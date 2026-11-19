@@ -2,6 +2,7 @@ import { Dispatch, SetStateAction } from "react";
 import {
   FilePlus2,
   HardDrive,
+  Info,
   Layers,
   Library,
   Loader2,
@@ -29,6 +30,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -219,6 +221,15 @@ export function ContentToolbar({
                         "modManager.categories.categories",
                         "Categories",
                       )}
+                      <Hint
+                        content={t("modManager.categoriesExplain")}
+                        className="max-w-64"
+                      >
+                        <Info
+                          aria-label={t("modManager.categoriesExplain")}
+                          className="size-3 text-faint"
+                        />
+                      </Hint>
                       {categoriesLoading && (
                         <Loader2 className="size-3 animate-spin" />
                       )}
@@ -537,7 +548,11 @@ export function ContentToolbar({
                 </Button>
               </DropdownMenuTrigger>
             </Hint>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuLabel className="text-xs leading-snug font-normal text-muted-foreground">
+                {t("modSets.explain")}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 disabled={!canApplySet}
                 onSelect={() => openSets("apply")}

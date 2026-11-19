@@ -1,7 +1,5 @@
 import {
   type DragEvent,
-  Dispatch,
-  SetStateAction,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -13,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { toast } from "sonner";
+import { FilePlus2 } from "lucide-react";
 import {
   DependencyType,
   IAddedLocalProject,
@@ -51,7 +50,7 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { showUndoToast } from "@renderer/utilities/undoToast";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { parseProjectLink } from "./projectLinks";
-import { startContentDrag } from "./contentDrag";
+import { isFileDrag, startContentDrag } from "./contentDrag";
 import { displayTitle } from "./titles";
 import {
   type SelectionGesture,
@@ -152,6 +151,7 @@ import {
 } from "./catalogLoader";
 import {
   LOCAL_IMPORT_EXTENSIONS,
+  isImportableFileName,
   buildImportEntry,
   buildInvalidEntry,
   findForeignFiles,
@@ -165,6 +165,7 @@ import { ContentDialogs } from "./ContentDialogs";
 import { ContentListPane } from "./ContentListPane";
 import { shaderSupport } from "./shaderSupport";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import type { CommitMods } from "./contentCommit";
 
 const api = window.api;
 
@@ -176,6 +177,30 @@ function listTitles(projects: ILocalProject[]): string {
 }
 
 const RUNNING_ALLOWED_TYPES = [ProjectType.RESOURCEPACK, ProjectType.SHADER];
+
+type DoneAction =
+  | "installed"
+  | "added"
+  | "restored"
+  | "removed"
+  | "updated"
+  | "enabled"
+  | "disabled";
+
+const COUNTED_TYPES = new Set<ProjectType>([
+  ProjectType.MOD,
+  ProjectType.RESOURCEPACK,
+  ProjectType.SHADER,
+  ProjectType.PLUGIN,
+  ProjectType.WORLD,
+  ProjectType.DATAPACK,
+]);
+
+function countKey(items: ILocalProject[]): string {
+  const types = new Set(items.map((item) => item.projectType));
+  const [only] = types;
+  return types.size === 1 && COUNTED_TYPES.has(only) ? only : "mixed";
+}
 
 const TRASH_HIDDEN_KEY = "grubie:trashBarHidden:";
 
@@ -209,7 +234,7 @@ function toModVersion(mod: ILocalProject): ModVersion[] {
 
 export function ContentManager({
   mods,
-  setMods,
+  commitMods,
   onClose,
   version,
   loader,
@@ -217,14 +242,13 @@ export function ContentManager({
   setVersion,
   setLoader,
   setModpack,
-  pendingRemovedLocalProjects,
-  setPendingRemovedLocalProjects,
   running = false,
   versionPath,
   canEdit: canEditProp,
+  onOpenWorlds,
 }: {
   mods: ILocalProject[];
-  setMods: (mods: ILocalProject[]) => void;
+  commitMods: CommitMods;
   onClose: (modpack?: IModpack) => void;
   version: IVersion | undefined;
   loader: Loader | undefined;
@@ -232,11 +256,10 @@ export function ContentManager({
   setVersion: (version: IVersion | undefined) => void;
   setLoader: (loader: Loader | undefined) => void;
   setModpack: (modpack: IModpack) => void;
-  pendingRemovedLocalProjects?: ILocalProject[];
-  setPendingRemovedLocalProjects?: Dispatch<SetStateAction<ILocalProject[]>>;
   running?: boolean;
   versionPath?: string;
   canEdit?: boolean;
+  onOpenWorlds?: () => void;
 }) {
   const { t } = useTranslation();
   const translateCategory = useCallback(
@@ -273,10 +296,18 @@ export function ContentManager({
     (isSelectedInstance ? !isDownloadedVersion && isOwnerVersion : true);
   const canBrowse = isModpacks || (canEdit && isOnline);
 
-  const [internalPending, setInternalPending] = useState<ILocalProject[]>([]);
-  const pendingRemoved = pendingRemovedLocalProjects ?? internalPending;
-  const setPendingRemoved =
-    setPendingRemovedLocalProjects ?? setInternalPending;
+  const [pendingRemoved, setPendingRemoved] = useState<ILocalProject[]>([]);
+
+  const doneTitle = useCallback(
+    (action: DoneAction, items: ILocalProject[]) =>
+      t(`modManager.done.${action}`, {
+        items:
+          items.length === 1
+            ? displayTitle(items[0].title)
+            : t(`modManager.count.${countKey(items)}`, { count: items.length }),
+      }),
+    [t],
+  );
 
   const typeCounts = useMemo(() => {
     const counts = new Map<ProjectType, number>();
@@ -1013,28 +1044,6 @@ export function ContentManager({
 
   const latestModsRef = useLatestRef(mods);
 
-  const showRemovedToast = useCallback(
-    (removed: ILocalProject[], description?: string) => {
-      showUndoToast(
-        removed.length > 1
-          ? t("modManager.deletedMultiple", { count: removed.length })
-          : t("modManager.deleted"),
-        () => {
-          const current = latestModsRef.current;
-          const missing = removed.filter(
-            (item) =>
-              !current.some((present) => isSameLocalProject(present, item)),
-          );
-          if (missing.length === 0) return;
-          setMods([...current, ...missing]);
-          for (const item of missing) forgetRemoved(item);
-        },
-        { description },
-      );
-    },
-    [forgetRemoved, latestModsRef, setMods, t],
-  );
-
   const unresolvedDepsRef = useRef(false);
   const skippedDepsRef = useRef(false);
 
@@ -1216,28 +1225,37 @@ export function ContentManager({
           added.push(...plan.added);
         }
 
-        setMods(next);
         for (const item of added) forgetRemoved(item);
 
-        const extra = added.length - 1;
-        const summary =
-          extra > 0
-            ? t("modManager.quickInstalled", { count: extra })
-            : explicit && entry.installed
-              ? t("modManager.updated")
-              : t("modManager.added");
+        const isUpdate = Boolean(explicit && entry.installed);
+        const dependencies = added.slice(1);
+        const notes = [
+          dependencies.length > 0
+            ? t("modManager.done.withDependencies", {
+                names: listTitles(dependencies),
+              })
+            : "",
+          skippedDepsRef.current
+            ? t("modManager.dependenciesSkipped")
+            : unresolvedDepsRef.current
+              ? t("modManager.dependenciesUnresolved")
+              : "",
+        ].filter(Boolean);
 
-        if (skippedDepsRef.current) {
-          toast.warning(summary, {
-            description: t("modManager.dependenciesSkipped"),
-          });
-        } else if (unresolvedDepsRef.current) {
-          toast.warning(summary, {
-            description: t("modManager.dependenciesUnresolved"),
-          });
-        } else {
-          toast.success(summary);
-        }
+        void commitMods(next, {
+          title: doneTitle(
+            isUpdate ? "updated" : "installed",
+            added.slice(0, 1),
+          ),
+          description: notes.length > 0 ? notes.join("\n") : undefined,
+          tone:
+            skippedDepsRef.current || unresolvedDepsRef.current
+              ? "warning"
+              : "success",
+          failTitle: t(
+            isUpdate ? "modManager.failed.update" : "modManager.failed.install",
+          ),
+        });
 
         if (detail?.entry.key === entry.key && explicit) {
           setDetail((prev) =>
@@ -1255,14 +1273,15 @@ export function ContentManager({
       }
     },
     [
+      commitMods,
       detail,
+      doneTitle,
       fetchers,
       fileStates.disabled,
       forgetRemoved,
       mods,
       loader,
       overrideLoader,
-      setMods,
       t,
       version,
     ],
@@ -1297,34 +1316,39 @@ export function ContentManager({
         plan.remove.map((item) => entryKey(item.provider, item.id)),
       );
       if (keys.size === 0) return;
-      setMods(
-        mods.filter((item) => !keys.has(entryKey(item.provider, item.id))),
-      );
       for (const item of plan.remove) rememberRemoved(item);
 
-      const extras = plan.remove.filter((item) => !targetKeys.has(entryKey(item.provider, item.id)));
-      showRemovedToast(
-        plan.remove,
-        dependents.length > 0
-          ? t("modManager.deletedBreaksDependents", {
-              names: listTitles(dependents),
-            })
-          : extras.length > 0
-            ? t("modManager.deletedWithDependencies", {
-                names: listTitles(extras),
-              })
-            : undefined,
+      const extras = plan.remove.filter(
+        (item) => !targetKeys.has(entryKey(item.provider, item.id)),
+      );
+      void commitMods(
+        mods.filter((item) => !keys.has(entryKey(item.provider, item.id))),
+        {
+          title: doneTitle("removed", plan.remove),
+          description:
+            dependents.length > 0
+              ? t("modManager.deletedBreaksDependents", {
+                  names: listTitles(dependents),
+                })
+              : extras.length > 0
+                ? t("modManager.deletedWithDependencies", {
+                    names: listTitles(extras),
+                  })
+                : undefined,
+          tone: dependents.length > 0 ? "warning" : "success",
+          failTitle: t("modManager.failed.remove"),
+        },
       );
     },
     [
       canEdit,
+      commitMods,
+      doneTitle,
       isBusy,
       localDependencies,
       mods,
       rememberRemoved,
       running,
-      setMods,
-      showRemovedToast,
       t,
     ],
   );
@@ -1385,13 +1409,16 @@ export function ContentManager({
       );
       if (removed.length === 0) return;
 
-      setMods(
-        mods.filter((item) => !keys.has(entryKey(item.provider, item.id))),
-      );
       for (const item of removed) rememberRemoved(item);
-      showRemovedToast(removed);
+      void commitMods(
+        mods.filter((item) => !keys.has(entryKey(item.provider, item.id))),
+        {
+          title: doneTitle("removed", removed),
+          failTitle: t("modManager.failed.remove"),
+        },
+      );
     },
-    [mods, rememberRemoved, setMods, showRemovedToast],
+    [commitMods, doneTitle, mods, rememberRemoved, t],
   );
 
   const setPinnedFor = useCallback(
@@ -1405,7 +1432,7 @@ export function ContentManager({
       );
       if (keys.size === 0) return;
 
-      setMods(
+      void commitMods(
         mods.map((item) => {
           if (!keys.has(entryKey(item.provider, item.id))) return item;
           const next = { ...item };
@@ -1413,14 +1440,17 @@ export function ContentManager({
           else delete next.pinned;
           return next;
         }),
-      );
-      toast.success(
-        t(pinned ? "modManager.pinnedDone" : "modManager.unpinnedDone", {
-          count: keys.size,
-        }),
+        {
+          title: t(
+            pinned ? "modManager.pinnedDone" : "modManager.unpinnedDone",
+            { count: keys.size },
+          ),
+          failTitle: t("modManager.failed.change"),
+          sync: false,
+        },
       );
     },
-    [mods, setMods, t],
+    [commitMods, mods, t],
   );
 
   const applyUpdateFor = useCallback(
@@ -1437,30 +1467,40 @@ export function ContentManager({
       }
 
       const result = applyUpdates(mods, updates, fileStates.disabled);
-      setMods(result.mods);
       if ([...updateCheck.updatable].every((key) => updates.has(key))) {
         setLibraryFacets((prev) => prev.filter((facet) => facet !== "update"));
       }
-      toast.success(
-        result.updated > 1
-          ? t("modManager.updatedMultiple", { count: result.updated })
-          : t("modManager.updated"),
-      );
+      void commitMods(result.mods, {
+        title: doneTitle(
+          "updated",
+          result.mods.filter((item) =>
+            updates.has(entryKey(item.provider, item.id)),
+          ),
+        ),
+        failTitle: t("modManager.failed.update"),
+      });
     },
     [
+      commitMods,
+      doneTitle,
       fileStates.disabled,
       mods,
-      setMods,
       t,
       updateCheck.latest,
       updateCheck.updatable,
     ],
   );
 
+  const fileStatesRef = useLatestRef(fileStates);
+  const setEnabledForRef = useRef<
+    (entries: ContentEntry[], enabled: boolean, isUndo?: boolean) => Promise<void>
+  >(async () => undefined);
+
   const setEnabledFor = useCallback(
-    async (entries: ContentEntry[], enabled: boolean) => {
+    async (entries: ContentEntry[], enabled: boolean, isUndo = false) => {
       if (!instancePath) return;
 
+      const disabledNow = fileStatesRef.current.disabled;
       const changed = new Set<string>();
       let failure: unknown = null;
 
@@ -1469,12 +1509,12 @@ export function ContentManager({
 
       for (const entry of entries) {
         if (!entry.fileName) continue;
-        if (fileStates.disabled.has(entry.key) === !enabled) continue;
+        if (!isUndo && disabledNow.has(entry.key) === !enabled) continue;
 
         try {
           await toggleModFile(
             instancePath,
-            projectType,
+            entry.projectType,
             entry.fileName,
             !enabled,
           );
@@ -1485,8 +1525,15 @@ export function ContentManager({
       }
 
       if (changed.size > 0) {
-        setMods(
-          mods.map((mod) => {
+        const current = latestModsRef.current;
+        const toggled = current.filter((mod) =>
+          changed.has(entryKey(mod.provider, mod.id)),
+        );
+        const changedEntries = entries.filter((entry) => changed.has(entry.key));
+
+        setFileRevision((value) => value + 1);
+        void commitMods(
+          current.map((mod) => {
             const key = entryKey(mod.provider, mod.id);
             if (!mod.version || !changed.has(key)) return mod;
 
@@ -1501,9 +1548,16 @@ export function ContentManager({
               },
             };
           }),
+          {
+            title: doneTitle(enabled ? "enabled" : "disabled", toggled),
+            failTitle: t("modManager.failed.change"),
+            sync: false,
+            undo: isUndo
+              ? false
+              : () =>
+                  setEnabledForRef.current(changedEntries, !enabled, true),
+          },
         );
-
-        setFileRevision((value) => value + 1);
       }
 
       if (failure) {
@@ -1516,17 +1570,21 @@ export function ContentManager({
       setBusyKey(null);
       setIsBusy(false);
     },
-    [fileStates.disabled, instancePath, mods, projectType, setMods, t],
+    [commitMods, doneTitle, fileStatesRef, instancePath, latestModsRef, t],
   );
+  setEnabledForRef.current = setEnabledFor;
 
   const restoreEntry = useCallback(
     (entry: ContentEntry) => {
       if (!entry.installed) return;
-      setMods([...mods, entry.installed]);
       forgetRemoved(entry.installed);
-      toast.success(t("modManager.added"));
+      void commitMods([...mods, entry.installed], {
+        title: doneTitle("restored", [entry.installed]),
+        failTitle: t("modManager.failed.install"),
+        restoreFromTrash: true,
+      });
     },
-    [forgetRemoved, mods, setMods, t],
+    [commitMods, doneTitle, forgetRemoved, mods, t],
   );
 
   const readLocalFiles = useCallback(
@@ -1760,11 +1818,6 @@ export function ContentManager({
     ],
   );
 
-  const identifyRef = useRef(identifyLocal);
-  useEffect(() => {
-    identifyRef.current = identifyLocal;
-  }, [identifyLocal]);
-
   const linkLocal = useCallback(
     (matches: ILocalIdentifyMatch[]) => {
       const result = linkIdentified(
@@ -1778,12 +1831,12 @@ export function ContentManager({
         return;
       }
 
-      setMods(result.mods);
-      toast.success(
-        t("modManager.identifyLinked", { count: result.linked.length }),
-      );
+      void commitMods(result.mods, {
+        title: t("modManager.identifyLinked", { count: result.linked.length }),
+        failTitle: t("modManager.failed.change"),
+      });
     },
-    [fileStates.disabled, loader, mods, setMods, t],
+    [commitMods, fileStates.disabled, loader, mods, t],
   );
 
   const addForeignFiles = useCallback(async () => {
@@ -1919,6 +1972,27 @@ export function ContentManager({
       },
     );
   }, [instancePath, readLocalFiles, restorableTrash]);
+
+  const dropFiles = useCallback(
+    async (files: File[]) => {
+      if (!canEdit) {
+        toast.warning(t("modManager.dropReadOnly"));
+        return;
+      }
+
+      const filePaths = files
+        .map((file) => api.other.getPathForFile(file))
+        .filter((filePath) => isImportableFileName(filePath));
+
+      if (filePaths.length === 0) {
+        toast.warning(t("modManager.invalidMod"));
+        return;
+      }
+
+      await readLocalFiles(filePaths);
+    },
+    [canEdit, readLocalFiles, t],
+  );
 
   const pickLocalFiles = useCallback(async () => {
     const filePaths = await api.other.openFileDialog(
@@ -2442,11 +2516,38 @@ export function ContentManager({
   const addFromSet = useCallback(
     (projects: ILocalProject[]) => {
       if (projects.length === 0) return;
-      setMods([...mods, ...projects]);
       for (const project of projects) forgetRemoved(project);
-      toast.success(t("modSets.added", { count: projects.length }));
+      void commitMods([...mods, ...projects], {
+        title: t("modSets.added", { count: projects.length }),
+        failTitle: t("modManager.failed.install"),
+      });
     },
-    [forgetRemoved, mods, setMods, t],
+    [commitMods, forgetRemoved, mods, t],
+  );
+
+  const commitImport = useCallback(
+    (added: ILocalProject[], mode: ImportMode) => {
+      if (added.length === 0) return;
+      for (const project of added) forgetRemoved(project);
+
+      const elsewhere = [
+        ...new Set(
+          added
+            .filter((project) => project.projectType !== projectType)
+            .map((project) => t(`modManager.projectTypes.${project.projectType}`)),
+        ),
+      ];
+
+      void commitMods([...latestModsRef.current, ...added], {
+        title: doneTitle(mode === "restore" ? "restored" : "added", added),
+        description:
+          elsewhere.length > 0
+            ? t("modManager.addedElsewhere", { types: elsewhere.join(", ") })
+            : undefined,
+        failTitle: t("modManager.failed.install"),
+      });
+    },
+    [commitMods, doneTitle, forgetRemoved, latestModsRef, projectType, t],
   );
 
   const handleKeyDown = useCallback(
@@ -2712,9 +2813,7 @@ export function ContentManager({
               ? "unchecked"
               : showConnectorHint
                 ? "connector"
-                : filterChips.length > 0
-                  ? "chips"
-                  : null;
+                : null;
   const listBusy =
     scope === "library" ? false : catalog.isLoading || !isCatalogReady;
   const isResultWave = useEntranceWave(listBusy, scope !== "library");
@@ -2722,8 +2821,38 @@ export function ContentManager({
     <>
       <div
         ref={rootRef}
-        className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
+        data-file-drop-zone={isModpacks ? undefined : ""}
+        className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
+        onDragEnter={(event) => {
+          if (isModpacks || !isFileDrag(event)) return;
+          event.preventDefault();
+          setIsDropActive(true);
+        }}
+        onDragOver={(event) => {
+          if (isModpacks || !isFileDrag(event)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = canEdit ? "copy" : "none";
+        }}
+        onDragLeave={(event) => {
+          if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+          setIsDropActive(false);
+        }}
+        onDrop={(event) => {
+          if (isModpacks || !isFileDrag(event)) return;
+          event.preventDefault();
+          setIsDropActive(false);
+          void dropFiles([...event.dataTransfer.files]);
+        }}
       >
+        {isDropActive && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-primary-veil text-sm font-medium text-foreground">
+            <FilePlus2 className="size-4" />
+            {canEdit
+              ? t("modManager.selectLocalsHint")
+              : t("modManager.dropReadOnly")}
+          </div>
+        )}
+
         <ContentToolbar
           browseLoader={browseLoader}
           canBrowse={canBrowse}
@@ -2823,6 +2952,7 @@ export function ContentManager({
           shaderSupport={shaderState}
           onOpenShaderLoader={(slug) => void openShaderLoader(slug)}
           canInstallShaderLoader={canEdit && isOnline}
+          onOpenWorlds={onOpenWorlds}
           account={account}
           activeIndex={activeIndex}
           busyKey={busyKey}
@@ -2857,7 +2987,6 @@ export function ContentManager({
           installProject={installProject}
           instancePath={instancePath}
           isBusy={isBusy}
-          isDropActive={isDropActive}
           isEmptyLibrary={isEmptyLibrary}
           isModpacks={isModpacks}
           isResultWave={isResultWave}
@@ -2870,7 +2999,6 @@ export function ContentManager({
           needsFileTimes={needsFileTimes}
           openTrashFolder={openTrashFolder}
           projectType={projectType}
-          readLocalFiles={readLocalFiles}
           removeEntries={removeEntries}
           resetFilters={resetFilters}
           restorableTrash={restorableTrash}
@@ -2883,7 +3011,6 @@ export function ContentManager({
           selection={selection}
           setDetailStack={setDetailStack}
           setIsClearTrashOpen={setIsClearTrashOpen}
-          setIsDropActive={setIsDropActive}
           listElement={listElement}
           setListElement={setListElement}
           setPinnedFor={setPinnedFor}
@@ -2925,19 +3052,15 @@ export function ContentManager({
         clearTrash={clearTrash}
         detail={detail}
         detailSelectedVersion={detailSelectedVersion}
-        identifyRef={identifyRef}
         identifyReport={identifyReport}
         importing={importing}
         importMode={importMode}
         isClearTrashOpen={isClearTrashOpen}
         isImportOpen={isImportOpen}
-        isOnline={isOnline}
         lang={lang}
         linkLocal={linkLocal}
-        mods={mods}
         onClose={onClose}
         paths={paths}
-        projectType={projectType}
         restorableTrash={restorableTrash}
         setBlockedMods={setBlockedMods}
         setBusyKey={setBusyKey}
@@ -2949,8 +3072,7 @@ export function ContentManager({
         setIsImportOpen={setIsImportOpen}
         setModpack={setModpack}
         setModpackStage={setModpackStage}
-        setMods={setMods}
-        setPendingRemoved={setPendingRemoved}
+        commitImport={commitImport}
         sizeUnits={sizeUnits}
         t={t}
       />

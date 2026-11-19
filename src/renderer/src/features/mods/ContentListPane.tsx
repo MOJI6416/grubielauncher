@@ -7,15 +7,14 @@ import {
   useRef,
   useState,
 } from "react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   CircleAlert,
   EyeOff,
-  FilePlus2,
   Folder,
   FolderOpen,
   FolderPlus,
+  Globe2,
   ListRestart,
   Loader2,
   Package,
@@ -52,11 +51,9 @@ import { TRASH_MAX_AGE_DAYS, TrashEntry } from "./trash";
 import { ContentRow } from "./ContentRow";
 import { GroupHeader, type GroupHeaderActions } from "./GroupHeader";
 import { type DisplayItem, type ModGroup, UNGROUPED_ID } from "./modGroups";
-import { isFileDrag } from "./contentDrag";
 import { useDragAutoScroll } from "@renderer/utilities/useDragAutoScroll";
 import { ContentDetails, DetailProgress } from "./ContentDetails";
 import { ImportMode } from "./ImportLocalDialog";
-import { isImportableFileName } from "./localImport";
 import { ListSkeleton } from "@renderer/components/ListSkeleton";
 import { type DetailState, type Scope } from "./contentManagerParts";
 import {
@@ -78,8 +75,6 @@ import type { DeletionPlan } from "@renderer/utilities/mod";
 import type { ModFileStates } from "./useModFileStates";
 import type { SelectionGesture } from "@renderer/utilities/rangeSelection";
 import type { ReactVirtualizer, VirtualItem } from "@tanstack/react-virtual";
-
-const api = window.api;
 
 function catalogSourceName(scope: Scope): string {
   return scope === Provider.CURSEFORGE ? "CurseForge" : "Modrinth";
@@ -136,7 +131,6 @@ export interface ContentListPaneProps {
   installProject: (entry: ContentEntry, explicit?: ModVersion) => Promise<void>;
   instancePath: string | undefined;
   isBusy: boolean;
-  isDropActive: boolean;
   isEmptyLibrary: boolean;
   isModpacks: boolean;
   isResultWave: boolean;
@@ -149,15 +143,6 @@ export interface ContentListPaneProps {
   needsFileTimes: boolean;
   openTrashFolder: () => Promise<void>;
   projectType: ProjectType;
-  readLocalFiles: (
-    filePaths: string[],
-    source?: {
-      names?: Map<string, string>;
-      deletedAt?: Map<string, number | null>;
-      reasons?: Map<string, TrashEntry["reason"]>;
-      mode?: ImportMode;
-    },
-  ) => Promise<void>;
   removeEntries: (targets: ContentEntry[]) => Promise<void>;
   resetFilters: () => void;
   restorableTrash: TrashEntry[];
@@ -180,7 +165,6 @@ export interface ContentListPaneProps {
   selection: Set<string>;
   setDetailStack: Dispatch<SetStateAction<ContentEntry[]>>;
   setIsClearTrashOpen: Dispatch<SetStateAction<boolean>>;
-  setIsDropActive: Dispatch<SetStateAction<boolean>>;
   listElement: HTMLDivElement | null;
   setListElement: Dispatch<SetStateAction<HTMLDivElement | null>>;
   setPinnedFor: (targets: ContentEntry[], pinned: boolean) => void;
@@ -197,6 +181,7 @@ export interface ContentListPaneProps {
   shaderSupport: ShaderSupport | null;
   onOpenShaderLoader: (slug: string) => void;
   canInstallShaderLoader: boolean;
+  onOpenWorlds?: () => void;
 }
 
 export function ContentListPane({
@@ -234,7 +219,6 @@ export function ContentListPane({
   installProject,
   instancePath,
   isBusy,
-  isDropActive,
   isEmptyLibrary,
   isModpacks,
   isResultWave,
@@ -247,7 +231,6 @@ export function ContentListPane({
   needsFileTimes,
   openTrashFolder,
   projectType,
-  readLocalFiles,
   removeEntries,
   resetFilters,
   restorableTrash,
@@ -260,7 +243,6 @@ export function ContentListPane({
   selection,
   setDetailStack,
   setIsClearTrashOpen,
-  setIsDropActive,
   listElement,
   setListElement,
   setPinnedFor,
@@ -278,6 +260,7 @@ export function ContentListPane({
   shaderSupport,
   onOpenShaderLoader,
   canInstallShaderLoader,
+  onOpenWorlds,
 }: ContentListPaneProps) {
   const dropPanelRef = useRef<HTMLDivElement | null>(null);
   useDragAutoScroll(
@@ -292,41 +275,29 @@ export function ContentListPane({
         ref={splitRef}
         className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-card"
       >
-        <div
-          data-file-drop-zone={canEdit && !isModpacks ? "" : undefined}
-          className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-          onDragEnter={(event) => {
-            if (!canEdit || isModpacks || !isFileDrag(event)) return;
-            event.preventDefault();
-            setIsDropActive(true);
-          }}
-          onDragOver={(event) => {
-            if (!canEdit || isModpacks || !isFileDrag(event)) return;
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "copy";
-          }}
-          onDragLeave={(event) => {
-            if (event.currentTarget.contains(event.relatedTarget as Node))
-              return;
-            setIsDropActive(false);
-          }}
-          onDrop={async (event) => {
-            if (!canEdit || isModpacks || !isFileDrag(event)) return;
-            event.preventDefault();
-            setIsDropActive(false);
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {onOpenWorlds &&
+            scope === "library" &&
+            (projectType === ProjectType.WORLD ||
+              projectType === ProjectType.DATAPACK) && (
+              <div className="flex min-h-10 shrink-0 items-center gap-2.5 border-b border-border px-3 py-1.5 text-xs">
+                <Globe2 className="size-3.5 shrink-0 text-faint" />
+                <span className="min-w-0 flex-1 leading-snug text-muted-foreground">
+                  {projectType === ProjectType.WORLD
+                    ? t("modManager.worldsElsewhere")
+                    : t("modManager.datapacksElsewhere")}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 shrink-0 px-2.5 text-xs"
+                  onClick={onOpenWorlds}
+                >
+                  {t("modManager.openWorlds")}
+                </Button>
+              </div>
+            )}
 
-            const filePaths = [...event.dataTransfer.files]
-              .map((file) => api.other.getPathForFile(file))
-              .filter((filePath) => isImportableFileName(filePath));
-
-            if (filePaths.length === 0) {
-              toast.warning(t("modManager.invalidMod"));
-              return;
-            }
-
-            await readLocalFiles(filePaths);
-          }}
-        >
           {shaderSupport && shaderSupport.state !== "ready" && (
             <div className="flex min-h-10 shrink-0 items-center gap-2.5 border-b border-border px-3 py-1.5 text-xs">
               <SunMoon className="size-3.5 shrink-0 text-warning" />
@@ -688,13 +659,6 @@ export function ContentListPane({
                   />
                 )}
               </div>
-            </div>
-          )}
-
-          {isDropActive && (
-            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-primary-veil text-sm font-medium text-foreground">
-              <FilePlus2 className="size-4" />
-              {t("modManager.selectLocalsHint")}
             </div>
           )}
 

@@ -712,12 +712,10 @@
       "foreign": "Під інший завантажувач"
     },
     "dependencies": "Залежності",
-    "added": "Мод додано",
     "deleted": "Мод видалено",
     "requiredBy": "Потрібна для",
     "deleteTitle": "Видалення модів",
     "alsoRemoves": "Також видалить невикористані залежності",
-    "updated": "Мод оновлено",
     "dependencyTypes": [
       "Невідомо",
       "Обов’язково",
@@ -812,22 +810,6 @@
     "notFoundModHint": "Джерело не віддало файли мода. Зазвичай це тимчасовий збій CurseForge чи Modrinth або блокування мережі.",
     "notModpackHint": "Архів не схожий на модпак: усередині немає маніфесту. Завантажте файл заново або виберіть іншу версію.",
     "toggleErrorHint": "Не вдалося перейменувати файл мода. Закрийте гру та перевірте, чи не блокує файл антивірус.",
-    "deletedMultiple_one": "Видалено {{count}} мод",
-    "deletedMultiple_few": "Видалено {{count}} моди",
-    "deletedMultiple_many": "Видалено {{count}} модів",
-    "deletedMultiple_other": "Видалено {{count}} модів",
-    "addedMultiple_one": "Додано {{count}} мод",
-    "addedMultiple_few": "Додано {{count}} моди",
-    "addedMultiple_many": "Додано {{count}} модів",
-    "addedMultiple_other": "Додано {{count}} модів",
-    "updatedMultiple_one": "Оновлено {{count}} мод",
-    "updatedMultiple_few": "Оновлено {{count}} моди",
-    "updatedMultiple_many": "Оновлено {{count}} модів",
-    "updatedMultiple_other": "Оновлено {{count}} модів",
-    "quickInstalled_one": "Мод додано з {{count}} залежністю",
-    "quickInstalled_few": "Мод додано з {{count}} залежностями",
-    "quickInstalled_many": "Мод додано з {{count}} залежностями",
-    "quickInstalled_other": "Мод додано з {{count}} залежностями",
     "availableUpdates_one": "Доступне {{count}} оновлення мода",
     "availableUpdates_few": "Доступні {{count}} оновлення модів",
     "availableUpdates_many": "Доступно {{count}} оновлень модів",
@@ -956,7 +938,6 @@
     "duplicatesShow": "Показати",
     "duplicatesRemove": "Прибрати зайві копії",
     "identifyAction": "Знайти локальні моди на CurseForge і Modrinth",
-    "identifyShort": "Знайти на сайтах",
     "identifySearching": "Шукаємо на CurseForge і Modrinth…",
     "identifyTitle": "Знайдено на сайтах",
     "identifyHint": "Пов'язані моди почнуть отримувати оновлення. Нічого не завантажується повторно — файли вже збігаються.",
@@ -972,7 +953,6 @@
     "connectorHint": "Fabric-моди працюють на {{loader}} лише через Sinytra Connector",
     "connectorFind": "Знайти Connector",
     "dependenciesSkipped": "Залежності мода під інший завантажувач не встановлюються автоматично — з Connector зазвичай потрібен Forgified Fabric API замість Fabric API. Перевірте їх на сторінці мода.",
-    "restoredCount": "Відновлено файлів: {{n}}",
     "addedElsewhere": "Частина файлів пішла на інші вкладки: {{types}}",
     "catalogLoaderHintQuilt": "Quilt запускає більшість Fabric-модів — їх можна шукати й тут. Оновлення для них теж перевіряються під Quilt.",
     "catalogLoaderHintLegacyFabric": "Частина модів для Legacy Fabric на Modrinth позначена просто Fabric. Перемкніться, щоб знайти і їх.",
@@ -987,7 +967,62 @@
     "searchFailedSource": "{{source}} не відповідає",
     "searchFailedSourceHint": "Пошук у каталозі зараз недоступний — повторіть за хвилину.",
     "deletedWithDependencies": "Разом із ними видалено невикористані залежності: {{names}}",
-    "deletedBreaksDependents": "Від видаленого залежать: {{names}}. Без нього гра може не запуститися."
+    "deletedBreaksDependents": "Від видаленого залежать: {{names}}. Без нього гра може не запуститися.",
+    "done": {
+      "installed": "Встановлено: {{items}}",
+      "added": "Додано: {{items}}",
+      "restored": "Відновлено: {{items}}",
+      "removed": "Видалено: {{items}}",
+      "updated": "Оновлено: {{items}}",
+      "enabled": "Увімкнено: {{items}}",
+      "disabled": "Вимкнено: {{items}}",
+      "withDependencies": "Разом із залежностями: {{names}}"
+    },
+    "failed": {
+      "install": "Не вдалося встановити",
+      "remove": "Не вдалося видалити",
+      "update": "Не вдалося оновити",
+      "change": "Не вдалося зберегти зміну"
+    },
+    "undone": "Зміну скасовано",
+    "undoFailed": "Не вдалося скасувати зміну",
+    "applyCancelled": "Встановлення скасовано — збірка лишилася без змін",
+    "applyBlockedSkipped": "Мод не встановлено: його файл треба завантажити вручну",
+    "dropReadOnly": "Цю збірку не можна змінювати — файли не додано",
+    "categoriesExplain": "Категорії надходять із Modrinth і CurseForge — за ними зручно фільтрувати. Змінити їх не можна.",
+    "worldsElsewhere": "Тут — світи, встановлені з каталогу. Усі світи збірки та їхні резервні копії — на вкладці «Світи».",
+    "datapacksElsewhere": "Тут — датапаки, завантажені до збірки. До світу їх додають на вкладці «Світи».",
+    "openWorlds": "Відкрити «Світи»",
+    "count": {
+      "mod_one": "{{count}} мод",
+      "mod_few": "{{count}} моди",
+      "mod_many": "{{count}} модів",
+      "mod_other": "{{count}} моди",
+      "resourcepack_one": "{{count}} ресурспак",
+      "resourcepack_few": "{{count}} ресурспаки",
+      "resourcepack_many": "{{count}} ресурспаків",
+      "resourcepack_other": "{{count}} ресурспаки",
+      "shader_one": "{{count}} шейдер",
+      "shader_few": "{{count}} шейдери",
+      "shader_many": "{{count}} шейдерів",
+      "shader_other": "{{count}} шейдери",
+      "plugin_one": "{{count}} плагін",
+      "plugin_few": "{{count}} плагіни",
+      "plugin_many": "{{count}} плагінів",
+      "plugin_other": "{{count}} плагіни",
+      "world_one": "{{count}} світ",
+      "world_few": "{{count}} світи",
+      "world_many": "{{count}} світів",
+      "world_other": "{{count}} світи",
+      "datapack_one": "{{count}} датапак",
+      "datapack_few": "{{count}} датапаки",
+      "datapack_many": "{{count}} датапаків",
+      "datapack_other": "{{count}} датапаки",
+      "mixed_one": "{{count}} елемент",
+      "mixed_few": "{{count}} елементи",
+      "mixed_many": "{{count}} елементів",
+      "mixed_other": "{{count}} елементи"
+    }
   },
   "nav": {
     "play": "Грати"
@@ -1053,7 +1088,6 @@
     "quickConnectOn": "під час запуску",
     "quickConnectOff": "вимкнено",
     "added": "Сервер додано",
-    "pendingSave": "Натисніть «Зберегти», щоб записати зміну в збірку.",
     "deleted": "Сервер видалено",
     "adding": "Новий сервер",
     "editing": "Зміна сервера",
@@ -1677,7 +1711,8 @@
       "splitSystem": "Система",
       "overridesTitle": "Збірки з власними налаштуваннями",
       "overridesHint": "значення вище на них не діють",
-      "overridesOther": "Java"
+      "overridesOther": "Java",
+      "freeNow": "Зараз вільно {{free}} ГБ — менше, ніж виділено грі ({{allocated}} ГБ). Закрийте зайві програми або зменште пам'ять."
     },
     "downloads": {
       "mirrorUnknown": "Перевіряємо джерело…",
@@ -2492,12 +2527,8 @@
     "unsaved": {
       "title": "Не збережено:",
       "kind": {
-        "name": "назва",
-        "content": "контент",
-        "servers": "сервери",
         "arguments": "аргументи запуску",
         "logo": "логотип",
-        "quickServer": "швидкий вхід",
         "settings": "налаштування збірки"
       }
     },
@@ -2541,10 +2572,10 @@
       "ask": "Видалити свою копію «{{name}}»?"
     },
     "playBlocked": {
-      "noAccount": "Виберіть акаунт, щоб грати."
+      "noAccount": "Виберіть акаунт, щоб грати.",
+      "applying": "Застосовуємо зміни вмісту…"
     },
     "saveBlocked": {
-      "invalidName": "Виберіть іншу назву — ця зайнята або недопустима.",
       "noChanges": "Поки немає чого зберігати.",
       "notOwner": "Зміни може зберегти лише автор збірки."
     },
@@ -2575,7 +2606,14 @@
     "configNotSavedAsk": "Піти, не зберігши файл?",
     "closeUnsavedQuestion": "Закрити лаунчер без збереження?",
     "updateBeforeLaunchQuestion": "Оновити збірку перед запуском?",
-    "updateCheckFailedQuestion": "Оновлення збірки не перевірено. Повторити?"
+    "updateCheckFailedQuestion": "Оновлення збірки не перевірено. Повторити?",
+    "playAsk": {
+      "title": "Зберегти зміни й грати?",
+      "body": "Не збережено: {{kinds}}. Гра запуститься вже з ними.",
+      "saveAndPlay": "Зберегти й грати"
+    },
+    "renamed": "Збірку перейменовано на «{{name}}»",
+    "renameApply": "Перейменувати"
   },
   "port": {
     "title": "Перенесення збірки «{{name}}»",
@@ -2649,7 +2687,8 @@
       "missing": "Немає версії під {{target}}",
       "unchecked": "Не вдалося перевірити — не додадуться",
       "localMod": "Локальні моди — не додадуться"
-    }
+    },
+    "explain": "Набір — збережений список модів із Modrinth і CurseForge. Його можна додати до будь-якої збірки."
   },
   "modGroups": {
     "toGroup": "У групу",
@@ -2670,7 +2709,8 @@
     "expand": "Розгорнути групу",
     "collapse": "Згорнути групу",
     "menu": "Дії з групою",
-    "saveFailed": "Не вдалося зберегти групи"
+    "saveFailed": "Не вдалося зберегти групи",
+    "explain": "Група — тека в цьому списку, щоб легше орієнтуватися. На гру не впливає."
   },
   "app": {
     "startupError": "Помилка запуску",
@@ -5072,7 +5112,8 @@
       "server": "Свій сервер",
       "logs": "Логи",
       "statistics": "Статистика",
-      "configs": "Конфіги"
+      "configs": "Конфіги",
+      "arguments": "Аргументи"
     },
     "emptyInstancesHint": "Створіть збірку або імпортуйте її з файлу — лаунчер завантажить усе потрібне.",
     "offline": {
@@ -5084,8 +5125,6 @@
   },
   "instanceSettings": {
     "title": "Налаштування збірки",
-    "inherited": "Успадковано від лаунчера",
-    "overridden": "Перевизначено для збірки",
     "resetAll": "Повернути спільні",
     "optimizedHint": "Додає {{flags}} прапорців збирача сміття",
     "priorityHint": "Гра отримує більше процесорного часу",
@@ -5098,6 +5137,12 @@
       "tooOld": "Потрібна Java {{major}} або новіша — з цією не запуститься",
       "missing": "Цю Java більше не знайдено — виберіть іншу",
       "manual": "вручну"
+    },
+    "resetToGlobal": "Скинути до спільного",
+    "groups": {
+      "performance": "Пам'ять і продуктивність",
+      "compatibility": "Java і графіка",
+      "language": "Мова"
     }
   },
   "modTranslations": {

@@ -100,7 +100,6 @@ import { duplicateInstance } from "./duplicateInstance";
 import { openPortDialog } from "@renderer/features/port/portStore";
 import { buildInstanceActions } from "./instanceActions";
 import { requestInstanceDelete } from "./deleteStore";
-import { instanceFlagsAtom } from "./atoms";
 import {
   instanceGroupsAtom,
   instanceOrderAtom,
@@ -210,7 +209,6 @@ export function InstanceLibrary({
   const lastLaunch = useAtomValue(instanceLastLaunchAtom);
   const stats = useAtomValue(instanceStatsAtom);
   const sessions = useAtomValue(runningSessionsAtom);
-  const flags = useAtomValue(instanceFlagsAtom);
   const { t } = useTranslation();
 
   const [query, setQuery] = useState("");
@@ -506,9 +504,6 @@ export function InstanceLibrary({
       t,
       canPlay: !!account && !isLaunching,
       isRunningInstance,
-      hasSaves: flags[itemKey]?.hasSaves === true,
-      hasServer: flags[itemKey]?.hasServer === true,
-      hasStatistics: flags[itemKey]?.hasStatistics === true,
       onPlay: () => play(instance),
       onPlayAnother: () => play(instance),
       onManageTags: () => onManageTags(itemKey, instance.version.name),

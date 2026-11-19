@@ -711,12 +711,10 @@
       "foreign": "Pour un autre chargeur"
     },
     "dependencies": "Dépendances",
-    "added": "Mod ajouté",
     "deleted": "Mod supprimé",
     "requiredBy": "Requis par",
     "deleteTitle": "Supprimer des mods",
     "alsoRemoves": "Supprime aussi les dépendances inutilisées",
-    "updated": "Mod mis à jour",
     "dependencyTypes": [
       "Inconnue",
       "Requise",
@@ -811,18 +809,6 @@
     "notFoundModHint": "La source n’a renvoyé aucun fichier de mod. C’est généralement une panne passagère de CurseForge ou de Modrinth, ou un blocage réseau.",
     "notModpackHint": "L’archive ne ressemble pas à un modpack : elle ne contient pas de manifeste. Téléchargez-la à nouveau ou choisissez une autre version.",
     "toggleErrorHint": "Impossible de renommer le fichier du mod. Fermez le jeu et vérifiez qu’un antivirus ne verrouille pas le fichier.",
-    "deletedMultiple_one": "{{count}} mod supprimé",
-    "deletedMultiple_many": "{{count}} mods supprimés",
-    "deletedMultiple_other": "{{count}} mods supprimés",
-    "addedMultiple_one": "{{count}} mod ajouté",
-    "addedMultiple_many": "{{count}} mods ajoutés",
-    "addedMultiple_other": "{{count}} mods ajoutés",
-    "updatedMultiple_one": "{{count}} mod mis à jour",
-    "updatedMultiple_many": "{{count}} mods mis à jour",
-    "updatedMultiple_other": "{{count}} mods mis à jour",
-    "quickInstalled_one": "Mod ajouté avec {{count}} dépendance",
-    "quickInstalled_many": "Mod ajouté avec {{count}} dépendances",
-    "quickInstalled_other": "Mod ajouté avec {{count}} dépendances",
     "availableUpdates_one": "{{count}} mise à jour de mod disponible",
     "availableUpdates_many": "{{count}} mises à jour de mods disponibles",
     "availableUpdates_other": "{{count}} mises à jour de mods disponibles",
@@ -947,7 +933,6 @@
     "duplicatesShow": "Afficher",
     "duplicatesRemove": "Supprimer les copies en trop",
     "identifyAction": "Trouver les mods locaux sur CurseForge et Modrinth",
-    "identifyShort": "Chercher sur les sites",
     "identifySearching": "Recherche sur CurseForge et Modrinth…",
     "identifyTitle": "Trouvés sur les sites",
     "identifyHint": "Les mods liés commencent à recevoir des mises à jour. Rien n’est retéléchargé — les fichiers correspondent déjà.",
@@ -963,7 +948,6 @@
     "connectorHint": "Les mods Fabric ne tournent sur {{loader}} que via Sinytra Connector",
     "connectorFind": "Trouver Connector",
     "dependenciesSkipped": "Les dépendances d’un mod pour un autre chargeur ne sont pas installées automatiquement — avec Connector, il faut généralement Forgified Fabric API au lieu de Fabric API. Vérifiez-les sur la page du mod.",
-    "restoredCount": "Restaurés : {{n}}",
     "addedElsewhere": "Certains fichiers sont allés dans d’autres onglets : {{types}}",
     "catalogLoaderHintQuilt": "Quilt fait tourner la plupart des mods Fabric, vous pouvez donc aussi les chercher ici. Leurs mises à jour sont également vérifiées pour Quilt.",
     "catalogLoaderHintLegacyFabric": "Sur Modrinth, certains mods Legacy Fabric sont marqués simplement Fabric. Basculez pour les trouver aussi.",
@@ -978,7 +962,55 @@
     "searchFailedSource": "{{source}} ne répond pas",
     "searchFailedSourceHint": "La recherche dans le catalogue est indisponible pour l’instant — réessayez dans une minute.",
     "deletedWithDependencies": "Les dépendances inutilisées ont aussi été retirées : {{names}}",
-    "deletedBreaksDependents": "Ces éléments dépendent de ce que vous avez retiré : {{names}}. Le jeu risque de ne pas démarrer."
+    "deletedBreaksDependents": "Ces éléments dépendent de ce que vous avez retiré : {{names}}. Le jeu risque de ne pas démarrer.",
+    "done": {
+      "installed": "Installé : {{items}}",
+      "added": "Ajouté : {{items}}",
+      "restored": "Restauré : {{items}}",
+      "removed": "Supprimé : {{items}}",
+      "updated": "Mis à jour : {{items}}",
+      "enabled": "Activé : {{items}}",
+      "disabled": "Désactivé : {{items}}",
+      "withDependencies": "Avec les dépendances : {{names}}"
+    },
+    "failed": {
+      "install": "Échec de l’installation",
+      "remove": "Échec de la suppression",
+      "update": "Échec de la mise à jour",
+      "change": "Impossible d’enregistrer la modification"
+    },
+    "undone": "Modification annulée",
+    "undoFailed": "Impossible d’annuler la modification",
+    "applyCancelled": "Installation annulée : l’instance n’a pas changé",
+    "applyBlockedSkipped": "Mod non installé : son fichier doit être téléchargé manuellement",
+    "dropReadOnly": "Cette instance ne peut pas être modifiée : les fichiers n’ont pas été ajoutés",
+    "categoriesExplain": "Les catégories viennent de Modrinth et CurseForge et servent à filtrer. Elles ne se modifient pas.",
+    "worldsElsewhere": "Voici les mondes installés depuis le catalogue. Tous les mondes de l’instance et leurs sauvegardes sont dans l’onglet « Mondes ».",
+    "datapacksElsewhere": "Voici les packs de données téléchargés dans l’instance. On les ajoute à un monde dans l’onglet « Mondes ».",
+    "openWorlds": "Ouvrir « Mondes »",
+    "count": {
+      "mod_one": "{{count}} mod",
+      "mod_many": "{{count}} mods",
+      "mod_other": "{{count}} mods",
+      "resourcepack_one": "{{count}} pack de ressources",
+      "resourcepack_many": "{{count}} packs de ressources",
+      "resourcepack_other": "{{count}} packs de ressources",
+      "shader_one": "{{count}} shader",
+      "shader_many": "{{count}} shaders",
+      "shader_other": "{{count}} shaders",
+      "plugin_one": "{{count}} plugin",
+      "plugin_many": "{{count}} plugins",
+      "plugin_other": "{{count}} plugins",
+      "world_one": "{{count}} monde",
+      "world_many": "{{count}} mondes",
+      "world_other": "{{count}} mondes",
+      "datapack_one": "{{count}} pack de données",
+      "datapack_many": "{{count}} packs de données",
+      "datapack_other": "{{count}} packs de données",
+      "mixed_one": "{{count}} élément",
+      "mixed_many": "{{count}} éléments",
+      "mixed_other": "{{count}} éléments"
+    }
   },
   "nav": {
     "play": "Jouer"
@@ -1044,7 +1076,6 @@
     "quickConnectOn": "au lancement",
     "quickConnectOff": "désactivée",
     "added": "Serveur ajouté",
-    "pendingSave": "Appuyez sur « Enregistrer » pour inscrire la modification dans l’instance.",
     "deleted": "Serveur supprimé",
     "adding": "Nouveau serveur",
     "editing": "Modification du serveur",
@@ -1668,7 +1699,8 @@
       "splitSystem": "Système",
       "overridesTitle": "Instances avec leurs propres paramètres",
       "overridesHint": "les valeurs ci-dessus ne s’y appliquent pas",
-      "overridesOther": "Java"
+      "overridesOther": "Java",
+      "freeNow": "Seulement {{free}} Go libres pour l’instant — moins que les {{allocated}} Go alloués au jeu. Fermez d’autres programmes ou réduisez la mémoire."
     },
     "downloads": {
       "mirrorUnknown": "Vérification de la source…",
@@ -2500,12 +2532,8 @@
     "unsaved": {
       "title": "Non enregistré :",
       "kind": {
-        "name": "nom",
-        "content": "contenu",
-        "servers": "serveurs",
         "arguments": "arguments de lancement",
         "logo": "logo",
-        "quickServer": "connexion rapide",
         "settings": "paramètres de l’instance"
       }
     },
@@ -2531,10 +2559,10 @@
       "ask": "Supprimer votre copie de « {{name}} » ?"
     },
     "playBlocked": {
-      "noAccount": "Choisissez un compte pour jouer."
+      "noAccount": "Choisissez un compte pour jouer.",
+      "applying": "Application des modifications du contenu…"
     },
     "saveBlocked": {
-      "invalidName": "Choisissez un autre nom — celui-ci est pris ou invalide.",
       "noChanges": "Rien à enregistrer pour l’instant.",
       "notOwner": "Seul l’auteur de cette instance peut enregistrer des modifications."
     },
@@ -2565,7 +2593,14 @@
     "configNotSavedAsk": "Quitter sans enregistrer le fichier ?",
     "closeUnsavedQuestion": "Fermer le launcher sans enregistrer \u0001",
     "updateBeforeLaunchQuestion": "Mettre à jour l’instance avant le lancement \u0001",
-    "updateCheckFailedQuestion": "La mise à jour de l’instance n’a pas été vérifiée. Réessayer \u0001"
+    "updateCheckFailedQuestion": "La mise à jour de l’instance n’a pas été vérifiée. Réessayer \u0001",
+    "playAsk": {
+      "title": "Enregistrer les modifications et jouer ?",
+      "body": "Non enregistré : {{kinds}}. Le jeu démarrera avec elles.",
+      "saveAndPlay": "Enregistrer et jouer"
+    },
+    "renamed": "Instance renommée en « {{name}} »",
+    "renameApply": "Renommer"
   },
   "port": {
     "title": "Déplacer « {{name}} »",
@@ -2639,7 +2674,8 @@
       "missing": "Aucune version pour {{target}}",
       "unchecked": "Vérification impossible — ne seront pas ajoutés",
       "localMod": "Mods locaux — ne seront pas ajoutés"
-    }
+    },
+    "explain": "Un ensemble est une liste enregistrée de mods Modrinth et CurseForge. Vous pouvez l’ajouter à n’importe quelle instance."
   },
   "modGroups": {
     "toGroup": "Dans un groupe",
@@ -2660,7 +2696,8 @@
     "expand": "Déplier le groupe",
     "collapse": "Replier le groupe",
     "menu": "Actions du groupe",
-    "saveFailed": "Impossible d’enregistrer les groupes"
+    "saveFailed": "Impossible d’enregistrer les groupes",
+    "explain": "Un groupe est un dossier dans cette liste pour mieux s’y retrouver. Il n’a aucun effet sur le jeu."
   },
   "app": {
     "startupError": "Erreur au démarrage",
@@ -5050,7 +5087,8 @@
       "server": "Mon serveur",
       "logs": "Journaux",
       "statistics": "Statistiques",
-      "configs": "Configs"
+      "configs": "Configs",
+      "arguments": "Arguments"
     },
     "emptyInstancesHint": "Créez une instance ou importez-en une depuis un fichier — le launcher téléchargera tout ce qu’il faut.",
     "offline": {
@@ -5062,8 +5100,6 @@
   },
   "instanceSettings": {
     "title": "Paramètres de l’instance",
-    "inherited": "Hérité du launcher",
-    "overridden": "Remplacé pour cette instance",
     "resetAll": "Utiliser les valeurs du launcher",
     "optimizedHint": "Ajoute {{flags}} flags du ramasse-miettes",
     "priorityHint": "Le jeu obtient plus de temps processeur",
@@ -5076,6 +5112,12 @@
       "tooOld": "Nécessite Java {{major}} ou plus récent — ne démarrera pas avec celui-ci",
       "missing": "Ce Java est introuvable — choisissez-en un autre",
       "manual": "manuel"
+    },
+    "resetToGlobal": "Revenir à la valeur du launcher",
+    "groups": {
+      "performance": "Mémoire et performances",
+      "compatibility": "Java et graphismes",
+      "language": "Langue"
     }
   },
   "modTranslations": {

@@ -10,7 +10,6 @@ import {
   recentSessions,
   sameChangeKinds,
   sameOverrides,
-  sameQuickServer,
   screenshotLabel,
   shortenPath,
   sortScreenshots,
@@ -35,28 +34,28 @@ describe("collectChangeKinds", () => {
     expect(
       collectChangeKinds({
         settings: true,
-        name: true,
-        content: true,
+        logo: true,
+        arguments: true,
       }),
-    ).toEqual(["name", "content", "settings"]);
+    ).toEqual(["arguments", "logo", "settings"]);
   });
 
   it("ignores false and missing flags", () => {
-    expect(collectChangeKinds({ name: false })).toEqual([]);
+    expect(collectChangeKinds({ logo: false })).toEqual([]);
     expect(collectChangeKinds({})).toEqual([]);
   });
 });
 
 describe("sameChangeKinds", () => {
   it("compares by content, not by identity", () => {
-    expect(sameChangeKinds(["name"], ["name"])).toBe(true);
+    expect(sameChangeKinds(["logo"], ["logo"])).toBe(true);
     expect(sameChangeKinds([], [])).toBe(true);
   });
 
   it("detects added, removed and reordered kinds", () => {
-    expect(sameChangeKinds(["name"], ["name", "content"])).toBe(false);
-    expect(sameChangeKinds(["name", "content"], ["name"])).toBe(false);
-    expect(sameChangeKinds(["name", "content"], ["content", "name"])).toBe(
+    expect(sameChangeKinds(["logo"], ["logo", "settings"])).toBe(false);
+    expect(sameChangeKinds(["logo", "settings"], ["logo"])).toBe(false);
+    expect(sameChangeKinds(["logo", "settings"], ["settings", "logo"])).toBe(
       false,
     );
   });
@@ -64,29 +63,15 @@ describe("sameChangeKinds", () => {
 
 describe("collectInstanceChanges", () => {
   const unchanged: InstanceChangeInput = {
-    draftName: "Pack",
-    currentName: "Pack",
     draftArguments: { game: "", jvm: "" },
     currentArguments: undefined,
-    draftQuickServer: undefined,
-    currentQuickServer: undefined,
     draftOverrides: undefined,
     currentOverrides: undefined,
     isLogoChanged: false,
-    content: { mods: false, servers: false },
   };
 
   it("reports nothing when the draft matches the instance", () => {
     expect(collectInstanceChanges(unchanged)).toEqual([]);
-  });
-
-  it("ignores surrounding whitespace in the name", () => {
-    expect(
-      collectInstanceChanges({ ...unchanged, draftName: "  Pack  " }),
-    ).toEqual([]);
-    expect(collectInstanceChanges({ ...unchanged, draftName: "Pack 2" })).toEqual(
-      ["name"],
-    );
   });
 
   it("treats missing arguments as empty strings", () => {
@@ -141,56 +126,16 @@ describe("collectInstanceChanges", () => {
     ).toEqual([]);
   });
 
-  it("treats an empty quick server as no quick server", () => {
-    expect(
-      collectInstanceChanges({
-        ...unchanged,
-        draftQuickServer: "  ",
-        currentQuickServer: undefined,
-      }),
-    ).toEqual([]);
-
-    expect(
-      collectInstanceChanges({
-        ...unchanged,
-        draftQuickServer: "play.example.com",
-        currentQuickServer: undefined,
-      }),
-    ).toEqual(["quickServer"]);
-  });
-
-  it("passes the already compared content flags through", () => {
-    expect(
-      collectInstanceChanges({
-        ...unchanged,
-        content: { mods: true, servers: true },
-      }),
-    ).toEqual(["content", "servers"]);
-  });
-
   it("keeps the display order when everything changed", () => {
     expect(
       collectInstanceChanges({
-        draftName: "Other",
-        currentName: "Pack",
         draftArguments: { game: "--demo", jvm: "-Xmx4G" },
         currentArguments: { game: "", jvm: "" },
-        draftQuickServer: "play.example.com",
-        currentQuickServer: undefined,
         draftOverrides: { xmx: 8192 },
         currentOverrides: undefined,
         isLogoChanged: true,
-        content: { mods: true, servers: true },
       }),
-    ).toEqual([
-      "name",
-      "content",
-      "servers",
-      "arguments",
-      "logo",
-      "quickServer",
-      "settings",
-    ]);
+    ).toEqual(["arguments", "logo", "settings"]);
   });
 });
 
@@ -340,13 +285,5 @@ describe("sameOverrides", () => {
     expect(sameOverrides({ java: { major: 17 } }, { java: { major: 17 } })).toBe(true);
     expect(sameOverrides({ java: { major: 17 } }, { java: { major: 21 } })).toBe(false);
     expect(sameOverrides({ java: { home: "/opt/jdk" } }, undefined)).toBe(false);
-  });
-});
-
-describe("sameQuickServer", () => {
-  it("ignores whitespace and the missing value", () => {
-    expect(sameQuickServer(undefined, "")).toBe(true);
-    expect(sameQuickServer(" play.example.com ", "play.example.com")).toBe(true);
-    expect(sameQuickServer("play.example.com", undefined)).toBe(false);
   });
 });

@@ -15,7 +15,8 @@ export interface InstanceTabsInput {
   hasStatistics: boolean;
   hasServerManager: boolean;
   hasOwnServer: boolean;
-  hasUnsavedContent?: boolean;
+  hasUnsavedSettings?: boolean;
+  hasUnsavedArguments?: boolean;
   hasModpack?: boolean;
   hasModpackUpdate?: boolean;
 }
@@ -26,11 +27,7 @@ export function buildInstanceTabs(input: InstanceTabsInput): InstanceTabItem[] {
     ...(input.hasModpack
       ? [{ id: "modpack" as const, alert: input.hasModpackUpdate === true }]
       : []),
-    {
-      id: "content",
-      count: input.contentCount,
-      alert: input.hasUnsavedContent === true,
-    },
+    { id: "content", count: input.contentCount },
   ];
 
   if (input.hasSaves) tabs.push({ id: "worlds", count: input.worldCount });
@@ -40,7 +37,8 @@ export function buildInstanceTabs(input: InstanceTabsInput): InstanceTabItem[] {
   if (input.hasOwnServer) tabs.push({ id: "server" });
   if (input.hasConfigs) tabs.push({ id: "configs" });
 
-  tabs.push({ id: "settings" });
+  tabs.push({ id: "settings", alert: input.hasUnsavedSettings === true });
+  tabs.push({ id: "arguments", alert: input.hasUnsavedArguments === true });
 
   if (input.hasStatistics) tabs.push({ id: "statistics" });
 

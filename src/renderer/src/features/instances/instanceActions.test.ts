@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { InstanceActionContext } from "./instanceActions";
+import type {
+  InstanceActionContext,
+  InstanceScreenTools,
+} from "./instanceActions";
 
 const navigations: unknown[] = [];
 
@@ -31,14 +34,27 @@ function context(
     t: ((key: string) => key) as never,
     canPlay: true,
     isRunningInstance: false,
-    hasSaves: false,
-    hasServer: false,
-    hasStatistics: false,
     onPlay: () => undefined,
     onPlayAnother: () => undefined,
     onManageTags: () => undefined,
     onDuplicate: () => undefined,
     onPort: () => undefined,
+    ...overrides,
+  };
+}
+
+function screen(
+  overrides: Partial<InstanceScreenTools> = {},
+): InstanceScreenTools {
+  return {
+    isLoading: false,
+    isOnline: true,
+    hasAccount: true,
+    devMode: false,
+    onCheckIntegrity: vi.fn(),
+    onExport: vi.fn(),
+    onCopyRunCommand: vi.fn(),
+    onCreateShortcut: vi.fn(),
     ...overrides,
   };
 }
@@ -54,18 +70,42 @@ afterEach(() => {
 });
 
 describe("buildInstanceActions", () => {
-  it("keeps launch, sections and tools in separate groups", async () => {
+  it("keeps launch, open and tools in separate groups", async () => {
     const { buildInstanceActions } = await loadActions();
     const groups = buildInstanceActions(context());
 
     expect(groups).toHaveLength(3);
     expect(groups[0].map((action) => action.id)).toEqual(["play"]);
+    expect(groups[1].map((action) => action.id)).toEqual(["overview"]);
     expect(groups[2].map((action) => action.id)).toEqual([
       "duplicate",
       "port",
       "folder",
       "shortcut",
       "tags",
+    ]);
+  });
+
+  it("does not repeat the instance tabs in the menu", async () => {
+    const { buildInstanceActions } = await loadActions();
+
+    expect(ids(buildInstanceActions(context()))).not.toEqual(
+      expect.arrayContaining([
+        "content",
+        "worlds",
+        "servers",
+        "settings",
+        "logs",
+      ]),
+    );
+  });
+
+  it("opens the instance from the open entry", async () => {
+    const { buildInstanceActions } = await loadActions();
+    buildInstanceActions(context())[1][0].onSelect();
+
+    expect(navigations).toEqual([
+      { name: "instance", id: "C:\\versions\\Pack" },
     ]);
   });
 
@@ -83,53 +123,9 @@ describe("buildInstanceActions", () => {
     expect(playAnother).toHaveBeenCalledTimes(1);
   });
 
-  it("offers the servers section whenever the version supports it", async () => {
-    const { buildInstanceActions } = await loadActions();
-
-    expect(ids(buildInstanceActions(context()))).toContain("servers");
-  });
-
-  it("hides the servers section for versions without a server manager", async () => {
-    const { buildInstanceActions } = await loadActions();
-    const groups = buildInstanceActions(
-      context({
-        instance: {
-          versionPath: "C:\\versions\\Old",
-          version: {
-            name: "Old",
-            loader: { name: "vanilla", mods: [] },
-            version: { id: "1.7.10", serverManager: false },
-          },
-        } as never,
-      }),
-    );
-
-    expect(ids(groups)).not.toContain("servers");
-  });
-
-  it("shows worlds only when the instance has saves", async () => {
-    const { buildInstanceActions } = await loadActions();
-
-    expect(ids(buildInstanceActions(context()))).not.toContain("worlds");
-    expect(ids(buildInstanceActions(context({ hasSaves: true })))).toContain(
-      "worlds",
-    );
-  });
-
-  it("shows statistics only when the instance collected some", async () => {
-    const { buildInstanceActions } = await loadActions();
-
-    expect(ids(buildInstanceActions(context()))).not.toContain("statistics");
-    expect(
-      ids(buildInstanceActions(context({ hasStatistics: true }))),
-    ).toContain("statistics");
-  });
-
   it("has no disabled entries besides launching without an account", async () => {
     const { buildInstanceActions } = await loadActions();
-    const groups = buildInstanceActions(
-      context({ canPlay: false, hasSaves: true, hasServer: true }),
-    );
+    const groups = buildInstanceActions(context({ canPlay: false }));
 
     const disabled = groups
       .flat()
@@ -186,24 +182,98 @@ describe("buildInstanceActions", () => {
       ids(buildInstanceActions(context({ onManageTags: undefined }))),
     ).not.toContain("tags");
   });
+});
 
-  it("routes every section entry to its own tab", async () => {
+describe("the same menu on the instance screen", () => {
+  it("drops the open entry and adds the screen tools", async () => {
     const { buildInstanceActions } = await loadActions();
     const groups = buildInstanceActions(
-      context({ hasSaves: true, hasServer: true, hasStatistics: true }),
+      context({ screen: screen(), onDelete: () => undefined }),
     );
 
-    for (const action of groups[1]) action.onSelect();
+    expect(groups.map((group) => group.map((action) => action.id))).toEqual([
+      ["play"],
+      [
+        "duplicate",
+        "port",
+        "folder",
+        "shortcut",
+        "export",
+        "integrity",
+        "run-command",
+        "tags",
+      ],
+      ["delete"],
+    ]);
+  });
 
-    expect(navigations).toEqual([
-      { name: "instance", id: "C:\\versions\\Pack", tab: undefined },
-      { name: "instance", id: "C:\\versions\\Pack", tab: "content" },
-      { name: "instance", id: "C:\\versions\\Pack", tab: "worlds" },
-      { name: "instance", id: "C:\\versions\\Pack", tab: "servers" },
-      { name: "instance", id: "C:\\versions\\Pack", tab: "server" },
-      { name: "instance", id: "C:\\versions\\Pack", tab: "settings" },
-      { name: "instance", id: "C:\\versions\\Pack", tab: "statistics" },
-      { name: "instance", id: "C:\\versions\\Pack", tab: "logs" },
+  it("keeps the home menu entries a subset of the screen menu", async () => {
+    const { buildInstanceActions } = await loadActions();
+    const home = ids(
+      buildInstanceActions(context({ onDelete: () => undefined })),
+    );
+    const onScreen = ids(
+      buildInstanceActions(
+        context({ screen: screen(), onDelete: () => undefined }),
+      ),
+    );
+
+    expect(
+      home
+        .filter((id) => id !== "overview")
+        .every((id) => onScreen.includes(id)),
+    ).toBe(true);
+  });
+
+  it("explains why the integrity check is unavailable offline", async () => {
+    const { buildInstanceActions, pickActions } = await loadActions();
+    const [integrity] = pickActions(
+      buildInstanceActions(context({ screen: screen({ isOnline: false }) })),
+      ["integrity"],
+    );
+
+    expect(integrity).toMatchObject({
+      disabled: true,
+      blockedReason: "versions.integrityBlocked.offline",
+    });
+  });
+
+  it("routes the tools to the screen handlers", async () => {
+    const { buildInstanceActions, pickActions } = await loadActions();
+    const tools = screen({ devMode: true });
+    const actions = pickActions(
+      buildInstanceActions(context({ screen: tools })),
+      [
+        "export",
+        "integrity",
+        "run-command",
+        "run-command-relative",
+        "shortcut",
+      ],
+    );
+
+    for (const action of actions) action.onSelect();
+
+    expect(tools.onExport).toHaveBeenCalledTimes(1);
+    expect(tools.onCheckIntegrity).toHaveBeenCalledTimes(1);
+    expect(tools.onCopyRunCommand).toHaveBeenNthCalledWith(1, false);
+    expect(tools.onCopyRunCommand).toHaveBeenNthCalledWith(2, true);
+    expect(tools.onCreateShortcut).toHaveBeenCalledTimes(1);
+  });
+
+  it("picks overview tiles in the requested order", async () => {
+    const { buildInstanceActions, pickActions, OVERVIEW_TILE_IDS } =
+      await loadActions();
+    const tiles = pickActions(
+      buildInstanceActions(context({ screen: screen() })),
+      OVERVIEW_TILE_IDS,
+    );
+
+    expect(tiles.map((action) => action.id)).toEqual([
+      "folder",
+      "integrity",
+      "export",
+      "shortcut",
     ]);
   });
 });

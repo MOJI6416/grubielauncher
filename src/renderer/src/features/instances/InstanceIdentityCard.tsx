@@ -5,6 +5,7 @@ import {
   Copy,
   ImageMinus,
   ImagePlus,
+  Loader2,
   Pencil,
   Share2,
   Wand2,
@@ -204,20 +205,24 @@ export function InstanceIdentityCard({
                 disabled={isLoading}
                 onChange={(event) => onNameChange(event.currentTarget.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && isNameValid) onCommitRename();
-                  if (event.key === "Escape") onCancelRename();
+                  if (event.key === "Enter" && isNameValid && !isLoading) {
+                    onCommitRename();
+                  }
+                  if (event.key === "Escape" && !isLoading) onCancelRename();
                 }}
               />
-              <Hint content={isNameValid ? t("common.ok") : undefined}>
+              <Hint
+                content={isNameValid ? t("versions.renameApply") : undefined}
+              >
                 <Button
                   type="button"
                   size="icon"
                   variant="secondary"
-                  disabled={!isNameValid}
-                  aria-label={t("common.ok")}
+                  disabled={!isNameValid || isLoading}
+                  aria-label={t("versions.renameApply")}
                   onClick={onCommitRename}
                 >
-                  <Check />
+                  {isLoading ? <Loader2 className="animate-spin" /> : <Check />}
                 </Button>
               </Hint>
               <Hint content={t("common.cancel")}>
@@ -226,6 +231,7 @@ export function InstanceIdentityCard({
                   size="icon"
                   variant="ghost"
                   aria-label={t("common.cancel")}
+                  disabled={isLoading}
                   onClick={onCancelRename}
                 >
                   <X />

@@ -18,6 +18,7 @@ describe("buildInstanceTabs", () => {
       "overview",
       "content",
       "settings",
+      "arguments",
       "logs",
     ]);
   });
@@ -41,6 +42,7 @@ describe("buildInstanceTabs", () => {
       "server",
       "configs",
       "settings",
+      "arguments",
       "statistics",
       "logs",
     ]);
@@ -82,9 +84,17 @@ describe("buildInstanceTabs", () => {
     expect(tabs.some((tab) => tab.id === "servers")).toBe(false);
   });
 
-  it("marks content when there are unsaved changes in it", () => {
-    const tabs = buildInstanceTabs({ ...base, hasUnsavedContent: true });
-    expect(tabs.find((tab) => tab.id === "content")?.alert).toBe(true);
+  it("marks settings when they hold unsaved changes", () => {
+    const tabs = buildInstanceTabs({ ...base, hasUnsavedSettings: true });
+    expect(tabs.find((tab) => tab.id === "settings")?.alert).toBe(true);
+    expect(tabs.find((tab) => tab.id === "arguments")?.alert).toBe(false);
+    expect(tabs.find((tab) => tab.id === "content")?.alert).toBeUndefined();
+  });
+
+  it("marks arguments on their own tab", () => {
+    const tabs = buildInstanceTabs({ ...base, hasUnsavedArguments: true });
+    expect(tabs.find((tab) => tab.id === "arguments")?.alert).toBe(true);
+    expect(tabs.find((tab) => tab.id === "settings")?.alert).toBe(false);
   });
 });
 

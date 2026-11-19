@@ -709,12 +709,10 @@
       "foreign": "For another loader"
     },
     "dependencies": "Dependencies",
-    "added": "Mod added",
     "deleted": "Mod deleted",
     "requiredBy": "Required by",
     "deleteTitle": "Remove mods",
     "alsoRemoves": "Also removes unused dependencies",
-    "updated": "Mod updated",
     "dependencyTypes": [
       "Unknown",
       "Required",
@@ -808,14 +806,6 @@
     "notFoundModHint": "The source returned no mod files. This is usually a temporary CurseForge or Modrinth failure, or network blocking.",
     "notModpackHint": "The archive does not look like a modpack: there is no manifest inside. Download it again or pick another version.",
     "toggleErrorHint": "The mod file could not be renamed. Close the game and check whether an antivirus is locking the file.",
-    "deletedMultiple_one": "{{count}} mod deleted",
-    "deletedMultiple_other": "{{count}} mods deleted",
-    "addedMultiple_one": "{{count}} mod added",
-    "addedMultiple_other": "{{count}} mods added",
-    "updatedMultiple_one": "{{count}} mod updated",
-    "updatedMultiple_other": "{{count}} mods updated",
-    "quickInstalled_one": "Mod added with {{count}} dependency",
-    "quickInstalled_other": "Mod added with {{count}} dependencies",
     "availableUpdates_one": "{{count}} mod update available",
     "availableUpdates_other": "{{count}} mod updates available",
     "uncheckedUpdates_one": "{{count}} mod could not be checked",
@@ -936,7 +926,6 @@
     "duplicatesShow": "Show",
     "duplicatesRemove": "Remove extra copies",
     "identifyAction": "Find local mods on CurseForge and Modrinth",
-    "identifyShort": "Find on sites",
     "identifySearching": "Looking them up on CurseForge and Modrinth…",
     "identifyTitle": "Found on the sites",
     "identifyHint": "Linked mods start getting updates. Nothing is downloaded again — the files already match.",
@@ -952,7 +941,6 @@
     "connectorHint": "Fabric mods run on {{loader}} only through Sinytra Connector",
     "connectorFind": "Find Connector",
     "dependenciesSkipped": "Dependencies of a mod for another loader are not installed automatically — with Connector you usually need Forgified Fabric API instead of Fabric API. Check them on the mod page.",
-    "restoredCount": "Restored: {{n}}",
     "addedElsewhere": "Some files went to other tabs: {{types}}",
     "catalogLoaderHintQuilt": "Quilt runs most Fabric mods, so you can look for them here too. Their updates are checked for Quilt as well.",
     "catalogLoaderHintLegacyFabric": "Some Legacy Fabric mods on Modrinth are tagged plain Fabric. Switch to find them as well.",
@@ -967,7 +955,48 @@
     "searchFailedSource": "{{source}} is not responding",
     "searchFailedSourceHint": "Catalog search is unavailable right now — try again in a minute.",
     "deletedWithDependencies": "Unused dependencies were removed too: {{names}}",
-    "deletedBreaksDependents": "These depend on what you removed: {{names}}. The game may not start without it."
+    "deletedBreaksDependents": "These depend on what you removed: {{names}}. The game may not start without it.",
+    "done": {
+      "installed": "Installed: {{items}}",
+      "added": "Added: {{items}}",
+      "restored": "Restored: {{items}}",
+      "removed": "Removed: {{items}}",
+      "updated": "Updated: {{items}}",
+      "enabled": "Enabled: {{items}}",
+      "disabled": "Disabled: {{items}}",
+      "withDependencies": "Along with dependencies: {{names}}"
+    },
+    "failed": {
+      "install": "Couldn't install",
+      "remove": "Couldn't remove",
+      "update": "Couldn't update",
+      "change": "Couldn't save the change"
+    },
+    "undone": "Change undone",
+    "undoFailed": "Couldn't undo the change",
+    "applyCancelled": "Installation cancelled — the instance is unchanged",
+    "applyBlockedSkipped": "Mod not installed: its file has to be downloaded manually",
+    "dropReadOnly": "This instance can't be changed — the files were not added",
+    "categoriesExplain": "Categories come from Modrinth and CurseForge and are handy for filtering. They can't be changed.",
+    "worldsElsewhere": "These are worlds installed from the catalog. All worlds of the instance and their backups are in the Worlds tab.",
+    "datapacksElsewhere": "These are datapacks downloaded into the instance. You add them to a world in the Worlds tab.",
+    "openWorlds": "Open Worlds",
+    "count": {
+      "mod_one": "{{count}} mod",
+      "mod_other": "{{count}} mods",
+      "resourcepack_one": "{{count}} resource pack",
+      "resourcepack_other": "{{count}} resource packs",
+      "shader_one": "{{count}} shader",
+      "shader_other": "{{count}} shaders",
+      "plugin_one": "{{count}} plugin",
+      "plugin_other": "{{count}} plugins",
+      "world_one": "{{count}} world",
+      "world_other": "{{count}} worlds",
+      "datapack_one": "{{count}} datapack",
+      "datapack_other": "{{count}} datapacks",
+      "mixed_one": "{{count}} item",
+      "mixed_other": "{{count}} items"
+    }
   },
   "nav": {
     "play": "Play"
@@ -1033,7 +1062,6 @@
     "quickConnectOn": "on launch",
     "quickConnectOff": "off",
     "added": "Server added",
-    "pendingSave": "Press “Save” to write the change into the instance.",
     "deleted": "Server deleted",
     "adding": "New server",
     "editing": "Editing server",
@@ -1653,7 +1681,8 @@
       "splitSystem": "System",
       "overridesTitle": "Instances with their own settings",
       "overridesHint": "the values above do not apply to them",
-      "overridesOther": "Java"
+      "overridesOther": "Java",
+      "freeNow": "Only {{free}} GB is free right now — less than the {{allocated}} GB given to the game. Close other programs or lower the memory."
     },
     "downloads": {
       "mirrorUnknown": "Checking the source…",
@@ -2484,12 +2513,8 @@
     "unsaved": {
       "title": "Unsaved:",
       "kind": {
-        "name": "name",
-        "content": "content",
-        "servers": "servers",
         "arguments": "launch arguments",
         "logo": "logo",
-        "quickServer": "quick join",
         "settings": "instance settings"
       }
     },
@@ -2515,10 +2540,10 @@
       "ask": "Delete your copy of “{{name}}”?"
     },
     "playBlocked": {
-      "noAccount": "Pick an account to play."
+      "noAccount": "Pick an account to play.",
+      "applying": "Applying content changes…"
     },
     "saveBlocked": {
-      "invalidName": "Pick another name — this one is taken or invalid.",
       "noChanges": "Nothing to save yet.",
       "notOwner": "Only the author of this instance can save changes."
     },
@@ -2549,7 +2574,14 @@
     "configNotSavedAsk": "Leave without saving the file?",
     "closeUnsavedQuestion": "Close the launcher without saving?",
     "updateBeforeLaunchQuestion": "Update the instance before launching?",
-    "updateCheckFailedQuestion": "The instance update check failed. Try again?"
+    "updateCheckFailedQuestion": "The instance update check failed. Try again?",
+    "playAsk": {
+      "title": "Save changes and play?",
+      "body": "Not saved: {{kinds}}. The game will start with them.",
+      "saveAndPlay": "Save and play"
+    },
+    "renamed": "Instance renamed to “{{name}}”",
+    "renameApply": "Rename"
   },
   "port": {
     "title": "Move “{{name}}”",
@@ -2623,7 +2655,8 @@
       "missing": "No version for {{target}}",
       "unchecked": "Could not be checked — will not be added",
       "localMod": "Local mods — will not be added"
-    }
+    },
+    "explain": "A set is a saved list of Modrinth and CurseForge mods. You can add it to any instance."
   },
   "modGroups": {
     "toGroup": "To a group",
@@ -2644,7 +2677,8 @@
     "expand": "Expand the group",
     "collapse": "Collapse the group",
     "menu": "Group actions",
-    "saveFailed": "Could not save the groups"
+    "saveFailed": "Could not save the groups",
+    "explain": "A group is a folder in this list to keep things tidy. It does not affect the game."
   },
   "app": {
     "startupError": "Startup error",
@@ -5011,7 +5045,8 @@
       "server": "My server",
       "logs": "Logs",
       "statistics": "Statistics",
-      "configs": "Configs"
+      "configs": "Configs",
+      "arguments": "Arguments"
     },
     "emptyInstancesHint": "Create an instance or import one from a file — the launcher will download everything it needs.",
     "offline": {
@@ -5023,8 +5058,6 @@
   },
   "instanceSettings": {
     "title": "Instance settings",
-    "inherited": "Inherited from launcher",
-    "overridden": "Overridden for this instance",
     "resetAll": "Use launcher values",
     "optimizedHint": "Adds {{flags}} garbage collector flags",
     "priorityHint": "The game gets more processor time",
@@ -5037,6 +5070,12 @@
       "tooOld": "Needs Java {{major}} or newer — it will not start with this one",
       "missing": "This Java is no longer found — pick another",
       "manual": "manual"
+    },
+    "resetToGlobal": "Use launcher value",
+    "groups": {
+      "performance": "Memory and performance",
+      "compatibility": "Java and graphics",
+      "language": "Language"
     }
   },
   "modTranslations": {

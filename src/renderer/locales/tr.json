@@ -709,12 +709,10 @@
       "foreign": "Başka yükleyici için"
     },
     "dependencies": "Bağımlılıklar",
-    "added": "Mod eklendi",
     "deleted": "Mod silindi",
     "requiredBy": "Gerektiren",
     "deleteTitle": "Modları kaldır",
     "alsoRemoves": "Kullanılmayan bağımlılıkları da kaldırır",
-    "updated": "Mod güncellendi",
     "dependencyTypes": [
       "Bilinmiyor",
       "Zorunlu",
@@ -808,14 +806,6 @@
     "notFoundModHint": "Kaynak hiç mod dosyası döndürmedi. Bu genellikle CurseForge veya Modrinth’teki geçici bir arıza ya da ağ engellemesidir.",
     "notModpackHint": "Arşiv bir mod paketine benzemiyor: içinde manifest yok. Yeniden indirin veya başka bir sürüm seçin.",
     "toggleErrorHint": "Mod dosyası yeniden adlandırılamadı. Oyunu kapatın ve bir antivirüsün dosyayı kilitleyip kilitlemediğini kontrol edin.",
-    "deletedMultiple_one": "{{count}} mod silindi",
-    "deletedMultiple_other": "{{count}} mod silindi",
-    "addedMultiple_one": "{{count}} mod eklendi",
-    "addedMultiple_other": "{{count}} mod eklendi",
-    "updatedMultiple_one": "{{count}} mod güncellendi",
-    "updatedMultiple_other": "{{count}} mod güncellendi",
-    "quickInstalled_one": "Mod, {{count}} bağımlılıkla eklendi",
-    "quickInstalled_other": "Mod, {{count}} bağımlılıkla eklendi",
     "availableUpdates_one": "{{count}} mod güncellemesi var",
     "availableUpdates_other": "{{count}} mod güncellemesi var",
     "uncheckedUpdates_one": "{{count}} mod denetlenemedi",
@@ -936,7 +926,6 @@
     "duplicatesShow": "Göster",
     "duplicatesRemove": "Fazla kopyaları kaldır",
     "identifyAction": "Yerel modları CurseForge ve Modrinth’te bul",
-    "identifyShort": "Sitelerde bul",
     "identifySearching": "CurseForge ve Modrinth’te aranıyor…",
     "identifyTitle": "Sitelerde bulundu",
     "identifyHint": "Bağlanan modlar güncelleme almaya başlar. Hiçbir şey yeniden indirilmez — dosyalar zaten eşleşiyor.",
@@ -952,7 +941,6 @@
     "connectorHint": "Fabric modları {{loader}} üzerinde yalnızca Sinytra Connector ile çalışır",
     "connectorFind": "Connector’ı bul",
     "dependenciesSkipped": "Başka bir yükleyiciye ait modun bağımlılıkları otomatik kurulmaz — Connector ile genellikle Fabric API yerine Forgified Fabric API gerekir. Onları mod sayfasından kontrol edin.",
-    "restoredCount": "Geri yüklendi: {{n}}",
     "addedElsewhere": "Bazı dosyalar başka sekmelere gitti: {{types}}",
     "catalogLoaderHintQuilt": "Quilt çoğu Fabric modunu çalıştırır, bu yüzden onları burada da arayabilirsiniz. Güncellemeleri Quilt için de denetlenir.",
     "catalogLoaderHintLegacyFabric": "Modrinth’teki bazı Legacy Fabric modları düz Fabric olarak etiketlenmiş. Onları da bulmak için geçiş yapın.",
@@ -967,7 +955,48 @@
     "searchFailedSource": "{{source}} yanıt vermiyor",
     "searchFailedSourceHint": "Katalog araması şu an kullanılamıyor — bir dakika sonra yeniden deneyin.",
     "deletedWithDependencies": "Kullanılmayan bağımlılıklar da kaldırıldı: {{names}}",
-    "deletedBreaksDependents": "Kaldırılana bağlı olanlar: {{names}}. Oyun açılmayabilir."
+    "deletedBreaksDependents": "Kaldırılana bağlı olanlar: {{names}}. Oyun açılmayabilir.",
+    "done": {
+      "installed": "Yüklendi: {{items}}",
+      "added": "Eklendi: {{items}}",
+      "restored": "Geri yüklendi: {{items}}",
+      "removed": "Kaldırıldı: {{items}}",
+      "updated": "Güncellendi: {{items}}",
+      "enabled": "Etkinleştirildi: {{items}}",
+      "disabled": "Devre dışı bırakıldı: {{items}}",
+      "withDependencies": "Bağımlılıklarıyla birlikte: {{names}}"
+    },
+    "failed": {
+      "install": "Yüklenemedi",
+      "remove": "Kaldırılamadı",
+      "update": "Güncellenemedi",
+      "change": "Değişiklik kaydedilemedi"
+    },
+    "undone": "Değişiklik geri alındı",
+    "undoFailed": "Değişiklik geri alınamadı",
+    "applyCancelled": "Yükleme iptal edildi; kurulum değişmedi",
+    "applyBlockedSkipped": "Mod yüklenmedi: dosyasının elle indirilmesi gerekiyor",
+    "dropReadOnly": "Bu kurulum değiştirilemez; dosyalar eklenmedi",
+    "categoriesExplain": "Kategoriler Modrinth ve CurseForge'dan gelir ve filtrelemeye yarar. Değiştirilemezler.",
+    "worldsElsewhere": "Burada katalogdan yüklenen dünyalar var. Kurulumun tüm dünyaları ve yedekleri «Dünyalar» sekmesinde.",
+    "datapacksElsewhere": "Burada kuruluma indirilen veri paketleri var. Bir dünyaya «Dünyalar» sekmesinde eklenirler.",
+    "openWorlds": "«Dünyalar»ı aç",
+    "count": {
+      "mod_one": "{{count}} mod",
+      "mod_other": "{{count}} mod",
+      "resourcepack_one": "{{count}} kaynak paketi",
+      "resourcepack_other": "{{count}} kaynak paketi",
+      "shader_one": "{{count}} gölgelendirici",
+      "shader_other": "{{count}} gölgelendirici",
+      "plugin_one": "{{count}} eklenti",
+      "plugin_other": "{{count}} eklenti",
+      "world_one": "{{count}} dünya",
+      "world_other": "{{count}} dünya",
+      "datapack_one": "{{count}} veri paketi",
+      "datapack_other": "{{count}} veri paketi",
+      "mixed_one": "{{count}} öğe",
+      "mixed_other": "{{count}} öğe"
+    }
   },
   "nav": {
     "play": "Oyna"
@@ -1033,7 +1062,6 @@
     "quickConnectOn": "başlatınca",
     "quickConnectOff": "kapalı",
     "added": "Sunucu eklendi",
-    "pendingSave": "Değişikliği kuruluma yazmak için “Kaydet”e basın.",
     "deleted": "Sunucu silindi",
     "adding": "Yeni sunucu",
     "editing": "Sunucu düzenleniyor",
@@ -1653,7 +1681,8 @@
       "splitSystem": "Sistem",
       "overridesTitle": "Kendi ayarları olan kurulumlar",
       "overridesHint": "yukarıdaki değerler onlara uygulanmaz",
-      "overridesOther": "Java"
+      "overridesOther": "Java",
+      "freeNow": "Şu anda yalnızca {{free}} GB boş; bu, oyuna ayrılan {{allocated}} GB'tan az. Diğer programları kapatın veya belleği azaltın."
     },
     "downloads": {
       "mirrorUnknown": "Kaynak kontrol ediliyor…",
@@ -2484,12 +2513,8 @@
     "unsaved": {
       "title": "Kaydedilmedi:",
       "kind": {
-        "name": "ad",
-        "content": "içerik",
-        "servers": "sunucular",
         "arguments": "başlatma argümanları",
         "logo": "logo",
-        "quickServer": "hızlı katılma",
         "settings": "kurulum ayarları"
       }
     },
@@ -2515,10 +2540,10 @@
       "ask": "“{{name}}” kopyanız silinsin mi?"
     },
     "playBlocked": {
-      "noAccount": "Oynamak için bir hesap seçin."
+      "noAccount": "Oynamak için bir hesap seçin.",
+      "applying": "İçerik değişiklikleri uygulanıyor…"
     },
     "saveBlocked": {
-      "invalidName": "Başka bir ad seçin — bu ad alınmış veya geçersiz.",
       "noChanges": "Henüz kaydedilecek bir şey yok.",
       "notOwner": "Değişiklikleri yalnızca bu kurulumun yazarı kaydedebilir."
     },
@@ -2549,7 +2574,14 @@
     "configNotSavedAsk": "Dosya kaydedilmeden çıkılsın mı?",
     "closeUnsavedQuestion": "Başlatıcı kaydetmeden kapatılsın mı?",
     "updateBeforeLaunchQuestion": "Kurulum başlatmadan önce güncellensin mi?",
-    "updateCheckFailedQuestion": "Kurulum güncellemesi denetlenemedi. Yeniden denensin mi?"
+    "updateCheckFailedQuestion": "Kurulum güncellemesi denetlenemedi. Yeniden denensin mi?",
+    "playAsk": {
+      "title": "Değişiklikler kaydedilip oynansın mı?",
+      "body": "Kaydedilmedi: {{kinds}}. Oyun bu değişikliklerle başlar.",
+      "saveAndPlay": "Kaydet ve oyna"
+    },
+    "renamed": "Kurulumun adı «{{name}}» olarak değiştirildi",
+    "renameApply": "Yeniden adlandır"
   },
   "port": {
     "title": "“{{name}}” kurulumunu taşı",
@@ -2623,7 +2655,8 @@
       "missing": "{{target}} için sürüm yok",
       "unchecked": "Kontrol edilemedi — eklenmeyecek",
       "localMod": "Yerel modlar — eklenmeyecek"
-    }
+    },
+    "explain": "Set, Modrinth ve CurseForge modlarının kayıtlı bir listesidir. Herhangi bir kuruluma ekleyebilirsiniz."
   },
   "modGroups": {
     "toGroup": "Gruba ekle",
@@ -2644,7 +2677,8 @@
     "expand": "Grubu genişlet",
     "collapse": "Grubu daralt",
     "menu": "Grup işlemleri",
-    "saveFailed": "Gruplar kaydedilemedi"
+    "saveFailed": "Gruplar kaydedilemedi",
+    "explain": "Grup, bu listede düzen için bir klasördür. Oyunu etkilemez."
   },
   "app": {
     "startupError": "Başlatma hatası",
@@ -5011,7 +5045,8 @@
       "server": "Sunucum",
       "logs": "Günlükler",
       "statistics": "İstatistikler",
-      "configs": "Yapılandırma"
+      "configs": "Yapılandırma",
+      "arguments": "Argümanlar"
     },
     "emptyInstancesHint": "Bir kurulum oluşturun veya dosyadan içe aktarın — başlatıcı gereken her şeyi indirecek.",
     "offline": {
@@ -5023,8 +5058,6 @@
   },
   "instanceSettings": {
     "title": "Kurulum ayarları",
-    "inherited": "Başlatıcıdan devralındı",
-    "overridden": "Bu kurulum için değiştirildi",
     "resetAll": "Başlatıcı değerlerini kullan",
     "optimizedHint": "{{flags}} çöp toplayıcı bayrağı ekler",
     "priorityHint": "Oyun daha fazla işlemci zamanı alır",
@@ -5037,6 +5070,12 @@
       "tooOld": "Java {{major}} veya daha yenisi gerekiyor — bununla açılmaz",
       "missing": "Bu Java artık bulunamıyor — başka birini seçin",
       "manual": "elle"
+    },
+    "resetToGlobal": "Başlatıcı değerine dön",
+    "groups": {
+      "performance": "Bellek ve performans",
+      "compatibility": "Java ve grafik",
+      "language": "Dil"
     }
   },
   "modTranslations": {

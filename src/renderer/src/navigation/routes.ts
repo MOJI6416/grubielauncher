@@ -7,6 +7,7 @@ export type InstanceTab =
   | "server"
   | "configs"
   | "settings"
+  | "arguments"
   | "statistics"
   | "logs";
 

@@ -251,9 +251,7 @@ export function ServersPanel({
           ? prev
           : [...prev, serverEntryOf(server)],
       );
-      toast.success(t("servers.added"), {
-        description: t("servers.pendingSave"),
-      });
+      toast.success(t("servers.added"));
     },
     [setServers, t],
   );
@@ -283,7 +281,6 @@ export function ServersPanel({
             next.splice(Math.min(index, next.length), 0, removed);
             return next;
           }),
-        { description: t("servers.pendingSave") },
       );
     },
     [servers, setServers, t],
@@ -730,9 +727,7 @@ export function ServersPanel({
                   } else {
                     setServers((prev) => [...prev, server]);
                     setSelected(servers.length);
-                    toast.success(t("servers.added"), {
-                      description: t("servers.pendingSave"),
-                    });
+                    toast.success(t("servers.added"));
                   }
 
                   setMode("details");
@@ -792,9 +787,7 @@ export function ServersPanel({
                 count: imported.length,
                 total: imported.length,
               }),
-              {
-              description: t("servers.pendingSave"),
-            });
+            );
           }}
         />
       )}

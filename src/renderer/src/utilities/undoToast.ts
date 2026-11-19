@@ -6,9 +6,14 @@ export const UNDO_TOAST_MS = 8000;
 export function showUndoToast(
   title: string,
   onUndo: () => void | Promise<void>,
-  options: { description?: string; id?: string | number } = {},
+  options: {
+    description?: string;
+    id?: string | number;
+    tone?: "success" | "warning";
+  } = {},
 ): string | number {
-  return toast.success(title, {
+  const show = options.tone === "warning" ? toast.warning : toast.success;
+  return show(title, {
     id: options.id,
     description: options.description,
     duration: UNDO_TOAST_MS,

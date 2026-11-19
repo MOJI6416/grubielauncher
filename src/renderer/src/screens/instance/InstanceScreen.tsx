@@ -2,26 +2,16 @@ import { Suspense, useMemo, useState } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
-  ArrowRightLeft,
   CircleCheck,
   CircleUserRound,
-  Copy,
-  CopySlash,
   Ellipsis,
-  FolderArchive,
-  FolderOpen,
   Loader2,
   Lock,
-  MonitorDown,
   Play,
   RotateCcw,
   Save,
-  ScanLine,
-  SquareTerminal,
-  Trash,
   WifiOff,
 } from "lucide-react";
-import { ILocalProject } from "@/types/ModManager";
 import { Button } from "@/components/ui/button";
 import { Collapse, CollapseInline } from "@/components/ui/collapse";
 import {
@@ -40,13 +30,7 @@ import { PanelFallback } from "@renderer/components/PanelFallback";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { BlockedMods } from "@renderer/components/Modals/BlockedMods";
 import { CreateServer } from "@renderer/features/servers/CreateServer";
-import {
-  accountsAtom,
-  isRunningAtom,
-  pathsAtom,
-  versionsAtom,
-} from "@renderer/stores/atoms";
-import { playAsVersionAtom } from "@renderer/features/launch/atoms";
+import { isRunningAtom, pathsAtom, versionsAtom } from "@renderer/stores/atoms";
 import { hasShaderLoader } from "@/shared/shaderLoaders";
 import { navigate } from "@renderer/navigation/navigate";
 import { openAccounts } from "@renderer/features/accounts/addAccountRequest";
@@ -62,14 +46,20 @@ import {
 import { InstanceLaunchProfileCard } from "@renderer/features/instances/InstanceLaunchProfileCard";
 import { duplicateInstance } from "@renderer/features/instances/duplicateInstance";
 import { openPortDialog } from "@renderer/features/port/portStore";
-import { getDeleteCopy } from "@renderer/features/instances/deleteGates";
+import { InstanceOverviewTab } from "@renderer/features/instances/InstanceOverviewTab";
 import {
-  InstanceOverviewTab,
-  OverviewAction,
-} from "@renderer/features/instances/InstanceOverviewTab";
+  OVERVIEW_TILE_IDS,
+  buildInstanceActions,
+  pickActions,
+} from "@renderer/features/instances/instanceActions";
+import { TagsDialog } from "@renderer/features/instances/TagsDialog";
+import { instanceKey } from "@renderer/features/instances/selectors";
 import { InstancePublishingCard } from "@renderer/features/instances/InstancePublishingCard";
 import { InstanceSettingsPanel } from "@renderer/features/instances/InstanceSettingsPanel";
-import { ModTranslationRow } from "@renderer/features/instances/ModTranslationRow";
+import {
+  ModTranslationRow,
+  canTranslateMods,
+} from "@renderer/features/instances/ModTranslationRow";
 import {
   effectiveJava,
   instanceRequiredJava,
@@ -156,6 +146,7 @@ export function InstanceScreen({
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [isLoaderPanelOpen, setIsLoaderPanelOpen] = useState(false);
   const [isJarPanelOpen, setIsJarPanelOpen] = useState(false);
+  const [isTagsOpen, setIsTagsOpen] = useState(false);
 
   const routeTab =
     currentRoute.name === "instance" ? currentRoute.tab : undefined;
@@ -179,7 +170,10 @@ export function InstanceScreen({
     await clearLauncherTemp(paths.launcher);
   };
 
-  const editor = useInstanceEditor({ closeModal: () => void closeScreen() });
+  const editor = useInstanceEditor({
+    closeModal: () => void closeScreen(),
+    runGame,
+  });
   const isSavedShown = useRecentFlag(editor.savedAt, SAVED_FLASH_MS);
 
   const {
@@ -189,6 +183,7 @@ export function InstanceScreen({
     server,
     setServer,
     draft,
+    content,
     changes,
     share,
     flags,
@@ -201,7 +196,6 @@ export function InstanceScreen({
     isLoading,
     loadingType,
     nameCheck,
-    isNameValid,
     canSave,
   } = editor;
 
@@ -210,8 +204,6 @@ export function InstanceScreen({
   const contents = useInstanceContents(version?.versionPath);
   const modpackState = useModpackSource(version, isInternetOnline);
   const setVersions = useSetAtom(versionsAtom);
-  const accountCount = useAtomValue(accountsAtom).length;
-  const setPlayAsVersion = useSetAtom(playAsVersionAtom);
   const updateDetails = useInstanceUpdateDetails(version);
   const syncGuard = useSyncGuard({
     versionPath: version?.versionPath,
@@ -240,13 +232,13 @@ export function InstanceScreen({
   );
   const modTitles = useMemo(() => {
     const titles = new Map<string, string>();
-    for (const mod of draft.mods) {
+    for (const mod of content.mods) {
       for (const file of mod.version?.files ?? []) {
         if (file.filename) titles.set(file.filename, mod.title);
       }
     }
     return titles;
-  }, [draft.mods]);
+  }, [content.mods]);
 
   const openLoaderPanel = () => {
     setIsJarPanelOpen(false);
@@ -257,15 +249,16 @@ export function InstanceScreen({
   const tabs = useMemo(
     () =>
       buildInstanceTabs({
-        contentCount: countContent(draft.mods),
+        contentCount: countContent(content.mods),
         worldCount: contents.worlds,
-        serverCount: draft.servers.length,
+        serverCount: editor.servers.length,
         hasSaves: contents.hasSaves,
         hasConfigs: contents.hasConfigs,
         hasStatistics: contents.hasStatistics,
         hasServerManager: !!version?.version.version?.serverManager,
         hasOwnServer: !!server,
-        hasUnsavedContent: changes.changeKinds.includes("content"),
+        hasUnsavedSettings: changes.changeKinds.includes("settings"),
+        hasUnsavedArguments: changes.changeKinds.includes("arguments"),
         hasModpack:
           !!version?.version.modpack ||
           (!!version && canUpdateFromArchive(version.version, modpackState.hasBase)),
@@ -275,8 +268,8 @@ export function InstanceScreen({
       modpackState.update,
       modpackState.hasBase,
       contents,
-      draft.mods.length,
-      draft.servers.length,
+      content.mods.length,
+      editor.servers.length,
       server,
       version,
       changes.changeKinds,
@@ -291,13 +284,11 @@ export function InstanceScreen({
   const activeTab = resolveActiveTab(tabs, routeTab ?? defaultTab);
   const shownTabs = visibleTabs(tabs, layout, activeTab);
 
-  const saveBlockedReason = !isNameValid
-    ? t("versions.saveBlocked.invalidName")
-    : !changes.hasChanges
-      ? t("versions.saveBlocked.noChanges")
-      : isForeignInstance
-        ? t("versions.saveBlocked.notOwner")
-        : undefined;
+  const saveBlockedReason = !changes.hasChanges
+    ? t("versions.saveBlocked.noChanges")
+    : isForeignInstance
+      ? t("versions.saveBlocked.notOwner")
+      : undefined;
 
   const shareBlockedReason = changes.hasChanges
     ? t("versions.shareBlocked.unsaved")
@@ -325,7 +316,9 @@ export function InstanceScreen({
     ? t("versions.playBlocked.noAccount")
     : isInstallActive
       ? t("versions.installBusy")
-      : undefined;
+      : content.isApplying
+        ? t("versions.playBlocked.applying")
+        : undefined;
 
   const unsavedKinds = changes.changeKinds
     .map((kind) => t(`versions.unsaved.kind.${kind}`))
@@ -365,59 +358,44 @@ export function InstanceScreen({
     </span>
   );
 
-  const overviewActions: OverviewAction[] = version
-    ? [
-        {
-          id: "folder",
-          label: t("common.openFolder"),
-          icon: FolderOpen,
-          onSelect: () => void api.shell.openPath(version.versionPath),
+  const actionGroups = version
+    ? buildInstanceActions({
+        instance: version,
+        t,
+        canPlay:
+          !!account && !isInstallActive && !isLaunching && !content.isApplying,
+        isRunningInstance: isVersionRunning,
+        onPlay: editor.requestPlay,
+        onPlayAnother: editor.requestPlay,
+        onManageTags: () => setIsTagsOpen(true),
+        onDuplicate: () => void duplicateInstance(version),
+        onPort: () => openPortDialog(version),
+        onDelete: () => setIsOpenDel(true),
+        account,
+        isBusy: isInstallActive,
+        screen: {
+          isLoading,
+          loadingType,
+          isOnline: isInternetOnline,
+          hasAccount: !!account,
+          devMode: !!settings?.devMode,
+          onCheckIntegrity: () => void editor.runIntegrityCheck(),
+          onExport: () => setIsOpenExportModal(true),
+          onCopyRunCommand: (relative) => void editor.copyRunCommand(relative),
+          onCreateShortcut: () => void editor.createShortcut(),
         },
-        {
-          id: "integrity",
-          label: t("versions.checkIntegrity"),
-          icon: ScanLine,
-          busy: isLoading && loadingType === "check",
-          disabled: isLoading || !isInternetOnline || isVersionRunning,
-          hint: t("versions.integrityHint"),
-          blockedReason: !isInternetOnline
-            ? t("versions.integrityBlocked.offline")
-            : isVersionRunning
-              ? t("versions.integrityBlocked.running")
-              : undefined,
-          onSelect: () => void editor.runIntegrityCheck(),
-        },
-        {
-          id: "export",
-          label: t("export.btn"),
-          icon: FolderArchive,
-          disabled: isLoading,
-          hint: t("export.contents"),
-          onSelect: () => setIsOpenExportModal(true),
-        },
-        {
-          id: "shortcut",
-          label: t("versions.createShortcut"),
-          icon: MonitorDown,
-          busy: isLoading && loadingType === "shortcut",
-          disabled: isLoading,
-          hint: t("versions.shortcutHint"),
-          onSelect: () => void editor.createShortcut(),
-        },
-        ...(accountCount > 1
-          ? [
-              {
-                id: "play-as",
-                label: t("playAs.menu"),
-                icon: CircleUserRound,
-                disabled: isLoading || !account || isInstallActive,
-                hint: t("playAs.hint"),
-                onSelect: () => setPlayAsVersion(version),
-              },
-            ]
-          : []),
-      ]
+      })
     : [];
+
+  const menuGroups = actionGroups
+    .map((group) =>
+      group.filter(
+        (action) => action.id !== "play" && action.id !== "play-another",
+      ),
+    )
+    .filter((group) => group.length > 0);
+
+  const overviewActions = pickActions(actionGroups, OVERVIEW_TILE_IDS);
 
   const banner = version &&
   hasInstanceBanner({
@@ -481,7 +459,7 @@ export function InstanceScreen({
   return (
     <>
       <section className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border">
+        <div className="flex h-13 shrink-0 items-center gap-1 border-b border-border">
           <InstanceTabBar
             items={shownTabs}
             active={activeTab}
@@ -536,20 +514,25 @@ export function InstanceScreen({
 
             <Hint
               content={
-                isVersionRunning && !isLaunching && !playBlockedReason
+                playBlockedReason ??
+                (isVersionRunning && !isLaunching
                   ? t("versions.playAnotherInstance")
-                  : undefined
+                  : undefined)
               }
             >
               <Button
                 type="button"
-                size="sm"
-                variant={changes.hasChanges ? "secondary" : "default"}
-                className="h-8"
-                disabled={!account || isInstallActive || isLaunching}
-                onClick={() => version && void runGame({ version })}
+                className="h-11 px-5"
+                disabled={
+                  !account || isInstallActive || isLaunching || content.isApplying
+                }
+                onClick={editor.requestPlay}
               >
-                {isLaunching ? <Loader2 className="animate-spin" /> : <Play />}
+                {isLaunching || content.isApplying ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Play />
+                )}
                 {isVersionRunning && !isLaunching
                   ? t("versions.playAnotherShort")
                   : t("nav.play")}
@@ -561,8 +544,9 @@ export function InstanceScreen({
                 <DropdownMenuTrigger asChild>
                   <Button
                     type="button"
-                    size="icon-sm"
+                    size="icon"
                     variant="ghost"
+                    className="ml-1"
                     aria-label={t("common.more")}
                   >
                     <Ellipsis />
@@ -570,55 +554,22 @@ export function InstanceScreen({
                 </DropdownMenuTrigger>
               </Hint>
               <DropdownMenuContent align="end" className="w-60">
-                <DropdownMenuItem
-                  disabled={isLoading || !account}
-                  onSelect={() => void editor.copyRunCommand(false)}
-                >
-                  <SquareTerminal />
-                  {t("versions.runCommand")}
-                </DropdownMenuItem>
-
-                {settings?.devMode && (
-                  <DropdownMenuItem
-                    disabled={isLoading || !account}
-                    onSelect={() => void editor.copyRunCommand(true)}
-                  >
-                    <CopySlash />
-                    {t("versions.copyRelativePath")}
-                  </DropdownMenuItem>
-                )}
-
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  disabled={
-                    isLoading || isInstallActive || isVersionRunning || !version
-                  }
-                  onSelect={() => version && void duplicateInstance(version)}
-                >
-                  <Copy />
-                  {t("versions.duplicate")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={isLoading || !version}
-                  onSelect={() => version && openPortDialog(version)}
-                >
-                  <ArrowRightLeft />
-                  {t("versions.port")}
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  disabled={isLoading || isInstallActive || isVersionRunning}
-                  onSelect={() => setIsOpenDel(true)}
-                >
-                  <Trash />
-                  {t(
-                    getDeleteCopy({
-                      foreignPublication: editor.isForeignPack,
-                    }).menuKey,
-                  )}
-                </DropdownMenuItem>
+                {menuGroups.map((group, index) => (
+                  <div key={group[0]?.id ?? index}>
+                    {index > 0 && <DropdownMenuSeparator />}
+                    {group.map((action) => (
+                      <DropdownMenuItem
+                        key={action.id}
+                        variant={action.destructive ? "destructive" : "default"}
+                        disabled={action.disabled}
+                        onSelect={action.onSelect}
+                      >
+                        <action.icon />
+                        <span>{action.label}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -638,7 +589,7 @@ export function InstanceScreen({
               server={server}
               isOnline={isInternetOnline}
               isRunning={isVersionRunning}
-              isBusy={isLoading || isInstallActive}
+              isBusy={isLoading || isInstallActive || content.isApplying}
               isReadOnly={isForeignInstance}
               hasUnsavedChanges={changes.hasChanges}
               onUpdated={() => {
@@ -667,7 +618,7 @@ export function InstanceScreen({
             <ConfigsPanel
               versionPath={version.versionPath}
               disabled={isLoading}
-              mods={draft.mods}
+              mods={content.mods}
             />
           ) : activeTab === "settings" && version && isJarPanelOpen ? (
             <JarModsPanel
@@ -713,9 +664,25 @@ export function InstanceScreen({
               onClose={() => setIsLoaderPanelOpen(false)}
             />
           ) : activeTab === "settings" && version ? (
-            <div className="grid h-full min-h-0 grid-cols-[minmax(0,440px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3">
-              <div className="flex min-h-0 flex-col gap-3">
-                {isModded && (
+            <InstanceSettingsPanel
+              requiredJavaMajor={instanceRequiredJava(version)}
+              overrides={draft.overrides}
+              disabled={isLoading || isVersionRunning || isForeignInstance}
+              hint={
+                isForeignInstance
+                  ? readOnlyHint
+                  : isVersionRunning
+                    ? t("instanceSettings.runningHint")
+                    : undefined
+              }
+              onChange={draft.setOverrides}
+              minecraftVersion={version.version.version.id}
+              shaderLoader={hasShaderLoader({
+                mods: content.mods,
+                jarMods: version.version.jarMods,
+              })}
+              loaderCard={
+                isModded ? (
                   <InstanceLoaderCard
                     loader={version.version.loader.name}
                     currentId={version.version.loader.version?.id}
@@ -734,85 +701,65 @@ export function InstanceScreen({
                       ) : undefined
                     }
                   />
-                )}
-
-                {!isModded && showsJarModsCard(version.version) && (
+                ) : showsJarModsCard(version.version) ? (
                   <InstanceJarCard
                     conf={version.version}
                     onOpen={() => setIsJarPanelOpen(true)}
                   />
-                )}
-
-                <InstanceSettingsPanel
-                  requiredJavaMajor={instanceRequiredJava(version)}
-                  overrides={draft.overrides}
-                  disabled={isLoading || isVersionRunning || isForeignInstance}
-                  hint={
-                    isForeignInstance
-                      ? readOnlyHint
-                      : isVersionRunning
-                        ? t("instanceSettings.runningHint")
-                        : undefined
-                  }
-                  onChange={draft.setOverrides}
-                  minecraftVersion={version.version.version.id}
-                  shaderLoader={hasShaderLoader({
-                    mods: draft.mods,
-                    jarMods: version.version.jarMods,
-                  })}
-                  extraRows={
-                    <ModTranslationRow
-                      versionPath={version.versionPath}
-                      mcVersion={version.version.version.id}
-                      loader={version.version.loader.name}
-                      disabled={
-                        isLoading || isVersionRunning || isForeignInstance
-                      }
-                    />
-                  }
-                />
-              </div>
-
-              <div className="flex min-h-0 flex-col gap-3">
-                <div className="flex min-h-0 flex-[3] flex-col">
-                  <Suspense fallback={<PanelFallback variant="card" />}>
-                    <LazyArguments
-                      embedded
-                      settings={resolved}
-                      runArguments={draft.runArguments}
-                      onClose={() => setActiveTab("overview")}
-                      setArguments={draft.setRunArguments}
-                    />
-                  </Suspense>
-                </div>
-
-                <div className="flex min-h-[132px] flex-[2] flex-col">
-                  <InstanceLaunchProfileCard
-                    runArguments={draft.runArguments}
-                    memoryMb={resolved.xmx}
-                    optimizedJvm={resolved.optimizedJvm}
-                    java={javaLabel(
-                      effectiveJava(
-                        draft.overrides?.java,
-                        instanceRequiredJava(version),
-                        javaRuntimes.list,
-                      ),
-                    )}
-                    canCopy={!isLoading && !!account}
-                    onCopy={() => void editor.copyRunCommand(false)}
+                ) : undefined
+              }
+              languageRow={
+                canTranslateMods(
+                  settings.lang,
+                  version.version.version.id,
+                  version.version.loader.name,
+                ) ? (
+                  <ModTranslationRow
+                    versionPath={version.versionPath}
+                    mcVersion={version.version.version.id}
+                    loader={version.version.loader.name}
+                    disabled={
+                      isLoading || isVersionRunning || isForeignInstance
+                    }
                   />
-                </div>
-              </div>
-            </div>
+                ) : undefined
+              }
+              profileCard={
+                <InstanceLaunchProfileCard
+                  runArguments={draft.runArguments}
+                  memoryMb={resolved.xmx}
+                  optimizedJvm={resolved.optimizedJvm}
+                  java={javaLabel(
+                    effectiveJava(
+                      draft.overrides?.java,
+                      instanceRequiredJava(version),
+                      javaRuntimes.list,
+                    ),
+                  )}
+                  canCopy={!isLoading && !!account}
+                  onCopy={() => void editor.copyRunCommand(false)}
+                />
+              }
+            />
+          ) : activeTab === "arguments" && version ? (
+            <Suspense fallback={<PanelFallback variant="card" />}>
+              <LazyArguments
+                embedded
+                settings={resolved}
+                runArguments={draft.runArguments}
+                onClose={() => setActiveTab("overview")}
+                setArguments={draft.setRunArguments}
+              />
+            </Suspense>
           ) : activeTab === "servers" && version ? (
-            draft.isReady ? (
+            editor.isServersReady ? (
               <Suspense fallback={<PanelFallback variant="master-detail" />}>
                 <LazyServersPanel
-                  quickConnectIp={draft.quickConnectIp}
-                  setQuickConnectIp={draft.setQuickConnectIp}
+                  quickConnectIp={editor.quickConnectIp}
+                  setQuickConnectIp={(ip) => void editor.setQuickConnectIp(ip)}
                   onPlayed={() => setActiveTab("overview")}
-                  servers={draft.servers}
-                  setServers={draft.setServers}
+                  servers={editor.servers}
+                  setServers={editor.setServers}
                   runGame={runGame}
                 />
               </Suspense>
@@ -827,14 +774,14 @@ export function InstanceScreen({
                   else setActiveTab("overview");
                 }}
                 runGame={runGame}
-                mods={draft.mods}
+                mods={content.mods}
               />
             </Suspense>
           ) : activeTab === "content" && version ? (
             <Suspense fallback={<PanelFallback variant="board" />}>
               <LazyModManager
-                mods={draft.mods}
-                setMods={(m: ILocalProject[]) => draft.setMods(m)}
+                mods={content.mods}
+                commitMods={content.commitMods}
                 onClose={() => setActiveTab("overview")}
                 loader={version.version.loader.name}
                 version={version.version.version}
@@ -842,12 +789,11 @@ export function InstanceScreen({
                 setLoader={() => {}}
                 setModpack={() => {}}
                 setVersion={() => {}}
-                pendingRemovedLocalProjects={draft.pendingRemovedLocalMods}
-                setPendingRemovedLocalProjects={
-                  draft.setPendingRemovedLocalMods
-                }
                 running={isVersionRunning}
                 versionPath={version.versionPath}
+                onOpenWorlds={
+                  contents.hasSaves ? () => setActiveTab("worlds") : undefined
+                }
               />
             </Suspense>
           ) : version ? (
@@ -860,7 +806,7 @@ export function InstanceScreen({
               isLoading={isLoading}
               canRename={flags.canRenameVersion && !isVersionRunning}
               canEditLogo={flags.canEditLogo}
-              contentCount={countContent(draft.mods)}
+              contentCount={countContent(content.mods)}
               argumentCount={
                 parseArgs(draft.runArguments.jvm).length +
                 parseArgs(draft.runArguments.game).length
@@ -907,11 +853,8 @@ export function InstanceScreen({
               onOpenTab={setActiveTab}
               onNameChange={draft.setName}
               onStartRename={() => draft.setEditName(true)}
-              onCancelRename={() => {
-                draft.setEditName(false);
-                draft.setName(version.version.name);
-              }}
-              onCommitRename={() => draft.setEditName(false)}
+              onCancelRename={editor.cancelRename}
+              onCommitRename={() => void editor.renameInstance()}
               onPickLogo={async () => {
                 const filePaths = await api.other.openFileDialog();
                 if (!filePaths || filePaths.length === 0) return;
@@ -1103,11 +1046,44 @@ export function InstanceScreen({
               text: t("common.reset"),
               color: "danger",
               onClick: () => {
-                draft.reset();
+                editor.resetDraft();
                 setIsResetOpen(false);
               },
             },
           ]}
+        />
+      )}
+
+      {editor.isPlayAskOpen && changes.hasChanges && (
+        <Confirmation
+          title={t("versions.playAsk.title")}
+          onClose={editor.closePlayAsk}
+          content={[
+            {
+              text: t("versions.playAsk.body", { kinds: unsavedKinds }),
+            },
+          ]}
+          buttons={[
+            {
+              text: t("common.cancel"),
+              color: "secondary",
+              onClick: editor.closePlayAsk,
+            },
+            {
+              text: t("versions.playAsk.saveAndPlay"),
+              color: "primary",
+              loading: isLoading && loadingType === "save",
+              onClick: editor.saveAndPlay,
+            },
+          ]}
+        />
+      )}
+
+      {isTagsOpen && version && (
+        <TagsDialog
+          instanceKey={instanceKey(version)}
+          name={version.version.name}
+          onClose={() => setIsTagsOpen(false)}
         />
       )}
 

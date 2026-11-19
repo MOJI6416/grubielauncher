@@ -712,12 +712,10 @@
       "foreign": "Под другой загрузчик"
     },
     "dependencies": "Зависимости",
-    "added": "Мод добавлен",
     "deleted": "Мод удалён",
     "requiredBy": "Требуется для",
     "deleteTitle": "Удаление модов",
     "alsoRemoves": "Также удалит неиспользуемые зависимости",
-    "updated": "Мод обновлён",
     "dependencyTypes": [
       "Неизвестно",
       "Обязательно",
@@ -812,22 +810,6 @@
     "notFoundModHint": "Источник не отдал файлы мода. Обычно это временный сбой CurseForge или Modrinth либо блокировка сети.",
     "notModpackHint": "Архив не похож на модпак: внутри нет манифеста. Скачайте файл заново или выберите другую версию.",
     "toggleErrorHint": "Не удалось переименовать файл мода. Закройте игру и проверьте, не блокирует ли файл антивирус.",
-    "deletedMultiple_one": "Удалён {{count}} мод",
-    "deletedMultiple_few": "Удалено {{count}} мода",
-    "deletedMultiple_many": "Удалено {{count}} модов",
-    "deletedMultiple_other": "Удалено {{count}} модов",
-    "addedMultiple_one": "Добавлен {{count}} мод",
-    "addedMultiple_few": "Добавлено {{count}} мода",
-    "addedMultiple_many": "Добавлено {{count}} модов",
-    "addedMultiple_other": "Добавлено {{count}} модов",
-    "updatedMultiple_one": "Обновлён {{count}} мод",
-    "updatedMultiple_few": "Обновлено {{count}} мода",
-    "updatedMultiple_many": "Обновлено {{count}} модов",
-    "updatedMultiple_other": "Обновлено {{count}} модов",
-    "quickInstalled_one": "Мод добавлен с {{count}} зависимостью",
-    "quickInstalled_few": "Мод добавлен с {{count}} зависимостями",
-    "quickInstalled_many": "Мод добавлен с {{count}} зависимостями",
-    "quickInstalled_other": "Мод добавлен с {{count}} зависимостями",
     "availableUpdates_one": "Доступно {{count}} обновление мода",
     "availableUpdates_few": "Доступно {{count}} обновления модов",
     "availableUpdates_many": "Доступно {{count}} обновлений модов",
@@ -956,7 +938,6 @@
     "duplicatesShow": "Показать",
     "duplicatesRemove": "Убрать лишние копии",
     "identifyAction": "Найти локальные моды на CurseForge и Modrinth",
-    "identifyShort": "Найти на сайтах",
     "identifySearching": "Ищем на CurseForge и Modrinth…",
     "identifyTitle": "Найдено на сайтах",
     "identifyHint": "Связанные моды начнут получать обновления. Ничего не перекачивается — файлы уже совпадают.",
@@ -972,7 +953,6 @@
     "connectorHint": "Fabric-моды работают на {{loader}} только через Sinytra Connector",
     "connectorFind": "Найти Connector",
     "dependenciesSkipped": "Зависимости мода под другой загрузчик не ставятся автоматически — с Connector обычно нужен Forgified Fabric API вместо Fabric API. Проверьте их на странице мода.",
-    "restoredCount": "Восстановлено файлов: {{n}}",
     "addedElsewhere": "Часть файлов ушла на другие вкладки: {{types}}",
     "catalogLoaderHintQuilt": "Quilt запускает большинство Fabric-модов — их можно искать и здесь. Обновления для них тоже проверяются под Quilt.",
     "catalogLoaderHintLegacyFabric": "Часть модов для Legacy Fabric на Modrinth помечена просто Fabric. Переключитесь, чтобы найти и их.",
@@ -987,7 +967,62 @@
     "searchFailedSource": "{{source}} не отвечает",
     "searchFailedSourceHint": "Поиск по каталогу сейчас недоступен — повторите через минуту.",
     "deletedWithDependencies": "Вместе с ними удалены неиспользуемые зависимости: {{names}}",
-    "deletedBreaksDependents": "От удалённого зависят: {{names}}. Без него игра может не запуститься."
+    "deletedBreaksDependents": "От удалённого зависят: {{names}}. Без него игра может не запуститься.",
+    "done": {
+      "installed": "Установлено: {{items}}",
+      "added": "Добавлено: {{items}}",
+      "restored": "Восстановлено: {{items}}",
+      "removed": "Удалено: {{items}}",
+      "updated": "Обновлено: {{items}}",
+      "enabled": "Включено: {{items}}",
+      "disabled": "Выключено: {{items}}",
+      "withDependencies": "Вместе с зависимостями: {{names}}"
+    },
+    "failed": {
+      "install": "Не удалось установить",
+      "remove": "Не удалось удалить",
+      "update": "Не удалось обновить",
+      "change": "Не удалось сохранить изменение"
+    },
+    "undone": "Изменение отменено",
+    "undoFailed": "Не удалось отменить изменение",
+    "applyCancelled": "Установка отменена — сборка осталась как была",
+    "applyBlockedSkipped": "Мод не установлен: его файл нужно скачать вручную",
+    "dropReadOnly": "Эту сборку нельзя менять — файлы не добавлены",
+    "categoriesExplain": "Категории приходят с Modrinth и CurseForge — по ним удобно фильтровать. Изменить их нельзя.",
+    "worldsElsewhere": "Здесь — миры, установленные из каталога. Все миры сборки и их резервные копии — во вкладке «Миры».",
+    "datapacksElsewhere": "Здесь — датапаки, скачанные в сборку. В мир их добавляют во вкладке «Миры».",
+    "openWorlds": "Открыть «Миры»",
+    "count": {
+      "mod_one": "{{count}} мод",
+      "mod_few": "{{count}} мода",
+      "mod_many": "{{count}} модов",
+      "mod_other": "{{count}} мода",
+      "resourcepack_one": "{{count}} ресурспак",
+      "resourcepack_few": "{{count}} ресурспака",
+      "resourcepack_many": "{{count}} ресурспаков",
+      "resourcepack_other": "{{count}} ресурспака",
+      "shader_one": "{{count}} шейдер",
+      "shader_few": "{{count}} шейдера",
+      "shader_many": "{{count}} шейдеров",
+      "shader_other": "{{count}} шейдера",
+      "plugin_one": "{{count}} плагин",
+      "plugin_few": "{{count}} плагина",
+      "plugin_many": "{{count}} плагинов",
+      "plugin_other": "{{count}} плагина",
+      "world_one": "{{count}} мир",
+      "world_few": "{{count}} мира",
+      "world_many": "{{count}} миров",
+      "world_other": "{{count}} мира",
+      "datapack_one": "{{count}} датапак",
+      "datapack_few": "{{count}} датапака",
+      "datapack_many": "{{count}} датапаков",
+      "datapack_other": "{{count}} датапака",
+      "mixed_one": "{{count}} элемент",
+      "mixed_few": "{{count}} элемента",
+      "mixed_many": "{{count}} элементов",
+      "mixed_other": "{{count}} элемента"
+    }
   },
   "nav": {
     "play": "Играть"
@@ -1053,7 +1088,6 @@
     "quickConnectOn": "при запуске",
     "quickConnectOff": "выключено",
     "added": "Сервер добавлен",
-    "pendingSave": "Нажмите «Сохранить», чтобы записать изменение в сборку.",
     "deleted": "Сервер удален",
     "adding": "Новый сервер",
     "editing": "Изменение сервера",
@@ -1677,7 +1711,8 @@
       "splitSystem": "Система",
       "overridesTitle": "Сборки со своими настройками",
       "overridesHint": "значения выше на них не действуют",
-      "overridesOther": "Java"
+      "overridesOther": "Java",
+      "freeNow": "Сейчас свободно {{free}} ГБ — меньше, чем выделено игре ({{allocated}} ГБ). Закройте лишние программы или уменьшите память."
     },
     "downloads": {
       "mirrorUnknown": "Проверяем источник…",
@@ -2510,12 +2545,8 @@
     "unsaved": {
       "title": "Не сохранено:",
       "kind": {
-        "name": "название",
-        "content": "контент",
-        "servers": "серверы",
         "arguments": "аргументы запуска",
         "logo": "логотип",
-        "quickServer": "быстрый вход",
         "settings": "настройки сборки"
       }
     },
@@ -2541,10 +2572,10 @@
       "ask": "Удалить свою копию «{{name}}»?"
     },
     "playBlocked": {
-      "noAccount": "Выберите аккаунт, чтобы играть."
+      "noAccount": "Выберите аккаунт, чтобы играть.",
+      "applying": "Применяем изменения контента…"
     },
     "saveBlocked": {
-      "invalidName": "Выберите другое имя — это занято или недопустимо.",
       "noChanges": "Пока нечего сохранять.",
       "notOwner": "Изменения может сохранить только автор сборки."
     },
@@ -2575,7 +2606,14 @@
     "configNotSavedAsk": "Уйти, не сохранив файл?",
     "closeUnsavedQuestion": "Закрыть лаунчер без сохранения?",
     "updateBeforeLaunchQuestion": "Обновить сборку перед запуском?",
-    "updateCheckFailedQuestion": "Обновление сборки не проверено. Повторить?"
+    "updateCheckFailedQuestion": "Обновление сборки не проверено. Повторить?",
+    "playAsk": {
+      "title": "Сохранить изменения и играть?",
+      "body": "Не сохранено: {{kinds}}. Игра запустится уже с ними.",
+      "saveAndPlay": "Сохранить и играть"
+    },
+    "renamed": "Сборка переименована в «{{name}}»",
+    "renameApply": "Переименовать"
   },
   "port": {
     "title": "Перенос сборки «{{name}}»",
@@ -2649,7 +2687,8 @@
       "missing": "Нет версии под {{target}}",
       "unchecked": "Не удалось проверить — не добавятся",
       "localMod": "Локальные моды — не добавятся"
-    }
+    },
+    "explain": "Набор — сохранённый список модов с Modrinth и CurseForge. Его можно добавить в любую сборку."
   },
   "modGroups": {
     "toGroup": "В группу",
@@ -2670,7 +2709,8 @@
     "expand": "Развернуть группу",
     "collapse": "Свернуть группу",
     "menu": "Действия с группой",
-    "saveFailed": "Не удалось сохранить группы"
+    "saveFailed": "Не удалось сохранить группы",
+    "explain": "Группа — папка в этом списке, чтобы проще ориентироваться. На игру не влияет."
   },
   "app": {
     "startupError": "Ошибка запуска",
@@ -5072,7 +5112,8 @@
       "server": "Свой сервер",
       "logs": "Логи",
       "statistics": "Статистика",
-      "configs": "Конфиги"
+      "configs": "Конфиги",
+      "arguments": "Аргументы"
     },
     "emptyInstancesHint": "Создайте сборку или импортируйте её из файла — лаунчер скачает всё необходимое.",
     "offline": {
@@ -5084,8 +5125,6 @@
   },
   "instanceSettings": {
     "title": "Настройки сборки",
-    "inherited": "Наследуется от лаунчера",
-    "overridden": "Переопределено для сборки",
     "resetAll": "Вернуть общие",
     "optimizedHint": "Добавляет {{flags}} флагов сборщика мусора",
     "priorityHint": "Игра получает больше процессорного времени",
@@ -5098,6 +5137,12 @@
       "tooOld": "Нужна Java {{major}} или новее — с этой не запустится",
       "missing": "Эта Java больше не найдена — выберите другую",
       "manual": "вручную"
+    },
+    "resetToGlobal": "Сбросить к общему",
+    "groups": {
+      "performance": "Память и производительность",
+      "compatibility": "Java и графика",
+      "language": "Язык"
     }
   },
   "modTranslations": {

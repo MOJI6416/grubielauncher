@@ -1,9 +1,6 @@
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
-import { CircleAlert, Info, SlidersHorizontal, TriangleAlert } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Slider } from "@/components/ui/slider";
+import { SlidersHorizontal } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -15,28 +12,16 @@ import {
 import { versionsAtom } from "@renderer/stores/atoms";
 import { navigate } from "@renderer/navigation/navigate";
 import { Hint } from "@renderer/components/Hint";
-import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { countOverrides } from "@/shared/instanceSettings";
 import { normalizeWorldBackupKeep } from "@/types/WorldBackup";
 import type { TSettings } from "@/types/Settings";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
-import {
-  MEMORY_MIN_MB,
-  MEMORY_STEP_MB,
-  activePresetId,
-  clampMemory,
-  maxMemoryMb,
-  memoryAdvice,
-  memoryArgsPreview,
-  memoryPresets,
-  memoryTicks,
-  tickOffset,
-} from "./memory";
+import { MemoryControl } from "./MemoryControl";
 import type { SettingsEntryId } from "./catalog";
 import { JavaSettingsGroup } from "@renderer/features/java/JavaSettingsGroup";
 import { JvmFlagsInfo } from "@renderer/components/JvmFlagsInfo";
-import { OS_NAME, PLATFORM } from "@renderer/utilities/platform";
+import { PLATFORM } from "@renderer/utilities/platform";
 import { supportsGpuPreference } from "@/shared/gpuPreference";
 import {
   GpuPreferenceControl,
@@ -45,12 +30,6 @@ import {
 } from "@renderer/features/launch/LaunchSettingsControls";
 
 const KEEP_OPTIONS = [1, 3, 5, 10, 20];
-
-const ADVICE_STYLE = {
-  info: { icon: Info, tone: "text-faint" },
-  warning: { icon: TriangleAlert, tone: "text-warning" },
-  danger: { icon: CircleAlert, tone: "text-destructive" },
-} as const;
 
 function formatGb(mb: number): string {
   return (mb / 1024).toFixed(mb % 1024 === 0 ? 0 : 1);
@@ -75,38 +54,12 @@ export function GameSection({
 }) {
   const { t } = useTranslation();
   const versions = useAtomValue(versionsAtom);
-  const [draft, setDraft] = useState(settings.xmx);
   const isLinux = PLATFORM === "linux";
   const linuxTools = useLinuxLaunchTools(isLinux);
 
-  useEffect(() => setDraft(settings.xmx), [settings.xmx]);
-
-  const max = maxMemoryMb(totalMemoryMb);
-  const presets = memoryPresets(totalMemoryMb);
-  const ticks = memoryTicks(totalMemoryMb);
-  const active = activePresetId(draft, totalMemoryMb);
-  const advice = memoryAdvice(draft, totalMemoryMb, settings.optimizedJvm);
   const overriding = versions.filter(
     (version) => countOverrides(version.version.overrides) > 0,
   );
-
-  const applyMemory = (value: number) => {
-    const next = clampMemory(value, totalMemoryMb);
-    setDraft(next);
-    if (next !== settings.xmx) commit({ xmx: next });
-  };
-
-  const presetIds = presets.map((preset) => preset.id);
-  const presetFocus = radioFocusIndex(presetIds, active);
-  const selectPreset = (id: string) => {
-    const preset = presets.find((item) => item.id === id);
-    if (preset) applyMemory(preset.mb);
-  };
-
-  const Advice = advice ? ADVICE_STYLE[advice.tone].icon : Info;
-  const gameShare = totalMemoryMb
-    ? Math.min(100, Math.round((draft / totalMemoryMb) * 100))
-    : 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -121,128 +74,13 @@ export function GameSection({
             query={query}
             changed={isChanged("memory")}
             onReset={() => reset("memory")}
-            control={
-              <span className="font-mono text-lg tabular-nums text-foreground">
-                {formatGb(draft)}
-                <span className="ml-1 text-xs text-faint">
-                  {t("settings.game.gb")}
-                </span>
-              </span>
-            }
           >
-            <div
-              role="radiogroup"
-              aria-label={t("settings.memory")}
-              onKeyDown={(event) =>
-                onRadioKeyDown(event, presetIds, active, selectPreset)
-              }
-              className="flex flex-wrap items-center gap-1.5"
-            >
-              {presets.map((preset, index) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active === preset.id}
-                  tabIndex={index === presetFocus ? 0 : -1}
-                  onClick={() => applyMemory(preset.mb)}
-                  className={cn(
-                    "flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                    active === preset.id
-                      ? "border-primary/50 bg-primary-soft text-foreground"
-                      : "border-border bg-surface-2 text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {t(`settings.game.presets.${preset.id}`)}
-                  <span className="font-mono tabular-nums text-faint">
-                    {formatGb(preset.mb)}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="relative mt-3">
-              <Slider
-                min={MEMORY_MIN_MB}
-                max={max}
-                step={MEMORY_STEP_MB}
-                value={[Math.min(draft, max)]}
-                onValueChange={([value]) => {
-                  if (typeof value === "number") setDraft(value);
-                }}
-                onValueCommit={([value]) => {
-                  if (typeof value === "number") applyMemory(value);
-                }}
-                aria-label={t("settings.memory")}
-              />
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-1.5">
-                {ticks.map((tick) => (
-                  <span
-                    key={tick}
-                    className={cn(
-                      "absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full",
-                      tick <= draft ? "bg-primary-foreground/60" : "bg-faint",
-                    )}
-                    style={{ left: `${tickOffset(tick, totalMemoryMb)}%` }}
-                  />
-                ))}
-              </div>
-              <div className="mt-1.5 flex items-center justify-between font-mono text-3xs tabular-nums text-faint">
-                <span>1 {t("settings.game.gb")}</span>
-                <span>
-                  {formatGb(max)} {t("settings.game.gb")}
-                </span>
-              </div>
-            </div>
-
-            {totalMemoryMb > 0 && (
-              <div className="mt-3 rounded-lg bg-surface-2 px-2.5 py-2">
-                <div className="flex h-2 w-full overflow-hidden rounded-full bg-surface-3">
-                  <span
-                    className="h-full bg-info"
-                    style={{ width: `${gameShare}%` }}
-                  />
-                </div>
-                <div className="mt-1.5 flex items-center justify-between text-2xs">
-                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <span className="size-1.5 rounded-[2px] bg-info" />
-                    {t("settings.game.splitGame")}
-                    <span className="font-mono tabular-nums text-faint">
-                      {formatGb(draft)} {t("settings.game.gb")}
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <span className="size-1.5 rounded-[2px] bg-surface-3" />
-                    {t("settings.game.splitSystem")}
-                    <span className="font-mono tabular-nums text-faint">
-                      {formatGb(Math.max(0, totalMemoryMb - draft))}{" "}
-                      {t("settings.game.gb")}
-                    </span>
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {advice && (
-              <p
-                className={cn(
-                  "mt-2.5 flex items-start gap-1.5 text-xs leading-snug",
-                  ADVICE_STYLE[advice.tone].tone,
-                )}
-              >
-                <Advice className="mt-px size-3.5 shrink-0" />
-                <span>
-                  {t(`settings.game.advice.${advice.key}`, {
-                    free: formatGb(advice.headroomMb),
-                    os: OS_NAME,
-                  })}
-                </span>
-              </p>
-            )}
-
-            <p className="mt-2 font-mono text-3xs text-faint">
-              {memoryArgsPreview(draft, settings.optimizedJvm)}
-            </p>
+            <MemoryControl
+              value={settings.xmx}
+              totalMemoryMb={totalMemoryMb}
+              optimizedJvm={settings.optimizedJvm}
+              onChange={(xmx) => commit({ xmx })}
+            />
           </SettingRow>
         )}
 

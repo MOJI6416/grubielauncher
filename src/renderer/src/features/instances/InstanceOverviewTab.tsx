@@ -47,6 +47,7 @@ import { isSlotHidden, slotId } from "@renderer/features/layout/layout";
 import { useLayout } from "@renderer/features/layout/useLayout";
 import { formatDuration } from "@renderer/utilities/duration";
 import { formatNumber } from "@renderer/utilities/numbers";
+import { formatGigabytes } from "@renderer/features/settings/memory";
 
 export interface OverviewAction {
   id: string;
@@ -429,7 +430,7 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
                 label={t("settings.memory")}
                 value={
                   <span className="font-mono tabular-nums">
-                    {formatNumber(props.memoryMb)} {t("settings.mb")}
+                    {formatGigabytes(props.memoryMb)} {t("settings.game.gb")}
                   </span>
                 }
                 onSelect={() => props.onOpenTab("settings")}
@@ -442,7 +443,7 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
                     {props.argumentCount || "—"}
                   </span>
                 }
-                onSelect={() => props.onOpenTab("settings")}
+                onSelect={() => props.onOpenTab("arguments")}
               />
             </FactRows>
           </SectionCard>

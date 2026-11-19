@@ -6,24 +6,9 @@ import {
 } from "@/shared/instanceSettings";
 import { sameJavaOverride } from "@/shared/javaRuntime";
 
-export type InstanceChangeKind =
-  | "name"
-  | "content"
-  | "servers"
-  | "arguments"
-  | "logo"
-  | "quickServer"
-  | "settings";
+export type InstanceChangeKind = "arguments" | "logo" | "settings";
 
-const CHANGE_ORDER: InstanceChangeKind[] = [
-  "name",
-  "content",
-  "servers",
-  "arguments",
-  "logo",
-  "quickServer",
-  "settings",
-];
+const CHANGE_ORDER: InstanceChangeKind[] = ["arguments", "logo", "settings"];
 
 export function collectChangeKinds(
   flags: Partial<Record<InstanceChangeKind, boolean>>,
@@ -41,11 +26,6 @@ export function sameChangeKinds(
   );
 }
 
-export interface ContentChanges {
-  mods: boolean;
-  servers: boolean;
-}
-
 export function sameOverrides(
   left: InstanceSettingsOverrides | undefined,
   right: InstanceSettingsOverrides | undefined,
@@ -57,41 +37,22 @@ export function sameOverrides(
   );
 }
 
-export function sameQuickServer(
-  left: string | undefined,
-  right: string | undefined,
-): boolean {
-  return (left ?? "").trim() === (right ?? "").trim();
-}
-
 export interface InstanceChangeInput {
-  draftName: string;
-  currentName: string;
   draftArguments: IArguments;
   currentArguments: IArguments | undefined;
-  draftQuickServer: string | undefined;
-  currentQuickServer: string | undefined;
   draftOverrides: InstanceSettingsOverrides | undefined;
   currentOverrides: InstanceSettingsOverrides | undefined;
   isLogoChanged: boolean;
-  content: ContentChanges;
 }
 
 export function collectInstanceChanges(
   input: InstanceChangeInput,
 ): InstanceChangeKind[] {
   return collectChangeKinds({
-    name: input.draftName.trim() !== (input.currentName ?? ""),
-    content: input.content.mods,
-    servers: input.content.servers,
     arguments:
       input.draftArguments.game !== (input.currentArguments?.game ?? "") ||
       input.draftArguments.jvm !== (input.currentArguments?.jvm ?? ""),
     logo: input.isLogoChanged,
-    quickServer: !sameQuickServer(
-      input.draftQuickServer,
-      input.currentQuickServer,
-    ),
     settings: !sameOverrides(input.draftOverrides, input.currentOverrides),
   });
 }

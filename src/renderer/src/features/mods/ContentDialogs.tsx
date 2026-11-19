@@ -1,5 +1,4 @@
 import { Dispatch, SetStateAction } from "react";
-import { toast } from "sonner";
 import {
   IAddedLocalProject,
   ILocalIdentifyMatch,
@@ -7,14 +6,12 @@ import {
   IModpack,
   IProject,
   IVersion as ModVersion,
-  ProjectType,
 } from "@/types/ModManager";
 import { showFailureToast } from "@renderer/utilities/failures";
 import {
   BlockedMods,
   IBlockedMod,
 } from "@renderer/components/Modals/BlockedMods";
-import { entryKey, isSameLocalProject } from "./entries";
 import { toLocalProject } from "./updates";
 import { TrashEntry } from "./trash";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
@@ -22,7 +19,6 @@ import { withExtractProgress } from "@renderer/utilities/archiveProgress";
 import { ImportLocalDialog, ImportMode } from "./ImportLocalDialog";
 import { IdentifyLocalDialog, IdentifyReport } from "./IdentifyLocalDialog";
 import { type DetailState } from "./contentManagerParts";
-import type { RefObject } from "react";
 import type { TFunction } from "i18next";
 
 const api = window.api;
@@ -32,19 +28,15 @@ export interface ContentDialogsProps {
   clearTrash: () => Promise<void>;
   detail: DetailState | null;
   detailSelectedVersion: ModVersion | null;
-  identifyRef: RefObject<(onlyKeys?: ReadonlySet<string>) => Promise<void>>;
   identifyReport: IdentifyReport | null;
   importing: IAddedLocalProject[];
   importMode: ImportMode;
   isClearTrashOpen: boolean;
   isImportOpen: boolean;
-  isOnline: boolean;
   lang: string;
   linkLocal: (matches: ILocalIdentifyMatch[]) => void;
-  mods: ILocalProject[];
   onClose: (modpack?: IModpack) => void;
   paths: { launcher: string; minecraft: string; java: string };
-  projectType: ProjectType;
   restorableTrash: TrashEntry[];
   setBlockedMods: Dispatch<SetStateAction<IBlockedMod[]>>;
   setBusyKey: Dispatch<SetStateAction<string | null>>;
@@ -56,8 +48,7 @@ export interface ContentDialogsProps {
   setIsImportOpen: Dispatch<SetStateAction<boolean>>;
   setModpack: (modpack: IModpack) => void;
   setModpackStage: Dispatch<SetStateAction<"download" | "extract" | null>>;
-  setMods: (mods: ILocalProject[]) => void;
-  setPendingRemoved: Dispatch<SetStateAction<ILocalProject[]>>;
+  commitImport: (added: ILocalProject[], mode: ImportMode) => void;
   sizeUnits: string[];
   t: TFunction<"translation", undefined>;
 }
@@ -67,19 +58,15 @@ export function ContentDialogs({
   clearTrash,
   detail,
   detailSelectedVersion,
-  identifyRef,
   identifyReport,
   importing,
   importMode,
   isClearTrashOpen,
   isImportOpen,
-  isOnline,
   lang,
   linkLocal,
-  mods,
   onClose,
   paths,
-  projectType,
   restorableTrash,
   setBlockedMods,
   setBusyKey,
@@ -91,8 +78,7 @@ export function ContentDialogs({
   setIsImportOpen,
   setModpack,
   setModpackStage,
-  setMods,
-  setPendingRemoved,
+  commitImport,
   sizeUnits,
   t,
 }: ContentDialogsProps) {
@@ -108,60 +94,19 @@ export function ContentDialogs({
             setIsImportOpen(false);
             setImporting([]);
           }}
-          addProjects={(projects: IProject[]) => {
-            const added = projects.map((project) =>
-              toLocalProject(project, project.versions[0], {
-                keepLocalPath: true,
-                disabled: project.versions[0]?.files.some(
-                  (file) => file.disabled === true,
-                ),
-              }),
-            );
-
-            setMods([...mods, ...added]);
-            setPendingRemoved((prev) =>
-              prev.filter(
-                (item) =>
-                  !added.some((project) => isSameLocalProject(item, project)),
+          addProjects={(projects: IProject[]) =>
+            commitImport(
+              projects.map((project) =>
+                toLocalProject(project, project.versions[0], {
+                  keepLocalPath: true,
+                  disabled: project.versions[0]?.files.some(
+                    (file) => file.disabled === true,
+                  ),
+                }),
               ),
-            );
-
-            const elsewhere = added.filter(
-              (project) => project.projectType !== projectType,
-            );
-            const elsewhereLabels = [
-              ...new Set(
-                elsewhere.map((project) =>
-                  t(`modManager.projectTypes.${project.projectType}`),
-                ),
-              ),
-            ];
-
-            const addedKeys = new Set(
-              added.map((project) => entryKey(project.provider, project.id)),
-            );
-
-            toast.success(
-              importMode === "restore"
-                ? t("modManager.restoredCount", { n: added.length })
-                : t("modManager.addedMultiple", { count: added.length }),
-              {
-                description:
-                  elsewhereLabels.length > 0
-                    ? t("modManager.addedElsewhere", {
-                        types: elsewhereLabels.join(", "),
-                      })
-                    : undefined,
-                action:
-                  isOnline && importMode === "import"
-                    ? {
-                        label: t("modManager.identifyShort"),
-                        onClick: () => void identifyRef.current(addedKeys),
-                      }
-                    : undefined,
-              },
-            );
-          }}
+              importMode,
+            )
+          }
         />
       )}
 

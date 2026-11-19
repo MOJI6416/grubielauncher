@@ -22,7 +22,6 @@ import {
 import type { Version } from "@renderer/classes/Version";
 import type { RunGameParams } from "@renderer/features/launch/types";
 import { buildInstanceActions } from "@renderer/features/instances/instanceActions";
-import { instanceFlagsAtom } from "@renderer/features/instances/atoms";
 import { duplicateInstance } from "@renderer/features/instances/duplicateInstance";
 import { requestInstanceDelete } from "@renderer/features/instances/deleteStore";
 import { openPortDialog } from "@renderer/features/port/portStore";
@@ -67,7 +66,6 @@ export function InstanceDock({
   const isRunning = useAtomValue(isRunningAtom);
   const account = useAtomValue(accountAtom);
   const isInstallActive = useAtomValue(installActiveAtom);
-  const flags = useAtomValue(instanceFlagsAtom);
   const collapsed = useSidebarCollapsed();
   const route = useAtomValue(currentRouteAtom);
   const pinned = useAtomValue(instancePinnedAtom);
@@ -139,9 +137,6 @@ export function InstanceDock({
       t,
       canPlay: !!account && !isRunning,
       isRunningInstance: running.has(instance.version.name),
-      hasSaves: flags[key]?.hasSaves === true,
-      hasServer: flags[key]?.hasServer === true,
-      hasStatistics: flags[key]?.hasStatistics === true,
       onPlay: () => void runGame({ version: instance }),
       onPlayAnother: () => void runGame({ version: instance }),
       onDuplicate: () => void duplicateInstance(instance),

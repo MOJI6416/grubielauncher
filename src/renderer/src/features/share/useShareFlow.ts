@@ -33,7 +33,8 @@ export type InstanceLoadingType =
   | "server"
   | "shortcut"
   | "check"
-  | "loader";
+  | "loader"
+  | "rename";
 
 export function useShareFlow({
   version,
@@ -62,7 +63,7 @@ export function useShareFlow({
   setLoadingType: (value: InstanceLoadingType | undefined) => void;
   setBlockedMods: (mods: IBlockedMod[]) => void;
   setIsBlockedMods: (value: boolean) => void;
-  setBlockedCloseType: (value: "save" | "check" | "sync" | undefined) => void;
+  setBlockedCloseType: (value: "check" | "sync" | undefined) => void;
 }) {
   const { t } = useTranslation();
 

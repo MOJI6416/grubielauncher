@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ILocalProject } from "@/types/ModManager";
 import { IServerOption } from "@/types/Server";
+import type { RunGameParams } from "@renderer/features/launch/types";
 import { IVersionStatistics } from "@/types/VersionStatistics";
 import { renameInstanceKey } from "@/shared/instancesFile";
 import { resolveInstanceSettings } from "@/shared/instanceSettings";
@@ -55,6 +56,8 @@ import type { InstanceLoadingType } from "@renderer/features/share/useShareFlow"
 import { instanceFlagsAtom } from "./atoms";
 import { instanceKey } from "./selectors";
 import { sameOverrides } from "./instanceOverview";
+import { useInstanceContent } from "./useInstanceContent";
+import { useInstanceServers } from "./useInstanceServers";
 import { updateInstancesFile } from "./instancesStore";
 import { createDesktopShortcut } from "./instanceActions";
 import { getInstanceActionFlags } from "./instanceActionFlags";
@@ -69,14 +72,12 @@ import {
   requestPublishOffer,
 } from "./publishOffer";
 import { consumeRenameOffer, renameOfferAtom } from "./renameOffer";
-import { readInstanceServers } from "./instanceServers";
 import { formatRunCommandForClipboard } from "./runCommand";
 import { readInstanceStatistics } from "./stats";
 import {
   hasQuickServerChanged,
   haveArgumentsChanged,
   isRenameRequested,
-  mergeExternalServers,
   repointLocalImage,
   restoreInstanceConf,
   shouldOfferPublish,
@@ -93,7 +94,13 @@ import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
 
-export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
+export function useInstanceEditor({
+  closeModal,
+  runGame,
+}: {
+  closeModal: () => void;
+  runGame: (params: RunGameParams) => Promise<void>;
+}) {
   const { t } = useTranslation();
 
   const [version, setVersion] = useAtom(selectedVersionAtom);
@@ -136,23 +143,58 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedMods, setIsBlockedMods] = useState(false);
   const [blockedCloseType, setBlockedCloseType] = useState<
-    "save" | "check" | "sync"
+    "check" | "sync" | "content"
   >();
+  const blockedResolverRef = useRef<
+    ((resolved: IBlockedMod[] | null) => void) | null
+  >(null);
 
   const [statistics, setStatistics] = useState<IVersionStatistics | null>(null);
   const [serverCores, setServerCores] = useState<IServerOption[]>([]);
   const [isServerCreate, setIsServerCreate] = useState(false);
   const [isNotSavedOpen, setIsNotSavedOpen] = useState(false);
+  const [isPlayAskOpen, setIsPlayAskOpen] = useState(false);
   const [savedAt, setSavedAt] = useState(0);
+  const [savedRevision, setSavedRevision] = useState(0);
+  const [quickConnectIp, setQuickConnectIpState] = useState(
+    () => version?.version.quickServer,
+  );
+
+  const requestBlockedFiles = useCallback(
+    (mods: IBlockedMod[]) =>
+      new Promise<IBlockedMod[] | null>((resolve) => {
+        blockedResolverRef.current?.(null);
+        blockedResolverRef.current = resolve;
+        setBlockedMods(mods);
+        setBlockedCloseType("content");
+        setIsBlockedMods(true);
+      }),
+    [],
+  );
+
+  const refreshPublishDiffRef = useRef<() => void>(() => undefined);
+
+  const content = useInstanceContent({
+    version,
+    settings,
+    server,
+    isRunning: isVersionRunning,
+    requestBlockedFiles,
+    onApplied: () => refreshPublishDiffRef.current(),
+  });
+
+  const serverList = useInstanceServers(version, () =>
+    refreshPublishDiffRef.current(),
+  );
 
   const share = useShareFlow({
     version,
     account,
-    servers: draft.servers,
+    servers: serverList.servers,
     settings,
     minecraftPath: paths.minecraft,
     image: draft.image,
-    quickConnectIp: draft.quickConnectIp,
+    quickConnectIp,
     closeModal,
     setIsLoading,
     setLoadingType,
@@ -160,19 +202,14 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     setIsBlockedMods,
     setBlockedCloseType,
   });
+  refreshPublishDiffRef.current = () => void share.refreshPublishDiff();
 
   const changes = useVersionChanges({
     version,
-    versionName: draft.name,
-    mods: draft.mods,
-    servers: draft.servers,
-    nbtServers: draft.nbtServers,
     runArguments: draft.runArguments,
     isLogoChanged: draft.isLogoChanged,
-    quickConnectIp: draft.quickConnectIp,
     overrides: draft.overrides,
-    isLoading,
-    isReady: draft.isReady,
+    savedRevision,
   });
 
   useEffect(() => {
@@ -241,13 +278,12 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     if (!version) return false;
     if (isLoading || isInstallActive) return false;
     if (!changes.hasChanges) return false;
-    if (!isNameValid) return false;
     if (
       (version.version.owner || version.version.ownerId) &&
       account &&
       !isOwnerVersion
     ) {
-      return changes.hasOnlyDownloadedRename;
+      return false;
     }
     return true;
   }, [
@@ -255,15 +291,13 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     isLoading,
     isInstallActive,
     changes.hasChanges,
-    isNameValid,
     account,
     isOwnerVersion,
-    changes.hasOnlyDownloadedRename,
   ]);
 
   async function checkIntegrity(
     resolvedBlockedMods: IBlockedMod[] = blockedMods,
-    resolvedMods: ILocalProject[] = draft.mods,
+    resolvedMods: ILocalProject[] = content.mods,
   ) {
     if (!version || !account) return;
 
@@ -271,6 +305,8 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     setIsLoading(true);
 
     try {
+      await content.idle();
+
       const hasBlockedPaths = applyBlockedModFilePaths(
         resolvedMods,
         resolvedBlockedMods,
@@ -305,6 +341,7 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     } finally {
       setIsLoading(false);
       setLoadingType(undefined);
+      bumpInstanceDataRevision();
     }
   }
 
@@ -319,10 +356,9 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     }
 
     const { blockedMods: b, mods: resolvedMods } = await checkBlockedMods(
-      draft.mods,
+      version.version.loader.mods ?? [],
       version.versionPath,
     );
-    if (resolvedMods !== draft.mods) draft.setMods(resolvedMods);
     if (b.length > 0) {
       setBlockedMods(b);
       setIsBlockedMods(true);
@@ -333,163 +369,135 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     await checkIntegrity(undefined, resolvedMods);
   }
 
-  async function saveVersion(
-    resolvedBlockedMods: IBlockedMod[] = blockedMods,
-    resolvedMods: ILocalProject[] = draft.mods,
-  ) {
+  async function renameInstance(): Promise<boolean> {
+    if (!version) return false;
+
+    if (!isRenameRequested(draft.name, version.version.name)) {
+      draft.setEditName(false);
+      return true;
+    }
+
+    if (!isNameValid) return false;
+
+    setLoadingType("rename");
+    setIsLoading(true);
+
+    const versionsPath = await api.path.join(paths.minecraft, "versions");
+    const oldName = version.version.name;
+    const oldPath = version.versionPath;
+    const newName = draft.name.trim();
+    const newPath = await api.path.join(versionsPath, newName);
+    let isMoved = false;
+
+    try {
+      await content.idle();
+
+      if (!(await api.fs.rename(oldPath, newPath))) {
+        throw new Error("rename failed");
+      }
+      isMoved = true;
+
+      setConsoles((prev) => ({
+        consoles: prev.consoles.filter((c) => c.versionName !== oldName),
+      }));
+
+      version.version.name = newName;
+      await version.init();
+
+      const repointed = repointLocalImage(
+        version.version.image,
+        oldPath,
+        version.versionPath,
+      );
+      if (repointed) {
+        version.version.image = repointed;
+        if (!draft.isLogoChanged) draft.setImage(repointed);
+      }
+
+      if (!(await version.save())) throw new Error("version save failed");
+
+      const previousKey = oldPath || oldName;
+      const renamedKey = version.versionPath || newName;
+      updateInstancesFile((file) =>
+        renameInstanceKey(file, previousKey, renamedKey),
+      );
+
+      draft.setEditName(false);
+      bumpInstanceDataRevision();
+      remapInstance(previousKey, renamedKey);
+      toast.success(t("versions.renamed", { name: newName }));
+
+      if (
+        shouldOfferPublish({
+          changed: true,
+          shareCode: version.version.shareCode,
+          isDownloadedVersion: version.version.downloadedVersion,
+          isNetwork,
+          isVersionRunning,
+        })
+      ) {
+        requestPublishOffer(renamedKey);
+      }
+
+      return true;
+    } catch (error) {
+      if (isMoved) {
+        version.version.name = oldName;
+        await api.fs.rename(newPath, oldPath).catch(ignoreFailure);
+        await version.init().catch(ignoreFailure);
+      }
+
+      showFailureToast(t("versions.renameError"), error, {
+        channels: ["fs:rename", "version:save"],
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+      setLoadingType(undefined);
+    }
+  }
+
+  function cancelRename() {
     if (!version) return;
+    draft.setEditName(false);
+    draft.setName(version.version.name);
+  }
+
+  async function setQuickConnectIp(ip: string) {
+    if (!version) return;
+    const previous = version.version.quickServer;
+    if (!hasQuickServerChanged(ip, previous)) return;
+
+    const next = ip.trim() || undefined;
+    setQuickConnectIpState(next);
+    version.version.quickServer = next;
+
+    if (await version.save()) {
+      refreshPublishDiffRef.current();
+      return;
+    }
+
+    version.version.quickServer = previous;
+    setQuickConnectIpState(previous);
+    if (!reportIpcFailure(t("versions.updateError"), ["version:save"])) {
+      showFailureToast(t("versions.updateError"), undefined, {
+        channels: ["version:save"],
+      });
+    }
+  }
+
+  async function saveVersion(): Promise<boolean> {
+    if (!version) return false;
 
     let isShare = false;
 
     setLoadingType("save");
     setIsLoading(true);
 
-    let isRename = false;
-    let renamedKey = "";
-    let previousKey = "";
-    const previousImage = version.version.image ?? "";
-    const oldPath = version.versionPath;
-    if (isRenameRequested(draft.name, version.version.name)) {
-      const versionsPath = await api.path.join(paths.minecraft, "versions");
-      const oldName = version.version.name;
-
-      const newName = draft.name.trim();
-      const newPath = await api.path.join(versionsPath, newName);
-
-      try {
-        if (!(await api.fs.rename(version.versionPath, newPath))) {
-          throw new Error("rename failed");
-        }
-
-        isRename = true;
-
-        setConsoles((prev) => ({
-          consoles: prev.consoles.filter((c) => c.versionName !== oldName),
-        }));
-
-        version.version.name = newName;
-        await version.init();
-
-        const repointed = repointLocalImage(
-          version.version.image,
-          oldPath,
-          version.versionPath,
-        );
-        if (repointed) {
-          version.version.image = repointed;
-          draft.setImage(repointed);
-        }
-
-        previousKey = oldPath || oldName;
-        renamedKey = version.versionPath || newName;
-        updateInstancesFile((file) =>
-          renameInstanceKey(file, previousKey, renamedKey),
-        );
-
-        isShare = true;
-      } catch (error) {
-        if (isRename) {
-          version.version.name = oldName;
-          await api.fs.rename(newPath, oldPath).catch(ignoreFailure);
-          await version.init().catch(ignoreFailure);
-        }
-
-        showFailureToast(t("versions.renameError"), error, {
-          channels: ["fs:rename"],
-        });
-
-        setIsLoading(false);
-        setLoadingType(undefined);
-        return;
-      } finally {
-        draft.setEditName(false);
-      }
-    }
-
     const wasLogoChanged = draft.isLogoChanged;
     const confSnapshot = snapshotInstanceConf(version.version);
 
-    try {
-      const hasBlockedPaths = applyBlockedModFilePaths(
-        resolvedMods,
-        resolvedBlockedMods,
-      );
-      const hasModsChanged = !(await api.modManager.compareMods(
-        version.version.loader.mods || [],
-        resolvedMods,
-      ));
-
-      if (hasModsChanged || hasBlockedPaths) {
-        const previousMods = version.version.loader.mods;
-        version.version.loader.mods = resolvedMods;
-
-        try {
-          const versionMods = new Mods(settings, version.version, server);
-          if (isVersionRunning) await versionMods.syncLive();
-          else await versionMods.check();
-        } catch (error) {
-          version.version.loader.mods = previousMods;
-          throw error;
-        }
-
-        isShare = true;
-        setBlockedMods([]);
-      }
-    } catch (error) {
-      if (isRename) {
-        version.version.name = await api.path.basename(oldPath);
-        await api.fs.rename(version.versionPath, oldPath).catch(ignoreFailure);
-        await version.init().catch(ignoreFailure);
-
-        version.version.image = previousImage;
-        draft.setImage(previousImage);
-        updateInstancesFile((file) =>
-          renameInstanceKey(file, renamedKey, previousKey),
-        );
-      }
-
-      showFailureToast(t("versions.updateError"), error);
-      setIsLoading(false);
-      setLoadingType(undefined);
-      return;
-    }
-
-    let hasPartialFailure = false;
     let hasLogoFailure = false;
-
-    if (version.version.version.serverManager && draft.isReady) {
-      try {
-        const serversPath = await api.path.join(
-          version.versionPath,
-          "servers.dat",
-        );
-
-        if (!(await api.servers.compare(draft.nbtServers, draft.servers))) {
-          const stored = await readInstanceServers(version.versionPath);
-          if (!stored) throw new Error("servers read failed");
-
-          const merged = mergeExternalServers(
-            draft.servers,
-            stored,
-            draft.nbtServers,
-          );
-
-          if (!(await api.servers.write(merged, serversPath))) {
-            throw new Error("servers write failed");
-          }
-
-          draft.setServers(merged);
-          draft.setNbtServers([...merged]);
-          isShare = true;
-        }
-      } catch (error) {
-        hasPartialFailure = true;
-        showFailureToast(t("versions.serversSaveError"), error, {
-          channels: ["servers:write", "servers:read"],
-          fallbackDescription: t("versions.serversSaveErrorHint"),
-        });
-      }
-    }
 
     version.version.lastUpdate = new Date();
 
@@ -530,19 +538,11 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
         version.version.image = fileUrl;
         isShare = true;
       } catch (error) {
-        hasPartialFailure = true;
         hasLogoFailure = true;
         showFailureToast(t("versions.logoSaveError"), error, {
           channels: ["fs:copy", "fs:writeFile"],
         });
       }
-    }
-
-    if (
-      hasQuickServerChanged(draft.quickConnectIp, version.version.quickServer)
-    ) {
-      version.version.quickServer = draft.quickConnectIp;
-      isShare = true;
     }
 
     const isConfWriteFailed = !(await version.save());
@@ -557,15 +557,10 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
       }
     }
 
-    draft.setPendingRemovedLocalMods([]);
-
-    try {
-      await api.fs.rimraf(await api.path.join(version.versionPath, "temp"));
-    } catch {}
-
     bumpInstanceDataRevision();
+    setSavedRevision((value) => value + 1);
 
-    if (!isConfWriteFailed && !hasPartialFailure) {
+    if (!isConfWriteFailed && !hasLogoFailure) {
       setSavedAt(Date.now());
     }
 
@@ -577,8 +572,6 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     setLoadingType(undefined);
     setIsLoading(false);
 
-    if (isRename) remapInstance(previousKey, renamedKey);
-
     if (
       shouldOfferPublish({
         changed: isShare && !isConfWriteFailed,
@@ -588,31 +581,52 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
         isVersionRunning,
       })
     ) {
-      if (isRename) requestPublishOffer(renamedKey);
-      else share.setIsOpenModalShare(true);
+      share.setIsOpenModalShare(true);
     }
+
+    return !isConfWriteFailed;
   }
 
   async function commitSave() {
-    if (!version) return;
+    await saveVersion();
+  }
 
-    const { blockedMods: b, mods: resolvedMods } = await checkBlockedMods(
-      draft.mods,
-      version.versionPath,
-    );
-    if (resolvedMods !== draft.mods) draft.setMods(resolvedMods);
-    if (b.length > 0) {
-      setBlockedMods(b);
-      setIsBlockedMods(true);
-      setBlockedCloseType("save");
+  function resetDraft() {
+    draft.reset();
+    setSavedRevision((value) => value + 1);
+  }
+
+  async function launch() {
+    if (!version) return;
+    await content.idle();
+    await runGame({ version });
+  }
+
+  function requestPlay() {
+    if (!version) return;
+    if (changes.hasChanges && canSave) {
+      setIsPlayAskOpen(true);
       return;
     }
+    void launch();
+  }
 
-    await saveVersion(undefined, resolvedMods);
+  async function saveAndPlay() {
+    setIsPlayAskOpen(false);
+    if (await saveVersion()) await launch();
   }
 
   async function resolveBlockedMods(resolved: IBlockedMod[] | null) {
     setIsBlockedMods(false);
+
+    if (blockedCloseType === "content") {
+      const resolve = blockedResolverRef.current;
+      blockedResolverRef.current = null;
+      setBlockedMods([]);
+      setBlockedCloseType(undefined);
+      resolve?.(resolved);
+      return;
+    }
 
     if (!resolved) {
       share.setSyncModpack(undefined);
@@ -622,7 +636,6 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
 
     setBlockedMods(resolved);
 
-    if (blockedCloseType === "save") await saveVersion(resolved);
     if (blockedCloseType === "check") await checkIntegrity(resolved);
     if (blockedCloseType === "sync")
       await share.sync(resolved, share.syncModpack);
@@ -744,11 +757,11 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
             game: "",
             jvm: "",
           },
-          servers: draft.servers,
+          servers: serverList.servers,
           version: version.version,
           versionPath: version.versionPath,
           logo: version.version.image || draft.image || "",
-          quickServer: draft.quickConnectIp,
+          quickServer: quickConnectIp,
         },
         account.accessToken || "",
         modpackData.data,
@@ -905,6 +918,12 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     isForeignPack,
     isVersionRunning,
     draft,
+    content,
+    servers: serverList.servers,
+    setServers: serverList.setServers,
+    isServersReady: serverList.isReady,
+    quickConnectIp,
+    setQuickConnectIp,
     changes,
     share,
     flags,
@@ -925,8 +944,15 @@ export function useInstanceEditor({ closeModal }: { closeModal: () => void }) {
     closeNotSaved,
     keepEditing,
     discardChanges,
+    isPlayAskOpen,
+    closePlayAsk: () => setIsPlayAskOpen(false),
+    requestPlay,
+    saveAndPlay,
     forgetInstance,
     commitSave,
+    resetDraft,
+    renameInstance,
+    cancelRename,
     runIntegrityCheck,
     copyRunCommand,
     createShortcut,

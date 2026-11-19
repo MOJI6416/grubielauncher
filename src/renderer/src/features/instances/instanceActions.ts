@@ -1,20 +1,17 @@
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowRightLeft,
-  Boxes,
-  ChartArea,
   CircleUserRound,
   Copy,
   CopyPlus,
+  CopySlash,
   Folder,
-  Globe2,
+  FolderArchive,
   LayoutDashboard,
   MonitorDown,
   Play,
-  ScrollText,
-  Server,
-  ServerCog,
-  SlidersHorizontal,
+  ScanLine,
+  SquareTerminal,
   Tag,
   Trash,
 } from "lucide-react";
@@ -28,7 +25,6 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { accountsAtom } from "@renderer/stores/atoms";
 import { playAsVersionAtom } from "@renderer/features/launch/atoms";
 import { navigate } from "@renderer/navigation/navigate";
-import type { InstanceTab } from "@renderer/navigation/routes";
 import { getDeleteCopy, isForeignPublication } from "./deleteGates";
 import { instanceKey } from "./selectors";
 
@@ -41,7 +37,22 @@ export interface InstanceAction {
   disabled?: boolean;
   destructive?: boolean;
   shortcut?: string;
+  busy?: boolean;
+  hint?: string;
+  blockedReason?: string;
   onSelect: () => void;
+}
+
+export interface InstanceScreenTools {
+  isLoading: boolean;
+  loadingType?: string;
+  isOnline: boolean;
+  hasAccount: boolean;
+  devMode: boolean;
+  onCheckIntegrity: () => void;
+  onExport: () => void;
+  onCopyRunCommand: (relative: boolean) => void;
+  onCreateShortcut: () => void;
 }
 
 export interface InstanceActionContext {
@@ -49,9 +60,6 @@ export interface InstanceActionContext {
   t: TFunction;
   canPlay: boolean;
   isRunningInstance: boolean;
-  hasSaves: boolean;
-  hasServer: boolean;
-  hasStatistics: boolean;
   onPlay: () => void;
   onPlayAnother: () => void;
   onManageTags?: () => void;
@@ -61,7 +69,16 @@ export interface InstanceActionContext {
   account?: ILocalAccount | null;
   isBusy?: boolean;
   deleteShortcut?: string;
+  screen?: InstanceScreenTools;
 }
+
+export const OVERVIEW_TILE_IDS = [
+  "folder",
+  "integrity",
+  "export",
+  "shortcut",
+  "play-as",
+] as const;
 
 export async function createDesktopShortcut(
   instance: Version,
@@ -93,9 +110,8 @@ export async function createDesktopShortcut(
 export function buildInstanceActions(
   context: InstanceActionContext,
 ): InstanceAction[][] {
-  const { instance, t } = context;
-  const open = (tab?: InstanceTab) =>
-    navigate({ name: "instance", id: instanceKey(instance), tab });
+  const { instance, t, screen } = context;
+  const busy = context.isBusy === true || screen?.isLoading === true;
 
   const launch: InstanceAction[] = [
     context.isRunningInstance
@@ -122,87 +138,38 @@ export function buildInstanceActions(
       label: t("playAs.menu"),
       icon: CircleUserRound,
       disabled: !context.canPlay,
+      hint: t("playAs.hint"),
       onSelect: () => store.set(playAsVersionAtom, instance),
     });
   }
 
-  const sections: InstanceAction[] = [
-    {
-      id: "overview",
-      label: t("versions.openInstance"),
-      icon: LayoutDashboard,
-      onSelect: () => open(),
-    },
-    {
-      id: "content",
-      label: t("shell.tabs.content"),
-      icon: Boxes,
-      onSelect: () => open("content"),
-    },
-  ];
+  const groups: InstanceAction[][] = [launch];
 
-  if (context.hasSaves) {
-    sections.push({
-      id: "worlds",
-      label: t("shell.tabs.worlds"),
-      icon: Globe2,
-      onSelect: () => open("worlds"),
-    });
+  if (!screen) {
+    groups.push([
+      {
+        id: "overview",
+        label: t("versions.openInstance"),
+        icon: LayoutDashboard,
+        onSelect: () =>
+          navigate({ name: "instance", id: instanceKey(instance) }),
+      },
+    ]);
   }
-
-  if (instance.version.version?.serverManager) {
-    sections.push({
-      id: "servers",
-      label: t("shell.tabs.servers"),
-      icon: Server,
-      onSelect: () => open("servers"),
-    });
-  }
-
-  if (context.hasServer) {
-    sections.push({
-      id: "server",
-      label: t("versions.serverManager"),
-      icon: ServerCog,
-      onSelect: () => open("server"),
-    });
-  }
-
-  sections.push({
-    id: "settings",
-    label: t("shell.tabs.settings"),
-    icon: SlidersHorizontal,
-    onSelect: () => open("settings"),
-  });
-
-  if (context.hasStatistics) {
-    sections.push({
-      id: "statistics",
-      label: t("versionStatistics.title"),
-      icon: ChartArea,
-      onSelect: () => open("statistics"),
-    });
-  }
-
-  sections.push({
-    id: "logs",
-    label: t("shell.tabs.logs"),
-    icon: ScrollText,
-    onSelect: () => open("logs"),
-  });
 
   const tools: InstanceAction[] = [
     {
       id: "duplicate",
       label: t("versions.duplicate"),
       icon: Copy,
-      disabled: context.isRunningInstance,
+      disabled: context.isRunningInstance || busy,
       onSelect: context.onDuplicate,
     },
     {
       id: "port",
       label: t("versions.port"),
       icon: ArrowRightLeft,
+      disabled: busy,
       onSelect: context.onPort,
     },
     {
@@ -215,9 +182,60 @@ export function buildInstanceActions(
       id: "shortcut",
       label: t("versions.createShortcut"),
       icon: MonitorDown,
-      onSelect: () => void createDesktopShortcut(instance, t),
+      hint: t("versions.shortcutHint"),
+      busy: screen?.isLoading === true && screen.loadingType === "shortcut",
+      disabled: screen?.isLoading === true,
+      onSelect: screen
+        ? screen.onCreateShortcut
+        : () => void createDesktopShortcut(instance, t),
     },
   ];
+
+  if (screen) {
+    const integrityBlocked = !screen.isOnline
+      ? t("versions.integrityBlocked.offline")
+      : context.isRunningInstance
+        ? t("versions.integrityBlocked.running")
+        : undefined;
+
+    tools.push(
+      {
+        id: "export",
+        label: t("export.btn"),
+        icon: FolderArchive,
+        hint: t("export.contents"),
+        disabled: screen.isLoading,
+        onSelect: screen.onExport,
+      },
+      {
+        id: "integrity",
+        label: t("versions.checkIntegrity"),
+        icon: ScanLine,
+        hint: t("versions.integrityHint"),
+        busy: screen.isLoading && screen.loadingType === "check",
+        disabled: screen.isLoading || Boolean(integrityBlocked),
+        blockedReason: integrityBlocked,
+        onSelect: screen.onCheckIntegrity,
+      },
+      {
+        id: "run-command",
+        label: t("versions.runCommand"),
+        icon: SquareTerminal,
+        disabled: screen.isLoading || !screen.hasAccount,
+        onSelect: () => screen.onCopyRunCommand(false),
+      },
+    );
+
+    if (screen.devMode) {
+      tools.push({
+        id: "run-command-relative",
+        label: t("versions.copyRelativePath"),
+        icon: CopySlash,
+        disabled: screen.isLoading || !screen.hasAccount,
+        onSelect: () => screen.onCopyRunCommand(true),
+      });
+    }
+  }
 
   if (context.onManageTags) {
     tools.push({
@@ -228,7 +246,9 @@ export function buildInstanceActions(
     });
   }
 
-  if (!context.onDelete) return [launch, sections, tools];
+  groups.push(tools);
+
+  if (!context.onDelete) return groups;
 
   const foreignPublication = isForeignPublication({
     shareCode: instance.version.shareCode,
@@ -237,17 +257,25 @@ export function buildInstanceActions(
     account: context.account,
   });
 
-  const danger: InstanceAction[] = [
+  groups.push([
     {
       id: "delete",
       label: t(getDeleteCopy({ foreignPublication }).menuKey),
       icon: Trash,
       destructive: true,
       shortcut: context.deleteShortcut,
-      disabled: context.isRunningInstance || context.isBusy === true,
+      disabled: context.isRunningInstance || busy,
       onSelect: context.onDelete,
     },
-  ];
+  ]);
 
-  return [launch, sections, tools, danger];
+  return groups;
+}
+
+export function pickActions(
+  groups: InstanceAction[][],
+  ids: readonly string[],
+): InstanceAction[] {
+  const flat = groups.flat();
+  return ids.flatMap((id) => flat.filter((action) => action.id === id));
 }

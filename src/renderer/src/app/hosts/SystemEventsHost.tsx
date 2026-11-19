@@ -15,6 +15,7 @@ import {
 } from "@renderer/utilities/failures";
 import { playSound } from "@renderer/utilities/sounds";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
+import { unexpectedQuarantine } from "@renderer/features/mods/expectedQuarantine";
 
 const api = window.api;
 
@@ -135,15 +136,19 @@ export function SystemEventsHost() {
 
     const unsubscribeModsQuarantined = api.events.onModsQuarantined(
       (notice) => {
-        if (!notice?.entries?.length) return;
+        const entries = unexpectedQuarantine(
+          notice?.versionName,
+          notice?.entries ?? [],
+        );
+        if (entries.length === 0) return;
 
         toast.info(
           tRef.current("modManager.quarantinedTitle", {
-            count: notice.entries.length,
+            count: entries.length,
           }),
           {
             description: [
-              notice.entries.slice(0, 5).join(", "),
+              entries.slice(0, 5).join(", "),
               tRef.current("modManager.quarantinedHint"),
             ].join(" — "),
           },

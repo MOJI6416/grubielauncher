@@ -709,12 +709,10 @@
       "foreign": "Für anderen Loader"
     },
     "dependencies": "Abhängigkeiten",
-    "added": "Mod hinzugefügt",
     "deleted": "Mod gelöscht",
     "requiredBy": "Benötigt von",
     "deleteTitle": "Mods entfernen",
     "alsoRemoves": "Entfernt auch ungenutzte Abhängigkeiten",
-    "updated": "Mod aktualisiert",
     "dependencyTypes": [
       "Unbekannt",
       "Erforderlich",
@@ -808,14 +806,6 @@
     "notFoundModHint": "Die Quelle hat keine Mod-Dateien geliefert. Meist ist das ein vorübergehender Ausfall von CurseForge oder Modrinth oder eine Netzwerksperre.",
     "notModpackHint": "Das Archiv sieht nicht nach einem Modpack aus: Es enthält kein Manifest. Laden Sie es erneut herunter oder wählen Sie eine andere Version.",
     "toggleErrorHint": "Die Mod-Datei konnte nicht umbenannt werden. Schließen Sie das Spiel und prüfen Sie, ob ein Virenscanner die Datei sperrt.",
-    "deletedMultiple_one": "{{count}} Mod gelöscht",
-    "deletedMultiple_other": "{{count}} Mods gelöscht",
-    "addedMultiple_one": "{{count}} Mod hinzugefügt",
-    "addedMultiple_other": "{{count}} Mods hinzugefügt",
-    "updatedMultiple_one": "{{count}} Mod aktualisiert",
-    "updatedMultiple_other": "{{count}} Mods aktualisiert",
-    "quickInstalled_one": "Mod mit {{count}} Abhängigkeit hinzugefügt",
-    "quickInstalled_other": "Mod mit {{count}} Abhängigkeiten hinzugefügt",
     "availableUpdates_one": "{{count}} Mod-Update verfügbar",
     "availableUpdates_other": "{{count}} Mod-Updates verfügbar",
     "uncheckedUpdates_one": "{{count}} Mod konnte nicht geprüft werden",
@@ -936,7 +926,6 @@
     "duplicatesShow": "Anzeigen",
     "duplicatesRemove": "Überflüssige Kopien entfernen",
     "identifyAction": "Lokale Mods auf CurseForge und Modrinth suchen",
-    "identifyShort": "Online suchen",
     "identifySearching": "Suche auf CurseForge und Modrinth…",
     "identifyTitle": "Online gefunden",
     "identifyHint": "Verknüpfte Mods erhalten ab jetzt Updates. Nichts wird erneut heruntergeladen – die Dateien stimmen bereits überein.",
@@ -952,7 +941,6 @@
     "connectorHint": "Fabric-Mods laufen auf {{loader}} nur über Sinytra Connector",
     "connectorFind": "Connector suchen",
     "dependenciesSkipped": "Abhängigkeiten eines Mods für einen anderen Loader werden nicht automatisch installiert – mit Connector brauchen Sie meist Forgified Fabric API statt Fabric API. Prüfen Sie sie auf der Mod-Seite.",
-    "restoredCount": "Wiederhergestellt: {{n}}",
     "addedElsewhere": "Einige Dateien landeten in anderen Tabs: {{types}}",
     "catalogLoaderHintQuilt": "Quilt führt die meisten Fabric-Mods aus, daher können Sie auch hier nach ihnen suchen. Ihre Updates werden ebenfalls für Quilt geprüft.",
     "catalogLoaderHintLegacyFabric": "Einige Legacy-Fabric-Mods auf Modrinth sind als einfaches Fabric markiert. Wechseln Sie, um auch diese zu finden.",
@@ -967,7 +955,48 @@
     "searchFailedSource": "{{source}} antwortet nicht",
     "searchFailedSourceHint": "Die Katalogsuche ist gerade nicht verfügbar – versuchen Sie es in einer Minute erneut.",
     "deletedWithDependencies": "Ungenutzte Abhängigkeiten wurden mit entfernt: {{names}}",
-    "deletedBreaksDependents": "Davon hängen ab: {{names}}. Ohne das Entfernte startet das Spiel womöglich nicht."
+    "deletedBreaksDependents": "Davon hängen ab: {{names}}. Ohne das Entfernte startet das Spiel womöglich nicht.",
+    "done": {
+      "installed": "Installiert: {{items}}",
+      "added": "Hinzugefügt: {{items}}",
+      "restored": "Wiederhergestellt: {{items}}",
+      "removed": "Entfernt: {{items}}",
+      "updated": "Aktualisiert: {{items}}",
+      "enabled": "Aktiviert: {{items}}",
+      "disabled": "Deaktiviert: {{items}}",
+      "withDependencies": "Zusammen mit Abhängigkeiten: {{names}}"
+    },
+    "failed": {
+      "install": "Installation fehlgeschlagen",
+      "remove": "Entfernen fehlgeschlagen",
+      "update": "Aktualisierung fehlgeschlagen",
+      "change": "Änderung konnte nicht gespeichert werden"
+    },
+    "undone": "Änderung rückgängig gemacht",
+    "undoFailed": "Änderung konnte nicht rückgängig gemacht werden",
+    "applyCancelled": "Installation abgebrochen – die Instanz ist unverändert",
+    "applyBlockedSkipped": "Mod nicht installiert: Die Datei muss manuell heruntergeladen werden",
+    "dropReadOnly": "Diese Instanz kann nicht geändert werden – die Dateien wurden nicht hinzugefügt",
+    "categoriesExplain": "Kategorien stammen von Modrinth und CurseForge und helfen beim Filtern. Ändern lassen sie sich nicht.",
+    "worldsElsewhere": "Hier stehen Welten aus dem Katalog. Alle Welten der Instanz und ihre Backups finden Sie im Tab „Welten“.",
+    "datapacksElsewhere": "Hier stehen Datenpakete, die in die Instanz geladen wurden. Zu einer Welt fügen Sie sie im Tab „Welten“ hinzu.",
+    "openWorlds": "„Welten“ öffnen",
+    "count": {
+      "mod_one": "{{count}} Mod",
+      "mod_other": "{{count}} Mods",
+      "resourcepack_one": "{{count}} Ressourcenpaket",
+      "resourcepack_other": "{{count}} Ressourcenpakete",
+      "shader_one": "{{count}} Shader",
+      "shader_other": "{{count}} Shader",
+      "plugin_one": "{{count}} Plugin",
+      "plugin_other": "{{count}} Plugins",
+      "world_one": "{{count}} Welt",
+      "world_other": "{{count}} Welten",
+      "datapack_one": "{{count}} Datenpaket",
+      "datapack_other": "{{count}} Datenpakete",
+      "mixed_one": "{{count}} Element",
+      "mixed_other": "{{count}} Elemente"
+    }
   },
   "nav": {
     "play": "Spielen"
@@ -1033,7 +1062,6 @@
     "quickConnectOn": "beim Start",
     "quickConnectOff": "aus",
     "added": "Server hinzugefügt",
-    "pendingSave": "Drücken Sie „Speichern“, um die Änderung in die Instanz zu schreiben.",
     "deleted": "Server gelöscht",
     "adding": "Neuer Server",
     "editing": "Server bearbeiten",
@@ -1653,7 +1681,8 @@
       "splitSystem": "System",
       "overridesTitle": "Instanzen mit eigenen Einstellungen",
       "overridesHint": "für sie gelten die Werte oben nicht",
-      "overridesOther": "Java"
+      "overridesOther": "Java",
+      "freeNow": "Gerade sind nur {{free}} GB frei – weniger als die {{allocated}} GB für das Spiel. Schließen Sie andere Programme oder verringern Sie den Speicher."
     },
     "downloads": {
       "mirrorUnknown": "Quelle wird geprüft…",
@@ -2484,12 +2513,8 @@
     "unsaved": {
       "title": "Ungespeichert:",
       "kind": {
-        "name": "Name",
-        "content": "Inhalt",
-        "servers": "Server",
         "arguments": "Startargumente",
         "logo": "Logo",
-        "quickServer": "Schnellbeitritt",
         "settings": "Instanzeinstellungen"
       }
     },
@@ -2515,10 +2540,10 @@
       "ask": "Ihre Kopie von „{{name}}“ löschen?"
     },
     "playBlocked": {
-      "noAccount": "Wählen Sie ein Konto, um zu spielen."
+      "noAccount": "Wählen Sie ein Konto, um zu spielen.",
+      "applying": "Inhaltsänderungen werden angewendet…"
     },
     "saveBlocked": {
-      "invalidName": "Wählen Sie einen anderen Namen – dieser ist vergeben oder ungültig.",
       "noChanges": "Noch nichts zu speichern.",
       "notOwner": "Nur der Autor dieser Instanz kann Änderungen speichern."
     },
@@ -2549,7 +2574,14 @@
     "configNotSavedAsk": "Verlassen, ohne die Datei zu speichern?",
     "closeUnsavedQuestion": "Launcher ohne Speichern schließen?",
     "updateBeforeLaunchQuestion": "Instanz vor dem Start aktualisieren?",
-    "updateCheckFailedQuestion": "Update der Instanz nicht geprüft. Erneut versuchen?"
+    "updateCheckFailedQuestion": "Update der Instanz nicht geprüft. Erneut versuchen?",
+    "playAsk": {
+      "title": "Änderungen speichern und spielen?",
+      "body": "Nicht gespeichert: {{kinds}}. Das Spiel startet dann mit ihnen.",
+      "saveAndPlay": "Speichern und spielen"
+    },
+    "renamed": "Instanz in „{{name}}“ umbenannt",
+    "renameApply": "Umbenennen"
   },
   "port": {
     "title": "„{{name}}“ übertragen",
@@ -2623,7 +2655,8 @@
       "missing": "Keine Version für {{target}}",
       "unchecked": "Nicht prüfbar — werden nicht hinzugefügt",
       "localMod": "Lokale Mods — werden nicht hinzugefügt"
-    }
+    },
+    "explain": "Ein Mod-Set ist eine gespeicherte Liste von Mods aus Modrinth und CurseForge. Sie können es zu jeder Instanz hinzufügen."
   },
   "modGroups": {
     "toGroup": "In eine Gruppe",
@@ -2644,7 +2677,8 @@
     "expand": "Gruppe aufklappen",
     "collapse": "Gruppe zuklappen",
     "menu": "Gruppenaktionen",
-    "saveFailed": "Die Gruppen konnten nicht gespeichert werden"
+    "saveFailed": "Die Gruppen konnten nicht gespeichert werden",
+    "explain": "Eine Gruppe ist ein Ordner in dieser Liste für mehr Übersicht. Auf das Spiel wirkt sie sich nicht aus."
   },
   "app": {
     "startupError": "Startfehler",
@@ -5011,7 +5045,8 @@
       "server": "Mein Server",
       "logs": "Logs",
       "statistics": "Statistik",
-      "configs": "Konfigs"
+      "configs": "Konfigs",
+      "arguments": "Argumente"
     },
     "emptyInstancesHint": "Erstellen Sie eine Instanz oder importieren Sie eine aus einer Datei – der Launcher lädt alles Nötige herunter.",
     "offline": {
@@ -5023,8 +5058,6 @@
   },
   "instanceSettings": {
     "title": "Instanzeinstellungen",
-    "inherited": "Vom Launcher übernommen",
-    "overridden": "Für diese Instanz überschrieben",
     "resetAll": "Launcher-Werte verwenden",
     "optimizedHint": "Fügt {{flags}} Flags für den Garbage Collector hinzu",
     "priorityHint": "Das Spiel bekommt mehr Prozessorzeit",
@@ -5037,6 +5070,12 @@
       "tooOld": "Braucht Java {{major}} oder neuer – mit diesem startet sie nicht",
       "missing": "Dieses Java wird nicht mehr gefunden – wählen Sie ein anderes",
       "manual": "manuell"
+    },
+    "resetToGlobal": "Auf Launcher-Wert zurücksetzen",
+    "groups": {
+      "performance": "Speicher und Leistung",
+      "compatibility": "Java und Grafik",
+      "language": "Sprache"
     }
   },
   "modTranslations": {

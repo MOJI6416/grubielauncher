@@ -19,6 +19,7 @@ export const HIDEABLE_TABS: InstanceTab[] = [
   "servers",
   "server",
   "configs",
+  "arguments",
   "statistics",
   "logs",
 ];

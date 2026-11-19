@@ -31,6 +31,7 @@ import {
   UserRound,
   Users,
   Wifi,
+  SquareTerminal,
 } from "lucide-react";
 import {
   accountAtom,
@@ -104,6 +105,7 @@ const INSTANCE_TABS: InstanceTab[] = [
   "server",
   "configs",
   "settings",
+  "arguments",
   "statistics",
   "logs",
 ];
@@ -120,8 +122,8 @@ const INSTANCE_TAB_KEYWORDS: Record<InstanceTab, string> = {
   servers: "servers multiplayer серверы сервер мультиплеер сервери",
   server: "own server host свой сервер хост власний",
   configs: "configs kubejs конфиги конфигурация конфіги",
-  settings:
-    "settings memory java arguments настройки память аргументы налаштування",
+  settings: "settings memory java настройки память налаштування пам'ять",
+  arguments: "arguments jvm flags аргументы флаги аргументи",
   statistics: "statistics статистика статистика",
   logs: "logs console логи консоль журнал",
 };
@@ -135,6 +137,7 @@ const TAB_ICON: Record<InstanceTab, ReactNode> = {
   server: <ServerCog className="size-4 text-faint" />,
   configs: <FileCog className="size-4 text-faint" />,
   settings: <LSettings className="size-4 text-faint" />,
+  arguments: <SquareTerminal className="size-4 text-faint" />,
   statistics: <ChartArea className="size-4 text-faint" />,
   logs: <ScrollText className="size-4 text-faint" />,
 };

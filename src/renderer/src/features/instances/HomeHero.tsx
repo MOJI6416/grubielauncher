@@ -46,7 +46,6 @@ import { duplicateInstance } from "./duplicateInstance";
 import { openPortDialog } from "@renderer/features/port/portStore";
 import { buildInstanceActions } from "./instanceActions";
 import { requestInstanceDelete } from "./deleteStore";
-import { instanceFlagsAtom } from "./atoms";
 import { instanceStatsAtom, runningSessionsAtom } from "./instanceStats";
 import { instanceTagsAtom } from "./instancesStore";
 import { instanceUpdatesAtom } from "./updateCheck";
@@ -93,7 +92,6 @@ export function HomeHero({
   const stats = useAtomValue(instanceStatsAtom);
   const updates = useAtomValue(instanceUpdatesAtom);
   const modpackUpdates = useAtomValue(modpackUpdatesAtom);
-  const flags = useAtomValue(instanceFlagsAtom);
   const tags = useAtomValue(instanceTagsAtom);
   const launch = useAtomValue(launchProgressAtom);
   const installingVersion = useAtomValue(installingVersionAtom);
@@ -144,9 +142,6 @@ export function HomeHero({
     t,
     canPlay,
     isRunningInstance,
-    hasSaves: flags[key]?.hasSaves === true,
-    hasServer: flags[key]?.hasServer === true,
-    hasStatistics: !!statistics,
     onPlay: () => void runGame({ version: instance }),
     onPlayAnother: () => void runGame({ version: instance }),
     onManageTags: () => onManageTags(key, instance.version.name),

@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogFooter,
   DialogHeader,
+  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,9 @@ export function ModGroupDialog({
               </span>
             </Hint>
           </DialogTitle>
+          {!isRename && (
+            <DialogDescription>{t("modGroups.explain")}</DialogDescription>
+          )}
         </DialogHeader>
 
         <form

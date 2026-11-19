@@ -48,7 +48,6 @@ export interface ContentStatusBarProps {
     | "updates"
     | "unchecked"
     | "connector"
-    | "chips"
     | null;
   clearFilterChips: () => void;
   duplicates: DuplicateMarks;
@@ -125,6 +124,32 @@ export function ContentStatusBar({
 }: ContentStatusBarProps) {
   return (
     <>
+      <Collapse show={filterChips.length > 0}>
+        {filterChips.length > 0 ? (
+          <div className="mb-2 flex h-7 items-center gap-1.5 overflow-x-auto">
+            {filterChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                className="flex h-6 shrink-0 items-center gap-1 rounded-md bg-surface-2 px-2 text-xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
+                onClick={() => removeFilterChip(chip.key)}
+              >
+                {chip.label}
+                <X className="size-3" />
+              </button>
+            ))}
+            <button
+              type="button"
+              className="flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-faint transition-colors hover:text-foreground"
+              onClick={clearFilterChips}
+            >
+              <ListRestart className="size-3" />
+              {t("modManager.resetFilters")}
+            </button>
+          </div>
+        ) : null}
+      </Collapse>
+
       <Collapse show={bar !== null}>
         {bar === "selection" ? (
           <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-primary/40 bg-primary-soft px-2.5">
@@ -148,17 +173,19 @@ export function ContentStatusBar({
 
               {canGroup && (
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      disabled={isBusy}
-                    >
-                      <FolderTree className="size-3.5" />
-                      {t("modGroups.toGroup")}
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <Hint content={t("modGroups.explain")} className="max-w-64">
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        disabled={isBusy}
+                      >
+                        <FolderTree className="size-3.5" />
+                        {t("modGroups.toGroup")}
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </Hint>
                   <DropdownMenuContent align="end" className="max-h-72">
                     {groups.map((group) => (
                       <DropdownMenuItem
@@ -195,16 +222,18 @@ export function ContentStatusBar({
               )}
 
               {selectedCheckable.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs"
-                  disabled={isBusy}
-                  onClick={() => saveToSet(selectedCheckable)}
-                >
-                  <Layers className="size-3.5" />
-                  {t("modSets.toSet")}
-                </Button>
+                <Hint content={t("modSets.explain")} className="max-w-64">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    disabled={isBusy}
+                    onClick={() => saveToSet(selectedCheckable)}
+                  >
+                    <Layers className="size-3.5" />
+                    {t("modSets.toSet")}
+                  </Button>
+                </Hint>
               )}
 
               {selectedCheckable.length > 0 && (
@@ -440,28 +469,6 @@ export function ContentStatusBar({
                 {t("modManager.duplicatesRemove")}
               </Button>
             )}
-          </div>
-        ) : bar === "chips" ? (
-          <div className="mb-2.5 flex h-9 items-center gap-1.5 overflow-x-auto">
-            {filterChips.map((chip) => (
-              <button
-                key={chip.key}
-                type="button"
-                className="flex h-6 shrink-0 items-center gap-1 rounded-md bg-surface-2 px-2 text-xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
-                onClick={() => removeFilterChip(chip.key)}
-              >
-                {chip.label}
-                <X className="size-3" />
-              </button>
-            ))}
-            <button
-              type="button"
-              className="flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-faint transition-colors hover:text-foreground"
-              onClick={clearFilterChips}
-            >
-              <ListRestart className="size-3" />
-              {t("modManager.resetFilters")}
-            </button>
           </div>
         ) : null}
       </Collapse>

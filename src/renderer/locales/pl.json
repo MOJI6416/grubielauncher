@@ -713,12 +713,10 @@
       "foreign": "Dla innego loadera"
     },
     "dependencies": "Zależności",
-    "added": "Dodano mod",
     "deleted": "Usunięto mod",
     "requiredBy": "Wymagany przez",
     "deleteTitle": "Usuń mody",
     "alsoRemoves": "Usuwa też nieużywane zależności",
-    "updated": "Zaktualizowano mod",
     "dependencyTypes": [
       "Nieznana",
       "Wymagana",
@@ -814,22 +812,6 @@
     "notFoundModHint": "Źródło nie zwróciło plików moda. Zwykle to chwilowa awaria CurseForge lub Modrinth albo blokada sieci.",
     "notModpackHint": "Archiwum nie wygląda na modpack: brak w nim manifestu. Pobierz je ponownie lub wybierz inną wersję.",
     "toggleErrorHint": "Nie udało się zmienić nazwy pliku moda. Zamknij grę i sprawdź, czy antywirus nie blokuje pliku.",
-    "deletedMultiple_one": "Usunięto {{count}} mod",
-    "deletedMultiple_few": "Usunięto {{count}} mody",
-    "deletedMultiple_many": "Usunięto {{count}} modów",
-    "deletedMultiple_other": "Usunięto {{count}} moda",
-    "addedMultiple_one": "Dodano {{count}} mod",
-    "addedMultiple_few": "Dodano {{count}} mody",
-    "addedMultiple_many": "Dodano {{count}} modów",
-    "addedMultiple_other": "Dodano {{count}} moda",
-    "updatedMultiple_one": "Zaktualizowano {{count}} mod",
-    "updatedMultiple_few": "Zaktualizowano {{count}} mody",
-    "updatedMultiple_many": "Zaktualizowano {{count}} modów",
-    "updatedMultiple_other": "Zaktualizowano {{count}} moda",
-    "quickInstalled_one": "Dodano mod z {{count}} zależnością",
-    "quickInstalled_few": "Dodano mod z {{count}} zależnościami",
-    "quickInstalled_many": "Dodano mod z {{count}} zależnościami",
-    "quickInstalled_other": "Dodano mod z {{count}} zależności",
     "availableUpdates_one": "Dostępna aktualizacja dla {{count}} moda",
     "availableUpdates_few": "Dostępne aktualizacje dla {{count}} modów",
     "availableUpdates_many": "Dostępne aktualizacje dla {{count}} modów",
@@ -958,7 +940,6 @@
     "duplicatesShow": "Pokaż",
     "duplicatesRemove": "Usuń zbędne kopie",
     "identifyAction": "Znajdź lokalne mody na CurseForge i Modrinth",
-    "identifyShort": "Znajdź na stronach",
     "identifySearching": "Wyszukiwanie na CurseForge i Modrinth…",
     "identifyTitle": "Znalezione na stronach",
     "identifyHint": "Powiązane mody zaczną dostawać aktualizacje. Nic nie jest pobierane ponownie — pliki już się zgadzają.",
@@ -974,7 +955,6 @@
     "connectorHint": "Mody Fabric działają na {{loader}} tylko przez Sinytra Connector",
     "connectorFind": "Znajdź Connector",
     "dependenciesSkipped": "Zależności moda dla innego loadera nie są instalowane automatycznie — z Connectorem zwykle potrzebne jest Forgified Fabric API zamiast Fabric API. Sprawdź je na stronie moda.",
-    "restoredCount": "Przywrócono: {{n}}",
     "addedElsewhere": "Część plików trafiła do innych zakładek: {{types}}",
     "catalogLoaderHintQuilt": "Quilt uruchamia większość modów Fabric, więc można ich szukać również tutaj. Ich aktualizacje też są sprawdzane dla Quilt.",
     "catalogLoaderHintLegacyFabric": "Część modów Legacy Fabric na Modrinth jest oznaczona jako zwykły Fabric. Przełącz, aby je też znaleźć.",
@@ -989,7 +969,62 @@
     "searchFailedSource": "{{source}} nie odpowiada",
     "searchFailedSourceHint": "Wyszukiwanie w katalogu jest teraz niedostępne — spróbuj ponownie za minutę.",
     "deletedWithDependencies": "Usunięto też nieużywane zależności: {{names}}",
-    "deletedBreaksDependents": "Od usuniętego zależą: {{names}}. Bez tego gra może się nie uruchomić."
+    "deletedBreaksDependents": "Od usuniętego zależą: {{names}}. Bez tego gra może się nie uruchomić.",
+    "done": {
+      "installed": "Zainstalowano: {{items}}",
+      "added": "Dodano: {{items}}",
+      "restored": "Przywrócono: {{items}}",
+      "removed": "Usunięto: {{items}}",
+      "updated": "Zaktualizowano: {{items}}",
+      "enabled": "Włączono: {{items}}",
+      "disabled": "Wyłączono: {{items}}",
+      "withDependencies": "Razem z zależnościami: {{names}}"
+    },
+    "failed": {
+      "install": "Nie udało się zainstalować",
+      "remove": "Nie udało się usunąć",
+      "update": "Nie udało się zaktualizować",
+      "change": "Nie udało się zapisać zmiany"
+    },
+    "undone": "Zmiana cofnięta",
+    "undoFailed": "Nie udało się cofnąć zmiany",
+    "applyCancelled": "Instalacja anulowana — instancja bez zmian",
+    "applyBlockedSkipped": "Mod nie został zainstalowany: jego plik trzeba pobrać ręcznie",
+    "dropReadOnly": "Tej instancji nie można zmieniać — pliki nie zostały dodane",
+    "categoriesExplain": "Kategorie pochodzą z Modrinth i CurseForge i ułatwiają filtrowanie. Nie da się ich zmienić.",
+    "worldsElsewhere": "Tu są światy zainstalowane z katalogu. Wszystkie światy instancji i ich kopie zapasowe znajdziesz w karcie „Światy”.",
+    "datapacksElsewhere": "Tu są paczki danych pobrane do instancji. Do świata dodajesz je w karcie „Światy”.",
+    "openWorlds": "Otwórz „Światy”",
+    "count": {
+      "mod_one": "{{count}} mod",
+      "mod_few": "{{count}} mody",
+      "mod_many": "{{count}} modów",
+      "mod_other": "{{count}} moda",
+      "resourcepack_one": "{{count}} paczka zasobów",
+      "resourcepack_few": "{{count}} paczki zasobów",
+      "resourcepack_many": "{{count}} paczek zasobów",
+      "resourcepack_other": "{{count}} paczki zasobów",
+      "shader_one": "{{count}} shader",
+      "shader_few": "{{count}} shadery",
+      "shader_many": "{{count}} shaderów",
+      "shader_other": "{{count}} shadera",
+      "plugin_one": "{{count}} plugin",
+      "plugin_few": "{{count}} pluginy",
+      "plugin_many": "{{count}} pluginów",
+      "plugin_other": "{{count}} pluginu",
+      "world_one": "{{count}} świat",
+      "world_few": "{{count}} światy",
+      "world_many": "{{count}} światów",
+      "world_other": "{{count}} świata",
+      "datapack_one": "{{count}} paczka danych",
+      "datapack_few": "{{count}} paczki danych",
+      "datapack_many": "{{count}} paczek danych",
+      "datapack_other": "{{count}} paczki danych",
+      "mixed_one": "{{count}} element",
+      "mixed_few": "{{count}} elementy",
+      "mixed_many": "{{count}} elementów",
+      "mixed_other": "{{count}} elementu"
+    }
   },
   "nav": {
     "play": "Graj"
@@ -1055,7 +1090,6 @@
     "quickConnectOn": "przy starcie",
     "quickConnectOff": "wył.",
     "added": "Dodano serwer",
-    "pendingSave": "Naciśnij „Zapisz”, aby zapisać zmianę w instancji.",
     "deleted": "Usunięto serwer",
     "adding": "Nowy serwer",
     "editing": "Edycja serwera",
@@ -1683,7 +1717,8 @@
       "splitSystem": "System",
       "overridesTitle": "Instancje z własnymi ustawieniami",
       "overridesHint": "wartości powyżej ich nie dotyczą",
-      "overridesOther": "Java"
+      "overridesOther": "Java",
+      "freeNow": "Teraz wolne jest tylko {{free}} GB — mniej niż {{allocated}} GB przydzielone grze. Zamknij inne programy albo zmniejsz pamięć."
     },
     "downloads": {
       "mirrorUnknown": "Sprawdzanie źródła…",
@@ -2516,12 +2551,8 @@
     "unsaved": {
       "title": "Niezapisane:",
       "kind": {
-        "name": "nazwa",
-        "content": "zawartość",
-        "servers": "serwery",
         "arguments": "argumenty uruchamiania",
         "logo": "logo",
-        "quickServer": "szybkie dołączanie",
         "settings": "ustawienia instancji"
       }
     },
@@ -2547,10 +2578,10 @@
       "ask": "Usunąć swoją kopię „{{name}}”?"
     },
     "playBlocked": {
-      "noAccount": "Wybierz konto, aby grać."
+      "noAccount": "Wybierz konto, aby grać.",
+      "applying": "Stosujemy zmiany zawartości…"
     },
     "saveBlocked": {
-      "invalidName": "Wybierz inną nazwę — ta jest zajęta lub nieprawidłowa.",
       "noChanges": "Na razie nie ma czego zapisać.",
       "notOwner": "Tylko autor tej instancji może zapisywać zmiany."
     },
@@ -2581,7 +2612,14 @@
     "configNotSavedAsk": "Wyjść bez zapisania pliku?",
     "closeUnsavedQuestion": "Zamknąć launcher bez zapisywania?",
     "updateBeforeLaunchQuestion": "Zaktualizować instancję przed uruchomieniem?",
-    "updateCheckFailedQuestion": "Nie sprawdzono aktualizacji instancji. Spróbować ponownie?"
+    "updateCheckFailedQuestion": "Nie sprawdzono aktualizacji instancji. Spróbować ponownie?",
+    "playAsk": {
+      "title": "Zapisać zmiany i grać?",
+      "body": "Niezapisane: {{kinds}}. Gra uruchomi się już z nimi.",
+      "saveAndPlay": "Zapisz i graj"
+    },
+    "renamed": "Zmieniono nazwę instancji na „{{name}}”",
+    "renameApply": "Zmień nazwę"
   },
   "port": {
     "title": "Przenoszenie „{{name}}”",
@@ -2655,7 +2693,8 @@
       "missing": "Brak wersji dla {{target}}",
       "unchecked": "Nie udało się sprawdzić — nie zostaną dodane",
       "localMod": "Mody lokalne — nie zostaną dodane"
-    }
+    },
+    "explain": "Zestaw to zapisana lista modów z Modrinth i CurseForge. Możesz dodać go do dowolnej instancji."
   },
   "modGroups": {
     "toGroup": "Do grupy",
@@ -2676,7 +2715,8 @@
     "expand": "Rozwiń grupę",
     "collapse": "Zwiń grupę",
     "menu": "Działania z grupą",
-    "saveFailed": "Nie udało się zapisać grup"
+    "saveFailed": "Nie udało się zapisać grup",
+    "explain": "Grupa to folder na tej liście, który ułatwia orientację. Nie wpływa na grę."
   },
   "app": {
     "startupError": "Błąd uruchamiania",
@@ -5089,7 +5129,8 @@
       "server": "Mój serwer",
       "logs": "Logi",
       "statistics": "Statystyki",
-      "configs": "Konfiguracje"
+      "configs": "Konfiguracje",
+      "arguments": "Argumenty"
     },
     "emptyInstancesHint": "Utwórz instancję lub zaimportuj ją z pliku — launcher pobierze wszystko, czego potrzebuje.",
     "offline": {
@@ -5101,8 +5142,6 @@
   },
   "instanceSettings": {
     "title": "Ustawienia instancji",
-    "inherited": "Dziedziczone z launchera",
-    "overridden": "Nadpisane dla tej instancji",
     "resetAll": "Użyj wartości launchera",
     "optimizedHint": "Dodaje flagi odśmiecacza pamięci ({{flags}})",
     "priorityHint": "Gra dostaje więcej czasu procesora",
@@ -5115,6 +5154,12 @@
       "tooOld": "Wymaga Javy {{major}} lub nowszej — z tą się nie uruchomi",
       "missing": "Tej Javy już nie ma — wybierz inną",
       "manual": "ręcznie"
+    },
+    "resetToGlobal": "Przywróć wartość launchera",
+    "groups": {
+      "performance": "Pamięć i wydajność",
+      "compatibility": "Java i grafika",
+      "language": "Język"
     }
   },
   "modTranslations": {
