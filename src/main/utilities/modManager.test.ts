@@ -294,7 +294,7 @@ describe("cfModpackToModpack", () => {
     );
   });
 
-  it("skips optional CurseForge files from the manifest", async () => {
+  it("installs optional CurseForge files turned off instead of skipping them", async () => {
     mockedCurseForge.getMods.mockResolvedValue([
       createMod({ id: 100, name: "Optional mod" }),
       createMod({ id: 101, name: "Required mod" }),
@@ -314,9 +314,10 @@ describe("cfModpackToModpack", () => {
     );
 
     expect(mockedCurseForge.getMods).toHaveBeenCalledWith([100, 101]);
-    expect(result.mods).toHaveLength(1);
-    expect(result.mods[0].id).toBe("101");
-    expect(result.mods[0].version?.id).toBe("201");
+    expect(result.mods.map((mod) => mod.id)).toEqual(["100", "101"]);
+    expect(result.mods[0].version?.files[0].disabled).toBe(true);
+    expect(result.mods[1].version?.files[0].disabled).toBeUndefined();
+    expect(result.optional).toEqual(["curseforge:100"]);
   });
 });
 
@@ -1645,3 +1646,86 @@ describe("mod icon storage", () => {
     expect(await migrateInlineModIcons(mods)).toBe(false);
   });
 });
+
+describe("modpack optional files", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedCurseForge.getFile.mockResolvedValue(null as any);
+    mockedModrinth.getProjects.mockResolvedValue([]);
+  });
+
+  it("keeps CurseForge files the author marked as not required, turned off", async () => {
+    mockedCurseForge.getMods.mockResolvedValue([
+      createMod(),
+      createMod({ id: 101, name: "Optional mod" }),
+    ]);
+    mockedCurseForge.getFiles.mockResolvedValue([createFile(200), createFile(201)]);
+
+    const result = await cfModpackToModpack(
+      createManifest({
+        files: [
+          { projectID: 100, fileID: 200, required: true },
+          { projectID: 101, fileID: 201, required: false },
+        ],
+      }),
+    );
+
+    expect(result.mods.map((mod) => mod.id)).toEqual(["100", "101"]);
+    expect(result.mods[0].version?.files[0].disabled).toBeUndefined();
+    expect(result.mods[1].version?.files[0].disabled).toBe(true);
+    expect(result.optional).toEqual(["curseforge:101"]);
+    expect(result.versionLabel).toBe("1.0.0");
+  });
+
+  it("skips an optional CurseForge file that is gone instead of failing the pack", async () => {
+    mockedCurseForge.getMods.mockResolvedValue([createMod()]);
+    mockedCurseForge.getFiles.mockResolvedValue([createFile(200)]);
+
+    const result = await cfModpackToModpack(
+      createManifest({
+        files: [
+          { projectID: 100, fileID: 200, required: true },
+          { projectID: 404, fileID: 405, required: false },
+        ],
+      }),
+    );
+
+    expect(result.mods.map((mod) => mod.id)).toEqual(["100"]);
+    expect(result.optional).toBeUndefined();
+  });
+
+  it("marks mrpack files with an optional client side and leaves them on", async () => {
+    const instanceRoot = await makeTempRoot();
+    await fs.outputJSON(path.join(instanceRoot, "modrinth.index.json"), {
+      formatVersion: 1,
+      game: "minecraft",
+      versionId: "2.4.0",
+      name: "MR Pack",
+      files: [
+        {
+          path: "mods/core.jar",
+          hashes: { sha1: "sha1-core" },
+          env: { client: "required", server: "required" },
+          downloads: ["https://cdn.modrinth.com/data/core/versions/v1/core.jar"],
+          fileSize: 20,
+        },
+        {
+          path: "mods/minimap.jar",
+          hashes: { sha1: "sha1-minimap" },
+          env: { client: "optional", server: "unsupported" },
+          downloads: ["https://cdn.modrinth.com/data/mini/versions/v2/minimap.jar"],
+          fileSize: 30,
+        },
+      ],
+      dependencies: { minecraft: "1.20.1", "fabric-loader": "0.15.0" },
+    });
+
+    const result = await checkModpack(instanceRoot, { id: "p" } as any);
+
+    expect(result?.optional).toEqual(["modrinth:mini"]);
+    expect(result?.versionLabel).toBe("2.4.0");
+    const minimap = result?.mods.find((mod) => mod.id === "mini");
+    expect(minimap?.version?.files[0].disabled).toBeUndefined();
+  });
+});
+

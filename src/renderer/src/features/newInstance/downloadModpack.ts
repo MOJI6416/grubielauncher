@@ -8,8 +8,11 @@ import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
 import type { IBlockedMod } from "@renderer/utilities/blockedMods";
 import { withExtractProgress } from "@renderer/utilities/archiveProgress";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { ensureDiskRoom } from "@renderer/utilities/diskRoom";
 
 const api = window.api;
+
+const ARCHIVE_ROOM_FACTOR = 3;
 
 export type ModpackDownloadStage = "download" | "extract" | null;
 
@@ -71,6 +74,8 @@ export async function downloadModpack(
   try {
     const temp = await api.path.join(paths.launcher, "temp");
     const archivePath = await api.path.join(temp, file.filename);
+
+    await ensureDiskRoom(temp, (file.size || 0) * ARCHIVE_ROOM_FACTOR);
 
     onStage("download");
     await api.file.download(

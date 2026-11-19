@@ -30,6 +30,8 @@ import { scanLocalModDependencies } from "../utilities/localModDependencies";
 import { detectFileGeneration } from "../game/ornitheMods";
 import { getDataRoot } from "../utilities/dataRoot";
 import { isPublishableContentUrl } from "../utilities/trustedHosts";
+import { getModpackContents } from "../utilities/modpackContents";
+import type { ModpackContents } from "@/types/ModpackContents";
 
 const isProvider = check.oneOf(...Object.values(Provider));
 const isProjectType = check.oneOf(...Object.values(ProjectType));
@@ -42,6 +44,21 @@ const isSha1 = check.optional(check.pattern(/^[0-9a-f]{40}$/i, 40));
 const isMinecraftVersion = check.pattern(/^[A-Za-z0-9._+-]+$/, 64);
 
 export function registerModManagerIpc() {
+  handleSafe<ModpackContents | null, [Provider, string, IVersion]>(
+    "modManager:packContents",
+    null,
+    [isProvider, isProjectId, check.object()],
+    async (_, provider, projectId, version) => {
+      return await getModpackContents(provider, projectId, {
+        ...version,
+        files: Array.isArray(version.files) ? version.files : [],
+        dependencies: Array.isArray(version.dependencies)
+          ? version.dependencies
+          : [],
+      });
+    },
+  );
+
   handleSafe<string | null, [Provider, string, string]>(
     "modManager:getChangelog",
     null,

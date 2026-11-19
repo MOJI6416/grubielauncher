@@ -113,7 +113,10 @@ import {
 } from "@renderer/utilities/useRecentFlag";
 import { bumpInstanceDataRevision } from "@renderer/features/instances/instanceRevision";
 import { ModpackPanel } from "@renderer/features/modpack/ModpackPanel";
-import { useModpackSource } from "@renderer/features/modpack/useModpackSource";
+import {
+  canUpdateFromArchive,
+  useModpackSource,
+} from "@renderer/features/modpack/useModpackSource";
 import {
   LazyArguments,
   LazyDeleteVersion,
@@ -263,11 +266,14 @@ export function InstanceScreen({
         hasServerManager: !!version?.version.version?.serverManager,
         hasOwnServer: !!server,
         hasUnsavedContent: changes.changeKinds.includes("content"),
-        hasModpack: !!version?.version.modpack,
+        hasModpack:
+          !!version?.version.modpack ||
+          (!!version && canUpdateFromArchive(version.version, modpackState.hasBase)),
         hasModpackUpdate: !!modpackState.update,
       }),
     [
       modpackState.update,
+      modpackState.hasBase,
       contents,
       draft.mods.length,
       draft.servers.length,

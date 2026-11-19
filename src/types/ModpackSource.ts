@@ -28,7 +28,13 @@ export type ModpackFileSide = "client" | "server";
 
 export type ModpackFileMap = Record<string, string>;
 
-export interface ModpackBase {
+export interface ModpackArchiveInfo {
+  label?: string;
+  title?: string;
+  url?: string;
+}
+
+export interface ModpackBase extends ModpackArchiveInfo {
   versionId: string;
   loaderVersion?: string;
   projects: ModpackBaseProject[];
@@ -36,7 +42,7 @@ export interface ModpackBase {
   server: ModpackFileMap;
 }
 
-export interface ModpackBaseInput {
+export interface ModpackBaseInput extends ModpackArchiveInfo {
   versionId: string;
   loaderVersion?: string;
   projects: ModpackBaseProject[];

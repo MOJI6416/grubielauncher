@@ -5286,8 +5286,8 @@
     "loaderMissing": "A versão do loader de que esta versão do modpack precisa não foi encontrada.",
     "openSite": "Abrir no {{site}}",
     "copyIds": "Copiar os IDs do modpack e da versão",
-    "fromFile": "De arquivo",
-    "fromFileHint": "Atualizar a partir de um .mrpack ou .zip que você mesmo baixou",
+    "fromFile": "De arquivo compactado",
+    "fromFileHint": "Atualizar a partir de um .mrpack ou .zip — do disco ou por link",
     "stats": {
       "downloads": "downloads",
       "versions": "versões",
@@ -5338,6 +5338,23 @@
       "backups": "Cópias dos arquivos",
       "done": "A instância voltou para a versão {{version}}",
       "failed": "Não foi possível voltar para a versão anterior"
+    },
+    "archive": {
+      "title": "Nova versão a partir de um arquivo compactado",
+      "pickFile": "Escolher arquivo…",
+      "orUrl": "ou por link",
+      "url": "Link para o arquivo compactado do modpack",
+      "download": "Baixar",
+      "urlHint": "Um link direto para um .zip ou .mrpack — os servidores costumam publicá-lo no site deles",
+      "badUrl": "O link precisa começar com http:// ou https://",
+      "offline": "Sem conexão com a internet — por enquanto só dá para atualizar a partir de um arquivo",
+      "source": "Instalada a partir de um arquivo compactado",
+      "noLabel": "Versão não informada",
+      "how": "Como a atualização funciona",
+      "howMods": "Os mods do autor são atualizados. Os mods que você adicionou ou desativou continuam como estão.",
+      "howConfigs": "Os arquivos de configuração que você alterou são substituídos pela versão do autor; suas cópias ficam guardadas para reverter.",
+      "howKept": "Mundos, configurações do jogo e a lista de servidores não são alterados.",
+      "howPreview": "Antes de aplicar, o launcher mostra o que vai mudar e, depois, permite voltar à versão anterior."
     }
   },
   "mirror": {
@@ -6559,5 +6576,24 @@
     "body": "Um link quer iniciar “{{instance}}” e se conectar a {{server}}.",
     "hint": "Atalhos criados pelo launcher abrem sem esta pergunta. Continue só se você confia na origem do link.",
     "confirm": "Iniciar e entrar"
+  },
+  "packContent": {
+    "optional": "Opcionais",
+    "optionalShort": "opcional",
+    "optionalHint": "O autor marcou esses arquivos como opcionais. Os desmarcados são baixados desativados — você pode ativá-los depois no conteúdo da instância.",
+    "optionalFooter": "Arquivos desmarcados são baixados desativados — ative-os depois em Conteúdo",
+    "filter": "Buscar no conteúdo",
+    "toggle": "Ativar “{{title}}”",
+    "notFound": "Nada encontrado",
+    "enabledOf": "{{enabled}} de {{total}}",
+    "empty": "Este modpack não tem mods nem pacotes",
+    "failed": "Não foi possível ler o conteúdo de {{site}}. Tente de novo ou instale o modpack — o conteúdo aparece na próxima etapa.",
+    "tabs": {
+      "overview": "Visão geral",
+      "contents": "Conteúdo"
+    }
+  },
+  "diskRoom": {
+    "description": "Não há espaço suficiente em {{drive}}: são necessários {{needed}} e há {{free}} livres. Libere espaço ou mova a pasta de dados do launcher nas configurações."
   }
 }

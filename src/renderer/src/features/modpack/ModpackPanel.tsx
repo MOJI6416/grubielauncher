@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useAtomValue } from "jotai";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import {
   ArrowUp,
   Copy,
   ExternalLink,
-  FileUp,
   FolderOpen,
   History,
   ListTree,
@@ -34,11 +31,9 @@ import {
   type IProject,
   type IVersion as IProjectVersion,
 } from "@/types/ModManager";
-import type { DownloaderInfo } from "@/types/Downloader";
 import type { IServerConf } from "@/types/Server";
 import { Version } from "@renderer/classes/Version";
 import { Hint } from "@renderer/components/Hint";
-import { BlockedMods, type IBlockedMod } from "@renderer/components/Modals/BlockedMods";
 import { openNewInstance } from "@renderer/features/instances/newInstance";
 import { formatDate } from "@renderer/features/mods/format";
 import { formatCompactNumber, formatNumber } from "@renderer/utilities/numbers";
@@ -47,20 +42,8 @@ import {
   useVersionChangelog,
 } from "@renderer/features/mods/changelog";
 import { TranslateToggle } from "@renderer/features/mods/TranslateToggle";
-import type { ModpackDownloadStage } from "@renderer/features/newInstance/downloadModpack";
-import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
 import { Markdown } from "@renderer/utilities/markdown";
-import { showFailureToast } from "@renderer/utilities/failures";
 import { SectionCard } from "@renderer/features/instances/SectionCard";
-import {
-  applyModpackUpdate,
-  prepareModpackUpdate,
-  prepareModpackUpdateFromFile,
-  remergeModpackUpdate,
-  rollbackModpackUpdate,
-  type ModpackPrepareResult,
-  type PreparedModpackUpdate,
-} from "./modpackUpdate";
 import {
   classifyModpackVersions,
   installedModpackVersion,
@@ -68,15 +51,20 @@ import {
   type ModpackVersionRow,
 } from "./modpackVersions";
 import { ModpackUpdatePreview } from "./ModpackUpdatePreview";
-import { canFollowModpack, type ModpackSourceState } from "./useModpackSource";
+import {
+  canFollowModpack,
+  canUpdateFromArchive,
+  type ModpackSourceState,
+} from "./useModpackSource";
+import { useModpackUpdateFlow } from "./useModpackUpdateFlow";
+import { ModpackFlowDialogs } from "./ModpackFlowDialogs";
+import { ModpackArchivePanel } from "./ModpackArchivePanel";
+import { ArchiveSourcePopover } from "./ArchiveSourceForm";
 import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
-import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { ListSkeleton } from "@renderer/components/ListSkeleton";
 
 const api = window.api;
-
-type Phase = "idle" | "preparing" | "preview" | "applying" | "rollingBack";
 
 function siteName(provider: Provider): string {
   return provider === Provider.CURSEFORGE ? "CurseForge" : "Modrinth";
@@ -130,11 +118,19 @@ export interface ModpackPanelProps {
 }
 
 export function ModpackPanel(props: ModpackPanelProps) {
+  if (!props.state.source) {
+    return canUpdateFromArchive(props.instance.version, props.state.hasBase) ? (
+      <ModpackArchivePanel {...props} />
+    ) : null;
+  }
+
+  return <LinkedModpackPanel {...props} />;
+}
+
+function LinkedModpackPanel(props: ModpackPanelProps) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const { instance, state } = props;
-  const settings = useAtomValue(settingsAtom);
-  const paths = useAtomValue(pathsAtom);
 
   const source = state.source;
   const conf = instance.version;
@@ -144,17 +140,18 @@ export function ModpackPanel(props: ModpackPanelProps) {
 
   const [showAll, setShowAll] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [stage, setStage] = useState<ModpackDownloadStage>(null);
-  const [extractPercent, setExtractPercent] = useState<number | null>(null);
-  const [downloadInfo, setDownloadInfo] = useState<DownloaderInfo | null>(null);
-  const [prepared, setPrepared] = useState<PreparedModpackUpdate | null>(null);
-  const [restoreRemoved, setRestoreRemoved] = useState(false);
-  const [blockedPack, setBlockedPack] = useState<{
-    blocked: IBlockedMod;
-    target: IProjectVersion;
-  } | null>(null);
-  const [blockedMods, setBlockedMods] = useState<IBlockedMod[] | null>(null);
+
+  const flow = useModpackUpdateFlow({
+    instance,
+    state,
+    account: props.account,
+    server: props.server,
+    site,
+    currentLabel: source?.versionNumber ?? "",
+    onUpdated: props.onUpdated,
+    onApplied: () => setSelectedId(null),
+  });
+  const { phase, prepared, restoreRemoved, stageText } = flow;
 
   const rows = useMemo(
     () =>
@@ -177,19 +174,6 @@ export function ModpackPanel(props: ModpackPanelProps) {
   const selected: ModpackVersionRow | undefined =
     rows.find((row) => row.version.id === (selectedId ?? fallbackId)) ??
     rows.find((row) => row.version.id === source?.versionId);
-
-  useEffect(() => {
-    if (phase !== "preparing") return;
-    return api.events.onDownloaderInfo(setDownloadInfo);
-  }, [phase]);
-
-  const preparedRoot = prepared?.pack.folderPath;
-  useEffect(() => {
-    if (!preparedRoot) return;
-    return () => {
-      void api.fs.rimraf(preparedRoot).catch(ignoreFailure);
-    };
-  }, [preparedRoot]);
 
   const selectedVersion = selected?.version;
   const changelog = useVersionChangelog({
@@ -226,203 +210,6 @@ export function ModpackPanel(props: ModpackPanelProps) {
             ? t("versions.installBusy")
             : undefined);
 
-  const report = (result: ModpackPrepareResult): PreparedModpackUpdate | null => {
-    switch (result.status) {
-      case "ready":
-        return result.update;
-      case "otherGame":
-        toast.error(t("modpack.otherGame", { version: result.gameVersion }), {
-          description: t("modpack.otherGameHint"),
-        });
-        return null;
-      case "otherProject":
-        toast.error(t("modpack.otherProject", { title: result.title }));
-        return null;
-      case "notModpack":
-        toast.error(t("modManager.notModpack"), {
-          description: t("modManager.notModpackHint"),
-        });
-        return null;
-      case "noBase":
-        toast.error(t("modpack.failed"), {
-          description: t("modpack.blocked.noBase"),
-        });
-        return null;
-      case "loaderMissing":
-        toast.error(t("modpack.failed"), {
-          description: t("modpack.loaderMissing"),
-        });
-        return null;
-      case "failed":
-        showFailureToast(t("modpack.failed"), result.error, {
-          channels: ["modManager:checkModpack", "file:download", "version:import"],
-          fallbackDescription: t("modpack.downloadFailedHint", { site }),
-        });
-        return null;
-      default:
-        return null;
-    }
-  };
-
-  const startPrepare = async (
-    target: IProjectVersion,
-    blockedFilePath?: string,
-  ) => {
-    if (!project) return;
-
-    setPhase("preparing");
-    setDownloadInfo(null);
-    try {
-      const result = await prepareModpackUpdate({
-        instance,
-        project,
-        target,
-        blockedFilePath,
-        onStage: setStage,
-        onExtractPercent: setExtractPercent,
-      });
-
-      if (result.status === "blockedPack") {
-        setBlockedPack({ blocked: result.blocked, target });
-        setPhase("idle");
-        return;
-      }
-
-      const next = report(result);
-      setRestoreRemoved(false);
-      setPrepared(next);
-      setPhase(next ? "preview" : "idle");
-    } finally {
-      setStage(null);
-      setExtractPercent(null);
-    }
-  };
-
-  const startFromFile = async () => {
-    if (!project) return;
-
-    const picked = await api.other.openFileDialog(false, [
-      { name: "Modpack", extensions: ["mrpack", "zip"] },
-    ]);
-    const filePath = picked?.[0];
-    if (!filePath) return;
-
-    setPhase("preparing");
-    setStage("extract");
-    try {
-      const result = await prepareModpackUpdateFromFile({
-        instance,
-        project,
-        versions: state.versions,
-        filePath,
-        tempPath: await api.path.join(paths.launcher, "temp"),
-        onExtractPercent: setExtractPercent,
-      });
-      const next = report(result);
-      setRestoreRemoved(false);
-      setPrepared(next);
-      setPhase(next ? "preview" : "idle");
-    } finally {
-      setStage(null);
-      setExtractPercent(null);
-    }
-  };
-
-  const cancelPreview = () => {
-    setPrepared(null);
-    setPhase("idle");
-  };
-
-  const apply = async (resolved?: IBlockedMod[]) => {
-    if (!prepared || !props.account) return;
-
-    setPhase("applying");
-    try {
-      const outcome = await applyModpackUpdate({
-        instance,
-        update: prepared,
-        account: props.account,
-        settings,
-        server: props.server,
-        resolvedBlocked: resolved,
-      });
-
-      if (outcome.status === "blockedMods") {
-        setBlockedMods(outcome.blocked);
-        setPhase("preview");
-        return;
-      }
-
-      const label = modpackVersionLabel(prepared.target);
-      if (outcome.extraFilesFailed) {
-        toast.warning(t("modpack.doneWithGaps", { version: label }), {
-          description: t("newInstance.extraFilesFailedHint"),
-        });
-      } else {
-        toast.success(t("modpack.done", { version: label }), {
-          description: t("modpack.doneHint"),
-        });
-      }
-
-      setPrepared(null);
-      setSelectedId(null);
-      setPhase("idle");
-      state.reload();
-      props.onUpdated();
-    } catch (error) {
-      showFailureToast(t("modpack.failed"), error, {
-        channels: ["modpack:applyFiles", "mods:check", "version:changeLoader"],
-        fallbackDescription: t("modpack.failedHint", { version: currentLabel }),
-      });
-      setPrepared(null);
-      setPhase("idle");
-      state.reload();
-      props.onUpdated();
-    }
-  };
-
-  const rollback = async () => {
-    if (!props.account) return;
-
-    const previous = state.rollback?.fromVersion ?? "";
-    setPhase("rollingBack");
-    try {
-      const done = await rollbackModpackUpdate({
-        instance,
-        account: props.account,
-        settings,
-        server: props.server,
-      });
-      if (done) {
-        toast.success(t("modpack.rollback.done", { version: previous }));
-      } else {
-        showFailureToast(t("modpack.rollback.failed"), undefined, {
-          channels: ["modpack:restoreRollback", "mods:check"],
-        });
-      }
-    } catch (error) {
-      showFailureToast(t("modpack.rollback.failed"), error, {
-        channels: ["modpack:restoreRollback", "mods:check"],
-      });
-    } finally {
-      setSelectedId(null);
-      setPhase("idle");
-      state.reload();
-      props.onUpdated();
-    }
-  };
-
-  const openBackups = async () => {
-    const folder = await api.path.join(
-      instance.versionPath,
-      "storage",
-      "modpack",
-      "rollback",
-      "files",
-    );
-    await api.shell.openPath(folder);
-  };
-
   const copyIds = async () => {
     await copyWithFeedback(`${source.projectId} ${source.versionId}`);
   };
@@ -434,23 +221,6 @@ export function ModpackPanel(props: ModpackPanelProps) {
         date: formatDate(state.rollback.createdAt, lang) ?? "",
       })
     : "";
-
-  const stageText =
-    phase === "applying"
-      ? t("modpack.stage.apply")
-      : phase === "rollingBack"
-        ? t("modpack.stage.rollback")
-        : stage === "download"
-          ? t("modpack.stage.download", {
-              percent: Math.round(downloadInfo?.progressPercent ?? 0),
-            })
-          : stage === "extract"
-            ? t("modpack.stage.extract", {
-                percent: Math.round(extractPercent ?? 0),
-              })
-            : phase === "preparing"
-              ? t("modpack.stage.plan")
-              : null;
 
   const selectedAction = (() => {
     if (!selected || selected.relation === "current") return null;
@@ -488,7 +258,7 @@ export function ModpackPanel(props: ModpackPanelProps) {
         size="sm"
         variant={selected.relation === "newer" ? "secondary" : "outline"}
         disabled={!!actionBlocked || !project || !props.account}
-        onClick={() => void startPrepare(selected.version)}
+        onClick={() => project && void flow.startPrepare(project, selected.version)}
       >
         {phase === "preparing" ? (
           <Loader2 className="animate-spin" />
@@ -531,12 +301,9 @@ export function ModpackPanel(props: ModpackPanelProps) {
           }
           restoreRemoved={restoreRemoved}
           isApplying={phase === "applying"}
-          onRestoreRemovedChange={(value) => {
-            setRestoreRemoved(value);
-            setPrepared(remergeModpackUpdate(prepared, conf, value));
-          }}
-          onCancel={cancelPreview}
-          onApply={() => void apply()}
+          onRestoreRemovedChange={flow.changeRestoreRemoved}
+          onCancel={flow.cancelPreview}
+          onApply={() => void flow.apply()}
         />
       )
     ) : (
@@ -675,7 +442,7 @@ export function ModpackPanel(props: ModpackPanelProps) {
               type="button"
               size="sm"
               variant="ghost"
-              onClick={() => void openBackups()}
+              onClick={() => void flow.openBackups()}
             >
               <FolderOpen />
               {t("modpack.rollback.backups")}
@@ -685,7 +452,7 @@ export function ModpackPanel(props: ModpackPanelProps) {
               size="sm"
               variant="outline"
               disabled={!!actionBlocked || !props.account}
-              onClick={() => void rollback()}
+              onClick={() => void flow.rollback()}
             >
               {phase === "rollingBack" ? (
                 <Loader2 className="animate-spin" />
@@ -787,26 +554,15 @@ export function ModpackPanel(props: ModpackPanelProps) {
                   </span>
                 </button>
               </Hint>
-              <Hint
-                content={
-                  actionBlocked || !project || !props.account
-                    ? undefined
-                    : t("modpack.fromFileHint")
+              <ArchiveSourcePopover
+                disabled={!!actionBlocked || !project || !props.account}
+                onPickFile={() =>
+                  void flow.startFromFile(project ?? undefined, state.versions)
                 }
-                variant="text"
-              >
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="ml-auto h-7 shrink-0 px-2 text-xs"
-                  disabled={!!actionBlocked || !project || !props.account}
-                  onClick={() => void startFromFile()}
-                >
-                  <FileUp />
-                  {t("modpack.fromFile")}
-                </Button>
-              </Hint>
+                onSubmitUrl={(url) =>
+                  void flow.startFromUrl(url, project ?? undefined, state.versions)
+                }
+              />
             </div>
           </section>
 
@@ -907,29 +663,11 @@ export function ModpackPanel(props: ModpackPanelProps) {
         </div>
       </div>
 
-      {blockedPack && (
-        <BlockedMods
-          mods={[blockedPack.blocked]}
-          onClose={(resolved) => {
-            const pending = blockedPack;
-            setBlockedPack(null);
-            const filePath = resolved?.[0]?.filePath;
-            if (filePath) void startPrepare(pending.target, filePath);
-          }}
-        />
-      )}
-
-      {blockedMods && (
-        <BlockedMods
-          mods={blockedMods}
-          mcVersion={gameVersion}
-          loader={conf.loader.name}
-          onClose={(resolved) => {
-            setBlockedMods(null);
-            if (resolved) void apply(resolved);
-          }}
-        />
-      )}
+      <ModpackFlowDialogs
+        flow={flow}
+        gameVersion={gameVersion}
+        loader={conf.loader.name}
+      />
     </>
   );
 }

@@ -86,7 +86,7 @@ async function isUsableMoveTarget(dir: string): Promise<boolean> {
   }
 }
 
-async function nearestExistingDir(target: string): Promise<string> {
+export async function nearestExistingDir(target: string): Promise<string> {
   let current = path.resolve(target);
   while (!(await isDirectory(current))) {
     const parent = path.dirname(current);

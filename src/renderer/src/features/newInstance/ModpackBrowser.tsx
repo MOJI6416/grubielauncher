@@ -1,5 +1,6 @@
 import {
   type CSSProperties,
+  type KeyboardEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -68,6 +69,10 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
+import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
+import { PackContentList } from "./PackContentList";
+import { usePackContents } from "./usePackContents";
 
 const api = window.api;
 
@@ -75,6 +80,9 @@ const VERSIONS_CHANNEL = "modManager:getVersions";
 const CATALOG_LOADERS: Loader[] = ["forge", "neoforge", "fabric", "quilt"];
 const MODRINTH_ONLY_LOADERS: Loader[] = ["legacy-fabric", "babric", "ornithe"];
 const ROW_HEIGHT = 60;
+const DETAIL_TABS = ["overview", "contents"] as const;
+
+type DetailTab = (typeof DETAIL_TABS)[number];
 
 interface DetailState {
   project: IProject | null;
@@ -128,6 +136,8 @@ export function ModpackBrowser({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailState>(EMPTY_DETAIL);
   const [isGalleryOpen, setGalleryOpen] = useState(false);
+  const [detailTab, setDetailTab] = useState<DetailTab>("overview");
+  const tabIndicator = useSlidingIndicator<HTMLDivElement>();
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
   );
@@ -269,6 +279,31 @@ export function ModpackBrowser({
     () => detail.versions.find((item) => item.id === detail.selectedId) ?? null,
     [detail.selectedId, detail.versions],
   );
+
+  const contents = usePackContents(
+    detailTab === "contents" ? detail.project : null,
+    selectedVersion,
+  );
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const index = DETAIL_TABS.indexOf(detailTab);
+    const target =
+      event.key === "ArrowRight" || event.key === "ArrowLeft"
+        ? (index + 1) % DETAIL_TABS.length
+        : event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? DETAIL_TABS.length - 1
+            : null;
+    if (target === null) return;
+
+    event.preventDefault();
+    setDetailTab(DETAIL_TABS[target]);
+    tabIndicator.containerRef.current
+      ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+      ?.item(target)
+      ?.focus();
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5">
@@ -545,6 +580,65 @@ export function ModpackBrowser({
             </Empty>
           ) : (
             <>
+              <div className="flex shrink-0 items-center border-b border-border px-2.5">
+                <div
+                  ref={tabIndicator.containerRef}
+                  role="tablist"
+                  aria-label={detail.project.title}
+                  onKeyDown={handleTabKeyDown}
+                  className="relative flex shrink-0 items-center gap-1"
+                >
+                  {DETAIL_TABS.map((entry) => (
+                    <button
+                      key={entry}
+                      type="button"
+                      role="tab"
+                      aria-selected={detailTab === entry}
+                      tabIndex={detailTab === entry ? 0 : -1}
+                      data-indicator-active={detailTab === entry}
+                      onClick={() => setDetailTab(entry)}
+                      className="-mb-px border-b-2 border-transparent px-2 py-2 text-xs whitespace-nowrap text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset aria-selected:text-foreground"
+                    >
+                      {t(`packContent.tabs.${entry}`)}
+                      {entry === "contents" && contents.items.length > 0 && (
+                        <span className="ml-1 font-mono text-3xs text-faint">
+                          {contents.items.length}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                  <SlidingIndicator indicator={tabIndicator} variant="underline" />
+                </div>
+              </div>
+
+              {detailTab === "contents" ? (
+                contents.status === "failed" ? (
+                  <Empty className="min-h-0 flex-1 gap-2 px-6">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <CircleAlert className="text-destructive" />
+                      </EmptyMedia>
+                      <EmptyDescription className="text-xs">
+                        {t("packContent.failed", {
+                          site: providerName(detail.project.provider),
+                        })}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                    <Button size="sm" variant="outline" onClick={contents.retry}>
+                      <RotateCw />
+                      {t("common.retry")}
+                    </Button>
+                  </Empty>
+                ) : (
+                  <PackContentList
+                    title={t("addVersion.preview.content")}
+                    items={contents.items}
+                    isLoading={contents.status === "loading" || detail.isLoading}
+                    emptyText={t("packContent.empty")}
+                    className="rounded-none border-0 bg-transparent"
+                  />
+                )
+              ) : (
               <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
                 {detail.project.gallery?.[0]?.url && (
                   <button
@@ -697,6 +791,7 @@ export function ModpackBrowser({
                     ))}
                 </dl>
               </div>
+              )}
 
               <div className="shrink-0 border-t border-border p-2.5">
                 {detail.isLoading ? (

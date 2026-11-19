@@ -83,6 +83,32 @@ export function packLocalContentPaths(
   return [...result].sort();
 }
 
+export function replacedLocalContentPaths(
+  merge: Pick<ModpackMergeResult, "updated" | "removed">,
+  versionPath: string,
+): string[] {
+  const root = normalizePackPath(versionPath).replace(/\/+$/, "");
+  const result = new Set<string>();
+  const projects = [...merge.updated.map((item) => item.from), ...merge.removed];
+
+  for (const project of projects) {
+    for (const file of project.version?.files ?? []) {
+      if (!file.localPath) continue;
+
+      const local = normalizePackPath(file.localPath);
+      if (!local.toLowerCase().startsWith(`${root.toLowerCase()}/`)) continue;
+
+      const relative = enabledName(local.slice(root.length + 1));
+      if (!relative || !isContentPath(relative)) continue;
+
+      result.add(relative);
+      result.add(`${relative}.disabled`);
+    }
+  }
+
+  return [...result].sort();
+}
+
 export function baseProjectsOf(mods: ILocalProject[]): ModpackBaseProject[] {
   return mods.map((mod) => ({
     key: modpackProjectKey(mod),
@@ -126,13 +152,19 @@ function keepDisabledState(
   next: ILocalProject,
   current: ILocalProject,
 ): ILocalProject {
-  if (!isDisabled(current) || !next.version) return next;
+  if (!next.version) return next;
+
+  const disabled = isDisabled(current);
+  if (!disabled && !isDisabled(next)) return next;
 
   return {
     ...next,
     version: {
       ...next.version,
-      files: next.version.files.map((file) => ({ ...file, disabled: true })),
+      files: next.version.files.map((file) => {
+        const { disabled: _disabled, ...rest } = file;
+        return disabled ? { ...rest, disabled: true } : rest;
+      }),
     },
   };
 }

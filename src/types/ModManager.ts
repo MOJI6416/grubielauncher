@@ -157,6 +157,8 @@ export interface IModpack {
   mainJar?: IJarMod;
   launchOverride?: ILaunchOverride;
   source?: IModpackSource;
+  optional?: string[];
+  versionLabel?: string;
 }
 
 export interface IModpackExtraFile {

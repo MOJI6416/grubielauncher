@@ -131,6 +131,8 @@ import type {
   ModpackRollback,
   ModpackRollbackInfo,
 } from "@/types/ModpackSource";
+import type { DiskRoom } from "@/types/DiskRoom";
+import type { ModpackContents } from "@/types/ModpackContents";
 import { ISkinData } from "@/types/Skin";
 import {
   IWorld,
@@ -1146,6 +1148,11 @@ export interface IElectronAPI {
         modUrl: string;
       },
     ) => Promise<IVersionModManager[]>;
+    packContents: (
+      provider: Provider,
+      projectId: string,
+      version: IVersionModManager,
+    ) => Promise<ModpackContents | null>;
     getDependencies: (
       provider: Provider,
       projectId: string,
@@ -1226,6 +1233,11 @@ export interface IElectronAPI {
     rollbackInfo: (versionPath: string) => Promise<ModpackRollbackInfo | null>;
     restoreRollback: (versionPath: string) => Promise<ModpackRollback | null>;
     dropRollback: (versionPath: string) => Promise<boolean>;
+    checkRoom: (
+      target: string,
+      bytes: number,
+      measureRoots?: string[],
+    ) => Promise<DiskRoom | null>;
   };
   worlds: {
     loadVersionStatistics: (
@@ -2369,6 +2381,11 @@ export const api: IElectronAPI = {
       invoke("modManager:getVersions", provider, projectId, options),
     getDependencies: (provider: Provider, projectId: string, deps: any[]) =>
       invoke("modManager:getDependencies", provider, projectId, deps),
+    packContents: (
+      provider: Provider,
+      projectId: string,
+      version: IVersionModManager,
+    ) => invoke("modManager:packContents", provider, projectId, version),
     getChangelog: (provider: Provider, projectId: string, versionId: string) =>
       invoke("modManager:getChangelog", provider, projectId, versionId),
     ornitheGeneration: (
@@ -2441,6 +2458,8 @@ export const api: IElectronAPI = {
       invoke("modpack:restoreRollback", versionPath),
     dropRollback: (versionPath: string) =>
       invoke("modpack:dropRollback", versionPath),
+    checkRoom: (target: string, bytes: number, measureRoots?: string[]) =>
+      invoke("modpack:checkRoom", target, bytes, measureRoots ?? []),
   },
   worlds: {
     loadVersionStatistics: (versionPath: string, account: ILocalAccount) =>

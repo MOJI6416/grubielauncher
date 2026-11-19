@@ -5246,8 +5246,8 @@
     "loaderMissing": "Bu mod paketi sürümünün ihtiyaç duyduğu yükleyici sürümü bulunamadı.",
     "openSite": "{{site}} sitesinde aç",
     "copyIds": "Modpaket ve sürüm kimliklerini kopyala",
-    "fromFile": "Dosyadan",
-    "fromFileHint": "Kendiniz indirdiğiniz bir .mrpack veya .zip dosyasından güncelleyin",
+    "fromFile": "Arşivden",
+    "fromFileHint": ".mrpack veya .zip dosyasından güncelleyin; diskten ya da bağlantıyla",
     "stats": {
       "downloads": "indirme",
       "versions": "sürüm",
@@ -5298,6 +5298,23 @@
       "backups": "Dosya kopyaları",
       "done": "Kurulum yeniden {{version}} sürümünde",
       "failed": "Önceki sürüm geri getirilemedi"
+    },
+    "archive": {
+      "title": "Arşivden yeni sürüm",
+      "pickFile": "Dosya seç…",
+      "orUrl": "veya bağlantıyla",
+      "url": "Mod paketi arşivinin bağlantısı",
+      "download": "İndir",
+      "urlHint": ".zip veya .mrpack dosyasına doğrudan bağlantı; sunucular genellikle bunu web sitelerinde paylaşır",
+      "badUrl": "Bağlantı http:// veya https:// ile başlamalıdır",
+      "offline": "İnternet bağlantısı yok; şimdilik yalnızca dosyadan güncelleyebilirsiniz",
+      "source": "Arşivden kuruldu",
+      "noLabel": "Sürüm belirtilmemiş",
+      "how": "Güncelleme nasıl yapılır",
+      "howMods": "Yazarın modları güncellenir. Kendi eklediğiniz veya kapattığınız modlar olduğu gibi kalır.",
+      "howConfigs": "Değiştirdiğiniz ayar dosyaları yazarın sürümüyle değiştirilir; kopyalarınız geri almak için saklanır.",
+      "howKept": "Dünyalara, oyun ayarlarına ve sunucu listesine dokunulmaz.",
+      "howPreview": "Uygulamadan önce başlatıcı neyin değişeceğini gösterir, sonrasında önceki sürüme dönmenize izin verir."
     }
   },
   "mirror": {
@@ -6510,5 +6527,24 @@
     "body": "Bir bağlantı “{{instance}}” kurulumunu başlatıp {{server}} sunucusuna bağlanmak istiyor.",
     "hint": "Başlatıcının oluşturduğu kısayollar bu soru olmadan açılır. Yalnızca bağlantının kaynağına güveniyorsanız devam edin.",
     "confirm": "Başlat ve katıl"
+  },
+  "packContent": {
+    "optional": "İsteğe bağlı",
+    "optionalShort": "isteğe bağlı",
+    "optionalHint": "Yazar bu dosyaları isteğe bağlı olarak işaretledi. İşaretsiz dosyalar kapalı olarak indirilir; bunları daha sonra kurulumun içeriğinden açabilirsiniz.",
+    "optionalFooter": "İşaretsiz dosyalar kapalı indirilir; daha sonra İçerik bölümünden açabilirsiniz",
+    "filter": "İçerikte ara",
+    "toggle": "“{{title}}” öğesini aç",
+    "notFound": "Hiçbir şey bulunamadı",
+    "enabledOf": "{{enabled}} / {{total}}",
+    "empty": "Bu mod paketinde mod veya paket yok",
+    "failed": "İçerik {{site}} üzerinden okunamadı. Tekrar deneyin ya da mod paketini kurun; içerik bir sonraki adımda görünür.",
+    "tabs": {
+      "overview": "Genel bakış",
+      "contents": "İçerik"
+    }
+  },
+  "diskRoom": {
+    "description": "{{drive}} diskinde yeterli alan yok: {{needed}} gerekiyor, {{free}} boş. Yer açın veya başlatıcının veri klasörünü ayarlardan taşıyın."
   }
 }

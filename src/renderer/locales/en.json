@@ -5246,8 +5246,8 @@
     "loaderMissing": "The loader version this modpack version needs was not found.",
     "openSite": "Open on {{site}}",
     "copyIds": "Copy the modpack and version IDs",
-    "fromFile": "From file",
-    "fromFileHint": "Update from a .mrpack or .zip you downloaded yourself",
+    "fromFile": "From archive",
+    "fromFileHint": "Update from a .mrpack or .zip — from your disk or a link",
     "stats": {
       "downloads": "downloads",
       "versions": "versions",
@@ -5298,6 +5298,23 @@
       "backups": "File copies",
       "done": "The instance is back on version {{version}}",
       "failed": "Could not return the previous version"
+    },
+    "archive": {
+      "title": "New version from an archive",
+      "pickFile": "Choose a file…",
+      "orUrl": "or by link",
+      "url": "Link to the modpack archive",
+      "download": "Download",
+      "urlHint": "A direct link to a .zip or .mrpack — servers usually post it on their website",
+      "badUrl": "The link must start with http:// or https://",
+      "offline": "No internet connection — for now you can only update from a file",
+      "source": "Installed from an archive",
+      "noLabel": "Version not set",
+      "how": "How the update works",
+      "howMods": "The author's mods are updated. Mods you added or turned off yourself stay as they are.",
+      "howConfigs": "Settings files you changed are replaced with the author's version; your copies are kept for rollback.",
+      "howKept": "Worlds, game settings and the server list are left alone.",
+      "howPreview": "Before applying, the launcher shows what will change, and afterwards lets you go back to the previous version."
     }
   },
   "mirror": {
@@ -6510,5 +6527,24 @@
     "body": "A link asks to launch “{{instance}}” and connect to {{server}}.",
     "hint": "Shortcuts made by the launcher open without this question. Continue only if you trust where the link came from.",
     "confirm": "Launch and join"
+  },
+  "packContent": {
+    "optional": "Optional",
+    "optionalShort": "optional",
+    "optionalHint": "The author marked these files as optional. Unchecked files are downloaded turned off — you can turn them on later in the instance's content.",
+    "optionalFooter": "Unchecked files are downloaded turned off — you can turn them on later in Content",
+    "filter": "Search the contents",
+    "toggle": "Turn on “{{title}}”",
+    "notFound": "Nothing found",
+    "enabledOf": "{{enabled}} of {{total}}",
+    "empty": "This modpack has no mods or packs",
+    "failed": "Couldn't read the contents from {{site}}. Try again, or install the modpack — the contents show on the next step.",
+    "tabs": {
+      "overview": "Overview",
+      "contents": "Contents"
+    }
+  },
+  "diskRoom": {
+    "description": "Not enough space on {{drive}}: {{needed}} needed, {{free}} free. Free up some space or move the launcher's data folder in settings."
   }
 }

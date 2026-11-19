@@ -42,6 +42,7 @@ import {
 } from "@/shared/instanceSettings";
 import { downloadImage } from "@renderer/utilities/imageDownload";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { contentBytes, ensureDiskRoom } from "@renderer/utilities/diskRoom";
 
 const api = window.api;
 
@@ -222,6 +223,14 @@ async function downloadExtraFiles(
   return (await api.file.download(downloads, downloadLimit)) !== false;
 }
 
+export async function packOverrideRoots(packRoot: string): Promise<string[]> {
+  return Promise.all(
+    ["overrides", "client-overrides", "server-overrides"].map((folder) =>
+      api.path.join(packRoot, folder),
+    ),
+  );
+}
+
 async function copyImportedFolders(
   importRoot: string,
   versionPath: string,
@@ -267,6 +276,16 @@ export async function createInstance(
   if (await api.fs.pathExists(versionPath)) {
     throw new Error(INSTANCE_FOLDER_EXISTS);
   }
+
+  await ensureDiskRoom(
+    versionPath,
+    importData ? 0 : contentBytes(request.mods, importModpack?.extraFiles),
+    importData
+      ? [importData.path]
+      : importModpack
+        ? await packOverrideRoots(importModpack.folderPath)
+        : [],
+  );
 
   assertWritten(await api.fs.ensure(versionPath));
 
@@ -338,16 +357,18 @@ export async function createInstance(
       assertWritten(await api.fs.copy(importData.path, versionPath));
     } else if (importModpack) {
       await copyImportedFolders(importModpack.folderPath, versionPath);
-      if (importModpack.source) {
-        assertWritten(
-          await api.modpack.writeBase(versionPath, importModpack.folderPath, {
-            versionId: importModpack.source.versionId,
-            loaderVersion: importModpack.loaderVersion,
-            projects: baseProjectsOf(importModpack.mods),
-            extraFiles: importModpack.extraFiles ?? [],
-          }),
-        );
-      }
+      assertWritten(
+        await api.modpack.writeBase(versionPath, importModpack.folderPath, {
+          versionId:
+            importModpack.source?.versionId ?? importModpack.versionId ?? "",
+          loaderVersion: importModpack.loaderVersion,
+          projects: baseProjectsOf(importModpack.mods),
+          extraFiles: importModpack.extraFiles ?? [],
+          label:
+            importModpack.source?.versionNumber ?? importModpack.versionLabel,
+          title: importModpack.source?.title ?? importModpack.name,
+        }),
+      );
       extraFilesFailed = !(await downloadExtraFiles(
         importModpack.extraFiles ?? [],
         versionPath,

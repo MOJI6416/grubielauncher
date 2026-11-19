@@ -8,6 +8,7 @@ import {
   modpackMergeDiff,
   packLocalContentPaths,
   planModpackFiles,
+  replacedLocalContentPaths,
 } from "./modpackMerge";
 
 function mod(
@@ -384,5 +385,102 @@ describe("path rules", () => {
     expect(isProtectedPath("options.txt")).toBe(true);
     expect(isProtectedPath("saves/a/level.dat")).toBe(true);
     expect(isProtectedPath("config/options.txt")).toBe(false);
+  });
+});
+
+describe("mergeModpackMods optional files", () => {
+  it("keeps an optional mod the player turned on when the pack ships it off", () => {
+    const base = baseProjectsOf([mod("shaders", "1", { disabled: true })]);
+    const result = mergeModpackMods({
+      base,
+      current: [mod("shaders", "1")],
+      next: [mod("shaders", "2", { disabled: true })],
+    });
+
+    expect(ids(result.mods)).toEqual(["shaders@2"]);
+    expect(result.mods[0].version?.files[0]).not.toHaveProperty("disabled");
+  });
+
+  it("adds a new optional mod in the state the author chose", () => {
+    const result = mergeModpackMods({
+      base: baseProjectsOf([mod("core", "1")]),
+      current: [mod("core", "1")],
+      next: [mod("core", "1"), mod("minimap", "1", { disabled: true })],
+    });
+
+    expect(result.added.map((item) => item.id)).toEqual(["minimap"]);
+    expect(result.added[0].version?.files[0].disabled).toBe(true);
+  });
+});
+
+describe("mergeModpackMods from a server archive", () => {
+  const local = (id: string, version: string, filename: string) =>
+    mod(id, version, { provider: Provider.LOCAL, filename });
+
+  it("updates jars the server swapped in its archive and keeps the player's own", () => {
+    const v1 = [
+      local("serverutils", "1.0", "serverutils-1.0.jar"),
+      mod("jei", "10", { provider: Provider.CURSEFORGE }),
+      local("oldmap", "2.0", "oldmap-2.0.jar"),
+    ];
+    const v2 = [
+      local("serverutils", "1.1", "serverutils-1.1.jar"),
+      mod("jei", "11", { provider: Provider.CURSEFORGE }),
+    ];
+    const current = [
+      ...v1,
+      mod("zoomify", "3", { provider: Provider.MODRINTH }),
+    ];
+
+    const result = mergeModpackMods({
+      base: baseProjectsOf(v1),
+      current,
+      next: v2,
+    });
+
+    expect(ids(result.mods).sort()).toEqual(
+      ["jei@11", "serverutils@1.1", "zoomify@3"].sort(),
+    );
+    expect(result.removed.map((item) => item.id)).toEqual(["oldmap"]);
+    expect(result.own.map((item) => item.id)).toEqual(["zoomify"]);
+  });
+});
+
+describe("replacedLocalContentPaths", () => {
+  it("keeps the instance copies of local jars the update replaces or drops", () => {
+    const instance = String.raw`C:\Games\versions\Server Pack`;
+    const local = (id: string, filename: string, disabled = false) => {
+      const project = mod(id, "1", { provider: Provider.LOCAL, filename, disabled });
+      project.version!.files[0].localPath = `C:/Games/versions/Server Pack/mods/${filename}`;
+      return project;
+    };
+
+    const paths = replacedLocalContentPaths(
+      {
+        updated: [
+          { from: local("serverutils", "serverutils-1.0.jar"), to: mod("serverutils", "2"), replacedUserVersion: false },
+          { from: mod("jei", "10"), to: mod("jei", "11"), replacedUserVersion: false },
+        ],
+        removed: [
+          local("oldmap", "oldmap-2.0.jar.disabled", true),
+          {
+            ...local("elsewhere", "x.jar"),
+            version: {
+              id: "1",
+              dependencies: [],
+              files: [{ filename: "x.jar", size: 1, sha1: "", url: "", isServer: true, localPath: "D:/temp/pack/overrides/mods/x.jar" }],
+            },
+          },
+        ],
+      },
+      instance,
+    );
+
+    expect(paths).toEqual([
+      "mods/oldmap-2.0.jar",
+      "mods/oldmap-2.0.jar.disabled",
+      "mods/serverutils-1.0.jar",
+      "mods/serverutils-1.0.jar.disabled",
+    ]);
   });
 });

@@ -17,6 +17,7 @@ import {
   baseProjectsOf,
   mergeModpackMods,
   packLocalContentPaths,
+  replacedLocalContentPaths,
   type ModpackMergeResult,
 } from "@/shared/modpackMerge";
 import { Mods } from "@renderer/classes/Mods";
@@ -31,10 +32,19 @@ import {
   readBlockedModpack,
   type ModpackDownloadStage,
 } from "@renderer/features/newInstance/downloadModpack";
-import { rewriteImportedLocalPaths } from "@renderer/features/newInstance/createInstance";
+import {
+  packOverrideRoots,
+  rewriteImportedLocalPaths,
+} from "@renderer/features/newInstance/createInstance";
+import { contentBytes, ensureDiskRoom } from "@renderer/utilities/diskRoom";
 import { resolvePackVersions } from "@renderer/features/newInstance/resolvePackVersions";
 import { withExtractProgress } from "@renderer/utilities/archiveProgress";
 import { modpackVersionLabel } from "./modpackVersions";
+import {
+  archiveExtension,
+  archiveProject,
+  parseArchiveUrl,
+} from "./archiveSource";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
@@ -49,6 +59,7 @@ export interface PreparedModpackUpdate {
   merge: ModpackMergeResult;
   files: ModpackFilesPlan;
   loaderTarget: string | null;
+  sourceUrl?: string;
 }
 
 export type ModpackPrepareResult =
@@ -59,6 +70,7 @@ export type ModpackPrepareResult =
   | { status: "loaderMissing" }
   | { status: "notModpack" }
   | { status: "otherProject"; title: string }
+  | { status: "badUrl" }
   | { status: "failed"; error?: unknown };
 
 export type ModpackApplyOutcome =
@@ -198,15 +210,68 @@ export async function prepareModpackUpdate(input: {
   return planPreparedUpdate(instance, project, target, result.modpack);
 }
 
+export async function prepareModpackUpdateFromUrl(input: {
+  instance: Version;
+  project?: IProject;
+  versions?: IProjectVersion[];
+  url: string;
+  tempPath: string;
+  downloadLimit: number;
+  onStage: (stage: ModpackDownloadStage) => void;
+  onExtractPercent?: (percent: number) => void;
+}): Promise<ModpackPrepareResult> {
+  const url = parseArchiveUrl(input.url);
+  if (!url) return { status: "badUrl" };
+
+  if (!(await api.modpack.readBase(input.instance.versionPath))) {
+    return { status: "noBase" };
+  }
+
+  const archivePath = await api.path.join(
+    input.tempPath,
+    `modpack-${Date.now().toString(36)}${archiveExtension(url)}`,
+  );
+
+  try {
+    input.onStage("download");
+    const downloaded = await api.file.download(
+      [{ url, destination: archivePath, group: "other" }],
+      input.downloadLimit,
+    );
+    if (downloaded === false || !(await api.fs.pathExists(archivePath))) {
+      return { status: "failed" };
+    }
+
+    input.onStage("extract");
+    const result = await prepareModpackUpdateFromFile({
+      instance: input.instance,
+      project: input.project,
+      versions: input.versions,
+      filePath: archivePath,
+      tempPath: input.tempPath,
+      onExtractPercent: input.onExtractPercent,
+    });
+
+    return result.status === "ready"
+      ? { status: "ready", update: { ...result.update, sourceUrl: url } }
+      : result;
+  } catch (error) {
+    return { status: "failed", error };
+  } finally {
+    input.onStage(null);
+    await api.fs.rimraf(archivePath).catch(ignoreFailure);
+  }
+}
+
 export async function prepareModpackUpdateFromFile(input: {
   instance: Version;
-  project: IProject;
-  versions: IProjectVersion[];
+  project?: IProject;
+  versions?: IProjectVersion[];
   filePath: string;
   tempPath: string;
   onExtractPercent?: (percent: number) => void;
 }): Promise<ModpackPrepareResult> {
-  const { instance, project } = input;
+  const { instance } = input;
 
   try {
     const imported = await withExtractProgress(
@@ -230,8 +295,10 @@ export async function prepareModpackUpdateFromFile(input: {
     }
 
     const fileName = await api.path.basename(input.filePath);
-    const label = pack.source?.versionNumber || pack.versionId || fileName;
-    const target: IProjectVersion = input.versions.find(
+    const label =
+      pack.source?.versionNumber || pack.versionLabel || pack.versionId || fileName;
+    const project = input.project ?? archiveProject(pack.name);
+    const target: IProjectVersion = (input.versions ?? []).find(
       (version) => version.id === pack.source?.versionId,
     ) ?? {
       id: pack.source?.versionId ?? `file:${label}`,
@@ -304,6 +371,18 @@ export async function applyModpackUpdate(input: {
     return { status: "blockedMods", blocked: blocked.blockedMods };
   }
 
+  await ensureDiskRoom(
+    versionPath,
+    contentBytes(
+      [
+        ...update.merge.added,
+        ...update.merge.updated.map((item) => item.to),
+      ],
+      update.pack.extraFiles,
+    ),
+    await packOverrideRoots(root),
+  );
+
   const previous = cloneConf(instance.version);
 
   if (update.loaderTarget) {
@@ -317,7 +396,12 @@ export async function applyModpackUpdate(input: {
     update.files,
     previous,
     modpackVersionLabel(update.target),
-    packLocalContentPaths(mods, root),
+    [
+      ...new Set([
+        ...packLocalContentPaths(mods, root),
+        ...replacedLocalContentPaths(update.merge, versionPath),
+      ]),
+    ],
   );
 
   if (!applied) {
@@ -359,6 +443,9 @@ export async function applyModpackUpdate(input: {
     loaderVersion: update.pack.loaderVersion,
     projects: baseProjectsOf(update.pack.mods),
     extraFiles: update.pack.extraFiles ?? [],
+    label: modpackVersionLabel(update.target),
+    title: update.pack.name || update.base.title,
+    url: update.sourceUrl ?? update.base.url,
   });
 
   if (!(await instance.save())) throw new Error(MODPACK_UPDATE_FAILED);

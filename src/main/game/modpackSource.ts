@@ -172,6 +172,9 @@ export async function writeModpackBase(
     projects: input.projects,
     client: files.hashes.client,
     server: files.hashes.server,
+    ...(input.label ? { label: input.label } : {}),
+    ...(input.title ? { title: input.title } : {}),
+    ...(input.url ? { url: input.url } : {}),
   };
 
   await fs.ensureDir(modpackStoragePath(versionPath));
@@ -242,12 +245,14 @@ export async function applyModpackUpdateFiles(input: {
   await fs.remove(snapshotRoot);
   await fs.ensureDir(snapshotRoot);
 
+  const previousBase = await readModpackBase(versionPath);
   const snapshot: RollbackSnapshot = {
     conf: input.previousConf,
-    base: await readModpackBase(versionPath),
+    base: previousBase,
     backedUp: [],
     created: [],
-    fromVersion: input.previousConf.modpack?.versionNumber ?? "",
+    fromVersion:
+      input.previousConf.modpack?.versionNumber || previousBase?.label || "",
     toVersion: input.toVersion,
     createdAt: new Date().toISOString(),
   };

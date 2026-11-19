@@ -5290,8 +5290,8 @@
     "loaderMissing": "La version du chargeur requise par cette version du modpack est introuvable.",
     "openSite": "Ouvrir sur {{site}}",
     "copyIds": "Copier les ID du modpack et de la version",
-    "fromFile": "Depuis un fichier",
-    "fromFileHint": "Mettre à jour depuis un .mrpack ou un .zip que vous avez téléchargé vous-même",
+    "fromFile": "Depuis une archive",
+    "fromFileHint": "Mettre à jour depuis un .mrpack ou un .zip, sur le disque ou par lien",
     "stats": {
       "downloads": "téléchargements",
       "versions": "versions",
@@ -5342,6 +5342,23 @@
       "backups": "Copies des fichiers",
       "done": "L’instance est revenue à la version {{version}}",
       "failed": "Impossible de revenir à la version précédente"
+    },
+    "archive": {
+      "title": "Nouvelle version depuis une archive",
+      "pickFile": "Choisir un fichier…",
+      "orUrl": "ou par lien",
+      "url": "Lien vers l’archive du modpack",
+      "download": "Télécharger",
+      "urlHint": "Un lien direct vers un .zip ou un .mrpack : les serveurs le publient en général sur leur site",
+      "badUrl": "Le lien doit commencer par http:// ou https://",
+      "offline": "Pas de connexion Internet : pour l’instant, la mise à jour n’est possible que depuis un fichier",
+      "source": "Installée depuis une archive",
+      "noLabel": "Version non indiquée",
+      "how": "Déroulement de la mise à jour",
+      "howMods": "Les mods de l’auteur sont mis à jour. Les mods que vous avez ajoutés ou désactivés vous-même restent tels quels.",
+      "howConfigs": "Les fichiers de réglages que vous avez modifiés sont remplacés par la version de l’auteur ; vos copies sont conservées pour pouvoir revenir en arrière.",
+      "howKept": "Les mondes, les réglages du jeu et la liste des serveurs ne sont pas touchés.",
+      "howPreview": "Avant d’appliquer, le launcher montre ce qui va changer, puis vous permet de revenir à la version précédente."
     }
   },
   "mirror": {
@@ -6563,5 +6580,24 @@
     "body": "Un lien demande de lancer « {{instance}} » et de se connecter à {{server}}.",
     "hint": "Les raccourcis créés par le launcher s’ouvrent sans cette question. Continuez uniquement si vous faites confiance à la source du lien.",
     "confirm": "Lancer et rejoindre"
+  },
+  "packContent": {
+    "optional": "Facultatifs",
+    "optionalShort": "facultatif",
+    "optionalHint": "L’auteur a marqué ces fichiers comme facultatifs. Les fichiers non cochés sont téléchargés désactivés : vous pourrez les activer plus tard dans le contenu de l’instance.",
+    "optionalFooter": "Les fichiers non cochés sont téléchargés désactivés : activez-les plus tard dans Contenu",
+    "filter": "Rechercher dans le contenu",
+    "toggle": "Activer « {{title}} »",
+    "notFound": "Aucun résultat",
+    "enabledOf": "{{enabled}} sur {{total}}",
+    "empty": "Ce modpack ne contient ni mods ni packs",
+    "failed": "Impossible de lire le contenu depuis {{site}}. Réessayez ou installez le modpack : le contenu s’affichera à l’étape suivante.",
+    "tabs": {
+      "overview": "Aperçu",
+      "contents": "Contenu"
+    }
+  },
+  "diskRoom": {
+    "description": "Pas assez d’espace sur {{drive}} : {{needed}} nécessaires, {{free}} libres. Libérez de l’espace ou déplacez le dossier de données du launcher dans les paramètres."
   }
 }

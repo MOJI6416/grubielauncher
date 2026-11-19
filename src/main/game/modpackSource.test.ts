@@ -304,3 +304,58 @@ describe("modpack update files", () => {
     expect(await planModpackUpdateFiles(instance, next, [])).toBeNull();
   });
 });
+
+describe("modpack from a server archive", () => {
+  it("remembers the archive's version, name and link in the base", async () => {
+    const folder = pack("server-v1", { "overrides/config/a.toml": "1" });
+    await writeModpackBase(instance, folder, {
+      versionId: "file:1.4",
+      projects: [],
+      extraFiles: [],
+      label: "1.4",
+      title: "Server Pack",
+      url: "https://example.org/pack.zip",
+    });
+
+    expect(await readModpackBase(instance)).toMatchObject({
+      versionId: "file:1.4",
+      label: "1.4",
+      title: "Server Pack",
+      url: "https://example.org/pack.zip",
+      client: { "config/a.toml": expect.any(String) },
+    });
+  });
+
+  it("names the previous archive version in the rollback without a linked source", async () => {
+    const v1 = pack("server-v1", { "overrides/config/a.toml": "1" });
+    fs.copySync(path.join(v1, "overrides"), instance);
+    await writeModpackBase(instance, v1, {
+      versionId: "file:1.4",
+      projects: [],
+      extraFiles: [],
+      label: "1.4",
+    });
+
+    const v2 = pack("server-v2", { "overrides/config/a.toml": "2" });
+    const plan = await planModpackUpdateFiles(instance, v2, []);
+    const previous = { ...conf("ignored"), modpack: undefined };
+
+    await applyModpackUpdateFiles({
+      versionPath: instance,
+      root: v2,
+      extraFiles: [],
+      plan: plan!,
+      previousConf: previous,
+      toVersion: "1.5",
+    });
+
+    expect(read(path.join(instance, "config/a.toml"))).toBe("2");
+    expect(await readModpackRollback(instance)).toMatchObject({
+      fromVersion: "1.4",
+      toVersion: "1.5",
+    });
+
+    await restoreModpackRollback(instance);
+    expect(read(path.join(instance, "config/a.toml"))).toBe("1");
+  });
+});

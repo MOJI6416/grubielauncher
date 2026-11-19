@@ -18,6 +18,8 @@ import {
   writeModpackBase,
 } from "../game/modpackSource";
 import { check, handleSafe } from "../utilities/ipc";
+import { checkInstallRoom } from "../utilities/installRoom";
+import type { DiskRoom } from "@/types/DiskRoom";
 import { assertReadablePath, assertWritablePath } from "../utilities/safePath";
 import { isVersionRunning } from "../utilities/worldBackups";
 
@@ -29,11 +31,41 @@ const isExtraFiles = check.arrayOf(check.object(), 20000);
 const isPlan = check.object();
 const isVersionNumber = check.string(512);
 
+function shortText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim()
+    ? value.trim().slice(0, 256)
+    : undefined;
+}
+
+function httpUrl(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length > 4096) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.href
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function asExtraFiles(value: unknown): IModpackExtraFile[] {
   return Array.isArray(value) ? (value as IModpackExtraFile[]) : [];
 }
 
 export function registerModpackIpc() {
+  handleSafe<DiskRoom | null, [string, number, string[]]>(
+    "modpack:checkRoom",
+    null,
+    [isPath, check.number(), check.arrayOf(isPath, 16)],
+    async (_, target, bytes, measureRoots) => {
+      for (const root of measureRoots) {
+        assertReadablePath(root, "modpack:checkRoom");
+      }
+      return await checkInstallRoom(target, bytes, measureRoots);
+    },
+  );
+
   handleSafe<boolean, [string, string, ModpackBaseInput]>(
     "modpack:writeBase",
     false,
@@ -49,6 +81,9 @@ export function registerModpackIpc() {
             : undefined,
         projects: Array.isArray(input.projects) ? input.projects : [],
         extraFiles: asExtraFiles(input.extraFiles),
+        label: shortText(input.label),
+        title: shortText(input.title),
+        url: httpUrl(input.url),
       });
       return true;
     },

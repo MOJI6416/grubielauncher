@@ -5246,8 +5246,8 @@
     "loaderMissing": "Die Loader-Version, die diese Modpack-Version braucht, wurde nicht gefunden.",
     "openSite": "Auf {{site}} öffnen",
     "copyIds": "Modpack- und Versions-IDs kopieren",
-    "fromFile": "Aus Datei",
-    "fromFileHint": "Aus einer selbst heruntergeladenen .mrpack- oder .zip-Datei aktualisieren",
+    "fromFile": "Aus Archiv",
+    "fromFileHint": "Aus einer .mrpack- oder .zip-Datei aktualisieren – vom Datenträger oder per Link",
     "stats": {
       "downloads": "Downloads",
       "versions": "Versionen",
@@ -5298,6 +5298,23 @@
       "backups": "Dateikopien",
       "done": "Die Instanz ist wieder auf Version {{version}}",
       "failed": "Die vorherige Version konnte nicht zurückgeholt werden"
+    },
+    "archive": {
+      "title": "Neue Version aus einem Archiv",
+      "pickFile": "Datei auswählen …",
+      "orUrl": "oder per Link",
+      "url": "Link zum Modpack-Archiv",
+      "download": "Herunterladen",
+      "urlHint": "Ein direkter Link zu einer .zip- oder .mrpack-Datei – Server stellen ihn meist auf ihrer Website bereit",
+      "badUrl": "Der Link muss mit http:// oder https:// beginnen",
+      "offline": "Keine Internetverbindung – vorerst ist nur ein Update aus einer Datei möglich",
+      "source": "Aus einem Archiv installiert",
+      "noLabel": "Version nicht angegeben",
+      "how": "So läuft das Update ab",
+      "howMods": "Die Mods des Autors werden aktualisiert. Mods, die Sie selbst hinzugefügt oder deaktiviert haben, bleiben unverändert.",
+      "howConfigs": "Von Ihnen geänderte Einstellungsdateien werden durch die Version des Autors ersetzt; Ihre Kopien bleiben für die Wiederherstellung erhalten.",
+      "howKept": "Welten, Spieleinstellungen und die Serverliste bleiben unberührt.",
+      "howPreview": "Vor dem Anwenden zeigt der Launcher, was sich ändert, und danach können Sie zur vorherigen Version zurückkehren."
     }
   },
   "mirror": {
@@ -6510,5 +6527,24 @@
     "body": "Ein Link möchte „{{instance}}“ starten und sich mit {{server}} verbinden.",
     "hint": "Vom Launcher erstellte Verknüpfungen öffnen sich ohne diese Frage. Fahren Sie nur fort, wenn Sie der Quelle des Links vertrauen.",
     "confirm": "Starten und beitreten"
+  },
+  "packContent": {
+    "optional": "Optional",
+    "optionalShort": "optional",
+    "optionalHint": "Der Autor hat diese Dateien als optional markiert. Dateien ohne Häkchen werden deaktiviert heruntergeladen – Sie können sie später im Inhalt der Instanz aktivieren.",
+    "optionalFooter": "Dateien ohne Häkchen werden deaktiviert heruntergeladen – später im Inhalt aktivierbar",
+    "filter": "Im Inhalt suchen",
+    "toggle": "„{{title}}“ aktivieren",
+    "notFound": "Nichts gefunden",
+    "enabledOf": "{{enabled}} von {{total}}",
+    "empty": "Dieses Modpack enthält keine Mods oder Pakete",
+    "failed": "Der Inhalt konnte nicht von {{site}} gelesen werden. Versuchen Sie es erneut oder installieren Sie das Modpack – der Inhalt erscheint im nächsten Schritt.",
+    "tabs": {
+      "overview": "Überblick",
+      "contents": "Inhalt"
+    }
+  },
+  "diskRoom": {
+    "description": "Nicht genug Speicherplatz auf {{drive}}: {{needed}} benötigt, {{free}} frei. Geben Sie Speicher frei oder verschieben Sie den Datenordner des Launchers in den Einstellungen."
   }
 }

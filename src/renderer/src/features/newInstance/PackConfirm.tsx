@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Boxes,
   Download,
@@ -27,9 +26,9 @@ import { summarizePackContent } from "./packSummary";
 import type { NewInstanceState } from "./state";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
-import { Empty, EmptyDescription } from "@/components/ui/empty";
-
-const ROW_HEIGHT = 34;
+import { modpackProjectKey } from "@/shared/modpackMerge";
+import { isProjectEnabled, optionalSummary } from "@/shared/modpackOptional";
+import { PackContentList, type PackContentItem } from "./PackContentList";
 
 export function PackConfirm({
   state,
@@ -39,6 +38,7 @@ export function PackConfirm({
   onRetryVersions,
   onChangePack,
   onSelectLoaderVersion,
+  onToggleOptional,
 }: {
   state: NewInstanceState;
   folderPath: string;
@@ -47,14 +47,32 @@ export function PackConfirm({
   onRetryVersions?: () => void;
   onChangePack?: () => void;
   onSelectLoaderVersion: (id: string) => void;
+  onToggleOptional?: (key: string, enabled: boolean) => void;
 }) {
   const { t } = useTranslation();
   const redact = useRedact();
-  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
-    null,
-  );
 
   const summary = useMemo(() => summarizePackContent(state.mods), [state.mods]);
+  const optionalKeys = state.pack?.importModpack?.optional;
+  const optional = useMemo(
+    () => optionalSummary(state.mods, optionalKeys),
+    [optionalKeys, state.mods],
+  );
+  const contentItems = useMemo((): PackContentItem[] => {
+    const keys = new Set(optionalKeys ?? []);
+    return state.mods.map((mod) => {
+      const key = modpackProjectKey(mod);
+      return {
+        key,
+        title: mod.title,
+        iconUrl: mod.iconUrl,
+        provider: mod.provider,
+        projectType: mod.projectType,
+        optional: keys.has(key),
+        enabled: isProjectEnabled(mod),
+      };
+    });
+  }, [optionalKeys, state.mods]);
 
   const sizes = [
     t("sizes.0"),
@@ -63,12 +81,6 @@ export function PackConfirm({
     t("sizes.3"),
     t("sizes.4"),
   ];
-  const virtualizer = useVirtualizer({
-    count: state.mods.length,
-    getScrollElement: () => scrollElement,
-    estimateSize: () => ROW_HEIGHT,
-    overscan: 8,
-  });
 
   const pack = state.pack;
   const loaderInfo = getLoaderInfo(state.loader);
@@ -105,7 +117,12 @@ export function PackConfirm({
       label: t("addVersion.preview.content"),
       value: (
         <span className="font-mono tabular-nums">
-          {summary.total}
+          {optional.total > 0
+            ? t("packContent.enabledOf", {
+                enabled: summary.total - optional.total + optional.enabled,
+                total: summary.total,
+              })
+            : summary.total}
           {summary.bytes > 0 && (
             <span className="ml-1.5 text-faint">
               {formatBytes(summary.bytes, sizes, 0)}
@@ -319,100 +336,29 @@ export function PackConfirm({
           </div>
         )}
 
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface-1">
-          <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border pr-1.5 pl-2.5">
-            <span className="shrink-0 text-2xs font-semibold tracking-[0.08em] text-faint uppercase">
-              {t("addVersion.preview.content")}
-            </span>
-            <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
-              {summary.total}
-            </span>
-
-            <div className="ml-auto flex min-w-0 items-center gap-1 overflow-hidden">
-              {summary.groups.map((group) => (
-                <span
-                  key={group.type}
-                  className="shrink-0 rounded-md bg-surface-2 px-1.5 py-0.5 text-3xs text-muted-foreground"
-                >
-                  {t(`modManager.projectTypes.${group.type}`)}
-                  <span className="ml-1 font-mono tabular-nums text-faint">
-                    {group.count}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </header>
-
-          <div
-            ref={setScrollElement}
-            className="min-h-0 flex-1 overflow-y-auto p-1"
-          >
-            {state.mods.length === 0 ? (
-              <Empty className="h-full px-4">
-                <EmptyDescription className="text-xs">
-                  {t("newInstance.emptyContent")}
-                </EmptyDescription>
-              </Empty>
-            ) : (
-              <div
-                className="relative w-full"
-                style={{ height: `${virtualizer.getTotalSize()}px` }}
-              >
-                {virtualizer.getVirtualItems().map((row) => {
-                  const mod = state.mods[row.index];
-                  if (!mod) return null;
-
-                  return (
-                    <div
-                      key={`${mod.provider}-${mod.id}-${row.index}`}
-                      style={{
-                        height: `${row.size}px`,
-                        transform: `translateY(${row.start}px)`,
-                      }}
-                      className="absolute top-0 left-0 flex w-full items-center gap-2 rounded-lg px-2"
-                    >
-                      <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-surface-2">
-                        {mod.iconUrl ? (
-                          <img
-                            src={mod.iconUrl}
-                            alt=""
-                            draggable={false}
-                            className="size-full object-cover"
-                          />
-                        ) : (
-                          <Package className="size-3 text-faint" />
-                        )}
-                      </span>
-
-                      <Hint content={mod.title} variant="text" truncatedOnly>
-                        <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                          {mod.title}
-                        </span>
-                      </Hint>
-
-                      <ContentProviderIcon
-                        provider={mod.provider}
-                        className="size-3"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <footer className="flex h-9 shrink-0 items-center border-t border-border px-2.5">
+        <PackContentList
+          title={t("addVersion.preview.content")}
+          items={contentItems}
+          emptyText={t("newInstance.emptyContent")}
+          onToggle={onToggleOptional}
+          footer={
             <Hint
-              content={t("newInstance.afterInstallHint")}
+              content={
+                optional.total > 0
+                  ? t("packContent.optionalFooter")
+                  : t("newInstance.afterInstallHint")
+              }
               variant="text"
               truncatedOnly
             >
               <span className="min-w-0 truncate text-2xs text-faint">
-                {t("newInstance.afterInstallHint")}
+                {optional.total > 0
+                  ? t("packContent.optionalFooter")
+                  : t("newInstance.afterInstallHint")}
               </span>
             </Hint>
-          </footer>
-        </section>
+          }
+        />
       </div>
 
       <SummaryCard

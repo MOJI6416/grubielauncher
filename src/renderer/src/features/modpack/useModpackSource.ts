@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { IVersionConf } from "@/types/IVersion";
-import type { ModpackRollbackInfo } from "@/types/ModpackSource";
+import type {
+  ModpackBase,
+  ModpackRollbackInfo,
+} from "@/types/ModpackSource";
 import { Version } from "@renderer/classes/Version";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import {
@@ -21,6 +24,13 @@ export function canFollowModpack(conf: IVersionConf): boolean {
   return !!conf.modpack && !conf.downloadedVersion;
 }
 
+export function canUpdateFromArchive(
+  conf: IVersionConf,
+  hasBase: boolean | null,
+): boolean {
+  return !conf.modpack && !conf.downloadedVersion && hasBase === true;
+}
+
 async function hasModpackBase(versionPath: string): Promise<boolean> {
   const target = await api.path.join(
     versionPath,
@@ -39,7 +49,7 @@ export function useModpackSource(instance: Version | undefined, isOnline: boolea
 
   const [catalog, setCatalog] = useState<ModpackCatalog | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasBase, setHasBase] = useState<boolean | null>(null);
+  const [base, setBase] = useState<ModpackBase | null | undefined>(undefined);
   const [rollback, setRollback] = useState<ModpackRollbackInfo | null>(null);
   const [revision, setRevision] = useState(0);
   const forceRef = useRef(false);
@@ -49,15 +59,18 @@ export function useModpackSource(instance: Version | undefined, isOnline: boolea
     let cancelled = false;
 
     void (async () => {
-      const [base, info] = await Promise.all([
-        hasModpackBase(versionPath),
+      const [nextBase, info] = await Promise.all([
+        api.modpack
+          .readBase(versionPath)
+          .catch(ignoreFailure)
+          .then((value) => value ?? null),
         api.modpack
           .rollbackInfo(versionPath)
           .catch(ignoreFailure)
           .then((info) => info ?? null),
       ]);
       if (cancelled) return;
-      setHasBase(base);
+      setBase(nextBase);
       setRollback(info);
     })();
 
@@ -86,6 +99,8 @@ export function useModpackSource(instance: Version | undefined, isOnline: boolea
       cancelled = true;
     };
   }, [source?.provider, source?.projectId, loader, isOnline, revision]);
+
+  const hasBase = base === undefined ? null : base !== null;
 
   const update = useMemo(
     () =>
@@ -119,6 +134,7 @@ export function useModpackSource(instance: Version | undefined, isOnline: boolea
     failed: !isOnline || catalog?.failed === true,
     isLoading,
     hasBase,
+    base: base ?? null,
     rollback,
     update,
     reload,

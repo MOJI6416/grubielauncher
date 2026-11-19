@@ -133,6 +133,8 @@ import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { setOptionalEnabled } from "@/shared/modpackOptional";
+import { showNotEnoughSpaceToast } from "@renderer/utilities/diskRoom";
 import { Hint } from "@renderer/components/Hint";
 
 const api = window.api;
@@ -531,6 +533,9 @@ export function NewInstancePanel({
       }
 
       if (result.status === "failed") {
+        if (showNotEnoughSpaceToast(t("versions.installError"), result.error)) {
+          return;
+        }
         showFailureToast(t("modManager.notModpack"), result.error, {
           channels: ["modManager:checkModpack", "file:download"],
           fallbackDescription: t("modManager.notModpackHint"),
@@ -971,7 +976,7 @@ export function NewInstancePanel({
             channels: ["fs:copy", "fs:ensure", "fs:writeFile", "servers:write"],
             fallbackDescription: t("newInstance.contentFailedHint"),
           });
-        } else {
+        } else if (!showNotEnoughSpaceToast(t("versions.installError"), error)) {
           showFailureToast(t("versions.installError"), error);
         }
       } finally {
@@ -1357,6 +1362,17 @@ export function NewInstancePanel({
                         : undefined
                     }
                     onChangePack={modpack ? undefined : dropPack}
+                    onToggleOptional={(key, enabled) =>
+                      dispatch({
+                        type: "setMods",
+                        mods: setOptionalEnabled(
+                          state.mods,
+                          state.pack?.importModpack?.optional ?? [],
+                          [key],
+                          enabled,
+                        ),
+                      })
+                    }
                     onSelectLoaderVersion={(id) => {
                       const version = state.loaderVersions.find(
                         (item) => item.id === id,

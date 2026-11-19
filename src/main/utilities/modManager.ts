@@ -68,6 +68,7 @@ import { VersionsService } from "../services/Versions";
 import { BTA_MINECRAFT_VERSION } from "@/shared/btaLoader";
 import { FOXLOADER_MINECRAFT_VERSION } from "@/shared/foxLoader";
 import { isExcludedInstancePath } from "@/shared/instancePrivacy";
+import { isOptionalOnClient } from "@/shared/modpackOptional";
 import {
   fabricFamilyFor,
   ornitheIntermediaryGeneration,
@@ -197,7 +198,6 @@ export async function cfModpackToModpack(
 
   const pendingFileIds = new Map<number, number>();
   for (const f of modpack.files) {
-    if (f.required === false) continue;
     if (filesById.has(f.fileID) || pendingFileIds.has(f.fileID)) continue;
     if (!mods.some((m) => m.id == f.projectID)) continue;
     pendingFileIds.set(f.fileID, f.projectID);
@@ -219,18 +219,20 @@ export async function cfModpackToModpack(
     }
   }
 
-  for (const f of modpack.files) {
-    if (f.required === false) continue;
+  const optional: string[] = [];
 
+  for (const f of modpack.files) {
+    const isOptional = f.required === false;
     const mod = mods.find((m) => m.id == f.projectID);
     if (!mod) {
-      missingProjects.push(f.projectID);
+      if (!isOptional) missingProjects.push(f.projectID);
       continue;
     }
 
     const file: IFile | null | undefined = filesById.get(f.fileID);
 
     if (!file) {
+      if (isOptional) continue;
       throw new Error(
         `CurseForge file ${f.fileID} for project ${f.projectID} was not found.`,
       );
@@ -267,10 +269,12 @@ export async function cfModpackToModpack(
             sha1: file.hashes.find((h) => h.algo == 1)?.value || "",
             isServer: true,
             isClient: true,
+            ...(isOptional ? { disabled: true } : {}),
           },
         ],
       },
     });
+    if (isOptional) optional.push(`${Provider.CURSEFORGE}:${mod.id}`);
   }
 
   if (missingProjects.length > 0) {
@@ -287,6 +291,8 @@ export async function cfModpackToModpack(
     mods: modpackFiles,
     folderPath: "",
     image: undefined,
+    ...(optional.length ? { optional } : {}),
+    ...(modpack.version ? { versionLabel: modpack.version } : {}),
   };
 }
 
@@ -323,6 +329,7 @@ export async function mrModpackToModpack(
     loaderVersion,
     mods: [],
     versionId: modpack.versionId,
+    versionLabel: modpack.versionId,
   };
 }
 
@@ -1956,6 +1963,7 @@ export async function checkModpack(
           )
         : []) ?? [];
 
+    const optional: number[] = [];
     for (const file of mrModpack.files) {
       const downloadUrl = file.downloads[0];
       if (!downloadUrl) continue;
@@ -1975,6 +1983,7 @@ export async function checkModpack(
       }
 
       const ids = extractModrinthIds(downloadUrl);
+      if (isOptionalOnClient(file.env)) optional.push(modpack.mods.length);
       if (!ids) {
         modpack.mods.push(
           createFallbackProjectFromModrinthFile(file, projectType, downloadUrl),
@@ -2030,6 +2039,13 @@ export async function checkModpack(
         },
       });
     }
+
+    const packMods = modpack.mods;
+    const optionalKeys = optional
+      .map((index) => packMods[index])
+      .filter((mod): mod is ILocalProject => !!mod)
+      .map((mod) => `${mod.provider}:${mod.id}`);
+    if (optionalKeys.length) modpack.optional = optionalKeys;
   } else if (foreignProvider == "prism") {
     modpack = await prismModpackToModpack(confPath);
   }

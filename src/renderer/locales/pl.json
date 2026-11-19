@@ -5334,8 +5334,8 @@
     "loaderMissing": "Nie znaleziono wersji loadera, której wymaga ta wersja modpacka.",
     "openSite": "Otwórz na {{site}}",
     "copyIds": "Kopiuj ID modpacka i wersji",
-    "fromFile": "Z pliku",
-    "fromFileHint": "Aktualizuj z pliku .mrpack lub .zip pobranego samodzielnie",
+    "fromFile": "Z archiwum",
+    "fromFileHint": "Aktualizuj z pliku .mrpack lub .zip — z dysku albo przez link",
     "stats": {
       "downloads": "pobrania",
       "versions": "wersje",
@@ -5386,6 +5386,23 @@
       "backups": "Kopie plików",
       "done": "Instancja wróciła do wersji {{version}}",
       "failed": "Nie udało się przywrócić poprzedniej wersji"
+    },
+    "archive": {
+      "title": "Nowa wersja z archiwum",
+      "pickFile": "Wybierz plik…",
+      "orUrl": "lub przez link",
+      "url": "Link do archiwum modpacka",
+      "download": "Pobierz",
+      "urlHint": "Bezpośredni link do pliku .zip lub .mrpack — serwery zwykle podają go na swojej stronie",
+      "badUrl": "Link musi zaczynać się od http:// lub https://",
+      "offline": "Brak połączenia z internetem — na razie można zaktualizować tylko z pliku",
+      "source": "Zainstalowana z archiwum",
+      "noLabel": "Nie podano wersji",
+      "how": "Jak przebiegnie aktualizacja",
+      "howMods": "Mody autora zostaną zaktualizowane. Mody, które dodano lub wyłączono samodzielnie, pozostaną bez zmian.",
+      "howConfigs": "Zmienione pliki ustawień zostaną zastąpione wersją autora, a ich kopie zostaną zachowane do przywrócenia.",
+      "howKept": "Światy, ustawienia gry i lista serwerów pozostają nietknięte.",
+      "howPreview": "Przed zastosowaniem launcher pokaże, co się zmieni, a potem pozwoli wrócić do poprzedniej wersji."
     }
   },
   "mirror": {
@@ -6616,5 +6633,24 @@
     "body": "Link chce uruchomić „{{instance}}” i połączyć się z {{server}}.",
     "hint": "Skróty utworzone przez launcher otwierają się bez tego pytania. Kontynuuj tylko, jeśli ufasz źródłu linku.",
     "confirm": "Uruchom i dołącz"
+  },
+  "packContent": {
+    "optional": "Opcjonalne",
+    "optionalShort": "opcjonalny",
+    "optionalHint": "Autor oznaczył te pliki jako opcjonalne. Pliki bez zaznaczenia zostaną pobrane jako wyłączone — możesz je włączyć później w zawartości instancji.",
+    "optionalFooter": "Pliki bez zaznaczenia są pobierane jako wyłączone — włączysz je później w Zawartości",
+    "filter": "Szukaj w zawartości",
+    "toggle": "Włącz „{{title}}”",
+    "notFound": "Nic nie znaleziono",
+    "enabledOf": "{{enabled}} z {{total}}",
+    "empty": "Ten modpack nie zawiera modów ani paczek",
+    "failed": "Nie udało się odczytać zawartości z {{site}}. Spróbuj ponownie albo zainstaluj modpack — zawartość pojawi się w następnym kroku.",
+    "tabs": {
+      "overview": "Przegląd",
+      "contents": "Zawartość"
+    }
+  },
+  "diskRoom": {
+    "description": "Za mało miejsca na dysku {{drive}}: potrzeba {{needed}}, wolne {{free}}. Zwolnij miejsce albo przenieś folder danych launchera w ustawieniach."
   }
 }
