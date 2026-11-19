@@ -2202,6 +2202,11 @@
         "title": "Comandos antes e depois do jogo",
         "description": "Comandos de shell antes de iniciar e depois de sair no Linux",
         "keywords": "linux hook antes de iniciar depois de sair script comando"
+      },
+      "sharedGameSettings": {
+        "title": "Configurações de jogo compartilhadas",
+        "description": "As mesmas teclas, gráficos, servidores e pacotes de recursos em todas as instâncias",
+        "keywords": "options.txt controles teclas gráficos som servidores pacotes de recursos barras comandos perfil modelo sincronização compartilhadas"
       }
     },
     "voicePttCaptureTimeout": "Nenhuma tecla foi pressionada — o atalho não mudou.",
@@ -6751,6 +6756,67 @@
       "console": "Pelo console",
       "consoleOldHint": "O protocolo de gerenciamento existe desde a 1.21.9. Aqui os comandos vão para o console e as listas são lidas dos arquivos.",
       "consoleFailedHint": "O protocolo de gerenciamento não respondeu, então os comandos vão para o console. Reiniciar o servidor costuma ajudar."
+    }
+  },
+  "sharedSettings": {
+    "title": "Configurações de jogo compartilhadas",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "offHint": "Esta instância tem os próprios controles, gráficos, servidores e o resto. Ao conectar, eles ficam guardados em um backup.",
+    "pending": "As configurações compartilhadas valem a partir da primeira inicialização",
+    "connected": "A instância agora usa as configurações compartilhadas",
+    "disconnected": "Desconectada: as configurações próprias da instância voltaram",
+    "groupOn": "{{group}}: agora compartilhado com todas as instâncias",
+    "groupOff": "{{group}}: as configurações da instância voltaram",
+    "failed": "Não foi possível alterar as configurações compartilhadas",
+    "groups": {
+      "controls": "Controles",
+      "video": "Vídeo e som",
+      "servers": "Lista de servidores",
+      "packs": "Pacotes de recursos",
+      "hotbars": "Barras de itens",
+      "history": "Histórico de comandos"
+    },
+    "groupHints": {
+      "controls": "Teclas, mouse e sensibilidade, incluindo as teclas de mods.",
+      "video": "Gráficos, brilho, campo de visão, tamanho da interface e volume. Distância de renderização, mipmaps e o motor de renderização ficam na instância.",
+      "servers": "Um servidor adicionado em qualquer instância aparece em todas. Servidores de um modpack ficam só nele.",
+      "packs": "Pacotes de recursos ativados. Cada instância recebe só os feitos para a versão dela.",
+      "hotbars": "Barras de itens salvas do modo criativo. Vão para instâncias da mesma versão ou de uma mais nova.",
+      "history": "Os últimos 50 comandos do chat."
+    },
+    "blocked": {
+      "share": "A lista de servidores de uma build publicada é definida pelo autor"
+    },
+    "settingsHint": "iguais em todas as instâncias",
+    "autoConnect": "Conectar novas instâncias",
+    "autoConnectDescription": "Uma nova instância já recebe as configurações compartilhadas. Desative grupos na aba “Configurações” da instância",
+    "connectedCount": "Instâncias com configurações compartilhadas: {{connected}} de {{total}}",
+    "connectRest_one": "Conectar mais {{count}}",
+    "connectRest_many": "Conectar mais {{count}}",
+    "connectRest_other": "Conectar mais {{count}}",
+    "connectedMany_one": "{{count}} instância conectada",
+    "connectedMany_many": "{{count}} instâncias conectadas",
+    "connectedMany_other": "{{count}} instâncias conectadas",
+    "connectedPartly_one": "Não foi possível conectar {{count}} instância",
+    "connectedPartly_many": "Não foi possível conectar {{count}} instâncias",
+    "connectedPartly_other": "Não foi possível conectar {{count}} instâncias",
+    "summary": {
+      "title": "No perfil: {{list}}",
+      "empty": "O perfil ainda está vazio: ele se enche quando você joga",
+      "options_one": "{{count}} configuração",
+      "options_many": "{{count}} configurações",
+      "options_other": "{{count}} configurações",
+      "servers_one": "{{count}} servidor",
+      "servers_many": "{{count}} servidores",
+      "servers_other": "{{count}} servidores",
+      "packs_one": "{{count}} pacote de recursos",
+      "packs_many": "{{count}} pacotes de recursos",
+      "packs_other": "{{count}} pacotes de recursos",
+      "hotbars": "barras de itens",
+      "history_one": "{{count}} comando",
+      "history_many": "{{count}} comandos",
+      "history_other": "{{count}} comandos"
     }
   }
 }

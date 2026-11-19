@@ -56,6 +56,7 @@ import { TagsDialog } from "@renderer/features/instances/TagsDialog";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { InstancePublishingCard } from "@renderer/features/instances/InstancePublishingCard";
 import { InstanceSettingsPanel } from "@renderer/features/instances/InstanceSettingsPanel";
+import { SharedSettingsCard } from "@renderer/features/sharedSettings/SharedSettingsCard";
 import {
   ModTranslationRow,
   canTranslateMods,
@@ -723,6 +724,12 @@ export function InstanceScreen({
                     }
                   />
                 ) : undefined
+              }
+              sharedCard={
+                <SharedSettingsCard
+                  instance={version}
+                  disabled={isLoading || isVersionRunning || isForeignInstance}
+                />
               }
               profileCard={
                 <InstanceLaunchProfileCard

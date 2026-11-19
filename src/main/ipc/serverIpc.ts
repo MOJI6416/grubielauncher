@@ -27,6 +27,7 @@ import {
   updateServerProperty
 } from '../utilities/serverManager'
 import { readNBT, writeNBT } from '../utilities/nbt'
+import { noteServersWritten } from '../game/sharedSettings/sync'
 import { IServer } from '@/types/ServersList'
 import { LOADERS, Loader } from '@/types/Loader'
 import { Server } from '../services/Server'
@@ -254,6 +255,7 @@ export function registerServerIpc() {
       assertWritablePath(p, 'servers:write')
       await readNBT(p)
       await writeNBT(data, p)
+      await noteServersWritten(p).catch(() => undefined)
       return true
     }
   )

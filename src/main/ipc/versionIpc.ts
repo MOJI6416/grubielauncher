@@ -69,6 +69,11 @@ import {
 } from "../game/jarMods";
 import { checkOrnitheMods, ensureOrnitheMapping } from "../game/ornitheMods";
 import { prepareModTranslationsForLaunch } from "../game/modTranslations/sync";
+import {
+  captureWhenClosed,
+  syncBeforeLaunch,
+} from "../game/sharedSettings/sync";
+import { journal } from "../journal/journal";
 import { assertSafeFileSegment } from "../game/serverScriptSafety";
 import { getDataRoot } from "../utilities/dataRoot";
 import type { OrnitheModsCheck } from "@/shared/profileLoaders";
@@ -523,7 +528,20 @@ export function registerVersionIpc() {
         launcherLang: settings.lang,
         token: account?.accessToken,
       }).catch(() => undefined);
-      return await vm.run(account, settings, authData, instance, quick);
+      const shared = {
+        versionPath: vm.versionPath,
+        mcVersion: versionConf.version.id,
+        loader: versionConf.loader.name,
+        shareCode: versionConf.shareCode || undefined,
+      };
+      await syncBeforeLaunch(shared).catch((error) =>
+        journal.warn("shared-settings", "sync before launch failed", {
+          error: String(error),
+        }),
+      );
+      const outcome = await vm.run(account, settings, authData, instance, quick);
+      if (outcome === true) captureWhenClosed(versionConf.name, instance, shared);
+      return outcome;
     },
   );
 

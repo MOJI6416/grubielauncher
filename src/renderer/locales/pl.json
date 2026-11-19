@@ -2220,6 +2220,11 @@
         "title": "Polecenia przed grą i po niej",
         "description": "Polecenia powłoki przed uruchomieniem i po wyjściu w Linuksie",
         "keywords": "linux hook przed uruchomieniem po wyjściu skrypt polecenie"
+      },
+      "sharedGameSettings": {
+        "title": "Wspólne ustawienia gry",
+        "description": "Te same klawisze, grafika, serwery i paczki zasobów w każdej instancji",
+        "keywords": "options.txt sterowanie klawisze grafika dźwięk serwery paczki zasobów paski polecenia profil szablon synchronizacja wspólne"
       }
     },
     "voicePttCaptureTimeout": "Nie naciśnięto żadnego klawisza — skrót się nie zmienił.",
@@ -6812,6 +6817,74 @@
       "console": "Przez konsolę",
       "consoleOldHint": "Protokół zarządzania istnieje od 1.21.9. Tutaj polecenia trafiają do konsoli, a listy są czytane z plików serwera.",
       "consoleFailedHint": "Protokół zarządzania nie odpowiedział, więc polecenia trafiają do konsoli. Zwykle pomaga restart serwera."
+    }
+  },
+  "sharedSettings": {
+    "title": "Wspólne ustawienia gry",
+    "connect": "Połącz",
+    "disconnect": "Odłącz",
+    "offHint": "Ta instancja ma własne sterowanie, grafikę, serwery i resztę. Przy łączeniu zostaną zapisane w kopii zapasowej.",
+    "pending": "Wspólne ustawienia zadziałają przy pierwszym uruchomieniu",
+    "connected": "Instancja korzysta teraz ze wspólnych ustawień",
+    "disconnected": "Odłączono: przywrócono własne ustawienia instancji",
+    "groupOn": "{{group}}: teraz wspólne dla wszystkich instancji",
+    "groupOff": "{{group}}: przywrócono ustawienia instancji",
+    "failed": "Nie udało się zmienić wspólnych ustawień",
+    "groups": {
+      "controls": "Sterowanie",
+      "video": "Grafika i dźwięk",
+      "servers": "Lista serwerów",
+      "packs": "Paczki zasobów",
+      "hotbars": "Paski szybkiego dostępu",
+      "history": "Historia poleceń"
+    },
+    "groupHints": {
+      "controls": "Klawisze, mysz i czułość, także klawisze modów.",
+      "video": "Grafika, jasność, pole widzenia, rozmiar interfejsu i głośność. Zasięg renderowania, mipmapy i silnik renderowania zostają w instancji.",
+      "servers": "Serwer dodany w dowolnej instancji pojawi się we wszystkich. Serwery z modpacka zostają tylko w nim.",
+      "packs": "Włączone paczki zasobów. Instancja dostaje tylko te, które pasują do jej wersji.",
+      "hotbars": "Zapisane paski szybkiego dostępu z trybu kreatywnego. Trafiają do instancji tej samej lub nowszej wersji.",
+      "history": "Ostatnie 50 poleceń z czatu."
+    },
+    "blocked": {
+      "share": "Listę serwerów opublikowanej paczki ustala jej autor"
+    },
+    "settingsHint": "takie same w każdej instancji",
+    "autoConnect": "Łącz nowe instancje",
+    "autoConnectDescription": "Nowa instancja od razu dostaje wspólne ustawienia. Grupy wyłączysz w karcie „Ustawienia” instancji",
+    "connectedCount": "Instancje ze wspólnymi ustawieniami: {{connected}} z {{total}}",
+    "connectRest_one": "Połącz jeszcze {{count}}",
+    "connectRest_few": "Połącz jeszcze {{count}}",
+    "connectRest_many": "Połącz jeszcze {{count}}",
+    "connectRest_other": "Połącz jeszcze {{count}}",
+    "connectedMany_one": "Połączono {{count}} instancję",
+    "connectedMany_few": "Połączono {{count}} instancje",
+    "connectedMany_many": "Połączono {{count}} instancji",
+    "connectedMany_other": "Połączono {{count}} instancji",
+    "connectedPartly_one": "Nie udało się połączyć {{count}} instancji",
+    "connectedPartly_few": "Nie udało się połączyć {{count}} instancji",
+    "connectedPartly_many": "Nie udało się połączyć {{count}} instancji",
+    "connectedPartly_other": "Nie udało się połączyć {{count}} instancji",
+    "summary": {
+      "title": "W profilu: {{list}}",
+      "empty": "Profil jest jeszcze pusty: wypełni się, gdy zagrasz",
+      "options_one": "{{count}} ustawienie",
+      "options_few": "{{count}} ustawienia",
+      "options_many": "{{count}} ustawień",
+      "options_other": "{{count}} ustawienia",
+      "servers_one": "{{count}} serwer",
+      "servers_few": "{{count}} serwery",
+      "servers_many": "{{count}} serwerów",
+      "servers_other": "{{count}} serwera",
+      "packs_one": "{{count}} paczka zasobów",
+      "packs_few": "{{count}} paczki zasobów",
+      "packs_many": "{{count}} paczek zasobów",
+      "packs_other": "{{count}} paczki zasobów",
+      "hotbars": "paski szybkiego dostępu",
+      "history_one": "{{count}} polecenie",
+      "history_few": "{{count}} polecenia",
+      "history_many": "{{count}} poleceń",
+      "history_other": "{{count}} polecenia"
     }
   }
 }

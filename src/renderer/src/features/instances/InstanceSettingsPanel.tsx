@@ -216,6 +216,7 @@ export function InstanceSettingsPanel({
   loaderCard,
   languageRow,
   profileCard,
+  sharedCard,
 }: {
   overrides: InstanceSettingsOverrides | undefined;
   onChange: (next: InstanceSettingsOverrides | undefined) => void;
@@ -227,6 +228,7 @@ export function InstanceSettingsPanel({
   loaderCard?: ReactNode;
   languageRow?: ReactNode;
   profileCard?: ReactNode;
+  sharedCard?: ReactNode;
 }) {
   const { t } = useTranslation();
   const global = useAtomValue(settingsAtom);
@@ -540,6 +542,8 @@ export function InstanceSettingsPanel({
         </SectionCard>
 
         {languageCard}
+
+        {sharedCard}
 
         {profileCard && (
           <div className="flex min-h-[132px] flex-1 flex-col">

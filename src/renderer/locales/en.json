@@ -2184,6 +2184,11 @@
         "title": "Commands before and after the game",
         "description": "Shell commands run before launch and after exit on Linux",
         "keywords": "linux hook pre-launch post-exit script command"
+      },
+      "sharedGameSettings": {
+        "title": "Shared game settings",
+        "description": "The same keys, graphics, servers and resource packs in every instance",
+        "keywords": "options.txt controls keys keybinds graphics sound servers resource packs hotbars commands profile template sync shared"
       }
     },
     "voicePttCaptureTimeout": "No key was pressed — the shortcut is unchanged.",
@@ -6698,6 +6703,60 @@
       "console": "Via console",
       "consoleOldHint": "The management protocol exists since 1.21.9. Here commands go to the server console and lists are read from its files.",
       "consoleFailedHint": "The management protocol did not answer, so commands go to the server console. Restarting the server usually helps."
+    }
+  },
+  "sharedSettings": {
+    "title": "Shared game settings",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "offHint": "This instance keeps its own controls, graphics, servers and the rest. Connecting saves them to a backup.",
+    "pending": "Shared settings are applied on the first launch",
+    "connected": "The instance now uses shared settings",
+    "disconnected": "Disconnected: the instance's own settings are back",
+    "groupOn": "{{group}}: shared with all instances",
+    "groupOff": "{{group}}: the instance's own settings are back",
+    "failed": "Couldn't change shared settings",
+    "groups": {
+      "controls": "Controls",
+      "video": "Video and sound",
+      "servers": "Server list",
+      "packs": "Resource packs",
+      "hotbars": "Hotbars",
+      "history": "Command history"
+    },
+    "groupHints": {
+      "controls": "Key bindings, mouse and sensitivity, mod keys included.",
+      "video": "Graphics, brightness, field of view, interface scale and volume. Render distance, mipmaps and the render backend stay with the instance.",
+      "servers": "A server added in any instance shows up in all of them. Servers from a modpack stay in that modpack.",
+      "packs": "Enabled resource packs. An instance only gets the packs made for its version.",
+      "hotbars": "Saved creative hotbars. They move to instances of the same or a newer version.",
+      "history": "The last 50 chat commands."
+    },
+    "blocked": {
+      "share": "The author of a published build sets its server list"
+    },
+    "settingsHint": "the same in every instance",
+    "autoConnect": "Connect new instances",
+    "autoConnectDescription": "A new instance gets shared settings right away. Turn groups off for one instance on its Settings tab",
+    "connectedCount": "Instances with shared settings: {{connected}} of {{total}}",
+    "connectRest_one": "Connect {{count}} more",
+    "connectRest_other": "Connect {{count}} more",
+    "connectedMany_one": "Connected {{count}} instance",
+    "connectedMany_other": "Connected {{count}} instances",
+    "connectedPartly_one": "Couldn't connect {{count}} instance",
+    "connectedPartly_other": "Couldn't connect {{count}} instances",
+    "summary": {
+      "title": "In the profile: {{list}}",
+      "empty": "The profile is empty for now: it fills up once you play",
+      "options_one": "{{count}} setting",
+      "options_other": "{{count}} settings",
+      "servers_one": "{{count}} server",
+      "servers_other": "{{count}} servers",
+      "packs_one": "{{count}} resource pack",
+      "packs_other": "{{count}} resource packs",
+      "hotbars": "hotbars",
+      "history_one": "{{count}} command",
+      "history_other": "{{count}} commands"
     }
   }
 }

@@ -2184,6 +2184,11 @@
         "title": "Oyundan önce ve sonra komutlar",
         "description": "Linux'ta başlatmadan önce ve çıkıştan sonra kabuk komutları",
         "keywords": "linux hook başlatmadan önce çıkıştan sonra betik komut"
+      },
+      "sharedGameSettings": {
+        "title": "Ortak oyun ayarları",
+        "description": "Her kurulumda aynı tuşlar, grafikler, sunucular ve kaynak paketleri",
+        "keywords": "options.txt kontroller tuşlar grafik ses sunucular kaynak paketleri hızlı erişim komutlar profil şablon senkronizasyon ortak"
       }
     },
     "voicePttCaptureTimeout": "Hiçbir tuşa basılmadı — kısayol değişmedi.",
@@ -6698,6 +6703,60 @@
       "console": "Konsol üzerinden",
       "consoleOldHint": "Yönetim protokolü 1.21.9’dan beri var. Burada komutlar sunucu konsoluna gider, listeler dosyalarından okunur.",
       "consoleFailedHint": "Yönetim protokolü yanıt vermedi, bu yüzden komutlar konsola gidiyor. Sunucuyu yeniden başlatmak genelde işe yarar."
+    }
+  },
+  "sharedSettings": {
+    "title": "Ortak oyun ayarları",
+    "connect": "Bağla",
+    "disconnect": "Bağlantıyı kes",
+    "offHint": "Bu kurulumun kontrolleri, grafikleri, sunucuları ve geri kalanı kendine ait. Bağlandığında bunlar bir yedeğe kaydedilir.",
+    "pending": "Ortak ayarlar ilk başlatmada uygulanır",
+    "connected": "Kurulum artık ortak ayarları kullanıyor",
+    "disconnected": "Bağlantı kesildi: kurulumun kendi ayarları geri geldi",
+    "groupOn": "{{group}}: artık tüm kurulumlarda ortak",
+    "groupOff": "{{group}}: kurulumun ayarları geri geldi",
+    "failed": "Ortak ayarlar değiştirilemedi",
+    "groups": {
+      "controls": "Kontroller",
+      "video": "Görüntü ve ses",
+      "servers": "Sunucu listesi",
+      "packs": "Kaynak paketleri",
+      "hotbars": "Hızlı erişim çubukları",
+      "history": "Komut geçmişi"
+    },
+    "groupHints": {
+      "controls": "Tuşlar, fare ve hassasiyet; mod tuşları da dahil.",
+      "video": "Grafikler, parlaklık, görüş alanı, arayüz boyutu ve ses düzeyi. Görüş mesafesi, mipmap ve oluşturma motoru kuruluma özel kalır.",
+      "servers": "Herhangi bir kurulumda eklenen sunucu hepsinde görünür. Mod paketinin sunucuları yalnızca o pakette kalır.",
+      "packs": "Etkin kaynak paketleri. Her kurulum yalnızca kendi sürümüne uygun paketleri alır.",
+      "hotbars": "Yaratıcı moddaki kaydedilmiş hızlı erişim çubukları. Aynı ya da daha yeni sürümdeki kurulumlara geçer.",
+      "history": "Sohbetteki son 50 komut."
+    },
+    "blocked": {
+      "share": "Yayımlanmış bir paketin sunucu listesini yazarı belirler"
+    },
+    "settingsHint": "tüm kurulumlarda aynı",
+    "autoConnect": "Yeni kurulumları bağla",
+    "autoConnectDescription": "Yeni bir kurulum ortak ayarları hemen alır. Grupları kurulumun “Ayarlar” sekmesinden kapatabilirsiniz",
+    "connectedCount": "Ortak ayarlı kurulumlar: {{connected}} / {{total}}",
+    "connectRest_one": "{{count}} tane daha bağla",
+    "connectRest_other": "{{count}} tane daha bağla",
+    "connectedMany_one": "{{count}} kurulum bağlandı",
+    "connectedMany_other": "{{count}} kurulum bağlandı",
+    "connectedPartly_one": "{{count}} kurulum bağlanamadı",
+    "connectedPartly_other": "{{count}} kurulum bağlanamadı",
+    "summary": {
+      "title": "Profilde: {{list}}",
+      "empty": "Profil şimdilik boş: oynadıkça dolacak",
+      "options_one": "{{count}} ayar",
+      "options_other": "{{count}} ayar",
+      "servers_one": "{{count}} sunucu",
+      "servers_other": "{{count}} sunucu",
+      "packs_one": "{{count}} kaynak paketi",
+      "packs_other": "{{count}} kaynak paketi",
+      "hotbars": "hızlı erişim çubukları",
+      "history_one": "{{count}} komut",
+      "history_other": "{{count}} komut"
     }
   }
 }

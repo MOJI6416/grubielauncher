@@ -20,6 +20,7 @@ import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import { MemoryControl } from "./MemoryControl";
 import type { SettingsEntryId } from "./catalog";
 import { JavaSettingsGroup } from "@renderer/features/java/JavaSettingsGroup";
+import { SharedSettingsGroup } from "@renderer/features/sharedSettings/SharedSettingsGroup";
 import { JvmFlagsInfo } from "@renderer/components/JvmFlagsInfo";
 import { PLATFORM } from "@renderer/utilities/platform";
 import { supportsGpuPreference } from "@/shared/gpuPreference";
@@ -216,6 +217,8 @@ export function GameSection({
           )}
         </SettingsGroup>
       )}
+
+      {visible("sharedGameSettings") && <SharedSettingsGroup query={query} />}
 
       {overriding.length > 0 && visible("memory") && (
         <SettingsGroup

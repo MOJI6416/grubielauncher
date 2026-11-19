@@ -2184,6 +2184,11 @@
         "title": "Befehle vor und nach dem Spiel",
         "description": "Shell-Befehle vor dem Start und nach dem Beenden unter Linux",
         "keywords": "linux hook vor dem start nach dem beenden skript befehl"
+      },
+      "sharedGameSettings": {
+        "title": "Gemeinsame Spieleinstellungen",
+        "description": "Dieselben Tasten, Grafik, Server und Ressourcenpakete in jeder Instanz",
+        "keywords": "options.txt Steuerung Tasten Grafik Sound Server Ressourcenpakete Schnellzugriffsleiste Befehle Profil Vorlage Synchronisierung gemeinsam"
       }
     },
     "voicePttCaptureTimeout": "Es wurde keine Taste gedrückt – das Tastenkürzel bleibt unverändert.",
@@ -6698,6 +6703,60 @@
       "console": "Über die Konsole",
       "consoleOldHint": "Das Verwaltungsprotokoll gibt es ab 1.21.9. Hier gehen Befehle an die Serverkonsole, Listen werden aus seinen Dateien gelesen.",
       "consoleFailedHint": "Das Verwaltungsprotokoll hat nicht geantwortet, daher gehen Befehle an die Konsole. Ein Neustart hilft meist."
+    }
+  },
+  "sharedSettings": {
+    "title": "Gemeinsame Spieleinstellungen",
+    "connect": "Verbinden",
+    "disconnect": "Trennen",
+    "offHint": "Diese Instanz hat eigene Steuerung, Grafik, Server und den Rest. Beim Verbinden werden sie in einer Sicherung gespeichert.",
+    "pending": "Die gemeinsamen Einstellungen gelten ab dem ersten Start",
+    "connected": "Die Instanz nutzt jetzt gemeinsame Einstellungen",
+    "disconnected": "Getrennt: Die eigenen Einstellungen der Instanz sind zurück",
+    "groupOn": "{{group}}: gilt jetzt für alle Instanzen",
+    "groupOff": "{{group}}: Einstellungen der Instanz wiederhergestellt",
+    "failed": "Gemeinsame Einstellungen konnten nicht geändert werden",
+    "groups": {
+      "controls": "Steuerung",
+      "video": "Grafik und Sound",
+      "servers": "Serverliste",
+      "packs": "Ressourcenpakete",
+      "hotbars": "Schnellzugriffsleisten",
+      "history": "Befehlsverlauf"
+    },
+    "groupHints": {
+      "controls": "Tastenbelegung, Maus und Empfindlichkeit, auch die Tasten von Mods.",
+      "video": "Grafik, Helligkeit, Sichtfeld, GUI-Größe und Lautstärke. Sichtweite, Mipmaps und Render-Backend bleiben bei der Instanz.",
+      "servers": "Ein Server, der in einer Instanz hinzugefügt wird, erscheint in allen. Server eines Modpacks bleiben in diesem Modpack.",
+      "packs": "Aktivierte Ressourcenpakete. Eine Instanz bekommt nur Pakete für ihre Version.",
+      "hotbars": "Gespeicherte Schnellzugriffsleisten aus dem Kreativmodus. Sie wandern in Instanzen derselben oder einer neueren Version.",
+      "history": "Die letzten 50 Chat-Befehle."
+    },
+    "blocked": {
+      "share": "Die Serverliste eines veröffentlichten Builds legt dessen Autor fest"
+    },
+    "settingsHint": "gleich in jeder Instanz",
+    "autoConnect": "Neue Instanzen verbinden",
+    "autoConnectDescription": "Eine neue Instanz bekommt sofort die gemeinsamen Einstellungen. Gruppen schalten Sie im Tab „Einstellungen“ der Instanz ab",
+    "connectedCount": "Instanzen mit gemeinsamen Einstellungen: {{connected}} von {{total}}",
+    "connectRest_one": "{{count}} weitere verbinden",
+    "connectRest_other": "{{count}} weitere verbinden",
+    "connectedMany_one": "{{count}} Instanz verbunden",
+    "connectedMany_other": "{{count}} Instanzen verbunden",
+    "connectedPartly_one": "{{count}} Instanz konnte nicht verbunden werden",
+    "connectedPartly_other": "{{count}} Instanzen konnten nicht verbunden werden",
+    "summary": {
+      "title": "Im Profil: {{list}}",
+      "empty": "Das Profil ist noch leer: Es füllt sich, sobald Sie spielen",
+      "options_one": "{{count}} Einstellung",
+      "options_other": "{{count}} Einstellungen",
+      "servers_one": "{{count}} Server",
+      "servers_other": "{{count}} Server",
+      "packs_one": "{{count}} Ressourcenpaket",
+      "packs_other": "{{count}} Ressourcenpakete",
+      "hotbars": "Schnellzugriffsleisten",
+      "history_one": "{{count}} Befehl",
+      "history_other": "{{count}} Befehle"
     }
   }
 }

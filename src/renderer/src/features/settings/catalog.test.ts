@@ -50,6 +50,7 @@ describe("catalog coverage", () => {
       "java",
       "autoWorldBackup",
       "worldBackupKeep",
+      "sharedGameSettings",
     ]);
   });
 });

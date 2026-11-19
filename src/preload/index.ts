@@ -206,6 +206,13 @@ import type { LaunchShortcutTarget } from "@/shared/launchLink";
 import type { ThemeFileManifest } from "@/shared/themeFile";
 import type { ModTranslationStatus } from "@/types/ModTranslations";
 import type {
+  SharedInstanceChoice,
+  SharedInstanceRef,
+  SharedInstanceStatus,
+  SharedOverview,
+  SharedProfileSummary,
+} from "@/types/SharedSettings";
+import type {
   GalleryPage,
   GalleryQuery,
   GalleryTheme,
@@ -1359,6 +1366,16 @@ export interface IElectronAPI {
       token?: string,
     ) => Promise<ModTranslationStatus>;
     onStatus: (callback: (status: ModTranslationStatus) => void) => () => void;
+  };
+  sharedSettings: {
+    status: (ref: SharedInstanceRef) => Promise<SharedInstanceStatus>;
+    configure: (
+      ref: SharedInstanceRef,
+      choice: SharedInstanceChoice,
+    ) => Promise<SharedInstanceStatus | null>;
+    markNew: (versionPath: string) => Promise<boolean>;
+    overview: (versionPaths: string[]) => Promise<SharedOverview | null>;
+    setAutoConnect: (value: boolean) => Promise<SharedProfileSummary | null>;
   };
   ai: {
     prepareCrashReport: (
@@ -2633,6 +2650,17 @@ export const api: IElectronAPI = {
       ipcRenderer.on("modTranslations:status", listener);
       return () => ipcRenderer.off("modTranslations:status", listener);
     },
+  },
+  sharedSettings: {
+    status: (ref: SharedInstanceRef) => invoke("sharedSettings:status", ref),
+    configure: (ref: SharedInstanceRef, choice: SharedInstanceChoice) =>
+      invoke("sharedSettings:configure", ref, choice),
+    markNew: (versionPath: string) =>
+      invoke("sharedSettings:markNew", versionPath),
+    overview: (versionPaths: string[]) =>
+      invoke("sharedSettings:overview", versionPaths),
+    setAutoConnect: (value: boolean) =>
+      invoke("sharedSettings:setAutoConnect", value),
   },
   ai: {
     prepareCrashReport: (

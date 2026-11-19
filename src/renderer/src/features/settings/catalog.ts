@@ -61,6 +61,7 @@ export type SettingsEntryId =
   | "voiceOverlay"
   | "autoWorldBackup"
   | "worldBackupKeep"
+  | "sharedGameSettings"
   | "streamerMode"
   | "streamerModeAuto"
   | "notifications"
@@ -147,6 +148,7 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "java", section: "game", keys: [] },
   { id: "autoWorldBackup", section: "game", keys: ["autoWorldBackup"] },
   { id: "worldBackupKeep", section: "game", keys: ["worldBackupKeep"] },
+  { id: "sharedGameSettings", section: "game", keys: [] },
   { id: "downloadSource", section: "downloads", keys: ["downloadSource"] },
   { id: "downloadLimit", section: "downloads", keys: ["downloadLimit"] },
   { id: "mirrorRouting", section: "downloads", keys: [] },

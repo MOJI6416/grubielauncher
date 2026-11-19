@@ -2202,6 +2202,11 @@
         "title": "Commandes avant et après le jeu",
         "description": "Commandes shell avant le lancement et après la sortie sous Linux",
         "keywords": "linux hook avant lancement après sortie script commande"
+      },
+      "sharedGameSettings": {
+        "title": "Paramètres de jeu partagés",
+        "description": "Les mêmes touches, graphismes, serveurs et packs de ressources dans chaque instance",
+        "keywords": "options.txt commandes touches graphismes son serveurs packs de ressources barres d’action commandes profil modèle synchronisation partagés"
       }
     },
     "voicePttCaptureTimeout": "Aucune touche n’a été pressée — le raccourci reste inchangé.",
@@ -6755,6 +6760,67 @@
       "console": "Par la console",
       "consoleOldHint": "Le protocole de gestion existe depuis la 1.21.9. Ici, les commandes passent par la console et les listes sont lues dans ses fichiers.",
       "consoleFailedHint": "Le protocole de gestion n’a pas répondu : les commandes passent par la console. Redémarrer le serveur aide souvent."
+    }
+  },
+  "sharedSettings": {
+    "title": "Paramètres de jeu partagés",
+    "connect": "Connecter",
+    "disconnect": "Déconnecter",
+    "offHint": "Cette instance garde ses propres commandes, graphismes, serveurs et le reste. À la connexion, ils sont mis de côté dans une sauvegarde.",
+    "pending": "Les paramètres partagés s’appliqueront au premier lancement",
+    "connected": "L’instance utilise désormais les paramètres partagés",
+    "disconnected": "Déconnectée : les paramètres propres à l’instance sont rétablis",
+    "groupOn": "{{group}} : partagé avec toutes les instances",
+    "groupOff": "{{group}} : paramètres de l’instance rétablis",
+    "failed": "Impossible de modifier les paramètres partagés",
+    "groups": {
+      "controls": "Commandes",
+      "video": "Vidéo et son",
+      "servers": "Liste des serveurs",
+      "packs": "Packs de ressources",
+      "hotbars": "Barres d’action",
+      "history": "Historique des commandes"
+    },
+    "groupHints": {
+      "controls": "Touches, souris et sensibilité, y compris les touches des mods.",
+      "video": "Graphismes, luminosité, champ de vision, taille de l’interface et volume. La distance d’affichage, les mipmaps et le moteur de rendu restent propres à l’instance.",
+      "servers": "Un serveur ajouté dans une instance apparaît dans toutes. Les serveurs d’un modpack restent dans ce modpack.",
+      "packs": "Packs de ressources activés. Une instance ne reçoit que ceux faits pour sa version.",
+      "hotbars": "Barres d’action sauvegardées en mode Créatif. Elles passent aux instances de la même version ou d’une version plus récente.",
+      "history": "Les 50 dernières commandes du chat."
+    },
+    "blocked": {
+      "share": "La liste des serveurs d’une build publiée est définie par son auteur"
+    },
+    "settingsHint": "identiques dans chaque instance",
+    "autoConnect": "Connecter les nouvelles instances",
+    "autoConnectDescription": "Une nouvelle instance reçoit tout de suite les paramètres partagés. Désactivez des groupes dans l’onglet « Paramètres » de l’instance",
+    "connectedCount": "Instances aux paramètres partagés : {{connected}} sur {{total}}",
+    "connectRest_one": "Connecter {{count}} de plus",
+    "connectRest_many": "Connecter {{count}} de plus",
+    "connectRest_other": "Connecter {{count}} de plus",
+    "connectedMany_one": "{{count}} instance connectée",
+    "connectedMany_many": "{{count}} instances connectées",
+    "connectedMany_other": "{{count}} instances connectées",
+    "connectedPartly_one": "Impossible de connecter {{count}} instance",
+    "connectedPartly_many": "Impossible de connecter {{count}} instances",
+    "connectedPartly_other": "Impossible de connecter {{count}} instances",
+    "summary": {
+      "title": "Dans le profil : {{list}}",
+      "empty": "Le profil est vide pour l’instant : il se remplira quand vous jouerez",
+      "options_one": "{{count}} paramètre",
+      "options_many": "{{count}} paramètres",
+      "options_other": "{{count}} paramètres",
+      "servers_one": "{{count}} serveur",
+      "servers_many": "{{count}} serveurs",
+      "servers_other": "{{count}} serveurs",
+      "packs_one": "{{count}} pack de ressources",
+      "packs_many": "{{count}} packs de ressources",
+      "packs_other": "{{count}} packs de ressources",
+      "hotbars": "barres d’action",
+      "history_one": "{{count}} commande",
+      "history_many": "{{count}} commandes",
+      "history_other": "{{count}} commandes"
     }
   }
 }

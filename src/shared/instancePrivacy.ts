@@ -19,6 +19,7 @@ export const PRIVATE_INSTANCE_PATHS = [
   "storage/trash",
   "storage/config-backups",
   "storage/offline-uuid-migration.json",
+  "storage/shared-settings",
 ] as const;
 
 export const INSTANCE_ID_FILE = ".gl-instance-id";
