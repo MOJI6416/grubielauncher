@@ -154,3 +154,15 @@ export function restoreServers(
 ): IServer[] {
   return uniqueByKey([...current.filter(isTransientServer), ...backup]);
 }
+
+export function withoutSharedServers(
+  current: IServer[],
+  shared: IServer[],
+  own: ReadonlySet<string>,
+): IServer[] {
+  const sharedKeys = new Set(shared.map((server) => serverKey(server.ip)));
+  return current.filter((server) => {
+    const key = serverKey(server.ip);
+    return !sharedKeys.has(key) || own.has(key);
+  });
+}

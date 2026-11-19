@@ -194,6 +194,65 @@ describe("shared game settings across a 1.20 and a 1.12 instance", () => {
     });
   });
 
+  it("publishes only a build's own servers and drops shared ones once it has a code", async () => {
+    const author = await instance(
+      "Author",
+      "1.20.1",
+      fixture("options-1.20.1.txt"),
+      [server("Author server", "author.example")],
+    );
+    const other = await instance(
+      "Other",
+      "1.20.1",
+      fixture("options-1.20.1.txt"),
+      [server("Hypixel", "mc.hypixel.net")],
+    );
+    await sync.configureShared(other, { connected: true, off: [] });
+    await sync.configureShared(author, { connected: true, off: [] });
+    expect(await servers(author)).toEqual(["Hypixel", "Author server"]);
+
+    const current = await readNBT(path.join(author.versionPath, "servers.dat"));
+    const own = await sync.ownServers(author, current);
+    expect(own.map((item) => item.name)).toEqual(["Author server"]);
+    expect(await sync.ownServers(other, current)).toHaveLength(1);
+
+    const published = { ...author, shareCode: "ABCD" };
+    expect(await sync.releaseSharedServers(published)).toBe(true);
+    expect(await servers(author)).toEqual(["Author server"]);
+    const profile = await readNBT(
+      path.join(root, "shared-game-settings", "servers.dat"),
+    );
+    expect(profile.map((item) => item.name)).toEqual([
+      "Hypixel",
+      "Author server",
+    ]);
+    expect((await sync.sharedStatus(published)).blocked).toEqual({
+      servers: "share",
+    });
+
+    await sync.syncBeforeLaunch(published);
+    expect(await servers(author)).toEqual(["Author server"]);
+  });
+
+  it("drops shared servers at the next launch when the code came without the publish window", async () => {
+    const author = await instance(
+      "Author",
+      "1.20.1",
+      fixture("options-1.20.1.txt"),
+      [server("Author server", "author.example")],
+    );
+    const other = await instance(
+      "Other",
+      "1.20.1",
+      fixture("options-1.20.1.txt"),
+      [server("Hypixel", "mc.hypixel.net")],
+    );
+    await sync.configureShared(other, { connected: true, off: [] });
+    await sync.configureShared(author, { connected: true, off: [] });
+    await sync.syncBeforeLaunch({ ...author, shareCode: "ABCD" });
+    expect(await servers(author)).toEqual(["Author server"]);
+  });
+
   it("keeps the server list of a published build to its author", async () => {
     const shared = await instance(
       "Shared",

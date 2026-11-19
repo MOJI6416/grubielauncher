@@ -87,6 +87,8 @@ import { announceShareCode } from "./publishPresence";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { withoutOverrides } from "@/shared/instanceSettings";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { sharedRefOf } from "@renderer/features/sharedSettings/SharedSettingsCard";
+import { readInstanceServers } from "@renderer/features/instances/instanceServers";
 import {
   resolvePackShortCode,
   usePackShortCode,
@@ -143,7 +145,8 @@ export function Share({
   const [worldCount, setWorldCount] = useState<number | null>(null);
 
   const [isNetwork] = useAtom(networkAtom);
-  const [servers] = useAtom(versionServersAtom);
+  const [servers, setServers] = useAtom(versionServersAtom);
+  const [publishServers, setPublishServers] = useState(servers);
   const [account] = useAtom(accountAtom);
   const [globalPaths] = useAtom(pathsAtom);
   const [versions, setVersions] = useAtom(versionsAtom);
@@ -328,6 +331,21 @@ export function Share({
     };
   }, [archiveSourcePaths, isArchiveSelected, selectedVersion]);
 
+  useEffect(() => {
+    if (!selectedVersion) return;
+    let cancelled = false;
+    setPublishServers(servers);
+    void api.sharedSettings
+      .ownServers(sharedRefOf(selectedVersion), servers)
+      .then((own) => {
+        if (!cancelled && own) setPublishServers(own);
+      })
+      .catch(ignoreFailure);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedVersion, servers]);
+
   const fields = useMemo(
     () =>
       getPublishFields({
@@ -336,7 +354,7 @@ export function Share({
         modsCount:
           countContent(selectedVersion?.version.loader.mods) +
           countJarMods(selectedVersion?.version),
-        serversCount: servers.length,
+        serversCount: publishServers.length,
         hasOptionsFile: isExistsOptionsFile,
         hasArguments: Boolean(
           selectedVersion?.version.runArguments?.jvm ||
@@ -352,7 +370,7 @@ export function Share({
       publishedHasWorld,
       selectedVersion,
       selection.other,
-      servers.length,
+      publishServers.length,
       shareType,
       worldCount,
     ],
@@ -526,7 +544,7 @@ export function Share({
             countJarMods(selectedVersion?.version),
         );
       case "servers":
-        return String(servers.length);
+        return String(publishServers.length);
       case "options":
         return "options.txt";
       case "world":
@@ -880,13 +898,23 @@ export function Share({
         shouldUpdateLocalImage = true;
       }
 
+      const sentServers = selection.servers
+        ? await api.sharedSettings.ownServers(
+            sharedRefOf(selectedVersion),
+            servers,
+          )
+        : null;
+      if (selection.servers && !sentServers) {
+        throw new Error("servers_not_filtered");
+      }
+
       const update: IModpackUpdate = {
         build: nextBuild,
         name: selection.name ? selectedVersion.version.name : null,
         description:
           isDescriptionChanged || silentMode ? nextDescription : null,
         mods: selection.mods ? mods : null,
-        servers: selection.servers ? servers : null,
+        servers: sentServers,
         options: selection.options ? options : null,
         runArguments:
           selection.arguments && selectedVersion.version.runArguments
@@ -1143,6 +1171,13 @@ export function Share({
       }
 
       setSelectedVersion(selectedVersion);
+      const released = await api.sharedSettings
+        .release(sharedRefOf(selectedVersion))
+        .catch(ignoreFailure);
+      if (released) {
+        const own = await readInstanceServers(selectedVersion.versionPath);
+        if (own) setServers(own);
+      }
       announceShareCode(selectedVersion.version.name, shareCode);
       onPublished?.(shareCode);
       void copyWithFeedback(buildPackShareUrl(shortCode || shareCode));

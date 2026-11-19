@@ -7,17 +7,21 @@ import {
   type SharedProfileSummary,
 } from "@/types/SharedSettings";
 import { LOADERS } from "@/types/Loader";
+import type { IServer } from "@/types/ServersList";
 import { check, handleSafe } from "../utilities/ipc";
 import { assertWritablePath } from "../utilities/safePath";
 import {
   configureShared,
   markNewInstance,
+  ownServers,
+  releaseSharedServers,
   setAutoConnect,
   sharedOverview,
   sharedStatus,
 } from "../game/sharedSettings/sync";
 
 const isPath = check.nonEmptyString(4096);
+const isServerList = check.arrayOf(check.object(), 5000);
 
 const isRef = (value: unknown): boolean => {
   if (!value || typeof value !== "object") return false;
@@ -126,5 +130,25 @@ export function registerSharedSettingsIpc() {
     null,
     [check.boolean()],
     async (_, value) => setAutoConnect(value),
+  );
+
+  handleSafe<IServer[] | null, [SharedInstanceRef, IServer[]]>(
+    "sharedSettings:ownServers",
+    null,
+    [isRef, isServerList],
+    async (_, ref, servers) => {
+      assertWritablePath(ref.versionPath, "sharedSettings:ownServers");
+      return ownServers(pick(ref), servers);
+    },
+  );
+
+  handleSafe<boolean, [SharedInstanceRef]>(
+    "sharedSettings:release",
+    false,
+    [isRef],
+    async (_, ref) => {
+      assertWritablePath(ref.versionPath, "sharedSettings:release");
+      return releaseSharedServers(pick(ref));
+    },
   );
 }

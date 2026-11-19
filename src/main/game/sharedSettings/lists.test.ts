@@ -5,6 +5,7 @@ import {
   captureServers,
   restoreServers,
   serverMarks,
+  withoutSharedServers,
 } from "./serverMerge";
 import { addedLines, captureHistory, HISTORY_LIMIT } from "./historyMerge";
 import {
@@ -113,6 +114,25 @@ describe("servers", () => {
 
   it("restores the backup list and keeps a pending friend entry", () => {
     expect(restoreServers([FRIEND, HYPIXEL], [LOCAL])).toEqual([FRIEND, LOCAL]);
+  });
+});
+
+describe("servers of a published build", () => {
+  it("keeps the build's own servers and drops the ones from the profile", () => {
+    const mine = server("Mine", "mine.example");
+    const own = withoutSharedServers(
+      [FRIEND, HYPIXEL, mine, LOCAL],
+      [HYPIXEL, mine],
+      new Set(["mc.hypixel.net", "play.pack.net"]),
+    );
+    expect(own).toEqual([FRIEND, HYPIXEL, LOCAL]);
+  });
+
+  it("leaves the list alone when nothing is shared", () => {
+    expect(withoutSharedServers([HYPIXEL, LOCAL], [], new Set())).toEqual([
+      HYPIXEL,
+      LOCAL,
+    ]);
   });
 });
 

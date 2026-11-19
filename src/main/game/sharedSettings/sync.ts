@@ -36,7 +36,9 @@ import {
   applyServers,
   captureServers,
   restoreServers,
+  serverKey,
   serverMarks,
+  withoutSharedServers,
 } from "./serverMerge";
 import { captureHistory, parseHistory, serializeHistory } from "./historyMerge";
 import {
@@ -496,6 +498,37 @@ async function rebaseline(
   }
 }
 
+async function ownServerKeys(
+  ref: SharedInstanceRef,
+  state: InstanceState,
+): Promise<Set<string>> {
+  const backup =
+    (await readServers(backupPath(ref.versionPath, SERVERS_FILE))) ?? [];
+  return new Set([
+    ...(state.localServers ?? []),
+    ...backup.map((server) => serverKey(server.ip)),
+  ]);
+}
+
+async function releaseServers(
+  ref: SharedInstanceRef,
+  state: InstanceState,
+  shared: IServer[],
+): Promise<void> {
+  const file = inInstance(ref, SERVERS_FILE);
+  const current = await readServers(file);
+  if (current) {
+    const own = withoutSharedServers(
+      current,
+      shared,
+      await ownServerKeys(ref, state),
+    );
+    if (own.length !== current.length) await writeNBT(own, file);
+  }
+  delete state.servers;
+  delete state.localServers;
+}
+
 async function runSync(
   ref: SharedInstanceRef,
   state: InstanceState,
@@ -506,6 +539,9 @@ async function runSync(
   const before = JSON.stringify(shared);
   const mode: Mode = state.synced ? "session" : state.adopt ? "adopt" : "first";
 
+  if (blockedFor(ref).servers && state.servers !== undefined) {
+    await releaseServers(ref, state, shared.servers);
+  }
   if (!state.synced) await takeBackup(ref);
   await captureInstance(ref, state, shared, groups, mode);
   if (phase === "exit") await rebaseline(ref, state, groups);
@@ -691,6 +727,39 @@ export function captureWhenClosed(
     );
   };
   gameRuntime.on("close", onClose);
+}
+
+export async function ownServers(
+  ref: SharedInstanceRef,
+  current: IServer[],
+): Promise<IServer[]> {
+  const state = await readInstanceState(ref.versionPath);
+  if (!state?.connected || !state.synced || state.servers === undefined) {
+    return current;
+  }
+  const shared = (await readServers(profilePath(SERVERS_FILE))) ?? [];
+  return withoutSharedServers(current, shared, await ownServerKeys(ref, state));
+}
+
+export async function releaseSharedServers(
+  ref: SharedInstanceRef,
+): Promise<boolean> {
+  return withProfileLock(async () => {
+    const state = await readInstanceState(ref.versionPath);
+    if (
+      !ref.shareCode ||
+      !state?.connected ||
+      state.servers === undefined ||
+      isVersionRunning(ref.versionPath)
+    ) {
+      return false;
+    }
+    const shared = (await readServers(profilePath(SERVERS_FILE))) ?? [];
+    await releaseServers(ref, state, shared);
+    state.shareLinked = true;
+    await writeInstanceState(ref.versionPath, state);
+    return true;
+  });
 }
 
 export async function noteServersWritten(file: string): Promise<void> {

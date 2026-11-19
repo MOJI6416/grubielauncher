@@ -1409,6 +1409,11 @@ export interface IElectronAPI {
     markNew: (versionPath: string) => Promise<boolean>;
     overview: (versionPaths: string[]) => Promise<SharedOverview | null>;
     setAutoConnect: (value: boolean) => Promise<SharedProfileSummary | null>;
+    ownServers: (
+      ref: SharedInstanceRef,
+      servers: IServer[],
+    ) => Promise<IServer[] | null>;
+    release: (ref: SharedInstanceRef) => Promise<boolean>;
   };
   ai: {
     prepareCrashReport: (
@@ -2732,6 +2737,9 @@ export const api: IElectronAPI = {
       invoke("sharedSettings:overview", versionPaths),
     setAutoConnect: (value: boolean) =>
       invoke("sharedSettings:setAutoConnect", value),
+    ownServers: (ref: SharedInstanceRef, servers: IServer[]) =>
+      invoke("sharedSettings:ownServers", ref, servers),
+    release: (ref: SharedInstanceRef) => invoke("sharedSettings:release", ref),
   },
   ai: {
     prepareCrashReport: (
