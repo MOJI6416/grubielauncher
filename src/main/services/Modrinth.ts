@@ -31,7 +31,7 @@ const URL = 'https://api.modrinth.com/v2'
 const V3_URL = 'https://api.modrinth.com/v3'
 const CONTACT = 'https://grubielauncher.com'
 
-function buildUserAgent(): string {
+export function buildUserAgent(): string {
   let version = '0.0.0'
   try {
     version = app.getVersion()
@@ -299,6 +299,32 @@ export class Modrinth {
     } catch (error) {
       this.logAxiosError('Error identifying files on Modrinth', error)
       return null
+    }
+  }
+
+  static async getCollection(
+    id: string
+  ): Promise<{ id: string; name: string; projects: string[] } | null> {
+    try {
+      const response = await this.api.get<{
+        id?: unknown
+        name?: unknown
+        projects?: unknown
+      }>(`${V3_URL}/collection/${encodeURIComponent(id)}`)
+      const data = response.data
+      if (!data || !Array.isArray(data.projects)) return null
+
+      return {
+        id: typeof data.id === 'string' ? data.id : id,
+        name: typeof data.name === 'string' ? data.name : '',
+        projects: data.projects.filter(
+          (item): item is string => typeof item === 'string' && !!item
+        )
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) return null
+      this.logAxiosError('Error getting Modrinth collection', error)
+      throw error
     }
   }
 

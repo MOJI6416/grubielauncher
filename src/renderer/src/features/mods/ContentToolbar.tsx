@@ -3,6 +3,7 @@ import {
   FilePlus2,
   HardDrive,
   Info,
+  Download,
   Layers,
   Library,
   Loader2,
@@ -57,6 +58,8 @@ import {
 } from "./filters";
 import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import { SortMenu } from "@renderer/components/SortMenu";
+import type { UpdateChannel } from "@/shared/updateChannel";
+import { UpdateChannelItems } from "./UpdateChannelMenu";
 import { FilterOptionList, type FilterSection } from "./FilterOptionList";
 import { PROJECT_TYPE_ICONS, type Scope } from "./contentManagerParts";
 
@@ -96,7 +99,7 @@ export interface ContentToolbarProps {
   loader: Loader | undefined;
   loaderOptions: Loader[];
   meta: { sorts: string[]; filters: IFilterGroup[]; isReady: boolean };
-  openSets: (kind: "save" | "apply") => void;
+  openSets: (kind: "save" | "apply" | "import") => void;
   pickLocalFiles: () => Promise<void>;
   projectType: ProjectType;
   projectTypes: ProjectType[];
@@ -121,6 +124,11 @@ export interface ContentToolbarProps {
   translateCategory: (key: string, fallback: string) => string;
   typeCounts: Map<ProjectType, number>;
   updateCheck: UpdateCheckResult;
+  updateChannel: {
+    instance: UpdateChannel | null;
+    inherited: UpdateChannel;
+    onChange: (channel: UpdateChannel | null) => void;
+  };
   version: IVersion | undefined;
 }
 
@@ -185,6 +193,7 @@ export function ContentToolbar({
   translateCategory,
   typeCounts,
   updateCheck,
+  updateChannel,
   version,
 }: ContentToolbarProps) {
   const libraryFilterCount =
@@ -564,27 +573,41 @@ export function ContentToolbar({
                 <FilePlus2 />
                 {t("modSets.saveAll")}
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => openSets("import")}>
+                <Download />
+                {t("modSets.importCollection")}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
 
         {scope === "library" && canEdit && !isModpacks && (
-          <Hint content={t("modManager.checkUpdates")} side="bottom">
-            <Button
-              size="icon-sm"
-              variant="outline"
-              className="size-8 shrink-0"
-              disabled={isBusy || updateCheck.isChecking}
-              aria-label={t("modManager.checkUpdates")}
-              onClick={() => updateCheck.check(true)}
-            >
-              {updateCheck.isChecking ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <RotateCw className="size-4" />
-              )}
-            </Button>
-          </Hint>
+          <DropdownMenu>
+            <Hint content={t("modManager.updatesMenu")} side="bottom">
+              <DropdownMenuTrigger asChild disabled={isBusy}>
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  className="size-8 shrink-0"
+                  aria-label={t("modManager.updatesMenu")}
+                >
+                  {updateCheck.isChecking ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <RotateCw className="size-4" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+            </Hint>
+            <DropdownMenuContent align="end" className="w-64">
+              <UpdateChannelItems
+                instanceChannel={updateChannel.instance}
+                inheritedChannel={updateChannel.inherited}
+                onCheck={() => updateCheck.check(true)}
+                onChange={updateChannel.onChange}
+              />
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         {canEdit && !isModpacks && (

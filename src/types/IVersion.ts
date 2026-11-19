@@ -5,6 +5,7 @@ import { IServer } from './ServersList'
 import { InstanceSettingsOverrides } from '../shared/instanceSettings'
 import type { IModpackSource } from './ModpackSource'
 import type { ResolvedJava } from '../shared/javaRuntime'
+import type { UpdateChannel } from '../shared/updateChannel'
 
 export interface IVersion {
   id: string
@@ -54,6 +55,7 @@ export interface IVersionConf {
   mainJar?: IJarMod
   launchOverride?: ILaunchOverride
   modpack?: IModpackSource
+  updateChannel?: UpdateChannel
 }
 
 export interface VersionDeleteResult {

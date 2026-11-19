@@ -12,6 +12,11 @@ import {
   normalizeGpuPreference,
   type GpuPreference,
 } from "@/shared/gpuPreference";
+import {
+  DEFAULT_UPDATE_CHANNEL,
+  UPDATE_CHANNELS,
+  type UpdateChannel,
+} from "@/shared/updateChannel";
 
 export const LANGUAGES = [
   { code: "en", label: "English", country: "GB" },
@@ -163,6 +168,8 @@ export type TSettings = {
   devMode: boolean;
   downloadLimit: number;
   downloadSource: DownloadSource;
+  modUpdateChannel: UpdateChannel;
+  catalogLinks: boolean;
   crashTelemetry: boolean;
   usageStats: boolean;
   aiLogAnalysis: boolean;
@@ -237,6 +244,8 @@ export const DEFAULT_SETTINGS: TSettings = {
   devMode: false,
   downloadLimit: 6,
   downloadSource: "auto",
+  modUpdateChannel: DEFAULT_UPDATE_CHANNEL,
+  catalogLinks: false,
   crashTelemetry: true,
   usageStats: true,
   aiLogAnalysis: false,
@@ -396,6 +405,12 @@ export function normalizeSettings(
         ? Math.min(16, Math.max(1, Math.round(downloadLimit)))
         : DEFAULT_SETTINGS.downloadLimit,
     downloadSource,
+    modUpdateChannel: oneOf(
+      value?.modUpdateChannel,
+      UPDATE_CHANNELS,
+      DEFAULT_SETTINGS.modUpdateChannel,
+    ),
+    catalogLinks: booleanOr(value?.catalogLinks, DEFAULT_SETTINGS.catalogLinks),
     crashTelemetry:
       typeof value?.crashTelemetry === "boolean"
         ? value.crashTelemetry

@@ -14,6 +14,7 @@ const SCREENS: Record<Route["name"], UsageFeature> = {
   profile: "screen.profile",
   accounts: "screen.accounts",
   settings: "screen.settings",
+  catalog: "instance.content",
 };
 
 function subFeature(route: Route, instanceTab: string): string | null {

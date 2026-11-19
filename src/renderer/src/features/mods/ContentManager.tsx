@@ -50,7 +50,14 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { showUndoToast } from "@renderer/utilities/undoToast";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { parseProjectLink } from "./projectLinks";
-import { isFileDrag, startContentDrag } from "./contentDrag";
+import {
+  isFileDrag,
+  isLinkDrag,
+  readDraggedLink,
+  startContentDrag,
+} from "./contentDrag";
+import { parseCollectionRef } from "@renderer/features/modSets/modSets";
+import { openCatalogInstall } from "@renderer/features/catalogInstall/catalogInstallStore";
 import { displayTitle } from "./titles";
 import {
   type SelectionGesture,
@@ -124,6 +131,11 @@ import {
 } from "./catalogAvailability";
 import { createOrnitheVersionGuard } from "./ornitheVersions";
 import { useUpdateCheck } from "./useUpdateCheck";
+import { modRelations, planDisable, planEnable } from "./modRelations";
+import {
+  resolveUpdateChannel,
+  type UpdateChannel,
+} from "@/shared/updateChannel";
 import { toggleModFile, useModFileStates } from "./useModFileStates";
 import {
   folderNameForType,
@@ -630,11 +642,50 @@ export function ContentManager({
     [isModpacks, loader, ornitheLoaderId, version?.id],
   );
 
+  const instanceConf = isSelectedInstance ? selectedVersion : undefined;
+  const [instanceChannel, setInstanceChannel] = useState<UpdateChannel | null>(
+    () => instanceConf?.version.updateChannel ?? null,
+  );
+  const inheritedChannel = resolveUpdateChannel({
+    global: settings.modUpdateChannel,
+    gameVersionType: version?.type,
+  });
+  const effectiveChannel = instanceChannel ?? inheritedChannel;
+  const changeUpdateChannel = useCallback(
+    (next: UpdateChannel | null) => {
+      if (!instanceConf) return;
+      const previous = instanceConf.version.updateChannel ?? null;
+      if (next) instanceConf.version.updateChannel = next;
+      else delete instanceConf.version.updateChannel;
+      setInstanceChannel(next);
+      void instanceConf.save().then((saved) => {
+        if (saved) return;
+        if (previous) instanceConf.version.updateChannel = previous;
+        else delete instanceConf.version.updateChannel;
+        setInstanceChannel(previous);
+        showFailureToast(t("modManager.failed.change"), undefined, {
+          channels: ["version:save"],
+        });
+      });
+    },
+    [instanceConf, t],
+  );
+  const updateChannelControl = useMemo(
+    () => ({
+      instance: instanceChannel,
+      inherited: inheritedChannel,
+      effective: effectiveChannel,
+      onChange: changeUpdateChannel,
+    }),
+    [changeUpdateChannel, effectiveChannel, inheritedChannel, instanceChannel],
+  );
+
   const updateCheck = useUpdateCheck({
     mods,
     projectType,
     gameVersion: version?.id,
     loader: resolvedLoader ?? "vanilla",
+    channel: effectiveChannel,
     enabled: scope === "library" && canEdit && isOnline && !isModpacks,
     keepsUpdate: ornitheGuard?.keepsGeneration,
   });
@@ -666,6 +717,23 @@ export function ContentManager({
     setLibraryCategories([]);
   }, [projectType]);
 
+  const [packKeys, setPackKeys] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    setPackKeys(null);
+    if (!instancePath || isModpacks) return;
+    let cancelled = false;
+    void api.modpack
+      .readBase(instancePath)
+      .catch(ignoreFailure)
+      .then((base) => {
+        if (cancelled || !base) return;
+        setPackKeys(new Set(base.projects.map((project) => project.key)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [instancePath, isModpacks]);
+
   const libraryMarks = useMemo(
     () => ({
       updatable: updateCheck.updatable,
@@ -673,12 +741,14 @@ export function ContentManager({
       duplicates: duplicates.all,
       foreign: foreignKeys,
       categories: modCategories.categories,
+      packKeys,
     }),
     [
       duplicates,
       fileStates.disabled,
       foreignKeys,
       modCategories.categories,
+      packKeys,
       updateCheck.updatable,
     ],
   );
@@ -840,11 +910,21 @@ export function ContentManager({
     setSelection((prev) => (prev.size === 0 ? prev : new Set()));
   }, [membershipSignature]);
 
+  const pendingLinkRef = useRef<ContentEntry | null>(null);
+
   useEffect(() => {
     setSelection(new Set());
     detailRequestRef.current += 1;
     setDetail(null);
     setDetailStack([]);
+  }, [scope, projectType]);
+
+  useEffect(() => {
+    const pending = pendingLinkRef.current;
+    if (!pending) return;
+    pendingLinkRef.current = null;
+    void loadDetail(pending, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope, projectType]);
 
   const closeDetail = useCallback(() => {
@@ -1255,6 +1335,12 @@ export function ContentManager({
           failTitle: t(
             isUpdate ? "modManager.failed.update" : "modManager.failed.install",
           ),
+          downloadReasons: Object.fromEntries(
+            added.map((item, index) => [
+              item.id,
+              index > 0 ? "dependency" : isUpdate ? "update" : "standalone",
+            ]),
+          ),
         });
 
         if (detail?.entry.key === entry.key && explicit) {
@@ -1478,6 +1564,12 @@ export function ContentManager({
           ),
         ),
         failTitle: t("modManager.failed.update"),
+        downloadReasons: Object.fromEntries(
+          [...updates.keys()].map((key) => [
+            key.slice(key.indexOf(":") + 1),
+            "update",
+          ]),
+        ),
       });
     },
     [
@@ -1496,16 +1588,93 @@ export function ContentManager({
     (entries: ContentEntry[], enabled: boolean, isUndo?: boolean) => Promise<void>
   >(async () => undefined);
 
+  const libraryEntriesRef = useLatestRef(libraryEntries);
+
+  const [relationsScanning, setRelationsScanning] = useState(false);
+  const relationsTriedRef = useRef<string | null>(null);
+  const loadRelations = useCallback(() => {
+    if (!instancePath || localDependencies || relationsScanning) return;
+    if (relationsTriedRef.current === instancePath) return;
+    const path = instancePath;
+    relationsTriedRef.current = path;
+    setRelationsScanning(true);
+    void api.modManager
+      .localDependencies(path)
+      .catch(ignoreFailure)
+      .then((index) => {
+        if (index) setLocalDependencyScan({ path, index });
+      })
+      .finally(() => setRelationsScanning(false));
+  }, [instancePath, localDependencies, relationsScanning]);
+
+  const detailInstalled =
+    scope === "library" && !isModpacks ? (detail?.entry.installed ?? null) : null;
+  const detailRelations = useMemo(
+    () =>
+      detailInstalled
+        ? modRelations(mods, detailInstalled, localDependencies)
+        : null,
+    [detailInstalled, localDependencies, mods],
+  );
+
+  const openInstalled = useCallback(
+    (mod: ILocalProject) => {
+      const key = entryKey(mod.provider, mod.id);
+      const target = libraryEntriesRef.current.find((entry) => entry.key === key);
+      const current = detail?.entry;
+      if (!target) return;
+      if (current) setDetailStack((prev) => [...prev, current]);
+      void loadDetail(target, true);
+    },
+    [detail?.entry, libraryEntriesRef, loadDetail],
+  );
+
   const setEnabledFor = useCallback(
-    async (entries: ContentEntry[], enabled: boolean, isUndo = false) => {
+    async (requested: ContentEntry[], enabled: boolean, isUndo = false) => {
       if (!instancePath) return;
 
       const disabledNow = fileStatesRef.current.disabled;
       const changed = new Set<string>();
       let failure: unknown = null;
+      let entries = requested;
+      let dependents: ILocalProject[] = [];
 
       setIsBusy(true);
-      if (entries.length === 1) setBusyKey(entries[0].key);
+      if (requested.length === 1) setBusyKey(requested[0].key);
+
+      if (
+        !isUndo &&
+        requested.some((entry) => entry.projectType === ProjectType.MOD)
+      ) {
+        const index =
+          (await api.modManager
+            .localDependencies(instancePath)
+            .catch(ignoreFailure)) ?? undefined;
+        if (index) setLocalDependencyScan({ path: instancePath, index });
+        const current = latestModsRef.current;
+        const requestedKeys = new Set(requested.map((entry) => entry.key));
+        const targets = current.filter((mod) =>
+          requestedKeys.has(entryKey(mod.provider, mod.id)),
+        );
+        const plan = enabled
+          ? {
+              toggle: planEnable(current, targets, disabledNow, index),
+              dependents: [],
+            }
+          : planDisable(current, targets, disabledNow, index);
+        const cascadeKeys = new Set(
+          plan.toggle
+            .map((mod) => entryKey(mod.provider, mod.id))
+            .filter((key) => !requestedKeys.has(key)),
+        );
+        entries = [
+          ...requested,
+          ...libraryEntriesRef.current.filter(
+            (entry) => cascadeKeys.has(entry.key) && entry.fileName,
+          ),
+        ];
+        dependents = plan.dependents;
+      }
 
       for (const entry of entries) {
         if (!entry.fileName) continue;
@@ -1530,6 +1699,10 @@ export function ContentManager({
           changed.has(entryKey(mod.provider, mod.id)),
         );
         const changedEntries = entries.filter((entry) => changed.has(entry.key));
+        const requestedKeys = new Set(requested.map((entry) => entry.key));
+        const cascaded = toggled.filter(
+          (mod) => !requestedKeys.has(entryKey(mod.provider, mod.id)),
+        );
 
         setFileRevision((value) => value + 1);
         void commitMods(
@@ -1549,7 +1722,26 @@ export function ContentManager({
             };
           }),
           {
-            title: doneTitle(enabled ? "enabled" : "disabled", toggled),
+            title: doneTitle(
+              enabled ? "enabled" : "disabled",
+              toggled.filter((mod) =>
+                requestedKeys.has(entryKey(mod.provider, mod.id)),
+              ),
+            ),
+            description:
+              dependents.length > 0
+                ? t("modManager.disabledBreaksDependents", {
+                    names: listTitles(dependents),
+                  })
+                : cascaded.length > 0
+                  ? t(
+                      enabled
+                        ? "modManager.enabledWithDependencies"
+                        : "modManager.disabledWithDependencies",
+                      { names: listTitles(cascaded) },
+                    )
+                  : undefined,
+            tone: dependents.length > 0 ? "warning" : "success",
             failTitle: t("modManager.failed.change"),
             sync: false,
             undo: isUndo
@@ -1570,7 +1762,15 @@ export function ContentManager({
       setBusyKey(null);
       setIsBusy(false);
     },
-    [commitMods, doneTitle, fileStatesRef, instancePath, latestModsRef, t],
+    [
+      commitMods,
+      doneTitle,
+      fileStatesRef,
+      instancePath,
+      latestModsRef,
+      libraryEntriesRef,
+      t,
+    ],
   );
   setEnabledForRef.current = setEnabledFor;
 
@@ -2285,19 +2485,99 @@ export function ContentManager({
       : null;
 
   const openSets = useCallback(
-    (kind: "save" | "apply") => {
+    (kind: "save" | "apply" | "import", link?: string) => {
       setSetsDialog(
         kind === "apply"
           ? { kind: "apply" }
-          : {
-              kind: "save",
-              mods,
-              defaultName: instancePath ? api.path.basename(instancePath) : "",
-            },
+          : kind === "import"
+            ? { kind: "import", link }
+            : {
+                kind: "save",
+                mods,
+                defaultName: instancePath ? api.path.basename(instancePath) : "",
+              },
       );
     },
     [instancePath, mods],
   );
+
+  const openPastedLink = useCallback(
+    async (href: string) => {
+      const text = href.trim();
+      if (parseCollectionRef(text) && /^https?:/i.test(text)) {
+        if (canEdit) openSets("import", text);
+        return true;
+      }
+
+      const link = parseProjectLink(text);
+      if (!link) return false;
+      if (!isOnline) {
+        toast.warning(t("modManager.linkOffline"));
+        return true;
+      }
+
+      const project = await api.modManager
+        .resolveLink(link.provider, link.ref, link.projectType)
+        .catch(ignoreFailure);
+      if (!project) {
+        showFailureToast(t("modManager.linkNotFound"), undefined, {
+          channels: ["modManager:resolveLink"],
+        });
+        return true;
+      }
+
+      if (project.projectType === ProjectType.MODPACK) {
+        openCatalogInstall({
+          kind: "link",
+          link: { provider: link.provider, target: "modpack", id: project.id },
+        });
+        return true;
+      }
+
+      const target = project.provider as Scope;
+      if (!canBrowse || !typesForScope(target).includes(project.projectType)) {
+        toast.warning(
+          t("modManager.linkWrongType", {
+            type: t(`modManager.projectTypes.${project.projectType}`),
+          }),
+        );
+        return true;
+      }
+
+      const entry = fromCatalogProject(project, findInstalled(project) ?? null);
+      if (scope !== target || projectType !== project.projectType) {
+        pendingLinkRef.current = entry;
+        changeScope(target);
+        setProjectType(project.projectType);
+        return true;
+      }
+      setDetailStack([]);
+      void loadDetail(entry, false);
+      return true;
+    },
+    [
+      canBrowse,
+      canEdit,
+      changeScope,
+      findInstalled,
+      isOnline,
+      loadDetail,
+      openSets,
+      projectType,
+      scope,
+      t,
+      typesForScope,
+    ],
+  );
+
+  useEffect(() => {
+    const text = rawQuery.trim();
+    if (!/^https?:\/\//i.test(text)) return;
+    if (!parseProjectLink(text) && !parseCollectionRef(text)) return;
+    setRawQuery("");
+    setQuery("");
+    void openPastedLink(text);
+  }, [openPastedLink, rawQuery]);
 
   const saveToSet = useCallback((entries: ContentEntry[]) => {
     setSetsDialog({
@@ -2824,12 +3104,23 @@ export function ContentManager({
         data-file-drop-zone={isModpacks ? undefined : ""}
         className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
         onDragEnter={(event) => {
-          if (isModpacks || !isFileDrag(event)) return;
+          if (isModpacks) return;
+          if (isLinkDrag(event)) {
+            event.preventDefault();
+            return;
+          }
+          if (!isFileDrag(event)) return;
           event.preventDefault();
           setIsDropActive(true);
         }}
         onDragOver={(event) => {
-          if (isModpacks || !isFileDrag(event)) return;
+          if (isModpacks) return;
+          if (isLinkDrag(event)) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "link";
+            return;
+          }
+          if (!isFileDrag(event)) return;
           event.preventDefault();
           event.dataTransfer.dropEffect = canEdit ? "copy" : "none";
         }}
@@ -2838,7 +3129,18 @@ export function ContentManager({
           setIsDropActive(false);
         }}
         onDrop={(event) => {
-          if (isModpacks || !isFileDrag(event)) return;
+          if (isModpacks) return;
+          if (isLinkDrag(event)) {
+            const href = readDraggedLink(event);
+            event.preventDefault();
+            if (href) {
+              void openPastedLink(href).then((handled) => {
+                if (!handled) toast.warning(t("modManager.linkUnsupported"));
+              });
+            }
+            return;
+          }
+          if (!isFileDrag(event)) return;
           event.preventDefault();
           setIsDropActive(false);
           void dropFiles([...event.dataTransfer.files]);
@@ -2906,6 +3208,7 @@ export function ContentManager({
           translateCategory={translateCategory}
           typeCounts={typeCounts}
           updateCheck={updateCheck}
+          updateChannel={updateChannelControl}
           version={version}
         />
 
@@ -2946,9 +3249,15 @@ export function ContentManager({
           uncheckedCount={uncheckedCount}
           updatableCount={updatableCount}
           updateCheck={updateCheck}
+          updateChannel={updateChannelControl}
         />
 
         <ContentListPane
+          libraryPackKeys={packKeys}
+          detailRelations={detailRelations}
+          relationsScanning={relationsScanning}
+          loadRelations={loadRelations}
+          openInstalled={openInstalled}
           shaderSupport={shaderState}
           onOpenShaderLoader={(slug) => void openShaderLoader(slug)}
           canInstallShaderLoader={canEdit && isOnline}

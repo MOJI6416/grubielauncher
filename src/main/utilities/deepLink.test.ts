@@ -157,4 +157,55 @@ describe("launcher deep links", () => {
       shareCode: "507f1f77bcf86cd799439011",
     });
   });
+
+  it("parses Modrinth install links", () => {
+    expect(parseLauncherDeepLink("modrinth://mod/sodium")).toEqual({
+      type: "catalog",
+      provider: "modrinth",
+      target: "project",
+      id: "sodium",
+    });
+    expect(parseLauncherDeepLink("modrinth://version/IZskON6d/")).toEqual({
+      type: "catalog",
+      provider: "modrinth",
+      target: "version",
+      id: "IZskON6d",
+    });
+    expect(parseLauncherDeepLink("modrinth://modpack/fabulously-optimized")).toEqual({
+      type: "catalog",
+      provider: "modrinth",
+      target: "modpack",
+      id: "fabulously-optimized",
+    });
+  });
+
+  it("parses the CurseForge install button", () => {
+    expect(
+      parseLauncherDeepLink(
+        "curseforge://install?addonId=238222&fileId=5101366",
+      ),
+    ).toEqual({
+      type: "catalog",
+      provider: "curseforge",
+      target: "project",
+      id: "238222",
+      fileId: "5101366",
+    });
+    expect(
+      parseLauncherDeepLink("curseforge://install?addonId=238222&fileId=x"),
+    ).toEqual({
+      type: "catalog",
+      provider: "curseforge",
+      target: "project",
+      id: "238222",
+    });
+  });
+
+  it("rejects catalog links it cannot act on", () => {
+    expect(parseLauncherDeepLink("modrinth://server/abc")).toBeNull();
+    expect(parseLauncherDeepLink("modrinth://mod/")).toBeNull();
+    expect(parseLauncherDeepLink("modrinth://mod/a%2Fb%3Fc")).toBeNull();
+    expect(parseLauncherDeepLink("curseforge://install?addonId=abc")).toBeNull();
+    expect(parseLauncherDeepLink("curseforge://open?addonId=1")).toBeNull();
+  });
 });

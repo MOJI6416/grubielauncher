@@ -1,4 +1,5 @@
 import { ILocalFile, ProjectType, Provider, VersionReleaseType } from "./ModManager";
+import type { UpdateChannel } from "../shared/updateChannel";
 
 export const UPDATE_CHECK_MAX_ITEMS = 500;
 
@@ -22,6 +23,7 @@ export interface IUpdateCheckRequest {
   gameVersion: string;
   loader?: string;
   projectType?: ProjectType;
+  channel?: UpdateChannel;
   items: IUpdateCheckItem[];
 }
 
@@ -53,5 +55,6 @@ export interface IUpdateVerdict {
 
 export interface IUpdateCheckResponse {
   generatedAt: string;
+  channel?: UpdateChannel;
   items: IUpdateVerdict[];
 }

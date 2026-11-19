@@ -34,6 +34,7 @@ export type Route =
   | { name: "agent"; chatId?: string }
   | { name: "profile"; userId: string; tab?: ProfileTab }
   | { name: "accounts" }
+  | { name: "catalog" }
   | { name: "settings"; section?: string };
 
 export type RouteName = Route["name"];

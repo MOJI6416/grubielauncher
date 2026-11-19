@@ -7,6 +7,7 @@ import { LazyNewInstanceScreen } from "@renderer/screens/lazyScreens";
 import { incomingInviteAtom } from "@renderer/features/friends/gameInvite";
 import { loadGroups } from "@renderer/features/friends/groups";
 import { openNewInstance } from "@renderer/features/instances/newInstance";
+import { openCatalogInstall } from "@renderer/features/catalogInstall/catalogInstallStore";
 import {
   PendingDeepLaunch,
   resolveDeepLaunch,
@@ -144,6 +145,11 @@ export function DeepLinkHost() {
 
       if (intent.kind === "webLogin") {
         setPendingWebLogin(intent.requestId);
+        return;
+      }
+
+      if (intent.kind === "catalog") {
+        openCatalogInstall({ kind: "link", link: intent.link });
         return;
       }
 

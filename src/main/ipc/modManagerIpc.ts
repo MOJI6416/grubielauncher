@@ -32,6 +32,11 @@ import { getDataRoot } from "../utilities/dataRoot";
 import { isPublishableContentUrl } from "../utilities/trustedHosts";
 import { getModpackContents } from "../utilities/modpackContents";
 import type { ModpackContents } from "@/types/ModpackContents";
+import type { CatalogLink } from "@/types/DeepLink";
+import type {
+  CatalogLinkResolution,
+  ModrinthCollectionImport,
+} from "@/types/Catalog";
 
 const isProvider = check.oneOf(...Object.values(Provider));
 const isProjectType = check.oneOf(...Object.values(ProjectType));
@@ -42,6 +47,22 @@ const isProjectList = check.arrayOf(check.object(), 20000);
 const isHttpsUrl = check.pattern(/^https:\/\//, 2048);
 const isSha1 = check.optional(check.pattern(/^[0-9a-f]{40}$/i, 40));
 const isMinecraftVersion = check.pattern(/^[A-Za-z0-9._+-]+$/, 64);
+const isCollectionId = check.pattern(/^[A-Za-z0-9]{1,32}$/, 32);
+const CATALOG_TARGETS = new Set(["project", "version", "modpack"]);
+const isCatalogLink = (value: unknown): value is CatalogLink => {
+  if (!value || typeof value !== "object") return false;
+  const link = value as Partial<CatalogLink>;
+  return (
+    (link.provider === Provider.MODRINTH ||
+      link.provider === Provider.CURSEFORGE) &&
+    typeof link.target === "string" &&
+    CATALOG_TARGETS.has(link.target) &&
+    typeof link.id === "string" &&
+    /^[\w!@$().+,'-]{1,64}$/.test(link.id) &&
+    (link.fileId === undefined ||
+      (typeof link.fileId === "string" && /^\d{1,10}$/.test(link.fileId)))
+  );
+};
 
 export function registerModManagerIpc() {
   handleSafe<ModpackContents | null, [Provider, string, IVersion]>(
@@ -148,6 +169,24 @@ export function registerModManagerIpc() {
     [isProvider, isProjectId, check.optional(isProjectType)],
     async (_, provider: Provider, ref: string, projectType?: ProjectType) => {
       return await ModManager.resolveLink(provider, ref, projectType);
+    },
+  );
+
+  handleSafe<CatalogLinkResolution | null>(
+    "modManager:resolveCatalogLink",
+    null,
+    [isCatalogLink],
+    async (_, link: CatalogLink) => {
+      return await ModManager.resolveCatalogLink(link);
+    },
+  );
+
+  handleSafe<ModrinthCollectionImport | null>(
+    "modManager:modrinthCollection",
+    null,
+    [isCollectionId],
+    async (_, id: string) => {
+      return await ModManager.modrinthCollection(id);
     },
   );
 

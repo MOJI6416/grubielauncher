@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { CircleAlert, Layers, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  CircleAlert,
+  Download,
+  Layers,
+  Loader2,
+  Plus,
+  Star,
+  Trash2,
+} from "lucide-react";
 import { Empty, EmptyDescription } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Hint } from "@renderer/components/Hint";
@@ -29,18 +37,125 @@ import { getLoaderInfo } from "@renderer/components/Loaders";
 import type { PortTarget } from "@renderer/features/port/analyzePort";
 import { PortPreview } from "@renderer/features/port/PortPreview";
 import { type PortItem, portedProjects } from "@renderer/features/port/portPlan";
-import { findSetByName, normalizeSetName, toSetItems } from "./modSets";
+import {
+  findSetByName,
+  isFavoritesSet,
+  normalizeSetName,
+  parseCollectionRef,
+  projectsAsSetItems,
+  toSetItems,
+} from "./modSets";
 import {
   deleteModSet,
   restoreModSet,
   saveModSet,
+  saveSetItems,
   useModSets,
 } from "./modSetsStore";
 import { resolveModSet } from "./resolveModSet";
 
 export type ModSetsDialogMode =
   | { kind: "save"; mods: ILocalProject[]; defaultName: string }
-  | { kind: "apply" };
+  | { kind: "apply"; selectedId?: string }
+  | { kind: "import"; link?: string };
+
+const api = window.api;
+
+function ImportCollectionView({
+  initialLink,
+  onImported,
+  onClose,
+}: {
+  initialLink?: string;
+  onImported: (setId: string) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const [link, setLink] = useState(initialLink ?? "");
+  const [isImporting, setIsImporting] = useState(false);
+  const ref = parseCollectionRef(link);
+
+  const runImport = async () => {
+    if (!ref || isImporting) return;
+    setIsImporting(true);
+    try {
+      const collection = await api.modManager.modrinthCollection(ref);
+      if (!collection) {
+        toast.warning(t("modSets.collectionNotFound"));
+        return;
+      }
+      const items = projectsAsSetItems(collection.projects);
+      if (items.length === 0) {
+        toast.warning(t("modSets.collectionEmpty"));
+        return;
+      }
+      const set = await saveSetItems(
+        collection.name || t("modSets.collectionDefaultName"),
+        items,
+      );
+      if (!set) {
+        showFailureToast(t("modSets.saveFailed"), undefined, {
+          channels: ["fs:writeJSON"],
+        });
+        return;
+      }
+      toast.success(
+        t("modSets.collectionImported", { name: set.name, count: items.length }),
+      );
+      onImported(set.id);
+    } catch (error) {
+      showFailureToast(t("modSets.collectionFailed"), error, {
+        channels: ["modManager:modrinthCollection", "service:modrinth"],
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  return (
+    <>
+      <DialogHeader className="min-w-0">
+        <DialogTitle className="flex min-w-0 items-center gap-2">
+          <Download className="size-5 shrink-0" />
+          <span className="truncate">{t("modSets.importTitle")}</span>
+        </DialogTitle>
+        <DialogDescription>{t("modSets.importDescription")}</DialogDescription>
+      </DialogHeader>
+
+      <form
+        className="flex min-w-0 flex-col gap-1.5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void runImport();
+        }}
+      >
+        <Label htmlFor="mod-set-collection">{t("modSets.collectionLink")}</Label>
+        <Input
+          id="mod-set-collection"
+          autoFocus
+          value={link}
+          placeholder="https://modrinth.com/collection/…"
+          onChange={(event) => setLink(event.target.value)}
+        />
+        {link.trim() && !ref && (
+          <p className="text-xs text-destructive">
+            {t("modSets.collectionInvalid")}
+          </p>
+        )}
+      </form>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>
+          {t("common.cancel")}
+        </Button>
+        <Button disabled={!ref || isImporting} onClick={() => void runImport()}>
+          {isImporting ? <Loader2 className="animate-spin" /> : <Download />}
+          {t("modSets.importAction")}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
 
 function SaveSetView({
   mods,
@@ -128,17 +243,21 @@ function SaveSetView({
 function ApplySetView({
   target,
   installed,
+  initialSelectedId,
   onAdd,
   onClose,
 }: {
   target: PortTarget;
   installed: ILocalProject[];
+  initialSelectedId?: string;
   onAdd: (projects: ILocalProject[]) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
   const sets = useModSets();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialSelectedId ?? null,
+  );
   const [items, setItems] = useState<PortItem[] | null>(null);
   const [isResolving, setIsResolving] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -186,9 +305,14 @@ function ApplySetView({
       return;
     }
 
-    showUndoToast(t("modSets.deleted", { name: removed.name }), async () => {
-      if (!(await restoreModSet(removed, index))) saveFailed();
-    });
+    showUndoToast(
+      t("modSets.deleted", {
+        name: isFavoritesSet(removed) ? t("modSets.favorites") : removed.name,
+      }),
+      async () => {
+        if (!(await restoreModSet(removed, index))) saveFailed();
+      },
+    );
   };
 
   const setIds = useMemo(
@@ -261,10 +385,20 @@ function ApplySetView({
                           : "hover:bg-row-hover",
                       )}
                     >
-                      <Layers className="size-4 shrink-0 text-faint" />
-                      <Hint content={set.name} variant="text" truncatedOnly>
+                      {isFavoritesSet(set) ? (
+                        <Star className="size-4 shrink-0 text-faint" />
+                      ) : (
+                        <Layers className="size-4 shrink-0 text-faint" />
+                      )}
+                      <Hint
+                        content={
+                          isFavoritesSet(set) ? t("modSets.favorites") : set.name
+                        }
+                        variant="text"
+                        truncatedOnly
+                      >
                         <span className="min-w-0 flex-1 truncate text-sm">
-                          {set.name}
+                          {isFavoritesSet(set) ? t("modSets.favorites") : set.name}
                         </span>
                       </Hint>
                       <span className="shrink-0 font-mono text-xs whitespace-nowrap text-faint tabular-nums">
@@ -341,19 +475,30 @@ export function ModSetsDialog({
   onAdd: (projects: ILocalProject[]) => void;
   onClose: () => void;
 }) {
+  const [view, setView] = useState<ModSetsDialogMode>(mode);
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
-        {mode.kind === "save" ? (
+        {view.kind === "save" ? (
           <SaveSetView
-            mods={mode.mods}
-            defaultName={mode.defaultName}
+            mods={view.mods}
+            defaultName={view.defaultName}
             onClose={onClose}
+          />
+        ) : view.kind === "import" ? (
+          <ImportCollectionView
+            initialLink={view.link}
+            onClose={onClose}
+            onImported={(setId) =>
+              target ? setView({ kind: "apply", selectedId: setId }) : onClose()
+            }
           />
         ) : target ? (
           <ApplySetView
             target={target}
             installed={installed}
+            initialSelectedId={view.selectedId}
             onAdd={onAdd}
             onClose={onClose}
           />

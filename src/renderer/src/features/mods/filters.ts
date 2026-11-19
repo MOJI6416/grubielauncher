@@ -13,12 +13,16 @@ export type LibraryFacet =
   | "curseforge"
   | "modrinth"
   | "local"
-  | "foreign";
+  | "foreign"
+  | "fromPack"
+  | "addedByYou";
 
 export const LIBRARY_FACETS: LibraryFacet[] = [
   "update",
   "disabled",
   "duplicate",
+  "fromPack",
+  "addedByYou",
   "client",
   "server",
   "curseforge",
@@ -135,6 +139,17 @@ export interface LibraryMarks {
   duplicates?: ReadonlySet<string>;
   foreign?: ReadonlySet<string>;
   categories?: ReadonlyMap<string, string[]>;
+  packKeys?: ReadonlySet<string> | null;
+}
+
+export type ContentOrigin = "pack" | "user";
+
+export function contentOrigin(
+  entry: Pick<ContentEntry, "key">,
+  packKeys: ReadonlySet<string> | null | undefined,
+): ContentOrigin | undefined {
+  if (!packKeys) return undefined;
+  return packKeys.has(entry.key) ? "pack" : "user";
 }
 
 export const HIDE_LIBRARIES_CHIP_KEY = "@hideLibraries";
@@ -191,6 +206,10 @@ function matchesFacet(
       return isLocalProvider(entry.provider);
     case "foreign":
       return marks.foreign?.has(entry.key) === true;
+    case "fromPack":
+      return contentOrigin(entry, marks.packKeys) === "pack";
+    case "addedByYou":
+      return contentOrigin(entry, marks.packKeys) === "user";
     default:
       return false;
   }
@@ -210,6 +229,8 @@ export function countLibraryFacets(
     modrinth: 0,
     local: 0,
     foreign: 0,
+    fromPack: 0,
+    addedByYou: 0,
   } satisfies LibraryFacetCounts;
 
   for (const entry of entries) {

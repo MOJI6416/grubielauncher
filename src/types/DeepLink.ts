@@ -1,3 +1,14 @@
+import type { Provider } from "./ModManager";
+
+export type CatalogLinkTarget = "project" | "version" | "modpack";
+
+export interface CatalogLink {
+  provider: Provider.MODRINTH | Provider.CURSEFORGE;
+  target: CatalogLinkTarget;
+  id: string;
+  fileId?: string;
+}
+
 export type LauncherDeepLink =
   | {
       type: "pack";
@@ -31,4 +42,5 @@ export type LauncherDeepLink =
   | {
       type: "webLogin";
       requestId: string;
-    };
+    }
+  | ({ type: "catalog" } & CatalogLink);

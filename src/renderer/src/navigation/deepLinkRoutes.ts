@@ -1,5 +1,5 @@
 import { AccountType } from "@/types/Account";
-import { LauncherDeepLink } from "@/types/DeepLink";
+import { CatalogLink, LauncherDeepLink } from "@/types/DeepLink";
 
 export interface DeepLinkContext {
   hasAccount: boolean;
@@ -22,6 +22,7 @@ export type DeepLinkIntent =
   | { kind: "webLogin"; requestId: string }
   | { kind: "friendRequest"; userId: string }
   | { kind: "pack"; shareCode: string }
+  | { kind: "catalog"; link: CatalogLink }
   | { kind: "notice"; level: "info" | "error"; messageKey: string };
 
 export function resolveDeepLink(
@@ -98,5 +99,16 @@ export function resolveDeepLink(
 
     case "pack":
       return { kind: "pack", shareCode: payload.shareCode };
+
+    case "catalog":
+      return {
+        kind: "catalog",
+        link: {
+          provider: payload.provider,
+          target: payload.target,
+          id: payload.id,
+          ...(payload.fileId ? { fileId: payload.fileId } : {}),
+        },
+      };
   }
 }

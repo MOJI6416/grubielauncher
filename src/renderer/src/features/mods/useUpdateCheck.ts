@@ -11,8 +11,10 @@ import { UpdateState, isCheckableProject } from "./updates";
 import {
   buildUpdateItems,
   chunkUpdateItems,
+  holdOutsideChannel,
   readUpdateVerdicts,
 } from "./updateQuery";
+import type { UpdateChannel } from "@/shared/updateChannel";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
 const api = window.api;
@@ -24,8 +26,9 @@ function cacheKey(
   versionId: string,
   gameVersion: string,
   loader: Loader | string,
+  channel: UpdateChannel,
 ): string {
-  return `${key}|${versionId}|${gameVersion}|${loader}`;
+  return `${key}|${versionId}|${gameVersion}|${loader}|${channel}`;
 }
 
 export interface UpdateCheckResult {
@@ -46,6 +49,7 @@ export function useUpdateCheck({
   projectType,
   gameVersion,
   loader,
+  channel,
   enabled,
   keepsUpdate,
 }: {
@@ -53,6 +57,7 @@ export function useUpdateCheck({
   projectType: ProjectType;
   gameVersion: string | undefined;
   loader: Loader | string;
+  channel: UpdateChannel;
   enabled: boolean;
   keepsUpdate?: (
     current: NonNullable<ILocalProject["version"]>,
@@ -97,6 +102,7 @@ export function useUpdateCheck({
         item.versionId ?? "",
         gameVersion,
         groupLoader,
+        channel,
       );
 
     if (force) {
@@ -132,13 +138,18 @@ export function useUpdateCheck({
           .checkUpdates({
             gameVersion,
             loader: groupLoader,
+            channel,
             items: chunk,
           })
           .catch(ignoreFailure);
 
         if (runId !== runIdRef.current) return;
 
-        const outcomes = readUpdateVerdicts(chunk, response?.items);
+        const verdicts = readUpdateVerdicts(chunk, response?.items);
+        const outcomes =
+          response && !response.channel && channel !== "alpha"
+            ? holdOutsideChannel(verdicts, channel)
+            : verdicts;
         const versionByKey = new Map(
           chunk.map((item) => [
             entryKey(item.provider, item.id),
@@ -155,7 +166,13 @@ export function useUpdateCheck({
             (await keepsUpdate(current, state.latest));
           if (runId !== runIdRef.current) return;
           cache.set(
-            cacheKey(key, versionByKey.get(key) ?? "", gameVersion, groupLoader),
+            cacheKey(
+              key,
+              versionByKey.get(key) ?? "",
+              gameVersion,
+              groupLoader,
+              channel,
+            ),
             kept ? state : { status: "current", latest: null },
           );
         }
@@ -165,7 +182,7 @@ export function useUpdateCheck({
 
     if (runId === runIdRef.current) setIsChecking(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameVersion, keepsUpdate, loader, signature]);
+  }, [channel, gameVersion, keepsUpdate, loader, signature]);
 
   useEffect(() => {
     if (!enabled) {
@@ -194,7 +211,13 @@ export function useUpdateCheck({
       for (const mod of targets) {
         const id = entryKey(mod.provider, mod.id);
         const state = cache.get(
-          cacheKey(id, mod.version?.id ?? "", gameVersion, mod.loader ?? loader),
+          cacheKey(
+            id,
+            mod.version?.id ?? "",
+            gameVersion,
+            mod.loader ?? loader,
+            channel,
+          ),
         );
         if (!state) continue;
 
@@ -227,7 +250,7 @@ export function useUpdateCheck({
       check: (force?: boolean) => void run(force),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targets, gameVersion, loader, isChecking, revision, run]);
+  }, [targets, gameVersion, loader, channel, isChecking, revision, run]);
 }
 
 export function forgetUpdateCache(): void {

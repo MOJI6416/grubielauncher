@@ -18,6 +18,12 @@ export const LazyNewInstanceScreen = lazyWithPreload(() =>
   })),
 );
 
+export const LazyCatalogScreen = lazyWithPreload(() =>
+  import("./catalog/CatalogScreen").then((module) => ({
+    default: module.CatalogScreen,
+  })),
+);
+
 export const LazyNewsScreen = lazyWithPreload(() =>
   import("./news/NewsScreen").then((module) => ({
     default: module.NewsScreen,

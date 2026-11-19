@@ -1,4 +1,5 @@
 import { LauncherDeepLink } from "@/types/DeepLink";
+import { Provider } from "@/types/ModManager";
 import { readLaunchTarget } from "@/shared/launchLink";
 import { isLaunchSignatureShape } from "./launchSignature";
 
@@ -7,6 +8,57 @@ const SHORT_PACK_CODE_PATTERN = /^[A-HJ-NP-Z2-9]{4}-?[A-HJ-NP-Z2-9]{4}$/i;
 const GROUP_CODE_PATTERN = /^[a-zA-Z0-9]{4}-?[a-zA-Z0-9]{4}$/;
 const WEB_LOGIN_ID_PATTERN = /^[a-f0-9]{64}$/i;
 
+const CATALOG_REF_PATTERN = /^[\w!@$().+,'-]{1,64}$/;
+const CURSEFORGE_ID_PATTERN = /^\d{1,10}$/;
+
+const MODRINTH_TARGETS: Record<string, "project" | "version" | "modpack"> = {
+  mod: "project",
+  plugin: "project",
+  datapack: "project",
+  resourcepack: "project",
+  shader: "project",
+  project: "project",
+  version: "version",
+  modpack: "modpack",
+};
+
+export const CATALOG_PROTOCOLS = ["modrinth", "curseforge"] as const;
+
+function parseCatalogLink(url: URL): LauncherDeepLink | null {
+  if (url.protocol === "modrinth:") {
+    const target = MODRINTH_TARGETS[url.hostname.toLowerCase()];
+    if (!target) return null;
+
+    let id: string;
+    try {
+      id = decodeURIComponent(url.pathname.split("/").filter(Boolean)[0] ?? "");
+    } catch {
+      return null;
+    }
+    if (!CATALOG_REF_PATTERN.test(id)) return null;
+
+    return { type: "catalog", provider: Provider.MODRINTH, target, id };
+  }
+
+  if (url.protocol === "curseforge:") {
+    if (url.hostname.toLowerCase() !== "install") return null;
+
+    const id = url.searchParams.get("addonId") ?? "";
+    const fileId = url.searchParams.get("fileId") ?? "";
+    if (!CURSEFORGE_ID_PATTERN.test(id)) return null;
+
+    return {
+      type: "catalog",
+      provider: Provider.CURSEFORGE,
+      target: "project",
+      id,
+      ...(CURSEFORGE_ID_PATTERN.test(fileId) ? { fileId } : {}),
+    };
+  }
+
+  return null;
+}
+
 export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
   let url: URL;
 
@@ -14,6 +66,10 @@ export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
     url = new URL(rawUrl);
   } catch {
     return null;
+  }
+
+  if (url.protocol === "modrinth:" || url.protocol === "curseforge:") {
+    return parseCatalogLink(url);
   }
 
   if (url.protocol !== "grubielauncher:") return null;

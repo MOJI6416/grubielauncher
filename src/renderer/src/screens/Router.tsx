@@ -33,6 +33,7 @@ import type {
 import { ScreenFallback } from "./ScreenFallback";
 import {
   LazyAgentScreen,
+  LazyCatalogScreen,
   LazyInstanceScreen,
   LazyNewInstanceScreen,
   LazyNewsScreen,
@@ -183,6 +184,14 @@ function RouteScreen({
 
   if (route.name === "accounts") {
     return <AccountsScreen />;
+  }
+
+  if (route.name === "catalog") {
+    return (
+      <Suspense fallback={<ScreenFallback />}>
+        <LazyCatalogScreen />
+      </Suspense>
+    );
   }
 
   return <HomeScreen runGame={runGame} />;

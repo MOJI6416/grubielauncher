@@ -16,6 +16,8 @@ import { curseForgeCategories, modrinthCategories } from '@/shared/modCategories
 import { LOADERS_WITHOUT_CURSEFORGE_MODS } from '@/shared/loaderCompat'
 import type { IModpackSource } from '@/types/ModpackSource'
 import type { ModrinthServerPack } from '@/types/ModrinthServers'
+import type { CatalogLink } from '@/types/DeepLink'
+import type { CatalogLinkResolution, ModrinthCollectionImport } from '@/types/Catalog'
 import { CurseForge } from './CurseForge'
 import { ModTypeClassIds, ModsSearchSortField } from '@/types/CurseForge'
 import {
@@ -309,6 +311,40 @@ export class ModManager {
       if (isSourceUnreachable(error)) throw error
       return null
     }
+  }
+
+  static async resolveCatalogLink(link: CatalogLink): Promise<CatalogLinkResolution | null> {
+    if (link.provider == Provider.CURSEFORGE) {
+      const project = await ModManager.getProject(Provider.CURSEFORGE, link.id)
+      return project ? { project, ...(link.fileId ? { versionId: link.fileId } : {}) } : null
+    }
+
+    if (link.target == 'version') {
+      const version = await Modrinth.getVersion(link.id)
+      const projectId = (version as { project_id?: unknown } | null)?.project_id
+      if (typeof projectId !== 'string' || !projectId) return null
+      const project = await ModManager.getProject(Provider.MODRINTH, projectId)
+      return project ? { project, versionId: link.id } : null
+    }
+
+    const project = await ModManager.getProject(Provider.MODRINTH, link.id)
+    return project ? { project } : null
+  }
+
+  static async modrinthCollection(id: string): Promise<ModrinthCollectionImport | null> {
+    const collection = await Modrinth.getCollection(id)
+    if (!collection) return null
+
+    const projects: IProject[] = []
+    for (let index = 0; index < collection.projects.length; index += 100) {
+      const batch = await Modrinth.getProjects(collection.projects.slice(index, index + 100))
+      if (!batch) throw new Error('Modrinth projects lookup failed')
+      for (const project of batch) {
+        projects.push(mrProjectToProject(project, project.project_type as ProjectType))
+      }
+    }
+
+    return { id: collection.id, name: collection.name, projects }
   }
 
   static async getVersions(

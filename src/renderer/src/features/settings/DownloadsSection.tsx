@@ -5,6 +5,10 @@ import { Globe, Loader2, Wifi } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { showFailureToast } from "@renderer/utilities/failures";
+import { UPDATE_CHANNELS, type UpdateChannel } from "@/shared/updateChannel";
 import {
   mirrorModeAtom,
   openConnectivityCheck,
@@ -209,6 +213,66 @@ export function DownloadsSection({
           </SettingRow>
         )}
       </SettingsGroup>
+
+      {(visible("modUpdateChannel") || visible("catalogLinks")) && (
+        <SettingsGroup title={t("settings.downloads.contentTitle")}>
+          {visible("modUpdateChannel") && (
+            <SettingRow
+              title={t("settings.downloads.updateChannel")}
+              description={t("settings.downloads.updateChannelDescription")}
+              query={query}
+              changed={isChanged("modUpdateChannel")}
+              onReset={() => reset("modUpdateChannel")}
+              control={
+                <SegmentedControl<UpdateChannel>
+                  ariaLabel={t("settings.downloads.updateChannel")}
+                  value={settings.modUpdateChannel}
+                  onChange={(value) => commit({ modUpdateChannel: value })}
+                  options={UPDATE_CHANNELS.map((channel) => ({
+                    value: channel,
+                    label: t(`modManager.updateChannel.segment.${channel}`),
+                  }))}
+                />
+              }
+            />
+          )}
+
+          {visible("catalogLinks") && (
+            <SettingRow
+              htmlFor="settings-catalogLinks"
+              title={t("settings.downloads.catalogLinks")}
+              description={t("settings.downloads.catalogLinksDescription")}
+              query={query}
+              changed={isChanged("catalogLinks")}
+              onReset={() => {
+                void api.other.setCatalogLinks(false);
+                reset("catalogLinks");
+              }}
+              control={
+                <Switch
+                  id="settings-catalogLinks"
+                  checked={settings.catalogLinks}
+                  onCheckedChange={(value) => {
+                    void api.other
+                      .setCatalogLinks(value)
+                      .then((applied) => {
+                        if (applied) {
+                          commit({ catalogLinks: value });
+                          return;
+                        }
+                        showFailureToast(
+                          t("settings.downloads.catalogLinksFailed"),
+                          undefined,
+                          { channels: ["app:setCatalogLinks"] },
+                        );
+                      });
+                  }}
+                />
+              }
+            />
+          )}
+        </SettingsGroup>
+      )}
 
       {visible("mirrorRouting") && (
         <SettingsGroup

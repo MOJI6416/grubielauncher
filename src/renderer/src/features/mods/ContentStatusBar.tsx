@@ -1,6 +1,7 @@
 import { Dispatch, SetStateAction } from "react";
 import {
   CheckCheck,
+  ChevronDown,
   CircleArrowUp,
   CloudOff,
   Copy,
@@ -27,6 +28,8 @@ import { ContentEntry, canToggleType } from "./entries";
 import { LibraryFacet } from "./filters";
 import type { TFunction } from "i18next";
 import type { UpdateCheckResult } from "./useUpdateCheck";
+import type { UpdateChannel } from "@/shared/updateChannel";
+import { UpdateChannelItems } from "./UpdateChannelMenu";
 
 import type { CatalogFilterChip, DuplicateMarks } from "./filters";
 import { type ModGroup, UNGROUPED_ID } from "./modGroups";
@@ -82,6 +85,12 @@ export interface ContentStatusBarProps {
   uncheckedCount: number;
   updatableCount: number;
   updateCheck: UpdateCheckResult;
+  updateChannel: {
+    instance: UpdateChannel | null;
+    inherited: UpdateChannel;
+    effective: UpdateChannel;
+    onChange: (channel: UpdateChannel | null) => void;
+  };
 }
 
 export function ContentStatusBar({
@@ -121,6 +130,7 @@ export function ContentStatusBar({
   uncheckedCount,
   updatableCount,
   updateCheck,
+  updateChannel,
 }: ContentStatusBarProps) {
   return (
     <>
@@ -353,6 +363,26 @@ export function ContentStatusBar({
                 {t("modManager.availableUpdates", { count: updatableCount })}
               </span>
             </Hint>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild disabled={isBusy}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 shrink-0 gap-1 px-2 text-xs text-muted-foreground"
+                  aria-label={t("modManager.updateChannel.title")}
+                >
+                  {t(`modManager.updateChannel.short.${updateChannel.effective}`)}
+                  <ChevronDown className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <UpdateChannelItems
+                  instanceChannel={updateChannel.instance}
+                  inheritedChannel={updateChannel.inherited}
+                  onChange={updateChannel.onChange}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
             {!libraryFacets.includes("update") && (
               <Button
                 size="sm"

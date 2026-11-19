@@ -52,6 +52,15 @@ import {
   isForeignFile,
 } from "./managedFiles";
 import { fileStem, moveFilesToTrash } from "./trash";
+import { readModpackBase } from "./modpackSource";
+import { Provider } from "@/types/ModManager";
+import {
+  downloadReasonFor,
+  isModrinthDownloadReason,
+  modrinthLoaderTag,
+  type ModrinthDownloadMeta,
+  type ModrinthDownloadReason,
+} from "@/shared/modrinthDownloadMeta";
 
 const TRASH_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const DISABLED_SUFFIX = ".disabled";
@@ -92,6 +101,7 @@ export class Mods {
   private installOperation: VersionInstallOperation = "install";
   private installAbortSignal: AbortSignal | null = null;
   private installPlan: VersionInstallStage[] | undefined = undefined;
+  private downloadReasons: Record<string, ModrinthDownloadReason> = {};
   public lastFailures: DownloaderFailuresInfo | null = null;
 
   constructor(
@@ -220,11 +230,45 @@ export class Mods {
   }
 
   async check(options?: ModsRuntimeOptions) {
-    await this.runWithProgress(
-      options,
-      contentPlan(this.conf.loader.mods, this.server),
-      () => this.checkInternal(),
+    this.downloadReasons = Object.fromEntries(
+      Object.entries(options?.downloadReasons ?? {}).filter(([, reason]) =>
+        isModrinthDownloadReason(reason),
+      ),
     );
+    try {
+      await this.runWithProgress(
+        options,
+        contentPlan(this.conf.loader.mods, this.server),
+        () => this.checkInternal(),
+      );
+    } finally {
+      this.downloadReasons = {};
+    }
+  }
+
+  private async modrinthMetaResolver(): Promise<
+    (mod: { id: string; provider: Provider; projectType: ProjectType }) =>
+      | ModrinthDownloadMeta
+      | undefined
+  > {
+    const fromModpack =
+      this.installOperation === "install" &&
+      (!!this.conf.modpack ||
+        (!!this.version.versionPath &&
+          !!(await readModpackBase(this.version.versionPath).catch(() => null))));
+
+    return (mod) => {
+      if (mod.provider !== Provider.MODRINTH) return undefined;
+      return {
+        reason: downloadReasonFor({
+          explicit: this.downloadReasons[mod.id],
+          operation: this.installOperation,
+          fromModpack,
+        }),
+        gameVersion: this.conf.version.id,
+        loader: modrinthLoaderTag(this.conf.loader.name, mod.projectType),
+      };
+    };
   }
 
   private async checkInternal() {
@@ -241,6 +285,7 @@ export class Mods {
     const storagePath = path.join(this.version.versionPath, "storage");
 
     const downloadFiles: DownloadItem[] = [];
+    const metaFor = await this.modrinthMetaResolver();
     const serverModFiles: ServerModFile[] = [];
     const worlds: string[] = [];
     const worldZips: string[] = [];
@@ -341,12 +386,14 @@ export class Mods {
               ? pathToFileURL(file.localPath).href
               : file.url;
 
+            const modrinthMeta = file.localPath ? undefined : metaFor(mod);
             downloadFiles.push({
               destination,
               url: await this.preferInstanceCopy(url, destination, filename),
               group: contentStageOf(mod.projectType),
               sha1: file.sha1,
               size: file.size,
+              ...(modrinthMeta ? { modrinthMeta } : {}),
             });
           }
         }
@@ -815,9 +862,18 @@ export class Mods {
   }
 
   async syncLive(options?: ModsRuntimeOptions) {
-    await this.runWithProgress(options, ["packs"], () =>
-      this.syncLiveInternal(),
+    this.downloadReasons = Object.fromEntries(
+      Object.entries(options?.downloadReasons ?? {}).filter(([, reason]) =>
+        isModrinthDownloadReason(reason),
+      ),
     );
+    try {
+      await this.runWithProgress(options, ["packs"], () =>
+        this.syncLiveInternal(),
+      );
+    } finally {
+      this.downloadReasons = {};
+    }
   }
 
   private async syncLiveInternal() {
@@ -829,6 +885,7 @@ export class Mods {
     }
 
     const downloadFiles: DownloadItem[] = [];
+    const metaFor = await this.modrinthMetaResolver();
 
     for (const mod of this.version.version.loader.mods) {
       if (!mod.version) continue;
@@ -854,12 +911,14 @@ export class Mods {
         if (await fs.pathExists(`${filepath}${DISABLED_SUFFIX}`)) continue;
         if (file.disabled === true && !(await fs.pathExists(filepath))) continue;
 
+        const modrinthMeta = file.localPath ? undefined : metaFor(mod);
         downloadFiles.push({
           destination: filepath,
           url: file.localPath ? pathToFileURL(file.localPath).href : file.url,
           group: "packs",
           sha1: file.sha1,
           size: file.size,
+          ...(modrinthMeta ? { modrinthMeta } : {}),
         });
       }
     }

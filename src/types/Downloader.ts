@@ -1,3 +1,5 @@
+import type { ModrinthDownloadMeta } from "../shared/modrinthDownloadMeta";
+
 export interface DownloadItem {
   url: string;
   destination: string;
@@ -6,6 +8,7 @@ export interface DownloadItem {
   checksum?: string;
   checksumType?: "sha1" | "sha256";
   size?: number;
+  modrinthMeta?: ModrinthDownloadMeta;
   options?: {
     extract?: boolean;
     extractFolder?: string;

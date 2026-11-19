@@ -1,4 +1,10 @@
 import axios from "axios";
+import type { DownloadItem } from "@/types/Downloader";
+import {
+  MODRINTH_META_HEADER,
+  isModrinthCdnUrl,
+  modrinthMetaHeader,
+} from "@/shared/modrinthDownloadMeta";
 
 export type DownloadFilesOptions = {
   throwOnFailure?: boolean;
@@ -44,6 +50,18 @@ export function buildDownloadRequestHeaders(
   }
 
   return { "Accept-Encoding": "identity" };
+}
+
+export function modrinthRequestHeaders(
+  item: Pick<DownloadItem, "modrinthMeta">,
+  url: string,
+  userAgent: string,
+): Record<string, string> {
+  if (!item.modrinthMeta || !isModrinthCdnUrl(url)) return {};
+  return {
+    "User-Agent": userAgent,
+    [MODRINTH_META_HEADER]: modrinthMetaHeader(item.modrinthMeta),
+  };
 }
 
 export function isTruncatedDownload(

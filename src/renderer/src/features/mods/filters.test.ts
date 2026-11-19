@@ -6,6 +6,7 @@ import {
   catalogFilterKey,
   catalogFilterLabel,
   categoryLocaleKey,
+  contentOrigin,
   countLibraryCategories,
   countLibraryFacets,
   humanizeFilterName,
@@ -88,6 +89,39 @@ describe("countLibraryFacets", () => {
     expect(counts.curseforge).toBe(1);
     expect(counts.modrinth).toBe(2);
     expect(counts.local).toBe(1);
+  });
+});
+
+describe("pack origin", () => {
+  const entries = [
+    entry({ key: "modrinth:a", id: "a" }),
+    entry({ key: "modrinth:b", id: "b" }),
+  ];
+  const marks = {
+    updatable: new Set<string>(),
+    disabled: new Set<string>(),
+  };
+
+  it("tells modpack mods from the ones the player added", () => {
+    const packKeys = new Set(["modrinth:a"]);
+    expect(contentOrigin(entries[0], packKeys)).toBe("pack");
+    expect(contentOrigin(entries[1], packKeys)).toBe("user");
+
+    const counts = countLibraryFacets(entries, { ...marks, packKeys });
+    expect(counts.fromPack).toBe(1);
+    expect(counts.addedByYou).toBe(1);
+    expect(
+      filterLibraryEntries(
+        entries,
+        { query: "", facets: ["addedByYou"], sort: "name" },
+        { ...marks, packKeys },
+      ).map((item) => item.id),
+    ).toEqual(["b"]);
+  });
+
+  it("says nothing for an instance that did not come from a modpack", () => {
+    expect(contentOrigin(entries[0], null)).toBeUndefined();
+    expect(countLibraryFacets(entries, marks).addedByYou).toBe(0);
   });
 });
 

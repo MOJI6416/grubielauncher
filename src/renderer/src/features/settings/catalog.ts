@@ -26,6 +26,8 @@ export type SettingsEntryId =
   | "downloadLimit"
   | "downloadSource"
   | "mirrorRouting"
+  | "modUpdateChannel"
+  | "catalogLinks"
   | "language"
   | "theme"
   | "uiScale"
@@ -153,6 +155,8 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "downloadSource", section: "downloads", keys: ["downloadSource"] },
   { id: "downloadLimit", section: "downloads", keys: ["downloadLimit"] },
   { id: "mirrorRouting", section: "downloads", keys: [] },
+  { id: "modUpdateChannel", section: "downloads", keys: ["modUpdateChannel"] },
+  { id: "catalogLinks", section: "downloads", keys: ["catalogLinks"] },
   { id: "language", section: "interface", keys: ["lang"], neutral: true },
   { id: "uiScale", section: "interface", keys: ["uiScale"] },
   { id: "theme", section: "themes", keys: ["themeId"] },

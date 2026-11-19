@@ -745,7 +745,9 @@
       "curseforge": "CurseForge",
       "modrinth": "Modrinth",
       "local": "Local files",
-      "foreign": "For another loader"
+      "foreign": "For another loader",
+      "fromPack": "From the modpack",
+      "addedByYou": "Added by you"
     },
     "dependencies": "Dependencies",
     "deleted": "Mod deleted",
@@ -1035,6 +1037,56 @@
       "datapack_other": "{{count}} datapacks",
       "mixed_one": "{{count}} item",
       "mixed_other": "{{count}} items"
+    },
+    "updatesMenu": "Updates",
+    "updateChannel": {
+      "title": "Which versions to offer",
+      "inherit": "As in launcher settings ({{channel}})",
+      "options": {
+        "release": "Releases only",
+        "beta": "Releases and betas",
+        "alpha": "Everything, alphas too"
+      },
+      "short": {
+        "release": "releases only",
+        "beta": "releases + beta",
+        "alpha": "all, alphas too"
+      },
+      "segment": {
+        "release": "Releases",
+        "beta": "+ Beta",
+        "alpha": "+ Alpha"
+      }
+    },
+    "linkOffline": "No internet connection, so the link can’t be opened",
+    "linkNotFound": "Nothing found at this link on Modrinth or CurseForge",
+    "linkWrongType": "{{type}} can’t be installed into this instance",
+    "linkUnsupported": "This link isn’t a Modrinth or CurseForge page",
+    "favoriteAdd": "Add to favorites",
+    "favoriteRemove": "Remove from favorites",
+    "favoriteAdded": "{{title}} added to favorites",
+    "favoriteRemoved": "{{title}} removed from favorites",
+    "installElsewhere": "Install into another instance",
+    "origin": {
+      "pack": "from the modpack",
+      "user": "added by you",
+      "packHint": "Came with the modpack this instance was installed from. A modpack update may change it.",
+      "userHint": "You added it yourself. A modpack update keeps it."
+    },
+    "disabledBreaksDependents": "These need what you disabled: {{names}}. The game may not start.",
+    "enabledWithDependencies": "Its dependencies were turned on too: {{names}}",
+    "disabledWithDependencies": "Dependencies nothing else uses were turned off too: {{names}}",
+    "relations": {
+      "tab": "Links",
+      "hint": "In this instance, from the mod’s catalog page and its own file.",
+      "requires": "Needs",
+      "requiredBy": "Needed by",
+      "optional": "Works with (optional)",
+      "embedded": "Built into the file",
+      "conflicts": "Conflicts with",
+      "notInstalled": "not installed",
+      "none": "No links with other mods in this instance.",
+      "declared": "Declared for version {{version}}"
     }
   },
   "nav": {
@@ -1742,7 +1794,13 @@
         "loaders": "Forge, NeoForge, Fabric, Quilt",
         "mods": "Mods from Modrinth and CurseForge",
         "account": "Accounts, friends, voice chat"
-      }
+      },
+      "contentTitle": "Mods and links",
+      "updateChannel": "Mod updates",
+      "updateChannelDescription": "Which versions “Update all” offers. Instances on snapshots get every version; an instance can have its own choice in its update menu.",
+      "catalogLinks": "Open Modrinth and CurseForge links in Grubie",
+      "catalogLinksDescription": "The “Install” buttons on modrinth.com and curseforge.com will open Grubie instead of the Modrinth App or the CurseForge app.",
+      "catalogLinksFailed": "The system didn’t let Grubie take these links"
     },
     "interface": {
       "languageDescription": "Applies immediately, no restart needed",
@@ -2225,6 +2283,16 @@
         "title": "Direct connection (P2P)",
         "description": "Play with friends directly, bypassing the Grubie server",
         "keywords": "p2p direct connection play together ping ip webrtc relay"
+      },
+      "modUpdateChannel": {
+        "title": "Mod updates",
+        "description": "Releases only, plus betas or plus alphas",
+        "keywords": "channel beta alpha release update all mods"
+      },
+      "catalogLinks": {
+        "title": "Modrinth and CurseForge links",
+        "description": "The Install buttons on mod sites open Grubie",
+        "keywords": "protocol modrinth:// curseforge:// install button browser"
       }
     },
     "voicePttCaptureTimeout": "No key was pressed — the shortcut is unchanged.",
@@ -2707,7 +2775,19 @@
       "unchecked": "Could not be checked — will not be added",
       "localMod": "Local mods — will not be added"
     },
-    "explain": "A set is a saved list of Modrinth and CurseForge mods. You can add it to any instance."
+    "explain": "A set is a saved list of Modrinth and CurseForge mods. You can add it to any instance.",
+    "importCollection": "Import a Modrinth collection…",
+    "importTitle": "Import a Modrinth collection",
+    "importDescription": "The collection becomes a mod set: add it to any instance, versions are picked for it.",
+    "collectionLink": "Collection link",
+    "collectionInvalid": "Paste a link like modrinth.com/collection/…",
+    "importAction": "Import",
+    "collectionNotFound": "Collection not found. It may be private.",
+    "collectionEmpty": "The collection has no mods, resource packs, shaders or data packs",
+    "collectionDefaultName": "Modrinth collection",
+    "collectionImported": "Set “{{name}}” saved, items: {{count}}",
+    "collectionFailed": "Couldn’t load the collection from Modrinth",
+    "favorites": "Favorites"
   },
   "modGroups": {
     "toGroup": "To a group",
@@ -6891,5 +6971,33 @@
       "later": "Not now",
       "open": "Move"
     }
+  },
+  "catalogInstall": {
+    "title": "Install “{{title}}”",
+    "loadingTitle": "Opening the link…",
+    "description": "Pick an instance: the version for its Minecraft and loader is chosen automatically, with required dependencies.",
+    "notFound": "Couldn’t open the link",
+    "notFoundHint": "Modrinth or CurseForge didn’t answer, or there’s nothing at this link. Try again later.",
+    "noInstances": "No instances you can change yet",
+    "createInstance": "New instance",
+    "installed": "“{{title}}” installed into “{{instance}}”",
+    "withDependencies": "Dependencies added too: {{count}}",
+    "openInstance": "Open instance",
+    "blocked": "The author doesn’t allow downloads from launchers. Open the instance and add the file by hand.",
+    "alreadyThere": "Installed",
+    "running": "Game is running",
+    "noVersion": "No version for it",
+    "install": "Install"
+  },
+  "catalog": {
+    "title": "Mod catalog",
+    "open": "Mods",
+    "searchPlaceholder": "Search, or paste a Modrinth or CurseForge link",
+    "anyVersion": "Any version",
+    "anyLoader": "Any loader",
+    "offline": "The catalog needs an internet connection",
+    "failed": "{{source}} didn’t answer",
+    "installTo": "Install to…",
+    "more": "Show more"
   }
 }

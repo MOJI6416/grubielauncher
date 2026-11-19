@@ -7,6 +7,7 @@ import {
   describeDownloadFailureHosts,
   isDownloadAbortError,
   isTruncatedDownload,
+  modrinthRequestHeaders,
   isEncodedResponse,
   isNonRetryableDownloadError,
   OPTIONAL_PROJECT_DOWNLOAD_OPTIONS,
@@ -162,5 +163,33 @@ describe("downloader pure helpers", () => {
   it("says nothing rather than something wrong when there is no url to read", () => {
     expect(describeDownloadFailureHosts([])).toBe("");
     expect(describeDownloadFailureHosts(["fabric.json", ""])).toBe("");
+  });
+});
+
+describe("modrinthRequestHeaders", () => {
+  const item = {
+    modrinthMeta: { reason: "update" as const, gameVersion: "1.21.1", loader: "fabric" },
+  };
+
+  it("tags Modrinth file requests directly and through the mirror", () => {
+    for (const url of [
+      "https://cdn.modrinth.com/data/AANobbMI/versions/x/sodium.jar",
+      "https://mirror.grubielauncher.com/modrinth/data/AANobbMI/versions/x/sodium.jar",
+    ]) {
+      expect(modrinthRequestHeaders(item, url, "GrubieLauncher/2.2.6")).toEqual({
+        "User-Agent": "GrubieLauncher/2.2.6",
+        "modrinth-download-meta":
+          '{"reason":"update","game_version":"1.21.1","loader":"fabric"}',
+      });
+    }
+  });
+
+  it("sends nothing to other hosts or for untagged items", () => {
+    expect(
+      modrinthRequestHeaders(item, "https://edge.forgecdn.net/files/1/2/a.jar", "UA"),
+    ).toEqual({});
+    expect(
+      modrinthRequestHeaders({}, "https://cdn.modrinth.com/data/a.jar", "UA"),
+    ).toEqual({});
   });
 });

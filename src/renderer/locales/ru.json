@@ -748,7 +748,9 @@
       "curseforge": "CurseForge",
       "modrinth": "Modrinth",
       "local": "Локальные файлы",
-      "foreign": "Под другой загрузчик"
+      "foreign": "Под другой загрузчик",
+      "fromPack": "Из сборки",
+      "addedByYou": "Добавлены вами"
     },
     "dependencies": "Зависимости",
     "deleted": "Мод удалён",
@@ -1061,6 +1063,56 @@
       "mixed_few": "{{count}} элемента",
       "mixed_many": "{{count}} элементов",
       "mixed_other": "{{count}} элемента"
+    },
+    "updatesMenu": "Обновления",
+    "updateChannel": {
+      "title": "Какие версии предлагать",
+      "inherit": "Как в настройках лаунчера ({{channel}})",
+      "options": {
+        "release": "Только релизы",
+        "beta": "Релизы и бета",
+        "alpha": "Все, включая альфа"
+      },
+      "short": {
+        "release": "только релизы",
+        "beta": "релизы + бета",
+        "alpha": "все, включая альфа"
+      },
+      "segment": {
+        "release": "Релизы",
+        "beta": "+ Бета",
+        "alpha": "+ Альфа"
+      }
+    },
+    "linkOffline": "Нет подключения к интернету — ссылку не открыть",
+    "linkNotFound": "По этой ссылке ничего не нашлось на Modrinth и CurseForge",
+    "linkWrongType": "{{type}} нельзя установить в эту сборку",
+    "linkUnsupported": "Это не ссылка на страницу Modrinth или CurseForge",
+    "favoriteAdd": "В избранное",
+    "favoriteRemove": "Убрать из избранного",
+    "favoriteAdded": "«{{title}}» в избранном",
+    "favoriteRemoved": "«{{title}}» убран из избранного",
+    "installElsewhere": "Установить в другую сборку",
+    "origin": {
+      "pack": "из сборки",
+      "user": "добавлен вами",
+      "packHint": "Пришёл вместе с модпаком, из которого установлена сборка. Обновление модпака может его изменить.",
+      "userHint": "Вы добавили его сами. При обновлении модпака он останется."
+    },
+    "disabledBreaksDependents": "От выключенного зависят: {{names}}. Без него игра может не запуститься.",
+    "enabledWithDependencies": "Вместе с ним включены зависимости: {{names}}",
+    "disabledWithDependencies": "Вместе с ним выключены зависимости, которые больше никому не нужны: {{names}}",
+    "relations": {
+      "tab": "Связи",
+      "hint": "В этой сборке — по странице мода в каталоге и по его файлу.",
+      "requires": "Требует",
+      "requiredBy": "Нужен для",
+      "optional": "Работает вместе (необязательно)",
+      "embedded": "Встроено в файл",
+      "conflicts": "Конфликтует с",
+      "notInstalled": "не установлен",
+      "none": "Связей с другими модами в этой сборке нет.",
+      "declared": "Заявлено для версии {{version}}"
     }
   },
   "nav": {
@@ -1772,7 +1824,13 @@
         "loaders": "Forge, NeoForge, Fabric, Quilt",
         "mods": "Моды с Modrinth и CurseForge",
         "account": "Аккаунты, друзья, голосовой чат"
-      }
+      },
+      "contentTitle": "Моды и ссылки",
+      "updateChannel": "Обновления модов",
+      "updateChannelDescription": "Какие версии предлагает «Обновить всё». Сборкам на снапшотах — все версии; у сборки можно выбрать своё в меню обновлений.",
+      "catalogLinks": "Открывать ссылки Modrinth и CurseForge в Grubie",
+      "catalogLinksDescription": "Кнопки «Install» на modrinth.com и curseforge.com будут открывать Grubie вместо Modrinth App и приложения CurseForge.",
+      "catalogLinksFailed": "Система не дала Grubie открывать эти ссылки"
     },
     "interface": {
       "languageDescription": "Применяется сразу, перезапуск не нужен",
@@ -2255,6 +2313,16 @@
         "title": "Прямое соединение (P2P)",
         "description": "Играть с друзьями напрямую, мимо сервера Grubie",
         "keywords": "p2p прямое соединение играть вместе пинг ip webrtc релей"
+      },
+      "modUpdateChannel": {
+        "title": "Обновления модов",
+        "description": "Только релизы, с бета или с альфа",
+        "keywords": "канал бета альфа релиз обновить всё моды"
+      },
+      "catalogLinks": {
+        "title": "Ссылки Modrinth и CurseForge",
+        "description": "Кнопки Install на сайтах модов открывают Grubie",
+        "keywords": "протокол modrinth:// curseforge:// кнопка установить браузер"
       }
     },
     "voicePttCaptureTimeout": "Клавиша не нажата — сочетание осталось прежним.",
@@ -2739,7 +2807,19 @@
       "unchecked": "Не удалось проверить — не добавятся",
       "localMod": "Локальные моды — не добавятся"
     },
-    "explain": "Набор — сохранённый список модов с Modrinth и CurseForge. Его можно добавить в любую сборку."
+    "explain": "Набор — сохранённый список модов с Modrinth и CurseForge. Его можно добавить в любую сборку.",
+    "importCollection": "Импорт коллекции Modrinth…",
+    "importTitle": "Импорт коллекции Modrinth",
+    "importDescription": "Коллекция станет набором модов: его можно добавить в любую сборку, версии подберутся под неё.",
+    "collectionLink": "Ссылка на коллекцию",
+    "collectionInvalid": "Вставьте ссылку вида modrinth.com/collection/…",
+    "importAction": "Импортировать",
+    "collectionNotFound": "Коллекция не найдена. Возможно, она закрыта.",
+    "collectionEmpty": "В коллекции нет модов, ресурспаков, шейдеров или датапаков",
+    "collectionDefaultName": "Коллекция Modrinth",
+    "collectionImported": "Набор «{{name}}» сохранён, элементов: {{count}}",
+    "collectionFailed": "Не удалось загрузить коллекцию с Modrinth",
+    "favorites": "Избранное"
   },
   "modGroups": {
     "toGroup": "В группу",
@@ -7016,5 +7096,33 @@
       "later": "Не сейчас",
       "open": "Перенести"
     }
+  },
+  "catalogInstall": {
+    "title": "Установить «{{title}}»",
+    "loadingTitle": "Открываем ссылку…",
+    "description": "Выберите сборку: версия под её Minecraft и загрузчик подберётся сама, вместе с нужными зависимостями.",
+    "notFound": "Не удалось открыть ссылку",
+    "notFoundHint": "Modrinth или CurseForge не ответил, или по ссылке ничего нет. Попробуйте позже.",
+    "noInstances": "Пока нет сборок, которые можно менять",
+    "createInstance": "Новая сборка",
+    "installed": "«{{title}}» установлен в «{{instance}}»",
+    "withDependencies": "Вместе с зависимостями: {{count}}",
+    "openInstance": "Открыть сборку",
+    "blocked": "Автор запретил скачивание из лаунчеров. Откройте сборку и добавьте файл вручную.",
+    "alreadyThere": "Установлен",
+    "running": "Игра запущена",
+    "noVersion": "Нет подходящей версии",
+    "install": "Установить"
+  },
+  "catalog": {
+    "title": "Каталог модов",
+    "open": "Моды",
+    "searchPlaceholder": "Поиск или ссылка на Modrinth и CurseForge",
+    "anyVersion": "Любая версия",
+    "anyLoader": "Любой загрузчик",
+    "offline": "Для каталога нужен интернет",
+    "failed": "{{source}} не ответил",
+    "installTo": "Установить в…",
+    "more": "Показать ещё"
   }
 }

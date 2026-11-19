@@ -2,6 +2,7 @@ import { type DragEvent, memo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Ban,
+  Boxes,
   CircleArrowUp,
   CloudOff,
   Copy,
@@ -17,6 +18,7 @@ import {
   Server,
   Trash2,
   Undo2,
+  UserPlus,
   UserRound,
   Loader2,
 } from "lucide-react";
@@ -34,6 +36,7 @@ import {
   readSelectionGesture,
 } from "@renderer/utilities/rangeSelection";
 import { ContentEntry } from "./entries";
+import type { ContentOrigin } from "./filters";
 import { formatCompactNumber } from "@renderer/utilities/numbers";
 import { ProjectIcon } from "./ProjectIcon";
 import { displayTitle, installedVersionLabel } from "./titles";
@@ -86,6 +89,7 @@ export const ContentRow = memo(function ContentRow({
   heldVersion,
   foreignLoader,
   changedAt,
+  origin,
   isBusy,
   isWorking = false,
   isDraggable = false,
@@ -112,6 +116,7 @@ export const ContentRow = memo(function ContentRow({
   heldVersion?: string;
   foreignLoader?: string;
   changedAt?: number;
+  origin?: ContentOrigin;
   isBusy: boolean;
   isWorking?: boolean;
   isDraggable?: boolean;
@@ -299,6 +304,21 @@ export const ContentRow = memo(function ContentRow({
                 <SideMark side={entry.side} />
                 {t(`modManager.sides.${entry.side}`)}
               </span>
+              {origin && (
+                <Hint
+                  content={t(`modManager.origin.${origin}Hint`)}
+                  className="max-w-64"
+                >
+                  <span className="flex shrink-0 items-center gap-1">
+                    {origin === "pack" ? (
+                      <Boxes className="size-3" />
+                    ) : (
+                      <UserPlus className="size-3" />
+                    )}
+                    {t(`modManager.origin.${origin}`)}
+                  </span>
+                </Hint>
+              )}
               {changedAt ? (
                 <span className="shrink-0 tabular-nums">
                   {formatRelative(new Date(changedAt))}

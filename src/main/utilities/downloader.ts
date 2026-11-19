@@ -13,6 +13,7 @@ import {
 import { mainWindow } from "../windows/mainWindow";
 import {
   buildDownloadRequestHeaders,
+  modrinthRequestHeaders,
   canSkipChecksumVerification,
   dedupeDownloadItemsBy,
   describeDownloadFailureHosts,
@@ -50,6 +51,7 @@ import {
   isWritablePath,
 } from "./safePath";
 import { isSafeRemoteUrl } from "./safeUrl";
+import { buildUserAgent } from "../services/Modrinth";
 
 let downloadsPaused = false;
 let pauseWaiters: Array<() => void> = [];
@@ -850,10 +852,10 @@ export class Downloader {
             }
 
             const makeRequest = async (rangeStart: number) => {
-              const headers = buildDownloadRequestHeaders(
-                rangeStart,
-                rangeValidator,
-              );
+              const headers = {
+                ...buildDownloadRequestHeaders(rangeStart, rangeValidator),
+                ...modrinthRequestHeaders(item, url, buildUserAgent()),
+              };
 
               return axios.get(url, {
                 responseType: "stream",

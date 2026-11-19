@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { ILocalProject, ProjectType, Provider } from "@/types/ModManager";
 import {
+  FAVORITES_SET_ID,
+  type IModSetItem,
+  isFavorite,
+  parseCollectionRef,
   parseSetsFile,
+  projectsAsSetItems,
   removeSet,
   saveIntoSets,
   setAsProjects,
   toSetItems,
+  toggleFavoriteIn,
 } from "./modSets";
 
 function mod(
@@ -140,5 +146,80 @@ describe("setAsProjects", () => {
         version: null,
       },
     ]);
+  });
+});
+
+describe("favorites", () => {
+  const sodium: IModSetItem = {
+    provider: Provider.MODRINTH,
+    id: "AANobbMI",
+    projectType: ProjectType.MOD,
+    title: "Sodium",
+    iconUrl: null,
+    url: "",
+  };
+
+  it("creates the favorites set on the first star and toggles it back", () => {
+    const first = toggleFavoriteIn([], sodium, "t1");
+    expect(first.favorite).toBe(true);
+    expect(isFavorite(first.sets, sodium)).toBe(true);
+    expect(first.sets[0].id).toBe(FAVORITES_SET_ID);
+
+    const second = toggleFavoriteIn(first.sets, sodium, "t2");
+    expect(second.favorite).toBe(false);
+    expect(isFavorite(second.sets, sodium)).toBe(false);
+    expect(second.sets).toHaveLength(1);
+  });
+
+  it("keeps other sets as they are", () => {
+    const other = {
+      id: "x",
+      name: "Other",
+      createdAt: "",
+      updatedAt: "",
+      items: [sodium],
+    };
+    const { sets } = toggleFavoriteIn([other], sodium, "t");
+    expect(sets.find((set) => set.id === "x")).toBe(other);
+  });
+});
+
+describe("collections", () => {
+  it("reads a collection link or a bare id", () => {
+    expect(parseCollectionRef("https://modrinth.com/collection/K2SNA6lZ")).toBe("K2SNA6lZ");
+    expect(parseCollectionRef("modrinth.com/collection/K2SNA6lZ")).toBeNull();
+    expect(parseCollectionRef("K2SNA6lZ")).toBe("K2SNA6lZ");
+    expect(parseCollectionRef("https://modrinth.com/mod/sodium")).toBeNull();
+    expect(parseCollectionRef("https://evil.com/collection/K2SNA6lZ")).toBeNull();
+  });
+
+  it("keeps only what a set can hold", () => {
+    const items = projectsAsSetItems([
+      {
+        id: "a",
+        title: "A",
+        description: "",
+        projectType: ProjectType.MOD,
+        iconUrl: null,
+        versions: [],
+        provider: Provider.MODRINTH,
+        url: "u",
+        gallery: [],
+        body: "",
+      },
+      {
+        id: "p",
+        title: "Pack",
+        description: "",
+        projectType: ProjectType.MODPACK,
+        iconUrl: null,
+        versions: [],
+        provider: Provider.MODRINTH,
+        url: "",
+        gallery: [],
+        body: "",
+      },
+    ]);
+    expect(items.map((item) => item.id)).toEqual(["a"]);
   });
 });

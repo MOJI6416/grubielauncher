@@ -201,7 +201,11 @@ import {
 import type { LoaderRequirementsScan } from "@/shared/loaderCompat";
 import type { OrnitheModsCheck } from "@/shared/profileLoaders";
 import { NotificationClickAction } from "@/types/Notification";
-import { LauncherDeepLink } from "@/types/DeepLink";
+import { CatalogLink, LauncherDeepLink } from "@/types/DeepLink";
+import type {
+  CatalogLinkResolution,
+  ModrinthCollectionImport,
+} from "@/types/Catalog";
 import type { FailureInfo } from "@/shared/errors";
 import type { UiScaleState } from "@/shared/uiScale";
 import type { LaunchOutcome, LinuxLaunchTools } from "@/shared/launchCommand";
@@ -951,6 +955,7 @@ export interface IElectronAPI {
     ) => Promise<void>;
     getLocale: () => Promise<string>;
     restoreWindow: () => Promise<void>;
+    setCatalogLinks: (enabled: boolean) => Promise<boolean>;
     setUnsavedGuard: (value: boolean) => Promise<void>;
     confirmClose: () => Promise<void>;
     getUiScale: () => Promise<UiScaleState>;
@@ -1196,6 +1201,10 @@ export interface IElectronAPI {
       ref: string,
       projectType?: ProjectType,
     ) => Promise<IProject | null>;
+    resolveCatalogLink: (
+      link: CatalogLink,
+    ) => Promise<CatalogLinkResolution | null>;
+    modrinthCollection: (id: string) => Promise<ModrinthCollectionImport | null>;
     getVersions: (
       provider: Provider,
       projectId: string,
@@ -2189,6 +2198,8 @@ export const api: IElectronAPI = {
     ) => invoke("other:notify", options, clickAction),
     getLocale: () => invoke("other:getLocale"),
     restoreWindow: () => invoke("other:restoreWindow"),
+    setCatalogLinks: (enabled: boolean) =>
+      invoke("app:setCatalogLinks", enabled),
     setUnsavedGuard: (value: boolean) => invoke("other:setUnsavedGuard", value),
     confirmClose: () => invoke("other:confirmClose"),
     getUiScale: () => invoke("other:getUiScale"),
@@ -2511,6 +2522,10 @@ export const api: IElectronAPI = {
       invoke("modManager:getProject", provider, projectId),
     resolveLink: (provider: Provider, ref: string, projectType?: ProjectType) =>
       invoke("modManager:resolveLink", provider, ref, projectType),
+    resolveCatalogLink: (link: CatalogLink) =>
+      invoke("modManager:resolveCatalogLink", link),
+    modrinthCollection: (id: string) =>
+      invoke("modManager:modrinthCollection", id),
     getVersions: (provider: Provider, projectId: string, options: any) =>
       invoke("modManager:getVersions", provider, projectId, options),
     getDependencies: (provider: Provider, projectId: string, deps: any[]) =>

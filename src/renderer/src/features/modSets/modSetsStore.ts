@@ -4,10 +4,12 @@ import type { ILocalProject } from "@/types/ModManager";
 import { pathsAtom } from "@renderer/stores/atoms";
 import {
   type IModSet,
+  type IModSetItem,
   parseSetsFile,
   removeSet,
   saveIntoSets,
   toSetItems,
+  toggleFavoriteIn,
 } from "./modSets";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 
@@ -64,6 +66,31 @@ export async function saveModSet(
     crypto.randomUUID(),
   );
   return (await persist(sets)) ? set : null;
+}
+
+export async function saveSetItems(
+  name: string,
+  items: IModSetItem[],
+): Promise<IModSet | null> {
+  const { sets, set } = saveIntoSets(
+    await loadModSets(),
+    name,
+    items,
+    new Date().toISOString(),
+    crypto.randomUUID(),
+  );
+  return (await persist(sets)) ? set : null;
+}
+
+export async function toggleFavorite(
+  item: IModSetItem,
+): Promise<boolean | null> {
+  const { sets, favorite } = toggleFavoriteIn(
+    await loadModSets(),
+    item,
+    new Date().toISOString(),
+  );
+  return (await persist(sets)) ? favorite : null;
 }
 
 export async function deleteModSet(id: string): Promise<boolean> {

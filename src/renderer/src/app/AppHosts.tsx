@@ -15,6 +15,7 @@ import { GameInviteHost } from "./hosts/GameInviteHost";
 import { InstallHost } from "./hosts/InstallHost";
 import { LaunchHost } from "./hosts/LaunchHost";
 import { PortHost } from "./hosts/PortHost";
+import { CatalogInstallHost } from "./hosts/CatalogInstallHost";
 import { InstanceDeleteHost } from "./hosts/InstanceDeleteHost";
 import { PresenceHost } from "./hosts/PresenceHost";
 import { RpcHost } from "./hosts/RpcHost";
@@ -72,6 +73,7 @@ export function AppHosts() {
       <CloseChoiceHost />
       <UsageStatsHost />
       <PortHost />
+      <CatalogInstallHost />
       <InstanceDeleteHost />
       <PrivacyNotice />
       <LauncherImportOffer />

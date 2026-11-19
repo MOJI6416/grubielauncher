@@ -3,6 +3,7 @@ import {
   DependencyType,
   ILocalDependency,
   ILocalProject,
+  LocalModDependencies,
   LocalModDependencyIndex,
   ProjectType,
   Provider,
@@ -144,23 +145,31 @@ export function sharesFile(a: ILocalProject, b: ILocalProject): boolean {
   return fileNamesOf(b).some((name) => names.has(name));
 }
 
-export function planDeletion(
+export interface DependencyGraph {
+  keyOf: (mod: ILocalProject) => string;
+  byKey: Map<string, ILocalProject>;
+  dependencies: Map<string, Set<string>>;
+  catalogDependencies: Map<string, Set<string>>;
+  requiredBy: Map<string, Set<string>>;
+  nativeInfo: Map<string, LocalModDependencies[]>;
+  byModId: Map<string, Set<string>>;
+  replacements: Map<string, Set<string>>;
+  resolveDependency: (
+    owner: ILocalProject,
+    dep: ILocalDependency,
+  ) => ILocalProject | undefined;
+}
+
+export function modGraphKey(mod: ILocalProject): string {
+  return `${mod.projectType}:${mod.provider}:${mod.id}`;
+}
+
+export function buildDependencyGraph(
   mods: ILocalProject[],
-  target: ILocalProject | ILocalProject[],
-  options: {
-    includeDependents?: boolean;
-    removeDependencies?: boolean;
-    localDependencies?: LocalModDependencyIndex;
-  } = {},
-): DeletionPlan {
-  const keyOf = (mod: ILocalProject) =>
-    `${mod.projectType}:${mod.provider}:${mod.id}`;
+  localDependencies?: LocalModDependencyIndex,
+): DependencyGraph {
+  const keyOf = modGraphKey;
   const byKey = new Map(mods.map((mod) => [keyOf(mod), mod]));
-  const requested = (Array.isArray(target) ? target : [target])
-    .map((mod) => byKey.get(keyOf(mod)))
-    .filter((mod): mod is ILocalProject => Boolean(mod));
-  if (requested.length === 0) return { remove: [], blockers: [] };
-  const explicit = new Set(requested.map(keyOf));
   const dependencies = new Map<string, Set<string>>();
   const catalogDependencies = new Map<string, Set<string>>();
   const byTitle = new Map<string, ILocalProject[]>();
@@ -171,8 +180,8 @@ export function planDeletion(
       .map((mod) => [
         keyOf(mod),
         fileNamesOf(mod)
-          .map((filename) => options.localDependencies?.[filename])
-          .filter((info) => !!info),
+          .map((filename) => localDependencies?.[filename])
+          .filter((info): info is LocalModDependencies => !!info),
       ]),
   );
   const byModId = new Map<string, Set<string>>();
@@ -267,6 +276,46 @@ export function planDeletion(
     keys.delete(keyOf(mod));
     replacements.set(keyOf(mod), keys);
   }
+
+  return {
+    keyOf,
+    byKey,
+    dependencies,
+    catalogDependencies,
+    requiredBy,
+    nativeInfo,
+    byModId,
+    replacements,
+    resolveDependency,
+  };
+}
+
+export function planDeletion(
+  mods: ILocalProject[],
+  target: ILocalProject | ILocalProject[],
+  options: {
+    includeDependents?: boolean;
+    removeDependencies?: boolean;
+    localDependencies?: LocalModDependencyIndex;
+  } = {},
+): DeletionPlan {
+  const graph = buildDependencyGraph(mods, options.localDependencies);
+  const {
+    keyOf,
+    byKey,
+    dependencies,
+    catalogDependencies,
+    requiredBy,
+    nativeInfo,
+    byModId,
+    replacements,
+  } = graph;
+  const requested = (Array.isArray(target) ? target : [target])
+    .map((mod) => byKey.get(keyOf(mod)))
+    .filter((mod): mod is ILocalProject => Boolean(mod));
+  if (requested.length === 0) return { remove: [], blockers: [] };
+  const explicit = new Set(requested.map(keyOf));
+
   const hasReplacement = (key: string, removed: Set<string>) =>
     [...(replacements.get(key) ?? [])].some((other) => !removed.has(other));
   const losesDependency = (mod: ILocalProject, removed: Set<string>) =>

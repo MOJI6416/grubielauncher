@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import type { ILocalProject } from "@/types/ModManager";
 import type { IServerConf } from "@/types/Server";
 import type { TSettings } from "@/types/Settings";
+import type { ModrinthDownloadReason } from "@/shared/modrinthDownloadMeta";
 import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
 import { Version } from "@renderer/classes/Version";
 import { Mods } from "@renderer/classes/Mods";
@@ -51,6 +52,7 @@ const BLOCKED_SKIPPED = "content-blocked-skipped";
 interface ApplyOptions {
   sync: boolean;
   restore?: { items: ILocalProject[]; since: number };
+  downloadReasons?: Record<string, ModrinthDownloadReason>;
 }
 
 async function restoreFromTrash(
@@ -166,8 +168,11 @@ export function useInstanceContent({
 
           if (options?.sync !== false) {
             const content = new Mods(current.settings, conf, current.server);
-            if (current.isRunning) await content.syncLive();
-            else await content.check();
+            const install = options?.downloadReasons
+              ? { downloadReasons: options.downloadReasons }
+              : undefined;
+            if (current.isRunning) await content.syncLive(install);
+            else await content.check(install);
           }
 
           if (!(await version.save())) throw new Error("version save failed");
@@ -265,6 +270,7 @@ export function useInstanceContent({
     (next, commit) =>
       apply(next, commit, {
         sync: commit.sync !== false,
+        downloadReasons: commit.downloadReasons,
         restore:
           commit.restoreFromTrash && applier
             ? { items: restoredItems(applier.current(), next), since: 0 }

@@ -1,3 +1,4 @@
+import type { ModrinthDownloadReason } from "../shared/modrinthDownloadMeta";
 import { DownloaderFailureItem } from "./Downloader";
 import { Loader } from "./Loader";
 
@@ -36,6 +37,7 @@ export interface VersionInstallOptions {
   cleanupOnCancel?: boolean;
   keepProgressOpen?: boolean;
   plan?: VersionInstallStage[];
+  downloadReasons?: Record<string, ModrinthDownloadReason>;
 }
 
 export interface VersionInstallResult {

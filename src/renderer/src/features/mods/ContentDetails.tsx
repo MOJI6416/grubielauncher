@@ -21,6 +21,8 @@ import {
   Trash2,
   UserRound,
   X,
+  Star,
+  CopyPlus,
 } from "lucide-react";
 import {
   DependencyType,
@@ -36,6 +38,8 @@ import { Collapse } from "@/components/ui/collapse";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ModRelationsView } from "./ModRelationsView";
+import type { ModRelations } from "./modRelations";
 import { Hint } from "@renderer/components/Hint";
 import { ContentEntry } from "./entries";
 import { formatDate } from "./format";
@@ -117,6 +121,13 @@ export function ContentDetails({
   isPinned = false,
   canPin = false,
   onTogglePin,
+  isFavorite = false,
+  onToggleFavorite,
+  onInstallElsewhere,
+  relations = null,
+  relationsScanning = false,
+  onLoadRelations,
+  onOpenInstalled,
   onAuthor,
 }: {
   entry: ContentEntry;
@@ -145,6 +156,13 @@ export function ContentDetails({
   isPinned?: boolean;
   canPin?: boolean;
   onTogglePin?: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
+  onInstallElsewhere?: () => void;
+  relations?: ModRelations | null;
+  relationsScanning?: boolean;
+  onLoadRelations?: () => void;
+  onOpenInstalled?: (mod: ILocalProject) => void;
   onAuthor?: (author: IProjectAuthor) => void;
   onBack: () => void;
   onClose: () => void;
@@ -184,6 +202,10 @@ export function ContentDetails({
   useEffect(() => {
     setTab("about");
   }, [entry.key]);
+
+  useEffect(() => {
+    if (tab === "deps" && relations) onLoadRelations?.();
+  }, [tab, entry.key, relations, onLoadRelations]);
 
   const asideRef = useRef<HTMLElement | null>(null);
 
@@ -454,6 +476,52 @@ export function ContentDetails({
                   {primaryLabel}
                 </Button>
 
+                {!isModpacks && onToggleFavorite && (
+                  <Hint
+                    content={t(
+                      isFavorite
+                        ? "modManager.favoriteRemove"
+                        : "modManager.favoriteAdd",
+                    )}
+                  >
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      aria-pressed={isFavorite}
+                      className={
+                        isFavorite
+                          ? "size-9 border-info/50 text-info hover:text-info"
+                          : "size-9"
+                      }
+                      aria-label={t(
+                        isFavorite
+                          ? "modManager.favoriteRemove"
+                          : "modManager.favoriteAdd",
+                      )}
+                      onClick={onToggleFavorite}
+                    >
+                      <Star
+                        className={isFavorite ? "size-4 fill-current" : "size-4"}
+                      />
+                    </Button>
+                  </Hint>
+                )}
+
+                {!isModpacks && onInstallElsewhere && (
+                  <Hint content={t("modManager.installElsewhere")}>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="size-9"
+                      disabled={isBusy}
+                      aria-label={t("modManager.installElsewhere")}
+                      onClick={onInstallElsewhere}
+                    >
+                      <CopyPlus className="size-4" />
+                    </Button>
+                  </Hint>
+                )}
+
                 {isInstalled && !isModpacks && canPin && onTogglePin && (
                   <Hint
                     content={t(
@@ -556,7 +624,9 @@ export function ContentDetails({
               </TabsTrigger>
               {!isModpacks && (
                 <TabsTrigger value="deps">
-                  {t("modManager.dependencies")}
+                  {relations
+                    ? t("modManager.relations.tab")
+                    : t("modManager.dependencies")}
                   {dependencies.length > 0 && (
                     <span className="ml-1 font-mono text-3xs text-faint">
                       {dependencies.length}
@@ -654,6 +724,22 @@ export function ContentDetails({
               value="deps"
               className="min-h-0 flex-1 overflow-y-auto px-3 pt-3 pb-3"
             >
+              {relations && (
+                <ModRelationsView
+                  relations={relations}
+                  isScanning={relationsScanning}
+                  onOpen={onOpenInstalled}
+                />
+              )}
+
+              {relations && resolvedDependencies.length > 0 && (
+                <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                  {t("modManager.relations.declared", {
+                    version: selectedVersion?.name ?? "",
+                  })}
+                </p>
+              )}
+
               {depsError && (
                 <Empty className="mb-2 gap-2 rounded-lg border border-dashed border-border px-3 py-5">
                   <EmptyMedia variant="icon" className="mb-0">
@@ -669,7 +755,7 @@ export function ContentDetails({
               )}
 
               {resolvedDependencies.length === 0 ? (
-                depsError ? null : (
+                depsError || relations ? null : (
                   <Empty className="gap-2 rounded-lg border border-dashed border-border px-3 py-6">
                     <EmptyDescription className="text-xs">
                       {t("modManager.noDependencies")}

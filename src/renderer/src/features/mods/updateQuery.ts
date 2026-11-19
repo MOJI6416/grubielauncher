@@ -11,6 +11,10 @@ import type {
   UpdateCheckProvider,
 } from "@/types/Updates";
 import { UPDATE_CHECK_MAX_ITEMS } from "@/types/Updates";
+import {
+  allowsReleaseType,
+  type UpdateChannel,
+} from "@/shared/updateChannel";
 import { entryKey } from "./entries";
 import type { UpdateState } from "./updates";
 
@@ -118,12 +122,15 @@ export function readUpdateVerdicts(
 
     const latest = verdict.latest ? toModVersion(verdict.latest) : null;
 
-    if (verdict.status === "update" || verdict.status === "current") {
+    if (verdict.status === "current") {
+      outcomes.set(key, { status: "current", latest });
+      continue;
+    }
+
+    if (verdict.status === "update") {
       outcomes.set(
         key,
-        latest
-          ? { status: verdict.status, latest }
-          : { status: "unknown", latest: null },
+        latest ? { status: "update", latest } : { status: "unknown", latest: null },
       );
       continue;
     }
@@ -137,4 +144,22 @@ export function readUpdateVerdicts(
   }
 
   return outcomes;
+}
+
+export function holdOutsideChannel(
+  outcomes: Map<string, UpdateState>,
+  channel: UpdateChannel,
+): Map<string, UpdateState> {
+  const held = new Map<string, UpdateState>();
+  for (const [key, state] of outcomes) {
+    held.set(
+      key,
+      state.status === "update" &&
+        state.latest &&
+        !allowsReleaseType(channel, state.latest.releaseType)
+        ? { status: "current", latest: null }
+        : state,
+    );
+  }
+  return held;
 }

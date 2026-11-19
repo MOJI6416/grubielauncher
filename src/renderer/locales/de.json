@@ -745,7 +745,9 @@
       "curseforge": "CurseForge",
       "modrinth": "Modrinth",
       "local": "Lokale Dateien",
-      "foreign": "Für anderen Loader"
+      "foreign": "Für anderen Loader",
+      "fromPack": "Aus dem Modpack",
+      "addedByYou": "Von dir hinzugefügt"
     },
     "dependencies": "Abhängigkeiten",
     "deleted": "Mod gelöscht",
@@ -1035,6 +1037,56 @@
       "datapack_other": "{{count}} Datenpakete",
       "mixed_one": "{{count}} Element",
       "mixed_other": "{{count}} Elemente"
+    },
+    "updatesMenu": "Updates",
+    "updateChannel": {
+      "title": "Welche Versionen anbieten",
+      "inherit": "Wie in den Launcher-Einstellungen ({{channel}})",
+      "options": {
+        "release": "Nur Releases",
+        "beta": "Releases und Betas",
+        "alpha": "Alles, auch Alphas"
+      },
+      "short": {
+        "release": "nur Releases",
+        "beta": "Releases + Beta",
+        "alpha": "alle, auch Alphas"
+      },
+      "segment": {
+        "release": "Releases",
+        "beta": "+ Beta",
+        "alpha": "+ Alpha"
+      }
+    },
+    "linkOffline": "Keine Internetverbindung – der Link lässt sich nicht öffnen",
+    "linkNotFound": "Unter diesem Link wurde auf Modrinth und CurseForge nichts gefunden",
+    "linkWrongType": "{{type}} lassen sich nicht in diese Instanz installieren",
+    "linkUnsupported": "Das ist kein Link zu einer Modrinth- oder CurseForge-Seite",
+    "favoriteAdd": "Zu Favoriten",
+    "favoriteRemove": "Aus Favoriten entfernen",
+    "favoriteAdded": "{{title}} zu Favoriten hinzugefügt",
+    "favoriteRemoved": "{{title}} aus Favoriten entfernt",
+    "installElsewhere": "In eine andere Instanz installieren",
+    "origin": {
+      "pack": "aus dem Modpack",
+      "user": "von dir hinzugefügt",
+      "packHint": "Kam mit dem Modpack, aus dem diese Instanz installiert wurde. Ein Modpack-Update kann ihn ändern.",
+      "userHint": "Du hast ihn selbst hinzugefügt. Ein Modpack-Update behält ihn."
+    },
+    "disabledBreaksDependents": "Davon hängen ab: {{names}}. Ohne das Deaktivierte startet das Spiel womöglich nicht.",
+    "enabledWithDependencies": "Abhängigkeiten ebenfalls aktiviert: {{names}}",
+    "disabledWithDependencies": "Nicht mehr benötigte Abhängigkeiten ebenfalls deaktiviert: {{names}}",
+    "relations": {
+      "tab": "Beziehungen",
+      "hint": "In dieser Instanz – laut Katalogseite des Mods und seiner Datei.",
+      "requires": "Benötigt",
+      "requiredBy": "Benötigt von",
+      "optional": "Funktioniert mit (optional)",
+      "embedded": "In der Datei enthalten",
+      "conflicts": "Konflikt mit",
+      "notInstalled": "nicht installiert",
+      "none": "Keine Beziehungen zu anderen Mods in dieser Instanz.",
+      "declared": "Angegeben für Version {{version}}"
     }
   },
   "nav": {
@@ -1742,7 +1794,13 @@
         "loaders": "Forge, NeoForge, Fabric, Quilt",
         "mods": "Mods von Modrinth und CurseForge",
         "account": "Konten, Freunde, Sprachchat"
-      }
+      },
+      "contentTitle": "Mods und Links",
+      "updateChannel": "Mod-Updates",
+      "updateChannelDescription": "Welche Versionen „Alle aktualisieren“ anbietet. Instanzen mit Snapshots bekommen alle Versionen; eine Instanz kann im Update-Menü eigene Wahl haben.",
+      "catalogLinks": "Modrinth- und CurseForge-Links in Grubie öffnen",
+      "catalogLinksDescription": "Die „Install“-Schaltflächen auf modrinth.com und curseforge.com öffnen dann Grubie statt der Modrinth App oder der CurseForge-App.",
+      "catalogLinksFailed": "Das System hat Grubie diese Links nicht überlassen"
     },
     "interface": {
       "languageDescription": "Gilt sofort, kein Neustart nötig",
@@ -2225,6 +2283,16 @@
         "title": "Direkte Verbindung (P2P)",
         "description": "Direkt mit Freunden spielen, am Grubie-Server vorbei",
         "keywords": "p2p direkte verbindung gemeinsam spielen ping ip webrtc relay"
+      },
+      "modUpdateChannel": {
+        "title": "Mod-Updates",
+        "description": "Nur Releases, mit Betas oder mit Alphas",
+        "keywords": "Kanal Beta Alpha Release alle aktualisieren Mods"
+      },
+      "catalogLinks": {
+        "title": "Modrinth- und CurseForge-Links",
+        "description": "Install-Schaltflächen auf Mod-Seiten öffnen Grubie",
+        "keywords": "Protokoll modrinth:// curseforge:// Install-Knopf Browser"
       }
     },
     "voicePttCaptureTimeout": "Es wurde keine Taste gedrückt – das Tastenkürzel bleibt unverändert.",
@@ -2707,7 +2775,19 @@
       "unchecked": "Nicht prüfbar — werden nicht hinzugefügt",
       "localMod": "Lokale Mods — werden nicht hinzugefügt"
     },
-    "explain": "Ein Mod-Set ist eine gespeicherte Liste von Mods aus Modrinth und CurseForge. Sie können es zu jeder Instanz hinzufügen."
+    "explain": "Ein Mod-Set ist eine gespeicherte Liste von Mods aus Modrinth und CurseForge. Sie können es zu jeder Instanz hinzufügen.",
+    "importCollection": "Modrinth-Sammlung importieren…",
+    "importTitle": "Modrinth-Sammlung importieren",
+    "importDescription": "Die Sammlung wird zu einem Mod-Set: Füge es einer beliebigen Instanz hinzu, die Versionen werden passend gewählt.",
+    "collectionLink": "Link zur Sammlung",
+    "collectionInvalid": "Füge einen Link wie modrinth.com/collection/… ein",
+    "importAction": "Importieren",
+    "collectionNotFound": "Sammlung nicht gefunden. Vielleicht ist sie privat.",
+    "collectionEmpty": "Die Sammlung enthält keine Mods, Ressourcenpakete, Shader oder Datenpakete",
+    "collectionDefaultName": "Modrinth-Sammlung",
+    "collectionImported": "Set „{{name}}“ gespeichert, Einträge: {{count}}",
+    "collectionFailed": "Sammlung konnte nicht von Modrinth geladen werden",
+    "favorites": "Favoriten"
   },
   "modGroups": {
     "toGroup": "In eine Gruppe",
@@ -6891,5 +6971,33 @@
       "later": "Nicht jetzt",
       "open": "Übernehmen"
     }
+  },
+  "catalogInstall": {
+    "title": "„{{title}}“ installieren",
+    "loadingTitle": "Link wird geöffnet…",
+    "description": "Wähle eine Instanz: Die Version für ihr Minecraft und ihren Loader wird samt nötiger Abhängigkeiten automatisch gewählt.",
+    "notFound": "Link konnte nicht geöffnet werden",
+    "notFoundHint": "Modrinth oder CurseForge hat nicht geantwortet, oder unter dem Link gibt es nichts. Versuche es später erneut.",
+    "noInstances": "Noch keine Instanzen, die du ändern kannst",
+    "createInstance": "Neue Instanz",
+    "installed": "„{{title}}“ in „{{instance}}“ installiert",
+    "withDependencies": "Mit Abhängigkeiten: {{count}}",
+    "openInstance": "Instanz öffnen",
+    "blocked": "Der Autor erlaubt keine Downloads über Launcher. Öffne die Instanz und füge die Datei manuell hinzu.",
+    "alreadyThere": "Installiert",
+    "running": "Spiel läuft",
+    "noVersion": "Keine passende Version",
+    "install": "Installieren"
+  },
+  "catalog": {
+    "title": "Mod-Katalog",
+    "open": "Mods",
+    "searchPlaceholder": "Suche oder Link zu Modrinth und CurseForge",
+    "anyVersion": "Jede Version",
+    "anyLoader": "Jeder Loader",
+    "offline": "Der Katalog braucht eine Internetverbindung",
+    "failed": "{{source}} hat nicht geantwortet",
+    "installTo": "Installieren in…",
+    "more": "Mehr anzeigen"
   }
 }

@@ -10,6 +10,7 @@ import { UPDATE_CHECK_MAX_ITEMS } from "@/types/Updates";
 import {
   buildUpdateItems,
   chunkUpdateItems,
+  holdOutsideChannel,
   readUpdateVerdicts,
   toModVersion,
 } from "./updateQuery";
@@ -281,6 +282,45 @@ describe("readUpdateVerdicts", () => {
       status: "unknown",
       latest: null,
     });
+  });
+
+  it("reads 'nothing newer in your channel' as current", () => {
+    const outcomes = readUpdateVerdicts(requested, [
+      { provider: Provider.MODRINTH, id: "AANobbMI", status: "current" },
+    ]);
+
+    expect(outcomes.get("modrinth:AANobbMI")).toEqual({
+      status: "current",
+      latest: null,
+    });
+  });
+
+  it("holds back an update outside the channel when the api did not filter", () => {
+    const outcomes = readUpdateVerdicts(requested, [
+      {
+        provider: Provider.MODRINTH,
+        id: "AANobbMI",
+        status: "update",
+        latest: remoteVersion({ releaseType: "beta" }),
+      },
+      {
+        provider: Provider.CURSEFORGE,
+        id: "306612",
+        status: "update",
+        latest: remoteVersion({ id: "r2", releaseType: "release" }),
+      },
+    ]);
+
+    const held = holdOutsideChannel(outcomes, "release");
+
+    expect(held.get("modrinth:AANobbMI")).toEqual({
+      status: "current",
+      latest: null,
+    });
+    expect(held.get("curseforge:306612")?.status).toBe("update");
+    expect(holdOutsideChannel(outcomes, "beta").get("modrinth:AANobbMI")?.status).toBe(
+      "update",
+    );
   });
 
   it("ignores a verdict for something that was never asked about", () => {

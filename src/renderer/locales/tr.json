@@ -745,7 +745,9 @@
       "curseforge": "CurseForge",
       "modrinth": "Modrinth",
       "local": "Yerel dosyalar",
-      "foreign": "Başka yükleyici için"
+      "foreign": "Başka yükleyici için",
+      "fromPack": "Mod paketinden",
+      "addedByYou": "Sizin eklediğiniz"
     },
     "dependencies": "Bağımlılıklar",
     "deleted": "Mod silindi",
@@ -1035,6 +1037,56 @@
       "datapack_other": "{{count}} veri paketi",
       "mixed_one": "{{count}} öğe",
       "mixed_other": "{{count}} öğe"
+    },
+    "updatesMenu": "Güncellemeler",
+    "updateChannel": {
+      "title": "Hangi sürümler önerilsin",
+      "inherit": "Başlatıcı ayarlarındaki gibi ({{channel}})",
+      "options": {
+        "release": "Yalnızca kararlı sürümler",
+        "beta": "Kararlı ve beta",
+        "alpha": "Tümü, alfa dahil"
+      },
+      "short": {
+        "release": "yalnızca kararlı",
+        "beta": "kararlı + beta",
+        "alpha": "tümü, alfa dahil"
+      },
+      "segment": {
+        "release": "Kararlı",
+        "beta": "+ Beta",
+        "alpha": "+ Alfa"
+      }
+    },
+    "linkOffline": "İnternet bağlantısı yok, bağlantı açılamıyor",
+    "linkNotFound": "Bu bağlantıyla Modrinth ve CurseForge’da bir şey bulunamadı",
+    "linkWrongType": "{{type}} bu kuruluma yüklenemez",
+    "linkUnsupported": "Bu bağlantı bir Modrinth veya CurseForge sayfası değil",
+    "favoriteAdd": "Favorilere ekle",
+    "favoriteRemove": "Favorilerden çıkar",
+    "favoriteAdded": "{{title}} favorilere eklendi",
+    "favoriteRemoved": "{{title}} favorilerden çıkarıldı",
+    "installElsewhere": "Başka bir kuruluma yükle",
+    "origin": {
+      "pack": "mod paketinden",
+      "user": "sizin eklediğiniz",
+      "packHint": "Bu kurulumun yüklendiği mod paketiyle geldi. Mod paketi güncellemesi onu değiştirebilir.",
+      "userHint": "Kendiniz eklediniz. Mod paketi güncellemesi onu korur."
+    },
+    "disabledBreaksDependents": "Devre dışı bırakılana bağlı olanlar: {{names}}. Oyun açılmayabilir.",
+    "enabledWithDependencies": "Bağımlılıkları da etkinleştirildi: {{names}}",
+    "disabledWithDependencies": "Başka hiçbir şeyin kullanmadığı bağımlılıklar da devre dışı bırakıldı: {{names}}",
+    "relations": {
+      "tab": "İlişkiler",
+      "hint": "Bu kurulumda, modun katalog sayfasına ve dosyasına göre.",
+      "requires": "Gerektirir",
+      "requiredBy": "Gerektirenler",
+      "optional": "Birlikte çalışır (isteğe bağlı)",
+      "embedded": "Dosyaya gömülü",
+      "conflicts": "Çakışır",
+      "notInstalled": "yüklü değil",
+      "none": "Bu kurulumda başka modlarla ilişki yok.",
+      "declared": "{{version}} sürümü için belirtilen"
     }
   },
   "nav": {
@@ -1742,7 +1794,13 @@
         "loaders": "Forge, NeoForge, Fabric, Quilt",
         "mods": "Modrinth ve CurseForge’dan modlar",
         "account": "Hesaplar, arkadaşlar, sesli sohbet"
-      }
+      },
+      "contentTitle": "Modlar ve bağlantılar",
+      "updateChannel": "Mod güncellemeleri",
+      "updateChannelDescription": "“Tümünü güncelle”nin önereceği sürümler. Snapshot kurulumları tüm sürümleri alır; bir kurulum güncelleme menüsünde kendi seçimini yapabilir.",
+      "catalogLinks": "Modrinth ve CurseForge bağlantılarını Grubie’de aç",
+      "catalogLinksDescription": "modrinth.com ve curseforge.com’daki “Install” düğmeleri Modrinth App veya CurseForge uygulaması yerine Grubie’yi açar.",
+      "catalogLinksFailed": "Sistem bu bağlantıları Grubie’nin açmasına izin vermedi"
     },
     "interface": {
       "languageDescription": "Hemen uygulanır, yeniden başlatma gerekmez",
@@ -2225,6 +2283,16 @@
         "title": "Doğrudan bağlantı (P2P)",
         "description": "Arkadaşlarla Grubie sunucusunu atlayarak doğrudan oyna",
         "keywords": "p2p doğrudan bağlantı birlikte oyna ping ip webrtc röle"
+      },
+      "modUpdateChannel": {
+        "title": "Mod güncellemeleri",
+        "description": "Yalnızca kararlı, beta veya alfa ile",
+        "keywords": "kanal beta alfa kararlı tümünü güncelle modlar"
+      },
+      "catalogLinks": {
+        "title": "Modrinth ve CurseForge bağlantıları",
+        "description": "Mod sitelerindeki Install düğmeleri Grubie’yi açar",
+        "keywords": "protokol modrinth:// curseforge:// yükle düğmesi tarayıcı"
       }
     },
     "voicePttCaptureTimeout": "Hiçbir tuşa basılmadı — kısayol değişmedi.",
@@ -2707,7 +2775,19 @@
       "unchecked": "Kontrol edilemedi — eklenmeyecek",
       "localMod": "Yerel modlar — eklenmeyecek"
     },
-    "explain": "Set, Modrinth ve CurseForge modlarının kayıtlı bir listesidir. Herhangi bir kuruluma ekleyebilirsiniz."
+    "explain": "Set, Modrinth ve CurseForge modlarının kayıtlı bir listesidir. Herhangi bir kuruluma ekleyebilirsiniz.",
+    "importCollection": "Modrinth koleksiyonunu içe aktar…",
+    "importTitle": "Modrinth koleksiyonunu içe aktar",
+    "importDescription": "Koleksiyon bir mod setine dönüşür: herhangi bir kuruluma ekleyin, sürümler ona göre seçilir.",
+    "collectionLink": "Koleksiyon bağlantısı",
+    "collectionInvalid": "modrinth.com/collection/… biçiminde bir bağlantı yapıştırın",
+    "importAction": "İçe aktar",
+    "collectionNotFound": "Koleksiyon bulunamadı. Gizli olabilir.",
+    "collectionEmpty": "Koleksiyonda mod, kaynak paketi, gölgelendirici veya veri paketi yok",
+    "collectionDefaultName": "Modrinth koleksiyonu",
+    "collectionImported": "“{{name}}” seti kaydedildi, öğe: {{count}}",
+    "collectionFailed": "Koleksiyon Modrinth’ten yüklenemedi",
+    "favorites": "Favoriler"
   },
   "modGroups": {
     "toGroup": "Gruba ekle",
@@ -6891,5 +6971,33 @@
       "later": "Şimdi değil",
       "open": "Taşı"
     }
+  },
+  "catalogInstall": {
+    "title": "“{{title}}” yükle",
+    "loadingTitle": "Bağlantı açılıyor…",
+    "description": "Bir kurulum seçin: Minecraft sürümüne ve yükleyicisine uygun sürüm, gerekli bağımlılıklarla birlikte kendiliğinden seçilir.",
+    "notFound": "Bağlantı açılamadı",
+    "notFoundHint": "Modrinth veya CurseForge yanıt vermedi ya da bağlantıda bir şey yok. Daha sonra tekrar deneyin.",
+    "noInstances": "Henüz değiştirebileceğiniz bir kurulum yok",
+    "createInstance": "Yeni kurulum",
+    "installed": "“{{title}}”, “{{instance}}” kurulumuna yüklendi",
+    "withDependencies": "Bağımlılıklarla birlikte: {{count}}",
+    "openInstance": "Kurulumu aç",
+    "blocked": "Yazar başlatıcılardan indirmeye izin vermiyor. Kurulumu açıp dosyayı elle ekleyin.",
+    "alreadyThere": "Yüklü",
+    "running": "Oyun çalışıyor",
+    "noVersion": "Uygun sürüm yok",
+    "install": "Yükle"
+  },
+  "catalog": {
+    "title": "Mod kataloğu",
+    "open": "Modlar",
+    "searchPlaceholder": "Arayın ya da Modrinth veya CurseForge bağlantısı yapıştırın",
+    "anyVersion": "Herhangi bir sürüm",
+    "anyLoader": "Herhangi bir yükleyici",
+    "offline": "Katalog için internet bağlantısı gerekir",
+    "failed": "{{source}} yanıt vermedi",
+    "installTo": "Şuraya yükle…",
+    "more": "Daha fazla göster"
   }
 }

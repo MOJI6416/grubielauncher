@@ -26,6 +26,7 @@ import {
   TriangleAlert,
   UserPlus,
   X,
+  Blocks,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -117,6 +118,7 @@ import {
   runningSessionsAtom,
 } from "./instanceStats";
 import { openNewInstance } from "./newInstance";
+import { navigate } from "@renderer/navigation/navigate";
 import { resolveInstanceStatuses } from "./instanceStatus";
 import { selectInstance } from "./selectInstance";
 import { openInstanceScreen } from "./openInstanceScreen";
@@ -762,6 +764,15 @@ export function InstanceLibrary({
                 </Hint>
               )}
             </div>
+
+            <Button
+              variant="secondary"
+              className="h-9 shrink-0"
+              onClick={() => navigate({ name: "catalog" })}
+            >
+              <Blocks />
+              {t("catalog.open")}
+            </Button>
 
             <Button
               variant="secondary"

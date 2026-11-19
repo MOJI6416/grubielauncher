@@ -1,4 +1,9 @@
-import { ILocalProject, ProjectType, Provider } from "@/types/ModManager";
+import {
+  ILocalProject,
+  IProject,
+  ProjectType,
+  Provider,
+} from "@/types/ModManager";
 import { entryKey } from "@renderer/features/mods/entries";
 import { isCheckableProject } from "@renderer/features/mods/updates";
 
@@ -163,4 +168,111 @@ export function parseSetsFile(raw: unknown): IModSet[] {
   }
 
   return sets;
+}
+
+export const FAVORITES_SET_ID = "favorites";
+
+export function isFavoritesSet(set: Pick<IModSet, "id">): boolean {
+  return set.id === FAVORITES_SET_ID;
+}
+
+export function projectsAsSetItems(projects: IProject[]): IModSetItem[] {
+  const items: IModSetItem[] = [];
+  const seen = new Set<string>();
+
+  for (const project of projects) {
+    if (
+      project.provider !== Provider.CURSEFORGE &&
+      project.provider !== Provider.MODRINTH
+    ) {
+      continue;
+    }
+    if (!project.id || !SET_TYPES.has(project.projectType)) continue;
+
+    const key = entryKey(project.provider, project.id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    items.push({
+      provider: project.provider,
+      id: project.id,
+      projectType: project.projectType,
+      title: project.title || project.id,
+      iconUrl: project.iconUrl ?? null,
+      url: project.url ?? "",
+    });
+  }
+
+  return items;
+}
+
+export function isFavorite(
+  sets: IModSet[] | null,
+  project: { provider: Provider; id: string },
+): boolean {
+  const favorites = sets?.find(isFavoritesSet);
+  return !!favorites?.items.some(
+    (item) => item.provider === project.provider && item.id === project.id,
+  );
+}
+
+export function toggleFavoriteIn(
+  sets: IModSet[],
+  item: IModSetItem,
+  now: string,
+): { sets: IModSet[]; favorite: boolean } {
+  const key = entryKey(item.provider, item.id);
+  const existing = sets.find(isFavoritesSet);
+
+  if (!existing) {
+    return {
+      favorite: true,
+      sets: [
+        {
+          id: FAVORITES_SET_ID,
+          name: "Favorites",
+          createdAt: now,
+          updatedAt: now,
+          items: [item],
+        },
+        ...sets,
+      ],
+    };
+  }
+
+  const present = existing.items.some(
+    (entry) => entryKey(entry.provider, entry.id) === key,
+  );
+  const next: IModSet = {
+    ...existing,
+    updatedAt: now,
+    items: present
+      ? existing.items.filter(
+          (entry) => entryKey(entry.provider, entry.id) !== key,
+        )
+      : [...existing.items, item],
+  };
+
+  return {
+    favorite: !present,
+    sets: sets.map((set) => (isFavoritesSet(set) ? next : set)),
+  };
+}
+
+export function parseCollectionRef(value: string): string | null {
+  const text = value.trim();
+  if (/^[A-Za-z0-9]{6,32}$/.test(text)) return text;
+
+  try {
+    const url = new URL(text);
+    if (url.hostname.toLowerCase().replace(/^www\./, "") !== "modrinth.com") {
+      return null;
+    }
+    const [kind, id] = url.pathname.split("/").filter(Boolean);
+    return kind?.toLowerCase() === "collection" && /^[A-Za-z0-9]{6,32}$/.test(id ?? "")
+      ? id
+      : null;
+  } catch {
+    return null;
+  }
 }

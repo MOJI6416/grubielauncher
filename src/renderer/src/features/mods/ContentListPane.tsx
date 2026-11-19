@@ -7,6 +7,15 @@ import {
   useRef,
   useState,
 } from "react";
+import { toast } from "sonner";
+import { showFailureToast } from "@renderer/utilities/failures";
+import { useModSets, toggleFavorite } from "@renderer/features/modSets/modSetsStore";
+import { isFavorite, type IModSetItem } from "@renderer/features/modSets/modSets";
+import { openCatalogInstall } from "@renderer/features/catalogInstall/catalogInstallStore";
+import {
+  INSTALLABLE_TYPES,
+  isCatalogProvider,
+} from "@renderer/features/catalogInstall/installToInstance";
 import { cn } from "@/lib/utils";
 import {
   CircleAlert,
@@ -67,7 +76,8 @@ import {
 import type { RefObject } from "react";
 import type { TFunction } from "i18next";
 import type { UpdateCheckResult } from "./useUpdateCheck";
-import type { DuplicateMarks } from "./filters";
+import { type DuplicateMarks, contentOrigin } from "./filters";
+import type { ModRelations } from "./modRelations";
 
 import type { ILocalAccount } from "@/types/Account";
 import type { CatalogState } from "./useCatalogSearch";
@@ -168,6 +178,11 @@ export interface ContentListPaneProps {
   listElement: HTMLDivElement | null;
   setListElement: Dispatch<SetStateAction<HTMLDivElement | null>>;
   setPinnedFor: (targets: ContentEntry[], pinned: boolean) => void;
+  libraryPackKeys: ReadonlySet<string> | null;
+  detailRelations: ModRelations | null;
+  relationsScanning: boolean;
+  loadRelations: () => void;
+  openInstalled: (mod: ILocalProject) => void;
   setScope: (scope: Scope) => void;
   showTrashBar: boolean;
   sizeUnits: string[];
@@ -246,6 +261,11 @@ export function ContentListPane({
   listElement,
   setListElement,
   setPinnedFor,
+  libraryPackKeys,
+  detailRelations,
+  relationsScanning,
+  loadRelations,
+  openInstalled,
   setScope,
   browseScope,
   showTrashBar,
@@ -262,6 +282,34 @@ export function ContentListPane({
   canInstallShaderLoader,
   onOpenWorlds,
 }: ContentListPaneProps) {
+  const modSets = useModSets();
+  const favoriteItem =
+    detailEntry &&
+    isCatalogProvider(detailEntry.provider) &&
+    INSTALLABLE_TYPES.has(detailEntry.projectType)
+      ? {
+          provider: detailEntry.provider,
+          id: detailEntry.id,
+          projectType: detailEntry.projectType,
+          title: detailEntry.title,
+          iconUrl: detailEntry.iconUrl ?? null,
+          url: detailEntry.url ?? "",
+        }
+      : null;
+  const flipFavorite = async (item: IModSetItem) => {
+    const favorite = await toggleFavorite(item);
+    if (favorite === null) {
+      showFailureToast(t("modSets.saveFailed"), undefined, {
+        channels: ["fs:writeJSON"],
+      });
+      return;
+    }
+    toast.success(
+      t(favorite ? "modManager.favoriteAdded" : "modManager.favoriteRemoved", {
+        title: item.title,
+      }),
+    );
+  };
   const dropPanelRef = useRef<HTMLDivElement | null>(null);
   useDragAutoScroll(
     dragState !== null,
@@ -424,6 +472,11 @@ export function ContentListPane({
                           updateCheck.held.get(entry.key)?.name
                         }
                         isUnchecked={updateCheck.unchecked.has(entry.key)}
+                        origin={
+                          scope === "library"
+                            ? contentOrigin(entry, libraryPackKeys)
+                            : undefined
+                        }
                         duplicate={
                           scope !== "library"
                             ? undefined
@@ -741,6 +794,23 @@ export function ContentListPane({
                 [detailEntry],
                 detailEntry.installed?.pinned !== true,
               )
+            }
+            relations={detailRelations}
+            relationsScanning={relationsScanning}
+            onLoadRelations={loadRelations}
+            onOpenInstalled={openInstalled}
+            isFavorite={isFavorite(modSets, detailEntry)}
+            onToggleFavorite={
+              favoriteItem ? () => void flipFavorite(favoriteItem) : undefined
+            }
+            onInstallElsewhere={
+              favoriteItem && (detail?.project ?? detailEntry.project)
+                ? () =>
+                    openCatalogInstall({
+                      kind: "project",
+                      project: (detail?.project ?? detailEntry.project)!,
+                    })
+                : undefined
             }
           />
         )}
