@@ -48,6 +48,7 @@ import { voiceJoinErrorKey } from "@renderer/features/voice/errors";
 import { groupPanelIdAtom } from "@renderer/features/voice/state";
 import { useGroupChat } from "@renderer/features/voice/useGroupChat";
 import {
+  isPackCode,
   parseGroupJoinCode,
   parsePackShareCode,
 } from "@renderer/utilities/packShare";
@@ -196,7 +197,9 @@ export function GroupChatModal({
     }
 
     const shareCode = parsePackShareCode(text);
-    const isPack = PACK_CODE_PATTERN.test(shareCode);
+    const isPack =
+      PACK_CODE_PATTERN.test(shareCode) ||
+      (shareCode !== text && isPackCode(shareCode));
 
     const sent = chat.sendBody({
       _type: isPack ? "modpack" : "text",

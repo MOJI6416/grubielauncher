@@ -43,6 +43,7 @@ export interface IVersionConf {
   lastLaunch?: Date
   build: number
   shareCode?: string
+  shortCode?: string
   downloadedVersion: boolean
   lastUpdate: Date
   runArguments: IArguments

@@ -87,6 +87,7 @@ import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { buildGroupInviteUrl } from "@renderer/utilities/packShare";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
@@ -737,9 +738,7 @@ export function GroupPanel({
               size="icon-sm"
               variant="ghost"
               className="size-7 shrink-0"
-              onClick={() =>
-                handleCopy(`grubielauncher://group/join/${group.code}`)
-              }
+              onClick={() => handleCopy(buildGroupInviteUrl(group.code))}
               aria-label={t("groups.copyLink")}
             >
               <Link2 className="size-3.5" />

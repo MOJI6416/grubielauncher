@@ -24,6 +24,7 @@ import type { IGroup } from "@/types/Voice";
 import type { Version } from "@renderer/classes/Version";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 import {
+  isPackCode,
   parseGroupJoinCode,
   parsePackShareCode,
 } from "@renderer/utilities/packShare";
@@ -37,8 +38,6 @@ import { isDmRoomWith } from "./voiceRoom";
 import { PlatformIcon } from "./PlatformIcon";
 import type { FriendEntry } from "./friendsList";
 import { Empty, EmptyDescription } from "@/components/ui/empty";
-
-const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
 
 interface ConversationPanelProps {
   entry: FriendEntry;
@@ -133,7 +132,7 @@ export function ConversationPanel({
     }
 
     const parsed = parsePackShareCode(text);
-    const isPack = parsed !== text && PACK_CODE_PATTERN.test(parsed);
+    const isPack = parsed !== text && isPackCode(parsed);
 
     const sent = chat.sendBody({
       _type: isPack ? "modpack" : "text",

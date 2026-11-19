@@ -76,6 +76,7 @@ export function buildSharedPack(
         lastUpdate: new Date(),
         ...sharedPackOwnership(shared),
         shareCode: packShareCode(shared),
+        ...(shared.shortCode ? { shortCode: shared.shortCode } : {}),
       },
     },
     content: {

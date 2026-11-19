@@ -13,6 +13,18 @@ describe("launcher deep links", () => {
     });
   });
 
+  it("parses short pack codes", () => {
+    expect(parseLauncherDeepLink("grubielauncher://pack/K7M2-QX9P")).toEqual({
+      type: "pack",
+      shareCode: "K7M2-QX9P",
+    });
+    expect(parseLauncherDeepLink("grubielauncher://pack/k7m2qx9p")).toEqual({
+      type: "pack",
+      shareCode: "k7m2qx9p",
+    });
+    expect(parseLauncherDeepLink("grubielauncher://pack/K0M2-QX1P")).toBeNull();
+  });
+
   it("ignores invalid scheme, path and code", () => {
     expect(
       parseLauncherDeepLink("https://grubielauncher.com/pack/507f"),

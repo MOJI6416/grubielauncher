@@ -63,6 +63,7 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { VoiceAudioPanel } from "./VoiceAudioPanel";
 import { VoiceParticipantChip } from "./VoiceParticipantChip";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { buildGroupInviteUrl } from "@renderer/utilities/packShare";
 import { formatClock } from "@renderer/utilities/duration";
 
 const api = window.api;
@@ -187,7 +188,7 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
 
   const handleCopyInvite = async () => {
     if (!currentGroup) return;
-    await copyWithFeedback(`grubielauncher://group/join/${currentGroup.code}`);
+    await copyWithFeedback(buildGroupInviteUrl(currentGroup.code));
   };
 
   const handleKick = async (identity: string) => {

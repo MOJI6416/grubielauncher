@@ -12,6 +12,7 @@ export interface IModpack {
   // have none, everything since has one, and the backend refuses id access to
   // an unlisted build.
   readonly shareCode?: string | null
+  readonly shortCode?: string | null
   build: number
   conf: IModpackConf
   // GET /modpacks/own does not populate this — it is the caller's own list.

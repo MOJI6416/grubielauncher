@@ -87,6 +87,10 @@ import { announceShareCode } from "./publishPresence";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { withoutOverrides } from "@/shared/instanceSettings";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import {
+  resolvePackShortCode,
+  usePackShortCode,
+} from "@renderer/utilities/packShortCode";
 const api = window.api;
 
 interface SharePublishProgress {
@@ -1115,16 +1119,24 @@ export function Share({
         (v) => v.version.name === selectedVersion.version.name,
       );
       const previousShareCode = selectedVersion.version.shareCode;
+      const previousShortCode = selectedVersion.version.shortCode;
+      const shortCode =
+        (await resolvePackShortCode(shareCode).catch(() => null)) ||
+        undefined;
       selectedVersion.version.shareCode = shareCode;
+      selectedVersion.version.shortCode = shortCode;
       if (index !== -1) {
         versions[index].version.shareCode = shareCode;
+        versions[index].version.shortCode = shortCode;
         setVersions([...versions]);
       }
 
       if (!(await selectedVersion.save())) {
         selectedVersion.version.shareCode = previousShareCode;
+        selectedVersion.version.shortCode = previousShortCode;
         if (index !== -1) {
           versions[index].version.shareCode = previousShareCode;
+          versions[index].version.shortCode = previousShortCode;
           setVersions([...versions]);
         }
         throw new Error("conf_not_saved");
@@ -1133,7 +1145,7 @@ export function Share({
       setSelectedVersion(selectedVersion);
       announceShareCode(selectedVersion.version.name, shareCode);
       onPublished?.(shareCode);
-      void copyWithFeedback(buildPackShareUrl(shareCode));
+      void copyWithFeedback(buildPackShareUrl(shortCode || shareCode));
 
       toast.success(t("versions.published"));
       isPublished = true;
@@ -1157,8 +1169,12 @@ export function Share({
     }
   }
 
+  const shortCode = usePackShortCode(
+    selectedVersion?.version.shareCode,
+    selectedVersion?.version.shortCode,
+  );
   const shareUrl = selectedVersion?.version.shareCode
-    ? buildPackShareUrl(selectedVersion.version.shareCode)
+    ? buildPackShareUrl(shortCode || selectedVersion.version.shareCode)
     : "";
 
   const isPublishing = isLoading && loadingType === "share";

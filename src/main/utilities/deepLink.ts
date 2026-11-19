@@ -3,6 +3,7 @@ import { readLaunchTarget } from "@/shared/launchLink";
 import { isLaunchSignatureShape } from "./launchSignature";
 
 const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
+const SHORT_PACK_CODE_PATTERN = /^[A-HJ-NP-Z2-9]{4}-?[A-HJ-NP-Z2-9]{4}$/i;
 const GROUP_CODE_PATTERN = /^[a-zA-Z0-9]{4}-?[a-zA-Z0-9]{4}$/;
 const WEB_LOGIN_ID_PATTERN = /^[a-f0-9]{64}$/i;
 
@@ -24,7 +25,12 @@ export function parseLauncherDeepLink(rawUrl: string): LauncherDeepLink | null {
     } catch {
       return null;
     }
-    if (!PACK_CODE_PATTERN.test(shareCode)) return null;
+    if (
+      !PACK_CODE_PATTERN.test(shareCode) &&
+      !SHORT_PACK_CODE_PATTERN.test(shareCode)
+    ) {
+      return null;
+    }
 
     return {
       type: "pack",
