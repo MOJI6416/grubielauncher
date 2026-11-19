@@ -45,6 +45,12 @@ export function getShareErrorText(
       });
     case "join_share_not_found":
       return t("share.errors.joinShareNotFound");
+    case "not_invited":
+      return t("share.errors.notInvited");
+    case "removed_by_host":
+      return t("share.errors.removedByHost");
+    case "server_not_running":
+      return t("share.errors.serverNotRunning");
     case "invalid_response":
       return t("share.errors.invalidResponse");
     default:

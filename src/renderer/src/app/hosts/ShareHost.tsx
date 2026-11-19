@@ -65,11 +65,17 @@ export function ShareHost() {
       toast(getShareErrorText(tRef.current, error));
     });
 
+    const unsubscribeRefused = api.share.onGuestRefused((event) => {
+      const name = event.username || tRef.current("share.panel.guests.unknown");
+      toast.info(tRef.current(`share.refused.${event.reason}`, { name }));
+    });
+
     return () => {
       cancelled = true;
       unsubscribeState();
       unsubscribePeers();
       unsubscribeError();
+      unsubscribeRefused();
     };
   }, [setSharePeers, setShareState, tRef]);
 

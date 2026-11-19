@@ -291,7 +291,8 @@
     "runtimeMissing": "Esta versión del launcher no puede iniciar el servidor.",
     "view": {
       "console": "Consola",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "players": "Jugadores"
     },
     "console": "Consola",
     "consoleEmpty": "Inicie el servidor y su salida aparecerá aquí.",
@@ -322,7 +323,14 @@
     "applyAfterRestart": "se aplica después de reiniciar el servidor",
     "runErrorChosenJava": "El Java elegido para este servidor no está disponible: elija otro en la configuración del servidor.",
     "viewLabel": "Sección del servidor",
-    "closeQuestion": "¿Detener el servidor y cerrar el launcher?"
+    "closeQuestion": "¿Detener el servidor y cerrar el launcher?",
+    "addressFriends": "Para amigos",
+    "friendsAction": "Abrir a amigos con Grubie",
+    "friendsNeedsRun": "Inicia el servidor para abrirlo a tus amigos",
+    "friendsOpen": "Abierto: gestiónalo en Jugar juntos",
+    "friendsStarting": "Abriendo…",
+    "friendsError": "No se pudo abrir el servidor a tus amigos",
+    "friendsBusy": "Ahora hay otro mundo abierto. Ciérralo en Jugar juntos para abrir el servidor."
   },
   "serverSettings": {
     "description": "Descripción",
@@ -3096,7 +3104,10 @@
       "joinShareNotFound": "No se encontró el mundo disponible de su amigo.",
       "invalidResponse": "El servidor devolvió una respuesta no válida.",
       "unknown": "No se pudo abrir el acceso al mundo.",
-      "tunnelVersionUnsupported": "El launcher está desactualizado: actualícelo para volver a compartir su mundo."
+      "tunnelVersionUnsupported": "El launcher está desactualizado: actualícelo para volver a compartir su mundo.",
+      "notInvited": "El anfitrión solo deja entrar a los invitados. Pídele que te añada a la lista.",
+      "removedByHost": "El anfitrión te ha quitado de esta partida.",
+      "serverNotRunning": "El servidor no está en marcha. Inícialo y vuelve a abrirlo."
     },
     "description": {
       "label": "Descripción para los jugadores",
@@ -3117,7 +3128,8 @@
         "world": "Mundo",
         "session": "Sesión",
         "channel": "Canal",
-        "open": "Acceso"
+        "open": "Acceso",
+        "server": "Servidor"
       },
       "stage": {
         "accountUnsupported": {
@@ -3160,6 +3172,10 @@
         "failed": {
           "title": "El acceso no se abrió",
           "description": "Algo salió mal. Intente abrir el acceso de nuevo."
+        },
+        "serverReady": {
+          "title": "Servidor en marcha",
+          "description": "Abre el acceso: tus amigos entran sin abrir puertos ni VPN, y el pack se les instala solo."
         }
       },
       "hint": {
@@ -3184,14 +3200,18 @@
         "public": "Cualquiera con la dirección",
         "applying": "Aplicando… por ahora: {{access}}.",
         "friendsHint": "Solo sus amigos pueden entrar, directamente desde su launcher.",
-        "publicHint": "Un mundo en red no verifica cuentas: cualquiera que sepa la dirección puede entrar con cualquier nombre."
+        "publicHint": "Un mundo en red no verifica cuentas: cualquiera que sepa la dirección puede entrar con cualquier nombre.",
+        "invite": "Con invitación",
+        "inviteHint": "Solo entra quien añadas a la lista. La lista se guarda para este mundo o servidor.",
+        "publicShort": "Público"
       },
       "address": {
         "title": "Mundo compartido",
         "friends": "Sus amigos entran desde el launcher: no hace falta escribir una dirección.",
         "copy": "Copiar dirección",
         "reveal": "Mostrar dirección",
-        "hide": "Ocultar dirección"
+        "hide": "Ocultar dirección",
+        "titleServer": "Dirección del servidor"
       },
       "health": {
         "degraded": "El canal está saturado: puede que los jugadores tengan lag.",
@@ -3203,7 +3223,11 @@
         "empty": "Todavía no entró nadie.",
         "notYet": "Los invitados aparecerán aquí cuando el acceso esté abierto.",
         "unknown": "Jugador desconocido",
-        "connectedFor": "Tiempo en el mundo"
+        "connectedFor": "Tiempo en el mundo",
+        "kick": "Expulsar a {{name}}",
+        "kicked": "{{name}} fue expulsado y no podrá volver",
+        "restore": "Dejar volver a {{name}}",
+        "removed": "Expulsado"
       },
       "invite": {
         "title": "Invitar",
@@ -3217,6 +3241,29 @@
         "waiting": "Podrá invitar cuando el acceso esté abierto.",
         "notOpen": "Abra el acceso para invitar a sus amigos.",
         "offlineSocket": "Sin conexión con el servicio de amigos."
+      },
+      "seats": {
+        "title": "Plazas para invitados",
+        "unlimited": "Sin límite",
+        "count_one": "{{count}} plaza",
+        "count_many": "{{count}} plazas",
+        "count_other": "{{count}} plazas",
+        "taken": "{{taken}} de {{total}}"
+      },
+      "members": {
+        "title": "Invitados",
+        "empty": "La lista está vacía. Añade amigos abajo: solo ellos podrán entrar.",
+        "remove": "Quitar a {{name}} de la lista",
+        "playing": "Jugando",
+        "removed": "{{name}} ya no está en la lista",
+        "added": "{{name}} está en la lista de invitados",
+        "add": "Añadir",
+        "collectHint": "Prepara la lista antes: al abrir el acceso, solo entrarán estos amigos.",
+        "localOnly": "El servidor de Grubie aún no conoce la lista: otros amigos verán la partida, pero tu launcher no los dejará entrar."
+      },
+      "target": {
+        "server": "Servidor de «{{name}}»",
+        "allowlistOn": "La lista blanca del servidor está activa: un amigo solo entra si su nombre está en ella (pestaña Jugadores)."
       }
     },
     "publish": {
@@ -3244,6 +3291,11 @@
       },
       "worldPrivacyHint": "El mundo se publica sin su progreso: los datos del jugador, las estadísticas, los progresos y la posición del jugador en level.dat se quedan en su computadora.",
       "worldWillBeRemoved": "El mundo no está marcado, así que se quitará del paquete publicado."
+    },
+    "refused": {
+      "full": "{{name}} no pudo entrar: no quedan plazas.",
+      "not_invited": "{{name}} no está en la lista de invitados y no pudo entrar.",
+      "removed": "{{name}} intentó volver, pero lo has quitado."
     }
   },
   "manageSkins": {
@@ -6647,5 +6699,58 @@
   },
   "diskRoom": {
     "description": "No hay suficiente espacio en {{drive}}: se necesitan {{needed}} y hay {{free}} libres. Libere espacio o mueva la carpeta de datos del launcher en los ajustes."
+  },
+  "serverAdmin": {
+    "actionFailed": "El servidor no completó la acción",
+    "banned": "{{name}} está baneado",
+    "kicked": "{{name}} fue expulsado",
+    "kickMessage": "El dueño del servidor te ha expulsado.",
+    "stoppedTitle": "El servidor está detenido",
+    "stoppedDescription": "Inicia el servidor para ver aquí jugadores, lista blanca, operadores, baneos y reglas del juego.",
+    "listsLabel": "Listas de jugadores",
+    "tabs": {
+      "online": "En línea",
+      "operators": "Operadores",
+      "bans": "Baneos"
+    },
+    "empty": {
+      "online": "Ahora no hay nadie en el servidor.",
+      "operators": "No hay operadores. Haz operador a un jugador desde la pestaña En línea.",
+      "bans": "No hay nadie baneado."
+    },
+    "op": "Hacer operador a {{name}}",
+    "deop": "Quitar operador a {{name}}",
+    "kick": "Expulsar a {{name}}",
+    "ban": "Banear a {{name}}",
+    "pardon": "Desbanear a {{name}}",
+    "level": "Nivel {{level}}",
+    "allowlist": {
+      "title": "Lista blanca",
+      "enabled": "Solo la lista",
+      "placeholder": "Nombre del jugador",
+      "add": "Añadir",
+      "empty": "No hay nadie en la lista. Mientras esté desactivada, entra cualquiera.",
+      "remove": "Quitar a {{name}} de la lista blanca",
+      "emptyOn": "La lista está activada pero vacía: solo entran los operadores."
+    },
+    "rules": {
+      "title": "Reglas del juego",
+      "search": "Buscar regla",
+      "reload": "Recargar reglas",
+      "load": "Cargar reglas",
+      "notLoaded": "Versión antigua del servidor: las reglas se leen con comandos de consola.",
+      "notFound": "No existe esa regla."
+    },
+    "mode": {
+      "connecting": "Conectando…",
+      "connectingHint": "El launcher se está conectando al protocolo de gestión del servidor.",
+      "msmp": "Protocolo de gestión",
+      "msmpSecure": "Protocolo de gestión · TLS",
+      "msmpHint": "Protocolo oficial de Mojang con secreto, solo en este ordenador. Cifrado desactivado: el Java del servidor no tiene keytool.",
+      "msmpSecureHint": "Protocolo oficial de Mojang: conexión cifrada con secreto, solo en este ordenador.",
+      "console": "Por consola",
+      "consoleOldHint": "El protocolo de gestión existe desde la 1.21.9. Aquí los comandos van a la consola y las listas se leen de sus archivos.",
+      "consoleFailedHint": "El protocolo de gestión no respondió, así que los comandos van a la consola. Reiniciar el servidor suele ayudar."
+    }
   }
 }

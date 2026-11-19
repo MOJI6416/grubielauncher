@@ -9,10 +9,14 @@ export function ShareInviteList({
   candidates,
   disabled,
   onInvite,
+  actionLabel,
+  includeOffline = false,
 }: {
   candidates: InviteCandidate[];
   disabled: boolean;
   onInvite: (id: string) => void;
+  actionLabel?: string;
+  includeOffline?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -43,7 +47,7 @@ export function ShareInviteList({
             <span className="shrink-0 text-xs text-success">
               {t("share.panel.invite.joined")}
             </span>
-          ) : candidate.state === "offline" ? (
+          ) : candidate.state === "offline" && !includeOffline ? (
             <span className="shrink-0 text-xs text-faint">
               {t("share.panel.invite.offline")}
             </span>
@@ -65,7 +69,7 @@ export function ShareInviteList({
               ) : (
                 <Send />
               )}
-              {t("share.panel.invite.action")}
+              {actionLabel ?? t("share.panel.invite.action")}
             </Button>
           )}
         </li>

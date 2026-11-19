@@ -65,6 +65,8 @@ import {
   ShareAccessResponse,
   ShareGatewayTokenResponse,
   ShareHeartbeatResponse,
+  ShareHostControlsRequest,
+  ShareHostControlsResponse,
   ShareJoinTicketResponse,
   ShareStartRequest,
   ShareStartResponse,
@@ -1078,6 +1080,17 @@ export class Backend extends BaseService {
       `${this.baseUrl}/share/${sessionId}/access`,
       { visibility },
     );
+    return response.data;
+  }
+
+  async updateShareHostControls(
+    sessionId: string,
+    controls: ShareHostControlsRequest,
+  ) {
+    const response = await this.api.patch<{
+      ok: true;
+      host: ShareHostControlsResponse;
+    }>(`${this.baseUrl}/share/${sessionId}/host`, controls);
     return response.data;
   }
 

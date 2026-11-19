@@ -40,6 +40,15 @@ import { assertReadablePath, assertWritablePath } from '../utilities/safePath'
 import { isPortAvailable } from '../utilities/portCheck'
 import { getLanAddress } from '../utilities/lanAddress'
 import { Modrinth } from '../services/Modrinth'
+import { serverAdmins } from '../serverAdmin'
+import { mainWindow } from '../windows/mainWindow'
+import type {
+  ServerAdminAction,
+  ServerAdminEvent,
+  ServerAdminResult,
+  ServerAdminSnapshot
+} from '@/types/ServerAdmin'
+import { emptyServerAdminSnapshot } from '@/types/ServerAdmin'
 import { ModManager } from '../services/ModManager'
 import { sanitizeServerQuery } from '@/shared/modrinthServers'
 import type {
@@ -56,7 +65,91 @@ const isServerList = check.arrayOf(check.object(), 5000)
 const isLoader = check.oneOf(...LOADERS)
 const isModrinthId = check.pattern(/^[A-Za-z0-9]{1,64}$/, 64)
 
+const ADMIN_PLAYER = /^[A-Za-z0-9_.]{1,16}$/
+const ADMIN_RULE = /^[A-Za-z0-9_:.]{1,64}$/
+
+function readAdminAction(value: Record<string, unknown>): ServerAdminAction | null {
+  const name = typeof value.name === 'string' && ADMIN_PLAYER.test(value.name) ? value.name : null
+  const text = (key: string) =>
+    typeof value[key] === 'string' ? (value[key] as string).slice(0, 200) : undefined
+
+  switch (value.type) {
+    case 'kick':
+      return name ? { type: 'kick', name, message: text('message') } : null
+    case 'ban':
+      return name ? { type: 'ban', name, reason: text('reason') } : null
+    case 'pardon':
+    case 'op':
+    case 'deop':
+    case 'allowlistAdd':
+    case 'allowlistRemove':
+      return name ? { type: value.type, name } : null
+    case 'allowlistEnabled':
+      return typeof value.enabled === 'boolean'
+        ? { type: 'allowlistEnabled', enabled: value.enabled }
+        : null
+    case 'gamerule':
+      if (typeof value.key !== 'string' || !ADMIN_RULE.test(value.key)) return null
+      if (typeof value.value === 'boolean') {
+        return { type: 'gamerule', key: value.key, value: value.value }
+      }
+      if (typeof value.value === 'number' && Number.isSafeInteger(value.value)) {
+        return { type: 'gamerule', key: value.key, value: value.value }
+      }
+      return null
+    default:
+      return null
+  }
+}
+
+let adminEventsRegistered = false
+
+function registerServerAdminEvents() {
+  if (adminEventsRegistered) return
+  adminEventsRegistered = true
+
+  serverAdmins.on('event', (event: ServerAdminEvent) => {
+    if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return
+    try {
+      mainWindow.webContents.send('serverAdmin:event', event)
+    } catch {}
+  })
+}
+
 export function registerServerIpc() {
+  registerServerAdminEvents()
+
+  handleSafe<ServerAdminSnapshot, [string]>(
+    'serverAdmin:snapshot',
+    (serverPath) => emptyServerAdminSnapshot(serverPath ?? ''),
+    [isPath],
+    async (_, serverPath) => {
+      assertReadablePath(serverPath, 'serverAdmin:snapshot')
+      return serverAdmins.snapshot(serverPath)
+    }
+  )
+
+  handleSafe<ServerAdminSnapshot, [string, boolean?]>(
+    'serverAdmin:refresh',
+    (serverPath) => emptyServerAdminSnapshot(serverPath ?? ''),
+    [isPath, check.optional(check.boolean())],
+    async (_, serverPath, gamerules) => {
+      assertReadablePath(serverPath, 'serverAdmin:refresh')
+      return await serverAdmins.refresh(serverPath, gamerules === true)
+    }
+  )
+
+  handleSafe<ServerAdminResult, [string, Record<string, unknown>]>(
+    'serverAdmin:perform',
+    { ok: false, error: 'server_admin_failed' },
+    [isPath, check.object(8)],
+    async (_, serverPath, rawAction) => {
+      assertWritablePath(serverPath, 'serverAdmin:perform')
+      const action = readAdminAction(rawAction)
+      if (!action) return { ok: false, error: 'invalid_action' }
+      return await serverAdmins.perform(serverPath, action)
+    }
+  )
 
   handleSafe<
     { success: boolean; error?: string; cancelled?: boolean },

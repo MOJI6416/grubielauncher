@@ -291,7 +291,8 @@
     "runtimeMissing": "Diese Launcher-Version kann den Server nicht starten.",
     "view": {
       "console": "Konsole",
-      "settings": "Einstellungen"
+      "settings": "Einstellungen",
+      "players": "Spieler"
     },
     "console": "Konsole",
     "consoleEmpty": "Starten Sie den Server, dann erscheint seine Ausgabe hier.",
@@ -322,7 +323,14 @@
     "applyAfterRestart": "wirkt nach einem Neustart des Servers",
     "runErrorChosenJava": "Das für diesen Server gewählte Java ist nicht verfügbar – wählen Sie in den Servereinstellungen ein anderes.",
     "viewLabel": "Serverbereich",
-    "closeQuestion": "Server beenden und Launcher schließen?"
+    "closeQuestion": "Server beenden und Launcher schließen?",
+    "addressFriends": "Für Freunde",
+    "friendsAction": "Über Grubie für Freunde öffnen",
+    "friendsNeedsRun": "Starten Sie den Server, um ihn für Freunde zu öffnen",
+    "friendsOpen": "Offen — verwalten unter „Zusammen spielen“",
+    "friendsStarting": "Wird geöffnet…",
+    "friendsError": "Server konnte nicht für Freunde geöffnet werden",
+    "friendsBusy": "Gerade ist eine andere Welt offen. Schließen Sie sie unter „Zusammen spielen“, um den Server zu öffnen."
   },
   "serverSettings": {
     "description": "Beschreibung",
@@ -3070,7 +3078,10 @@
       "joinShareNotFound": "Die verfügbare Welt Ihres Freundes wurde nicht gefunden.",
       "invalidResponse": "Der Server hat eine ungültige Antwort geliefert.",
       "unknown": "Der Zugang zur Welt konnte nicht geöffnet werden.",
-      "tunnelVersionUnsupported": "Der Launcher ist veraltet – aktualisieren Sie ihn, um Ihre Welt wieder zu teilen."
+      "tunnelVersionUnsupported": "Der Launcher ist veraltet – aktualisieren Sie ihn, um Ihre Welt wieder zu teilen.",
+      "notInvited": "Der Gastgeber lässt nur Eingeladene herein. Bitten Sie ihn, Sie auf die Liste zu setzen.",
+      "removedByHost": "Der Gastgeber hat Sie aus diesem Spiel entfernt.",
+      "serverNotRunning": "Der Server läuft nicht. Starten Sie ihn und öffnen Sie ihn erneut."
     },
     "description": {
       "label": "Beschreibung für Spieler",
@@ -3091,7 +3102,8 @@
         "world": "Welt",
         "session": "Sitzung",
         "channel": "Kanal",
-        "open": "Zugang"
+        "open": "Zugang",
+        "server": "Server"
       },
       "stage": {
         "accountUnsupported": {
@@ -3134,6 +3146,10 @@
         "failed": {
           "title": "Zugang wurde nicht geöffnet",
           "description": "Etwas ist schiefgelaufen. Versuchen Sie, den Zugang erneut zu öffnen."
+        },
+        "serverReady": {
+          "title": "Server läuft",
+          "description": "Öffnen Sie den Zugang: Freunde kommen ohne Portfreigabe oder VPN herein, das Paket installiert sich bei ihnen selbst."
         }
       },
       "hint": {
@@ -3158,14 +3174,18 @@
         "public": "Jeder mit der Adresse",
         "applying": "Wird übernommen… derzeit: {{access}}.",
         "friendsHint": "Nur Ihre Freunde können beitreten, direkt aus ihrem Launcher.",
-        "publicHint": "Eine Netzwerkwelt prüft keine Konten: Wer die Adresse kennt, kann unter beliebigem Spielernamen hinein."
+        "publicHint": "Eine Netzwerkwelt prüft keine Konten: Wer die Adresse kennt, kann unter beliebigem Spielernamen hinein.",
+        "invite": "Nur Einladung",
+        "inviteHint": "Nur Personen auf Ihrer Liste können beitreten. Die Liste bleibt für diese Welt oder diesen Server gespeichert.",
+        "publicShort": "Öffentlich"
       },
       "address": {
         "title": "Geteilte Welt",
         "friends": "Freunde treten aus dem Launcher bei – keine Adresse nötig.",
         "copy": "Adresse kopieren",
         "reveal": "Adresse zeigen",
-        "hide": "Adresse verbergen"
+        "hide": "Adresse verbergen",
+        "titleServer": "Serveradresse"
       },
       "health": {
         "degraded": "Der Kanal ist überlastet – Spieler können Lags haben.",
@@ -3177,7 +3197,11 @@
         "empty": "Noch ist niemand beigetreten.",
         "notYet": "Gäste erscheinen hier, sobald der Zugang offen ist.",
         "unknown": "Unbekannter Spieler",
-        "connectedFor": "Zeit in der Welt"
+        "connectedFor": "Zeit in der Welt",
+        "kick": "{{name}} entfernen",
+        "kicked": "{{name}} wurde entfernt und kann nicht zurück",
+        "restore": "{{name}} wieder hereinlassen",
+        "removed": "Entfernt"
       },
       "invite": {
         "title": "Einladen",
@@ -3191,6 +3215,28 @@
         "waiting": "Sie können einladen, sobald der Zugang offen ist.",
         "notOpen": "Öffnen Sie den Zugang, um Freunde einzuladen.",
         "offlineSocket": "Keine Verbindung zum Freundesdienst."
+      },
+      "seats": {
+        "title": "Plätze für Gäste",
+        "unlimited": "Unbegrenzt",
+        "count_one": "{{count}} Platz",
+        "count_other": "{{count}} Plätze",
+        "taken": "{{taken}} von {{total}}"
+      },
+      "members": {
+        "title": "Eingeladen",
+        "empty": "Die Liste ist leer. Fügen Sie unten Freunde hinzu — nur sie kommen herein.",
+        "remove": "{{name}} von der Liste entfernen",
+        "playing": "Spielt",
+        "removed": "{{name}} steht nicht mehr auf der Liste",
+        "added": "{{name}} steht auf der Einladungsliste",
+        "add": "Hinzufügen",
+        "collectHint": "Stellen Sie die Liste vorab zusammen: Sobald der Zugang offen ist, kommen nur diese Freunde herein.",
+        "localOnly": "Der Grubie-Server kennt die Liste noch nicht: andere Freunde sehen das Spiel, aber Ihr Launcher lässt sie nicht herein."
+      },
+      "target": {
+        "server": "Server von „{{name}}“",
+        "allowlistOn": "Die Server-Whitelist ist aktiv: Ein Freund kommt nur herein, wenn sein Name darauf steht (Tab „Spieler“)."
       }
     },
     "publish": {
@@ -3218,6 +3264,11 @@
       },
       "worldPrivacyHint": "Die Welt wird ohne Ihren Fortschritt veröffentlicht: Spielerdaten, Statistiken, Fortschritte und die Spielerposition aus level.dat bleiben auf Ihrem Computer.",
       "worldWillBeRemoved": "Die Welt ist nicht angehakt und wird daher aus dem veröffentlichten Paket entfernt."
+    },
+    "refused": {
+      "full": "{{name}} konnte nicht beitreten: alle Plätze sind belegt.",
+      "not_invited": "{{name}} steht nicht auf der Einladungsliste und wurde abgewiesen.",
+      "removed": "{{name}} wollte zurück, aber Sie haben ihn entfernt."
     }
   },
   "manageSkins": {
@@ -6595,5 +6646,58 @@
   },
   "diskRoom": {
     "description": "Nicht genug Speicherplatz auf {{drive}}: {{needed}} benötigt, {{free}} frei. Geben Sie Speicher frei oder verschieben Sie den Datenordner des Launchers in den Einstellungen."
+  },
+  "serverAdmin": {
+    "actionFailed": "Der Server hat die Aktion nicht ausgeführt",
+    "banned": "{{name}} ist gebannt",
+    "kicked": "{{name}} wurde gekickt",
+    "kickMessage": "Sie wurden vom Serverbesitzer gekickt.",
+    "stoppedTitle": "Der Server ist gestoppt",
+    "stoppedDescription": "Starten Sie den Server, dann erscheinen hier Spieler, Whitelist, Operatoren, Banns und Spielregeln.",
+    "listsLabel": "Spielerlisten",
+    "tabs": {
+      "online": "Online",
+      "operators": "Operatoren",
+      "bans": "Banns"
+    },
+    "empty": {
+      "online": "Gerade ist niemand auf dem Server.",
+      "operators": "Keine Operatoren. Machen Sie einen Spieler im Tab „Online“ zum Operator.",
+      "bans": "Niemand ist gebannt."
+    },
+    "op": "{{name}} zum Operator machen",
+    "deop": "{{name}} den Operator entziehen",
+    "kick": "{{name}} kicken",
+    "ban": "{{name}} bannen",
+    "pardon": "{{name}} entbannen",
+    "level": "Stufe {{level}}",
+    "allowlist": {
+      "title": "Whitelist",
+      "enabled": "Nur Liste",
+      "placeholder": "Spielername",
+      "add": "Hinzufügen",
+      "empty": "Niemand auf der Liste. Solange sie aus ist, kann jeder beitreten.",
+      "remove": "{{name}} von der Whitelist entfernen",
+      "emptyOn": "Die Liste ist aktiv, aber leer: nur Operatoren können beitreten."
+    },
+    "rules": {
+      "title": "Spielregeln",
+      "search": "Regel suchen",
+      "reload": "Regeln neu laden",
+      "load": "Regeln laden",
+      "notLoaded": "Ältere Serverversion: Regeln werden über Konsolenbefehle gelesen.",
+      "notFound": "Keine solche Regel."
+    },
+    "mode": {
+      "connecting": "Verbinde…",
+      "connectingHint": "Der Launcher verbindet sich mit dem Server-Verwaltungsprotokoll.",
+      "msmp": "Verwaltungsprotokoll",
+      "msmpSecure": "Verwaltungsprotokoll · TLS",
+      "msmpHint": "Offizielles Mojang-Protokoll mit Geheimnis, nur auf diesem Computer. Verschlüsselung ist aus: der Server-Java fehlt keytool.",
+      "msmpSecureHint": "Offizielles Mojang-Protokoll: verschlüsselte Verbindung mit Geheimnis, nur auf diesem Computer.",
+      "console": "Über die Konsole",
+      "consoleOldHint": "Das Verwaltungsprotokoll gibt es ab 1.21.9. Hier gehen Befehle an die Serverkonsole, Listen werden aus seinen Dateien gelesen.",
+      "consoleFailedHint": "Das Verwaltungsprotokoll hat nicht geantwortet, daher gehen Befehle an die Konsole. Ein Neustart hilft meist."
+    }
   }
 }

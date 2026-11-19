@@ -18,10 +18,16 @@ const TONE_TEXT: Record<ShareTone, string> = {
   danger: "text-destructive",
 };
 
-function stepLabel(id: ShareStepId, t: (key: string) => string) {
+function stepLabel(
+  id: ShareStepId,
+  t: (key: string) => string,
+  isServer: boolean,
+) {
   switch (id) {
     case "world":
-      return t("share.panel.steps.world");
+      return isServer
+        ? t("share.panel.steps.server")
+        : t("share.panel.steps.world");
     case "session":
       return t("share.panel.steps.session");
     case "channel":
@@ -49,7 +55,13 @@ function lineClass(step: ShareStep | undefined) {
   return step.status === "done" ? "bg-success/50" : "bg-border";
 }
 
-export function ShareSteps({ steps }: { steps: ShareStep[] }) {
+export function ShareSteps({
+  steps,
+  isServer = false,
+}: {
+  steps: ShareStep[];
+  isServer?: boolean;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -81,14 +93,14 @@ export function ShareSteps({ steps }: { steps: ShareStep[] }) {
               )}
             />
           </div>
-          <Hint content={stepLabel(step.id, t)} variant="text" truncatedOnly>
+          <Hint content={stepLabel(step.id, t, isServer)} variant="text" truncatedOnly>
             <span
               className={cn(
                 "min-w-0 truncate text-3xs leading-none",
                 step.status === "pending" ? "text-faint" : "text-muted-foreground",
               )}
             >
-              {stepLabel(step.id, t)}
+              {stepLabel(step.id, t, isServer)}
             </span>
           </Hint>
         </div>
@@ -104,6 +116,7 @@ export function ShareStatus({
   steps,
   isBusy,
   meta,
+  isServer = false,
 }: {
   tone: ShareTone;
   title: string;
@@ -111,6 +124,7 @@ export function ShareStatus({
   steps: ShareStep[];
   isBusy: boolean;
   meta?: string;
+  isServer?: boolean;
 }) {
   return (
     <div className="grid gap-2.5 px-4 pt-3 pb-3.5">
@@ -132,9 +146,11 @@ export function ShareStatus({
         )}
       </div>
 
-      <p className="text-xs leading-4 text-muted-foreground">{description}</p>
+      <p className="line-clamp-2 min-h-8 text-xs leading-4 text-muted-foreground">
+        {description}
+      </p>
 
-      <ShareSteps steps={steps} />
+      <ShareSteps steps={steps} isServer={isServer} />
     </div>
   );
 }

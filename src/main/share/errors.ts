@@ -19,6 +19,8 @@ function mapApiErrorCode(code: unknown, status?: number): ShareErrorCode {
     case 'session_not_online':
     case 'active_share_exists':
     case 'not_friend':
+    case 'not_invited':
+    case 'removed_by_host':
       return code
     default:
       if (status === 401) return 'not_authenticated'
@@ -75,6 +77,8 @@ const UNRECOVERABLE_SHARE_ERROR_CODES: ShareErrorCode[] = [
   'join_share_not_found',
   'not_authenticated',
   'not_friend',
+  'not_invited',
+  'removed_by_host',
 ]
 
 export function isUnrecoverableShareError(error: ShareStateError): boolean {

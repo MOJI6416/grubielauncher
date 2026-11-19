@@ -291,7 +291,8 @@
     "runtimeMissing": "Başlatıcının bu sürümü sunucuyu başlatamıyor.",
     "view": {
       "console": "Konsol",
-      "settings": "Ayarlar"
+      "settings": "Ayarlar",
+      "players": "Oyuncular"
     },
     "console": "Konsol",
     "consoleEmpty": "Sunucuyu başlatın, çıktısı burada görünecek.",
@@ -322,7 +323,14 @@
     "applyAfterRestart": "sunucu yeniden başlayınca geçerli olur",
     "runErrorChosenJava": "Bu sunucu için seçilen Java kullanılamıyor — sunucu ayarlarından başka bir Java seçin.",
     "viewLabel": "Sunucu bölümü",
-    "closeQuestion": "Sunucu durdurulup başlatıcı kapatılsın mı?"
+    "closeQuestion": "Sunucu durdurulup başlatıcı kapatılsın mı?",
+    "addressFriends": "Arkadaşlar için",
+    "friendsAction": "Grubie ile arkadaşlara aç",
+    "friendsNeedsRun": "Arkadaşlara açmak için sunucuyu başlatın",
+    "friendsOpen": "Açık — Birlikte oyna bölümünden yönetin",
+    "friendsStarting": "Açılıyor…",
+    "friendsError": "Sunucu arkadaşlara açılamadı",
+    "friendsBusy": "Şu anda başka bir dünya açık. Sunucuyu açmak için onu Birlikte oyna bölümünden kapatın."
   },
   "serverSettings": {
     "description": "Açıklama",
@@ -3070,7 +3078,10 @@
       "joinShareNotFound": "Arkadaşınızın erişilebilir dünyası bulunamadı.",
       "invalidResponse": "Sunucu geçersiz bir yanıt döndürdü.",
       "unknown": "Dünyaya erişim açılamadı.",
-      "tunnelVersionUnsupported": "Başlatıcı güncel değil — dünyanızı yeniden paylaşmak için güncelleyin."
+      "tunnelVersionUnsupported": "Başlatıcı güncel değil — dünyanızı yeniden paylaşmak için güncelleyin.",
+      "notInvited": "Ev sahibi yalnızca davet edilenleri alıyor. Sizi listeye eklemesini isteyin.",
+      "removedByHost": "Ev sahibi sizi bu oyundan çıkardı.",
+      "serverNotRunning": "Sunucu çalışmıyor. Başlatın ve yeniden açın."
     },
     "description": {
       "label": "Oyuncular için açıklama",
@@ -3091,7 +3102,8 @@
         "world": "Dünya",
         "session": "Oturum",
         "channel": "Kanal",
-        "open": "Erişim"
+        "open": "Erişim",
+        "server": "Sunucu"
       },
       "stage": {
         "accountUnsupported": {
@@ -3134,6 +3146,10 @@
         "failed": {
           "title": "Erişim açılmadı",
           "description": "Bir şeyler ters gitti. Erişimi yeniden açmayı deneyin."
+        },
+        "serverReady": {
+          "title": "Sunucu çalışıyor",
+          "description": "Erişimi açın: arkadaşlarınız port yönlendirme ya da VPN olmadan girer, paket onlarda kendiliğinden kurulur."
         }
       },
       "hint": {
@@ -3158,14 +3174,18 @@
         "public": "Adresi bilen herkes",
         "applying": "Uygulanıyor… şimdilik: {{access}}.",
         "friendsHint": "Yalnızca arkadaşlarınız, doğrudan kendi başlatıcılarından katılabilir.",
-        "publicHint": "Ağ dünyası hesapları denetlemez: adresi öğrenen herkes herhangi bir kullanıcı adıyla girebilir."
+        "publicHint": "Ağ dünyası hesapları denetlemez: adresi öğrenen herkes herhangi bir kullanıcı adıyla girebilir.",
+        "invite": "Davetle",
+        "inviteHint": "Yalnızca listeye eklediğiniz kişiler katılabilir. Liste bu dünya ya da sunucu için saklanır.",
+        "publicShort": "Herkese açık"
       },
       "address": {
         "title": "Ortak dünya",
         "friends": "Arkadaşlar başlatıcıdan katılır — adres yazmaya gerek yok.",
         "copy": "Adresi kopyala",
         "reveal": "Adresi göster",
-        "hide": "Adresi gizle"
+        "hide": "Adresi gizle",
+        "titleServer": "Sunucu adresi"
       },
       "health": {
         "degraded": "Kanal aşırı yüklü — oyuncularda gecikme olabilir.",
@@ -3177,7 +3197,11 @@
         "empty": "Henüz kimse katılmadı.",
         "notYet": "Erişim açılınca konuklar burada görünür.",
         "unknown": "Bilinmeyen oyuncu",
-        "connectedFor": "Dünyadaki süre"
+        "connectedFor": "Dünyadaki süre",
+        "kick": "{{name}} adlı kişiyi at",
+        "kicked": "{{name}} atıldı ve geri dönemez",
+        "restore": "{{name}} geri girebilsin",
+        "removed": "Atıldı"
       },
       "invite": {
         "title": "Davet et",
@@ -3191,6 +3215,28 @@
         "waiting": "Erişim açılınca davet edebilirsiniz.",
         "notOpen": "Arkadaşları davet etmek için erişimi açın.",
         "offlineSocket": "Arkadaş hizmetiyle bağlantı yok."
+      },
+      "seats": {
+        "title": "Misafir yerleri",
+        "unlimited": "Sınırsız",
+        "count_one": "{{count}} yer",
+        "count_other": "{{count}} yer",
+        "taken": "{{taken}}/{{total}}"
+      },
+      "members": {
+        "title": "Davetliler",
+        "empty": "Liste boş. Aşağıdan arkadaş ekleyin — yalnızca onlar girebilir.",
+        "remove": "{{name}} adlı kişiyi listeden çıkar",
+        "playing": "Oyunda",
+        "removed": "{{name}} listeden çıkarıldı",
+        "added": "{{name}} davet listesinde",
+        "add": "Ekle",
+        "collectHint": "Listeyi önceden hazırlayın: erişim açıldığında yalnızca bu arkadaşlar girebilir.",
+        "localOnly": "Grubie sunucusu listeyi henüz bilmiyor: diğer arkadaşlar oyunu görecek ama başlatıcınız onları içeri almayacak."
+      },
+      "target": {
+        "server": "“{{name}}” sunucusu",
+        "allowlistOn": "Sunucuda izin listesi açık: arkadaşınız yalnızca adı listedeyse girebilir (Oyuncular sekmesi)."
       }
     },
     "publish": {
@@ -3218,6 +3264,11 @@
       },
       "worldPrivacyHint": "Dünya ilerlemeniz olmadan yayımlanır: oyuncu verileri, istatistikler, gelişimler ve level.dat’taki oyuncu konumu bilgisayarınızda kalır.",
       "worldWillBeRemoved": "Dünya işaretli değil, bu yüzden yayımlanan paketten kaldırılacak."
+    },
+    "refused": {
+      "full": "{{name}} katılamadı: tüm yerler dolu.",
+      "not_invited": "{{name}} davet listesinde değil, giriş engellendi.",
+      "removed": "{{name}} geri dönmeye çalıştı ama onu çıkardınız."
     }
   },
   "manageSkins": {
@@ -6595,5 +6646,58 @@
   },
   "diskRoom": {
     "description": "{{drive}} diskinde yeterli alan yok: {{needed}} gerekiyor, {{free}} boş. Yer açın veya başlatıcının veri klasörünü ayarlardan taşıyın."
+  },
+  "serverAdmin": {
+    "actionFailed": "Sunucu işlemi yapmadı",
+    "banned": "{{name}} yasaklandı",
+    "kicked": "{{name}} sunucudan atıldı",
+    "kickMessage": "Sunucu sahibi sizi attı.",
+    "stoppedTitle": "Sunucu durduruldu",
+    "stoppedDescription": "Oyuncuları, izin listesini, operatörleri, yasakları ve oyun kurallarını görmek için sunucuyu başlatın.",
+    "listsLabel": "Oyuncu listeleri",
+    "tabs": {
+      "online": "Çevrimiçi",
+      "operators": "Operatörler",
+      "bans": "Yasaklar"
+    },
+    "empty": {
+      "online": "Şu anda sunucuda kimse yok.",
+      "operators": "Operatör yok. Çevrimiçi sekmesinden bir oyuncuyu operatör yapın.",
+      "bans": "Yasaklı kimse yok."
+    },
+    "op": "{{name}} operatör yap",
+    "deop": "{{name}} operatörlüğünü kaldır",
+    "kick": "{{name}} at",
+    "ban": "{{name}} yasakla",
+    "pardon": "{{name}} yasağını kaldır",
+    "level": "Seviye {{level}}",
+    "allowlist": {
+      "title": "İzin listesi",
+      "enabled": "Yalnızca liste",
+      "placeholder": "Oyuncu adı",
+      "add": "Ekle",
+      "empty": "Listede kimse yok. Kapalıyken herkes girebilir.",
+      "remove": "{{name}} izin listesinden çıkar",
+      "emptyOn": "Liste açık ama boş: yalnızca operatörler girebilir."
+    },
+    "rules": {
+      "title": "Oyun kuralları",
+      "search": "Kural ara",
+      "reload": "Kuralları yenile",
+      "load": "Kuralları yükle",
+      "notLoaded": "Eski sunucu sürümü: kurallar konsol komutlarıyla okunur.",
+      "notFound": "Böyle bir kural yok."
+    },
+    "mode": {
+      "connecting": "Bağlanıyor…",
+      "connectingHint": "Başlatıcı sunucu yönetim protokolüne bağlanıyor.",
+      "msmp": "Yönetim protokolü",
+      "msmpSecure": "Yönetim protokolü · TLS",
+      "msmpHint": "Gizli anahtarlı resmî Mojang protokolü, yalnızca bu bilgisayarda. Şifreleme kapalı: sunucunun Java’sında keytool yok.",
+      "msmpSecureHint": "Resmî Mojang protokolü: gizli anahtarlı şifreli bağlantı, yalnızca bu bilgisayarda.",
+      "console": "Konsol üzerinden",
+      "consoleOldHint": "Yönetim protokolü 1.21.9’dan beri var. Burada komutlar sunucu konsoluna gider, listeler dosyalarından okunur.",
+      "consoleFailedHint": "Yönetim protokolü yanıt vermedi, bu yüzden komutlar konsola gidiyor. Sunucuyu yeniden başlatmak genelde işe yarar."
+    }
   }
 }

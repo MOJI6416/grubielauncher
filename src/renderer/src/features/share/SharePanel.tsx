@@ -11,8 +11,10 @@ import {
   Loader2,
   Radio,
   Search,
+  Server as ServerIcon,
   Shield,
   Square,
+  UserCheck,
   Users,
   X,
 } from "lucide-react";
@@ -35,7 +37,11 @@ import {
   EmptyMedia,
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
-import type { ShareVisibility } from "@/types/Share";
+import type {
+  ShareAccessMode,
+  ShareMember,
+  ShareVisibility,
+} from "@/types/Share";
 import type { GameInviteResult } from "@/types/GameInvite";
 import {
   accountAtom,
@@ -81,6 +87,17 @@ import {
 } from "./shareModel";
 import { ShareGuestList } from "./ShareGuestList";
 import { ShareInviteList } from "./ShareInviteList";
+import { ShareMemberList, ShareSeatLimit } from "./ShareHostControls";
+import {
+  accessTarget,
+  guestRefOf,
+  isServerTarget,
+  withMember,
+  withoutMember,
+} from "./hostModel";
+import type { ShareGuestRow } from "./guests";
+import { showUndoToast } from "@renderer/utilities/undoToast";
+import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { ShareStatus } from "./ShareStatus";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
@@ -149,6 +166,7 @@ export function LanShareModal({
   >(null);
   const [draftVisibility, setDraftVisibility] =
     useState<ShareVisibility>("friends");
+  const [draftInviteOnly, setDraftInviteOnly] = useState(false);
   const [isAddressRevealed, setIsAddressRevealed] = useState(false);
   const [isConfirmingStop, setIsConfirmingStop] = useState(false);
   const [inviteQuery, setInviteQuery] = useState("");
@@ -187,6 +205,46 @@ export function LanShareModal({
   useEffect(() => {
     if (shareState.visibility) setDraftVisibility(shareState.visibility);
   }, [shareState.visibility]);
+
+  const hostInviteOnly = shareState.host?.inviteOnly;
+  useEffect(() => {
+    if (typeof hostInviteOnly === "boolean") setDraftInviteOnly(hostInviteOnly);
+  }, [hostInviteOnly]);
+
+  const host = shareState.host;
+  const hostRef = useLatestRef(host);
+  const hasTarget = !!(shareState.target ?? shareState.candidate);
+  const isServer = isServerTarget(shareState);
+  const sharedServerPath = isServer
+    ? (shareState.target ?? shareState.candidate)?.serverPath
+    : undefined;
+  const [serverAllowlistOn, setServerAllowlistOn] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !sharedServerPath) {
+      setServerAllowlistOn(false);
+      return;
+    }
+    let cancelled = false;
+    const target = sharedServerPath.toLowerCase();
+    void api.server.admin.snapshot(sharedServerPath).then((snapshot) => {
+      if (!cancelled) setServerAllowlistOn(snapshot?.allowlistEnabled === true);
+    });
+    const off = api.server.admin.onEvent((event) => {
+      if (event.serverPath.toLowerCase() !== target) return;
+      setServerAllowlistOn(event.snapshot.allowlistEnabled === true);
+    });
+    return () => {
+      cancelled = true;
+      off();
+    };
+  }, [isOpen, sharedServerPath]);
+  const accessMode: ShareAccessMode =
+    draftVisibility === "public"
+      ? "public"
+      : draftInviteOnly
+        ? "invite"
+        : "friends";
 
   useEffect(() => {
     if (!isOpen) return;
@@ -254,12 +312,21 @@ export function LanShareModal({
   const handleStart = useCallback(async () => {
     setPendingAction("start");
     try {
+      if ((hostRef.current?.inviteOnly ?? false) !== draftInviteOnly) {
+        const prepared = await api.share.updateHost({
+          inviteOnly: draftInviteOnly,
+        });
+        if (!prepared.ok) {
+          reportError(prepared.error);
+          return;
+        }
+      }
       const result = await api.share.startShare(draftVisibility);
       if (!result.ok) reportError(result.error);
     } finally {
       setPendingAction(null);
     }
-  }, [draftVisibility, reportError]);
+  }, [draftInviteOnly, draftVisibility, hostRef, reportError]);
 
   const handleStop = useCallback(async () => {
     setPendingAction("stop");
@@ -272,24 +339,103 @@ export function LanShareModal({
     }
   }, [reportError]);
 
-  const handleVisibility = useCallback(
-    async (visibility: ShareVisibility) => {
-      const previous = draftVisibility;
-      setDraftVisibility(visibility);
-      if (!shareState.sessionId) return;
+  const handleAccess = useCallback(
+    async (mode: ShareAccessMode) => {
+      const target = accessTarget(mode);
+      const previousVisibility = draftVisibility;
+      const previousInviteOnly = draftInviteOnly;
+      const revert = () => {
+        setDraftVisibility(previousVisibility);
+        setDraftInviteOnly(previousInviteOnly);
+      };
+      setDraftVisibility(target.visibility);
+      setDraftInviteOnly(target.inviteOnly);
+      if (!hasTarget) return;
 
       setPendingAction("visibility");
       try {
-        const result = await api.share.updateShareVisibility(visibility);
-        if (!result.ok) {
-          setDraftVisibility(previous);
-          reportError(result.error);
+        if ((hostRef.current?.inviteOnly ?? false) !== target.inviteOnly) {
+          const hostResult = await api.share.updateHost({
+            inviteOnly: target.inviteOnly,
+          });
+          if (!hostResult.ok) {
+            revert();
+            reportError(hostResult.error);
+            return;
+          }
+        }
+
+        if (
+          shareState.sessionId &&
+          shareState.visibility !== target.visibility
+        ) {
+          const result = await api.share.updateShareVisibility(
+            target.visibility,
+          );
+          if (!result.ok) {
+            revert();
+            reportError(result.error);
+          }
         }
       } finally {
         setPendingAction(null);
       }
     },
-    [draftVisibility, reportError, shareState.sessionId],
+    [
+      draftInviteOnly,
+      draftVisibility,
+      hasTarget,
+      hostRef,
+      reportError,
+      shareState.sessionId,
+      shareState.visibility,
+    ],
+  );
+
+  const updateHost = useCallback(
+    async (patch: Parameters<typeof api.share.updateHost>[0]) => {
+      const result = await api.share.updateHost(patch);
+      if (!result.ok) reportError(result.error);
+      return result.ok;
+    },
+    [reportError],
+  );
+
+  const handleRemoveMember = useCallback(
+    async (member: ShareMember) => {
+      const members = hostRef.current?.members ?? [];
+      if (!(await updateHost({ members: withoutMember(members, member.userId) }))) {
+        return;
+      }
+      showUndoToast(
+        t("share.panel.members.removed", { name: member.nickname }),
+        async () => {
+          await updateHost({
+            members: withMember(hostRef.current?.members ?? [], member),
+          });
+        },
+      );
+    },
+    [hostRef, t, updateHost],
+  );
+
+  const handleKick = useCallback(
+    async (row: ShareGuestRow, name: string) => {
+      const guest = { ...guestRefOf(row), nickname: name };
+      const result = await api.share.kickGuest(guest);
+      if (!result.ok) {
+        reportError(result.error);
+        return;
+      }
+      showUndoToast(
+        t("share.panel.guests.kicked", { name }),
+        async () => {
+          const restored = await api.share.restoreGuest(guest);
+          if (!restored.ok) reportError(restored.error);
+        },
+      );
+    },
+    [reportError, t],
   );
 
   const handleCopyAddress = useCallback(async () => {
@@ -366,7 +512,24 @@ export function LanShareModal({
   }, [friendSocket, inviteReason, markInviteSent, settleInvite, t]);
 
   const handleInvite = useCallback(
-    (recipientId: string) => {
+    async (recipientId: string) => {
+      if (accessMode === "invite") {
+        const members = hostRef.current?.members ?? [];
+        const nickname =
+          friends.find((friend) => friend.user?._id === recipientId)?.user
+            .nickname ?? "";
+        if (!members.some((member) => member.userId === recipientId)) {
+          const added = await updateHost({
+            members: withMember(members, { userId: recipientId, nickname }),
+          });
+          if (!added) return;
+        }
+        if (!isOpenForGuests) {
+          toast.success(t("share.panel.members.added", { name: nickname }));
+          return;
+        }
+      }
+
       if (!friendSocket || !isOpenForGuests) return;
       if (!shareState.slug || !shareState.sessionId) return;
       if (answerTimersRef.current.has(recipientId)) return;
@@ -376,7 +539,7 @@ export function LanShareModal({
         return;
       }
 
-      if (!ownPresence.versionCode) {
+      if (!isServer && !ownPresence.versionCode) {
         toast.warning(inviteReason("unpublished_version"));
         return;
       }
@@ -405,9 +568,13 @@ export function LanShareModal({
       });
     },
     [
+      accessMode,
       friendSocket,
+      friends,
+      hostRef,
       inviteReason,
       isOpenForGuests,
+      isServer,
       ownPresence.versionCode,
       settleInvite,
       shareState.publicAddress,
@@ -415,6 +582,7 @@ export function LanShareModal({
       shareState.slug,
       shareState.visibility,
       t,
+      updateHost,
     ],
   );
 
@@ -446,10 +614,15 @@ export function LanShareModal({
           description: t("share.panel.stage.needsWorld.description"),
         };
       case "ready":
-        return {
-          title: t("share.panel.stage.ready.title"),
-          description: t("share.panel.stage.ready.description"),
-        };
+        return isServer
+          ? {
+              title: t("share.panel.stage.serverReady.title"),
+              description: t("share.panel.stage.serverReady.description"),
+            }
+          : {
+              title: t("share.panel.stage.ready.title"),
+              description: t("share.panel.stage.ready.description"),
+            };
       case "starting":
         return {
           title: t("share.panel.stage.starting.title"),
@@ -512,22 +685,30 @@ export function LanShareModal({
   );
   const showHowTo: ShareStage[] = ["noGame", "needsWorld"];
   const isFriendsReachable = !!friendSocket && isFriendsConnected;
-  const canInvite =
-    isOpenForGuests && isFriendsReachable && !!ownPresence.versionCode;
-  const inviteNote = !isOpenForGuests
-    ? isBusy
-      ? t("share.panel.invite.waiting")
-      : t("share.panel.invite.notOpen")
-    : !isFriendsReachable
-      ? t("share.panel.invite.offlineSocket")
-      : !ownPresence.versionCode
-        ? t("friends.inviteErrors.unpublished_version")
-        : "";
-  const targetLabel = shareState.target
-    ? `${shareState.target.versionName} #${shareState.target.instance}`
-    : shareState.candidate
-      ? `${shareState.candidate.versionName} #${shareState.candidate.instance}`
-      : null;
+  const hasPresenceCode = isServer || !!ownPresence.versionCode;
+  const isCollectingMembers = accessMode === "invite" && !isOpenForGuests;
+  const canInvite = isCollectingMembers
+    ? hasTarget && pendingAction === null
+    : isOpenForGuests && isFriendsReachable && hasPresenceCode;
+  const inviteNote = isCollectingMembers
+    ? t("share.panel.members.collectHint")
+    : !isOpenForGuests
+      ? isBusy
+        ? t("share.panel.invite.waiting")
+        : t("share.panel.invite.notOpen")
+      : !isFriendsReachable
+        ? t("share.panel.invite.offlineSocket")
+        : !hasPresenceCode
+          ? t("friends.inviteErrors.unpublished_version")
+          : "";
+  const targetEntry = shareState.target ?? shareState.candidate;
+  const targetLabel = targetEntry
+    ? isServer
+      ? t("share.panel.target.server", { name: targetEntry.versionName })
+      : `${targetEntry.versionName} #${targetEntry.instance}`
+    : null;
+  const members = host?.members ?? [];
+  const removedGuests = host?.removed ?? [];
   const targetPort =
     shareState.target?.localPort ?? shareState.candidate?.localPort;
 
@@ -542,7 +723,9 @@ export function LanShareModal({
   const effectiveAccessLabel =
     visibility.effective === "public"
       ? t("share.panel.access.public")
-      : t("share.panel.access.friends");
+      : host?.inviteOnly
+        ? t("share.panel.access.invite")
+        : t("share.panel.access.friends");
 
   return (
     <Dialog
@@ -590,13 +773,18 @@ export function LanShareModal({
               steps={steps}
               isBusy={isBusy}
               meta={uptime}
+              isServer={isServer}
             />
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-3.5 px-4 py-3">
             {targetLabel && (
               <div className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5">
-                <Users className="size-3.5 shrink-0 text-faint" />
+                {isServer ? (
+                  <ServerIcon className="size-3.5 shrink-0 text-faint" />
+                ) : (
+                  <Users className="size-3.5 shrink-0 text-faint" />
+                )}
                 <Hint content={targetLabel} variant="text" truncatedOnly>
                   <span className="min-w-0 flex-1 truncate text-xs">
                     {targetLabel}
@@ -638,26 +826,20 @@ export function LanShareModal({
               title={t("share.panel.access.title")}
             >
               <SegmentedControl
-                value={draftVisibility}
+                value={accessMode}
                 stretch
                 disabled={isVisibilityLocked}
                 ariaLabel={t("share.panel.access.title")}
-                options={(["friends", "public"] as ShareVisibility[]).map(
+                options={(["friends", "invite", "public"] as ShareAccessMode[]).map(
                   (value) => ({
                     value,
                     label:
-                      value === "friends"
-                        ? t("share.panel.access.friends")
-                        : t("share.panel.access.public"),
-                    icon:
-                      value === "friends" ? (
-                        <Shield className="size-3.5" />
-                      ) : (
-                        <Globe className="size-3.5" />
-                      ),
+                      value === "public"
+                        ? t("share.panel.access.publicShort")
+                        : t(`share.panel.access.${value}`),
                   }),
                 )}
-                onChange={(value) => void handleVisibility(value)}
+                onChange={(value) => void handleAccess(value)}
               />
               <p
                 className={cn(
@@ -673,15 +855,55 @@ export function LanShareModal({
                     })
                   : visibility.effective === "public"
                     ? t("share.panel.access.publicHint")
-                    : t("share.panel.access.friendsHint")}
+                    : accessMode === "invite"
+                      ? t("share.panel.access.inviteHint")
+                      : t("share.panel.access.friendsHint")}
               </p>
+              <ShareSeatLimit
+                value={host?.maxGuests ?? 0}
+                disabled={isVisibilityLocked || !hasTarget}
+                onChange={(maxGuests) => void updateHost({ maxGuests })}
+              />
+              {serverAllowlistOn && (
+                <p className="text-xs leading-4 text-warning">
+                  {t("share.panel.target.allowlistOn")}
+                </p>
+              )}
             </Section>
 
-            {isOpenForGuests && (
+            {accessMode === "invite" && (
+              <Section
+                className="shrink-0"
+                icon={<UserCheck className="size-3.5" />}
+                title={t("share.panel.members.title")}
+                count={members.length}
+              >
+                <ScrollArea className="max-h-[6.5rem]">
+                  <ShareMemberList
+                    members={members}
+                    friends={friends}
+                    joinedIds={joinedUserIds}
+                    disabled={pendingAction !== null || !hasTarget}
+                    onRemove={(member) => void handleRemoveMember(member)}
+                  />
+                </ScrollArea>
+                {host?.apiSynced === false && (
+                  <p className="text-xs leading-4 text-warning">
+                    {t("share.panel.members.localOnly")}
+                  </p>
+                )}
+              </Section>
+            )}
+
+            {isOpenForGuests && accessMode !== "invite" && (
               <Section
                 className="shrink-0"
                 icon={<Globe className="size-3.5" />}
-                title={t("share.panel.address.title")}
+                title={
+                  isServer
+                    ? t("share.panel.address.titleServer")
+                    : t("share.panel.address.title")
+                }
                 action={
                   address &&
                   visibility.effective === "public" && (
@@ -772,18 +994,38 @@ export function LanShareModal({
               </Hint>
             )}
 
-            {(isOpenForGuests || guestRows.length > 0) && (
+            {(isOpenForGuests ||
+              guestRows.length > 0 ||
+              removedGuests.length > 0) && (
               <Section
                 className="shrink-0"
                 icon={<Users className="size-3.5" />}
                 title={t("share.panel.guests.title")}
                 count={guestRows.length}
+                action={
+                  host && host.maxGuests > 0 ? (
+                    <span className="font-mono text-3xs whitespace-nowrap tabular-nums text-faint">
+                      {t("share.panel.seats.taken", {
+                        taken: guestRows.length,
+                        total: host.maxGuests,
+                      })}
+                    </span>
+                  ) : undefined
+                }
               >
                 <ScrollArea className="max-h-[7.5rem]">
                   <ShareGuestList
                     rows={guestRows}
+                    removed={removedGuests}
                     nowMs={nowMs}
                     isOpenForGuests={isOpenForGuests}
+                    disabled={!shareState.sessionId}
+                    onKick={(row, name) => void handleKick(row, name)}
+                    onRestore={(guest) =>
+                      void api.share.restoreGuest(guest).then((result) => {
+                        if (!result.ok) reportError(result.error);
+                      })
+                    }
                   />
                 </ScrollArea>
               </Section>
@@ -832,7 +1074,13 @@ export function LanShareModal({
                   <ShareInviteList
                     candidates={inviteCandidates}
                     disabled={!canInvite}
-                    onInvite={handleInvite}
+                    onInvite={(id) => void handleInvite(id)}
+                    includeOffline={accessMode === "invite"}
+                    actionLabel={
+                      isCollectingMembers
+                        ? t("share.panel.members.add")
+                        : undefined
+                    }
                   />
                 </ScrollArea>
               )}

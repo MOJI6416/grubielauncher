@@ -102,6 +102,12 @@ import {
   ServerRunStatus,
   ServerSyncNotice,
 } from "@/types/Server";
+import type {
+  ServerAdminAction,
+  ServerAdminEvent,
+  ServerAdminResult,
+  ServerAdminSnapshot,
+} from "@/types/ServerAdmin";
 import {
   DownloaderFailuresInfo,
   DownloaderInfo,
@@ -177,6 +183,9 @@ import {
   SharePeerInfo,
   ShareState,
   ShareStateError,
+  ShareGuestRef,
+  ShareGuestRefusedEvent,
+  ShareHostPatch,
   ShareVisibility,
 } from "@/types/Share";
 import { RpcRendererContext } from "@/types/Rpc";
@@ -1020,6 +1029,18 @@ export interface IElectronAPI {
     onRunOutput: (
       callback: (payload: { serverPath: string; lines: string[] }) => void,
     ) => () => void;
+    admin: {
+      snapshot: (serverPath: string) => Promise<ServerAdminSnapshot>;
+      refresh: (
+        serverPath: string,
+        gamerules?: boolean,
+      ) => Promise<ServerAdminSnapshot>;
+      perform: (
+        serverPath: string,
+        action: ServerAdminAction,
+      ) => Promise<ServerAdminResult>;
+      onEvent: (callback: (event: ServerAdminEvent) => void) => () => void;
+    };
   };
   skins: {
     load: (
@@ -1428,6 +1449,21 @@ export interface IElectronAPI {
     onShareError: (callback: (error: ShareStateError) => void) => () => void;
     onSharePeersChanged: (
       callback: (peers: SharePeerInfo[]) => void,
+    ) => () => void;
+    registerServer: (
+      serverPath: string,
+    ) => Promise<ShareCommandResult<ShareState>>;
+    updateHost: (
+      patch: ShareHostPatch,
+    ) => Promise<ShareCommandResult<ShareState>>;
+    kickGuest: (
+      guest: ShareGuestRef & { nickname?: string },
+    ) => Promise<ShareCommandResult<ShareState>>;
+    restoreGuest: (
+      guest: ShareGuestRef,
+    ) => Promise<ShareCommandResult<ShareState>>;
+    onGuestRefused: (
+      callback: (event: ShareGuestRefusedEvent) => void,
     ) => () => void;
   };
   events: {
@@ -2269,6 +2305,22 @@ export const api: IElectronAPI = {
       ipcRenderer.on("server:output", listener);
       return () => ipcRenderer.off("server:output", listener);
     },
+    admin: {
+      snapshot: (serverPath: string) =>
+        invoke("serverAdmin:snapshot", serverPath),
+      refresh: (serverPath: string, gamerules?: boolean) =>
+        invoke("serverAdmin:refresh", serverPath, gamerules),
+      perform: (serverPath: string, action: ServerAdminAction) =>
+        invoke("serverAdmin:perform", serverPath, action),
+      onEvent: (callback: (event: ServerAdminEvent) => void) => {
+        const listener = (
+          _event: Electron.IpcRendererEvent,
+          payload: ServerAdminEvent,
+        ) => callback(payload);
+        ipcRenderer.on("serverAdmin:event", listener);
+        return () => ipcRenderer.off("serverAdmin:event", listener);
+      },
+    },
   },
   skins: {
     load: (
@@ -2678,6 +2730,21 @@ export const api: IElectronAPI = {
       ) => callback(peers);
       ipcRenderer.on("share:peersChanged", listener);
       return () => ipcRenderer.off("share:peersChanged", listener);
+    },
+    registerServer: (serverPath: string) =>
+      invoke("share:registerServer", serverPath),
+    updateHost: (patch: ShareHostPatch) => invoke("share:updateHost", patch),
+    kickGuest: (guest: ShareGuestRef & { nickname?: string }) =>
+      invoke("share:kickGuest", guest),
+    restoreGuest: (guest: ShareGuestRef) =>
+      invoke("share:restoreGuest", guest),
+    onGuestRefused: (callback: (event: ShareGuestRefusedEvent) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: ShareGuestRefusedEvent,
+      ) => callback(payload);
+      ipcRenderer.on("share:guestRefused", listener);
+      return () => ipcRenderer.off("share:guestRefused", listener);
     },
   },
   events: {

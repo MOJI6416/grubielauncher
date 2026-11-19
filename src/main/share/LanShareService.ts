@@ -2,8 +2,14 @@ import {
   ActiveFriendShare,
   ResolvedFriendShareConnection,
   ShareCommandResult,
+  ShareGuestRef,
+  ShareHostPatch,
+  ShareHostState,
   ShareLanCandidate,
   SharePeerInfo,
+  ShareRemovedGuest,
+  ShareStartRequest,
+  ShareStartResponse,
   ShareState,
   ShareStateError,
   ShareVisibility,
@@ -47,19 +53,61 @@ import {
   toShareStateError,
 } from "./errors";
 import { ShareStateStore } from "./ShareStateStore";
-import { LocalProxyManager } from "./LocalProxyManager";
+import { GuestRefusedEvent, LocalProxyManager } from "./LocalProxyManager";
 import { TunnelClient } from "./TunnelClient";
+import {
+  applyHostPatch,
+  decideAdmission,
+  DEFAULT_HOST_CONTROLS,
+  HostControlsStore,
+  hostControlsRequest,
+  isSameGuest,
+} from "./hostControls";
 import fs from "fs-extra";
+import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import path from "path";
 import net from "net";
 import { listTcpConnections } from "../utilities/tcpConnections";
+import { getDataRoot } from "../utilities/dataRoot";
+import {
+  getServerSettings,
+  isServerRunning,
+} from "../utilities/serverManager";
+import { serverAdmins } from "../serverAdmin";
 
 type ShareEvents = {
   stateChanged: (state: ShareState) => void;
   shareError: (error: ShareStateError) => void;
   peersChanged: (peers: SharePeerInfo[]) => void;
+  guestRefused: (event: GuestRefusedEvent) => void;
 };
+
+const KICK_MESSAGE = "Хозяин убрал вас из этой игры. / The host removed you from this game.";
+
+function hostKeyOf(candidate: ShareLanCandidate): string {
+  return candidate.kind === "server"
+    ? `server:${candidate.versionName}`
+    : `world:${candidate.versionName}`;
+}
+
+function idleHostState(): ShareHostState {
+  return { ...DEFAULT_HOST_CONTROLS, members: [], removed: [], apiSynced: null };
+}
+
+function isLegacyApiRejection(error: unknown): boolean {
+  if (!axios.isAxiosError(error) || error.response?.status !== 400) return false;
+  const message = (error.response?.data as { message?: unknown } | undefined)
+    ?.message;
+  const text = Array.isArray(message) ? message.join(" ") : String(message ?? "");
+  return /should not exist/i.test(text);
+}
+
+function isMissingApiRoute(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  const status = error.response?.status;
+  return status === 404 || status === 400 || status === 405;
+}
 
 const LAN_PORT_PATTERNS = [
   /Local game hosted on port (\d{2,5})/i,
@@ -78,6 +126,11 @@ export class LanShareService extends EventEmitter {
   private readonly proxyManager = new LocalProxyManager();
   private readonly tunnelClient = new TunnelClient(this.proxyManager);
   private readonly candidates = new Map<string, ShareLanCandidate>();
+  private readonly hostStore = new HostControlsStore(() =>
+    path.join(getDataRoot(), "share-hosts.json"),
+  );
+  private host: ShareHostState = idleHostState();
+  private hostKey = "";
 
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
@@ -93,6 +146,7 @@ export class LanShareService extends EventEmitter {
   private activeGatewayTokenExpMs = 0;
   private activeHostAccessToken = "";
   private activeVersionPath = "";
+  private activeServerPath = "";
   private shareStartedAtMs = 0;
   private hasAuthenticatedOnce = false;
   private disposed = false;
@@ -111,6 +165,17 @@ export class LanShareService extends EventEmitter {
     });
     this.proxyManager.onStreamClosed((event) => {
       this.recordStreamDiagnostic(event);
+    });
+    this.proxyManager.setAdmission((request, connected) =>
+      decideAdmission(
+        request,
+        connected,
+        this.host,
+        this.stateStore.getState().visibility,
+      ),
+    );
+    this.proxyManager.onGuestRefused((event) => {
+      this.emit("guestRefused", event);
     });
 
     this.tunnelClient.on("connected", () => {
@@ -240,8 +305,23 @@ export class LanShareService extends EventEmitter {
         return { ok: false, error };
       }
 
-      const processRecord = gameProcesses.get(candidate.key);
-      if (!processRecord?.accessToken) {
+      const isServer = candidate.kind === "server" && !!candidate.serverPath;
+      if (isServer && !(await isServerRunning(candidate.serverPath || ""))) {
+        this.candidates.delete(candidate.key);
+        const error = createShareError(
+          "server_not_running",
+          "The server is not running",
+        );
+        this.stateStore.setError(error, "lan_not_found");
+        this.emit("shareError", error);
+        return { ok: false, error };
+      }
+
+      const processRecord = isServer ? null : gameProcesses.get(candidate.key);
+      const hostAccessToken = isServer
+        ? await getSelectedAccessToken()
+        : processRecord?.accessToken;
+      if (!hostAccessToken) {
         const error = createShareError(
           "not_authenticated",
           "Unable to resolve host account token",
@@ -250,6 +330,9 @@ export class LanShareService extends EventEmitter {
         this.emit("shareError", error);
         return { ok: false, error };
       }
+      const hostVersionPath = isServer
+        ? path.dirname(candidate.serverPath || "")
+        : processRecord?.versionPath || "";
 
       const isReachable = await this.verifyLocalPort(candidate.localPort);
       if (!isReachable) {
@@ -263,11 +346,14 @@ export class LanShareService extends EventEmitter {
         return { ok: false, error };
       }
 
-      this.activeHostAccessToken = processRecord.accessToken;
-      this.activeVersionPath = processRecord.versionPath;
+      this.activeHostAccessToken = hostAccessToken;
+      this.activeVersionPath = hostVersionPath;
+      this.activeServerPath = isServer ? candidate.serverPath || "" : "";
       this.shareStartedAtMs = Date.now();
       this.proxyManager.setLocalPort(candidate.localPort);
       this.hasAuthenticatedOnce = false;
+      await this.loadHostControls(candidate);
+      this.host = { ...this.host, removed: [], apiSynced: null };
 
       this.stateStore.patch({
         phase: "share_starting",
@@ -281,21 +367,20 @@ export class LanShareService extends EventEmitter {
         reconnectAttempt: 0,
         lastError: undefined,
         lastStreamDiagnostic: undefined,
+        host: this.host,
       });
 
       try {
-        const backend = new Backend(processRecord.accessToken);
-        const versionMeta = await this.readVersionMeta(
-          processRecord.versionPath,
-        );
+        const backend = new Backend(hostAccessToken);
+        const versionMeta = await this.readVersionMeta(hostVersionPath);
 
-        const response = await backend.startShare({
+        const response = await this.requestShareStart(backend, {
           localPort: candidate.localPort,
           visibility,
           mcVersion: versionMeta.mcVersion || undefined,
           launcherVersion: app.getVersion(),
           versionShareCode: versionMeta.shareCode || undefined,
-        });
+        }, candidate);
 
         if (
           !isValidShareSlug(response.slug) ||
@@ -746,7 +831,6 @@ export class LanShareService extends EventEmitter {
     };
 
     this.candidates.set(event.key, nextCandidate);
-    this.proxyManager.setLocalPort(nextCandidate.localPort);
 
     const state = this.stateStore.getState();
     if (
@@ -763,10 +847,12 @@ export class LanShareService extends EventEmitter {
     }
 
     if (!state.sessionId) {
+      this.proxyManager.setLocalPort(nextCandidate.localPort);
       this.stateStore.patch({
         candidate: nextCandidate,
         phase: "lan_ready",
       });
+      void this.publishIdleHost(nextCandidate);
       return;
     }
 
@@ -1070,6 +1156,13 @@ export class LanShareService extends EventEmitter {
   private async probeLanTargets(): Promise<void> {
     if (this.disposed) return;
 
+    for (const candidate of [...this.candidates.values()]) {
+      if (candidate.kind !== "server" || !candidate.serverPath) continue;
+      if (await isServerRunning(candidate.serverPath)) continue;
+      if (this.stateStore.getState().target?.key === candidate.key) continue;
+      this.candidates.delete(candidate.key);
+    }
+
     const state = this.stateStore.getState();
     const target = state.target;
     if (!target) {
@@ -1077,8 +1170,12 @@ export class LanShareService extends EventEmitter {
       return;
     }
 
-    const processRecord = gameProcesses.get(target.key);
-    if (!processRecord) {
+    const isTargetAlive =
+      target.kind === "server" && target.serverPath
+        ? await isServerRunning(target.serverPath)
+        : gameProcesses.has(target.key);
+    if (!isTargetAlive) {
+      this.candidates.delete(target.key);
       if (state.sessionId) {
         await this.forceLocalStop(
           gameProcesses.size > 0 ? "lan_not_found" : "idle",
@@ -1122,6 +1219,9 @@ export class LanShareService extends EventEmitter {
         candidate,
         target: candidate,
       });
+      if (state.target?.key !== candidate.key) {
+        void this.publishIdleHost(candidate);
+      }
       return;
     }
 
@@ -1148,8 +1248,10 @@ export class LanShareService extends EventEmitter {
     this.activeGatewayTokenExpMs = 0;
     this.activeHostAccessToken = "";
     this.activeVersionPath = "";
+    this.activeServerPath = "";
     this.shareStartedAtMs = 0;
     this.hasAuthenticatedOnce = false;
+    this.host = { ...this.host, removed: [], apiSynced: null };
 
     const candidate = this.getPreferredCandidate();
 
@@ -1157,7 +1259,13 @@ export class LanShareService extends EventEmitter {
       phase,
       candidate,
       target: candidate,
+      host: candidate && hostKeyOf(candidate) === this.hostKey
+        ? this.host
+        : undefined,
     });
+    if (candidate && hostKeyOf(candidate) !== this.hostKey) {
+      void this.publishIdleHost(candidate);
+    }
 
     if (notifyBackend && sessionId && hostAccessToken) {
       try {
@@ -1387,15 +1495,11 @@ export class LanShareService extends EventEmitter {
 
     this.guestStatsUploadInFlight = true;
     try {
-      const savesPath = path.join(versionPath, "saves");
-      if (!(await fs.pathExists(savesPath))) return;
-
-      const entries = await fs.readdir(savesPath).catch(() => [] as string[]);
+      const worldPaths = await this.resolveStatsWorlds(versionPath);
       const hostUuids = this.getHostUuidSet(token);
       const worlds: IGuestWorldStatsUpload[] = [];
 
-      for (const entry of entries) {
-        const worldPath = path.join(savesPath, entry);
+      for (const worldPath of worldPaths) {
         const players = await this.collectWorldGuestStats(worldPath, hostUuids);
         if (players.length === 0) continue;
 
@@ -1412,6 +1516,258 @@ export class LanShareService extends EventEmitter {
     } catch {
     } finally {
       this.guestStatsUploadInFlight = false;
+    }
+  }
+
+  private async resolveStatsWorlds(versionPath: string): Promise<string[]> {
+    if (this.activeServerPath) {
+      const properties = await fs
+        .readFile(path.join(this.activeServerPath, "server.properties"), "utf8")
+        .catch(() => "");
+      const levelName =
+        /^level-name=(.+)$/m.exec(properties)?.[1]?.trim() || "world";
+      const worldPath = path.resolve(this.activeServerPath, levelName);
+      return worldPath.startsWith(path.resolve(this.activeServerPath))
+        ? [worldPath]
+        : [];
+    }
+
+    const savesPath = path.join(versionPath, "saves");
+    if (!(await fs.pathExists(savesPath))) return [];
+    const entries = await fs.readdir(savesPath).catch(() => [] as string[]);
+    return entries.map((entry) => path.join(savesPath, entry));
+  }
+
+  public async registerServerTarget(
+    serverPath: string,
+  ): Promise<ShareCommandResult<ShareState>> {
+    return this.runExclusive(async () => {
+      const resolved = path.resolve(serverPath);
+      if (!(await isServerRunning(resolved))) {
+        return {
+          ok: false,
+          error: createShareError(
+            "server_not_running",
+            "The server is not running",
+          ),
+        };
+      }
+
+      const settings = await getServerSettings(
+        path.join(resolved, "server.properties"),
+      ).catch(() => null);
+      const localPort = settings?.serverPort || 25565;
+      if (!(await this.verifyLocalPort(localPort))) {
+        return {
+          ok: false,
+          error: createShareError(
+            "local_port_unreachable",
+            "The server port is not reachable on 127.0.0.1",
+          ),
+        };
+      }
+
+      const candidate: ShareLanCandidate = {
+        key: `server:${resolved}`,
+        kind: "server",
+        serverPath: resolved,
+        versionName: path.basename(path.dirname(resolved)),
+        instance: 0,
+        localPort,
+        detectedAt: new Date().toISOString(),
+        isReachable: true,
+      };
+      this.candidates.set(candidate.key, candidate);
+
+      const state = this.stateStore.getState();
+      if (!state.sessionId) {
+        this.proxyManager.setLocalPort(localPort);
+        this.stateStore.patch({
+          phase: "lan_ready",
+          candidate,
+          target: candidate,
+          lastError: undefined,
+        });
+        await this.publishIdleHost(candidate);
+      }
+
+      return { ok: true, data: this.stateStore.getState() };
+    });
+  }
+
+  public async updateHostControls(
+    patch: ShareHostPatch,
+  ): Promise<ShareCommandResult<ShareState>> {
+    return this.runExclusive(async () => {
+      const state = this.stateStore.getState();
+      const target = state.target ?? this.getPreferredCandidate();
+      if (!target) {
+        return {
+          ok: false,
+          error: createShareError("lan_not_found", "Nothing to share yet"),
+        };
+      }
+
+      if (hostKeyOf(target) !== this.hostKey) {
+        await this.loadHostControls(target);
+      }
+
+      const controls = applyHostPatch(this.host, patch);
+      this.host = { ...this.host, ...controls };
+      await this.hostStore.set(this.hostKey, controls);
+      this.stateStore.patch({ host: this.host });
+
+      if (state.sessionId) {
+        await this.syncHostControls();
+        this.enforceHostControls();
+      }
+
+      return { ok: true, data: this.stateStore.getState() };
+    });
+  }
+
+  public async kickGuest(
+    guest: ShareGuestRef & { nickname?: string },
+  ): Promise<ShareCommandResult<ShareState>> {
+    return this.runExclusive(async () => {
+      const state = this.stateStore.getState();
+      if (!state.sessionId) {
+        return {
+          ok: false,
+          error: createShareError(
+            "share_not_started",
+            "Share session is not active",
+          ),
+        };
+      }
+      if (!guest.userId && !guest.username) {
+        return {
+          ok: false,
+          error: createShareError("unknown", "Guest is not identified"),
+        };
+      }
+
+      const entry: ShareRemovedGuest = {
+        userId: guest.userId?.toLowerCase(),
+        username: guest.username,
+        nickname: guest.nickname || guest.username || "",
+      };
+      if (!this.host.removed.some((removed) => isSameGuest(removed, entry))) {
+        this.host = { ...this.host, removed: [...this.host.removed, entry] };
+      }
+      this.stateStore.patch({ host: this.host });
+
+      await this.syncHostControls();
+
+      if (this.activeServerPath && guest.username) {
+        await serverAdmins
+          .kick(this.activeServerPath, guest.username, KICK_MESSAGE)
+          .catch(() => false);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      this.proxyManager.closeGuestStreams(entry, "kicked_by_host");
+
+      return { ok: true, data: this.stateStore.getState() };
+    });
+  }
+
+  public async restoreGuest(
+    guest: ShareGuestRef,
+  ): Promise<ShareCommandResult<ShareState>> {
+    return this.runExclusive(async () => {
+      const removed = this.host.removed.filter(
+        (entry) => !isSameGuest(entry, guest),
+      );
+      if (removed.length === this.host.removed.length) {
+        return { ok: true, data: this.stateStore.getState() };
+      }
+
+      this.host = { ...this.host, removed };
+      this.stateStore.patch({ host: this.host });
+      if (this.stateStore.getState().sessionId) await this.syncHostControls();
+      return { ok: true, data: this.stateStore.getState() };
+    });
+  }
+
+  private async loadHostControls(candidate: ShareLanCandidate): Promise<void> {
+    const key = hostKeyOf(candidate);
+    const controls = await this.hostStore.get(key);
+    const sameTarget = key === this.hostKey;
+    this.hostKey = key;
+    this.host = {
+      ...controls,
+      removed: sameTarget ? this.host.removed : [],
+      apiSynced: sameTarget ? this.host.apiSynced : null,
+    };
+  }
+
+  private async publishIdleHost(candidate: ShareLanCandidate): Promise<void> {
+    if (this.stateStore.getState().sessionId) return;
+    await this.loadHostControls(candidate);
+    const state = this.stateStore.getState();
+    if (state.sessionId || state.target?.key !== candidate.key) return;
+    this.stateStore.patch({ host: this.host });
+  }
+
+  private async requestShareStart(
+    backend: Backend,
+    payload: ShareStartRequest,
+    candidate: ShareLanCandidate,
+  ): Promise<ShareStartResponse> {
+    const controls = hostControlsRequest(this.host);
+    try {
+      const response = await backend.startShare({
+        ...payload,
+        kind: candidate.kind === "server" ? "server" : "world",
+        title: candidate.versionName.slice(0, 64) || undefined,
+        inviteOnly: controls.inviteOnly,
+        memberUserIds: controls.memberUserIds,
+        maxGuests: controls.maxGuests,
+      });
+      this.host = { ...this.host, apiSynced: !!response.host };
+      this.stateStore.patch({ host: this.host });
+      return response;
+    } catch (error) {
+      if (!isLegacyApiRejection(error)) throw error;
+      const response = await backend.startShare(payload);
+      this.host = { ...this.host, apiSynced: false };
+      this.stateStore.patch({ host: this.host });
+      return response;
+    }
+  }
+
+  private async syncHostControls(): Promise<void> {
+    const sessionId = this.stateStore.getState().sessionId;
+    if (!sessionId || !this.activeHostAccessToken) return;
+
+    try {
+      const backend = new Backend(this.activeHostAccessToken);
+      await backend.updateShareHostControls(
+        sessionId,
+        hostControlsRequest(this.host),
+      );
+      this.host = { ...this.host, apiSynced: true };
+    } catch (error) {
+      this.host = { ...this.host, apiSynced: false };
+      if (!isMissingApiRoute(error)) {
+        console.warn("[share:host] host controls sync failed:", error);
+      }
+    }
+    this.stateStore.patch({ host: this.host });
+  }
+
+  private enforceHostControls(): void {
+    const visibility = this.stateStore.getState().visibility;
+    for (const guest of this.proxyManager.connectedGuests()) {
+      const refusal = decideAdmission(
+        { ...guest, statusPing: false },
+        this.proxyManager
+          .connectedGuests()
+          .filter((other) => !isSameGuest(other, guest)),
+        { ...this.host, maxGuests: 0 },
+        visibility,
+      );
+      if (refusal) this.proxyManager.closeGuestStreams(guest, `guest_${refusal}`);
     }
   }
 

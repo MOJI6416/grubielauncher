@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   Copy,
   Cpu,
@@ -11,6 +11,7 @@ import {
   Coffee,
   HardDriveDownload,
   MemoryStick,
+  Radio,
   RefreshCw,
   Square,
   Trash,
@@ -28,10 +29,17 @@ import { PopoverTrigger } from "@/components/ui/popover";
 import {
   accountAtom,
   installActiveAtom,
+  isShareModalOpenAtom,
   selectedVersionAtom,
   serverAtom,
   settingsAtom,
+  shareOwnerAccountKeyAtom,
+  shareStateAtom,
 } from "@renderer/stores/atoms";
+import { getShareAccountKey } from "@renderer/utilities/shareAccount";
+import { getShareErrorText } from "@renderer/utilities/share";
+import { ServerPlayersPanel } from "./ServerPlayersPanel";
+import { useServerAdmin } from "./useServerAdmin";
 import { ServerGame } from "@renderer/classes/ServerGame";
 import { Hint } from "@renderer/components/Hint";
 import { ImageCropper } from "@renderer/components/ImageCropper";
@@ -101,10 +109,17 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
 
   const runtime = useMemo(() => getServerRuntime(), []);
   const javaRuntimes = useJavaRuntimes();
+  const shareState = useAtomValue(shareStateAtom);
+  const setIsShareModalOpen = useSetAtom(isShareModalOpenAtom);
+  const setShareOwnerAccountKey = useSetAtom(shareOwnerAccountKeyAtom);
 
   const [serverPath, setServerPath] = useState("");
-  const [view, setView] = useState<"console" | "settings">("console");
+  const [view, setView] = useState<"console" | "players" | "settings">(
+    "console",
+  );
   const [runState, setRunState] = useState<ServerRunState>("stopped");
+  const [isOpeningForFriends, setIsOpeningForFriends] = useState(false);
+  const admin = useServerAdmin(serverPath, runState === "running");
   const [log, setLog] = useState<string[]>([]);
   const [logo, setLogo] = useState("");
   const [cropImage, setCropImage] = useState("");
@@ -422,6 +437,52 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
     [t],
   );
 
+  const sharedTarget = shareState.target;
+  const isSharedHere =
+    !!shareState.sessionId &&
+    sharedTarget?.kind === "server" &&
+    !!serverPath &&
+    samePath(sharedTarget.serverPath ?? "", serverPath);
+
+  const openForFriends = useCallback(async () => {
+    if (!account || account.type === "plain") {
+      toast.warning(t("share.panel.stage.accountUnsupported.title"), {
+        description: t("share.panel.stage.accountUnsupported.description"),
+      });
+      return;
+    }
+
+    if (!isSharedHere) {
+      setIsOpeningForFriends(true);
+      try {
+        const result = await api.share.registerServer(serverPath);
+        if (!result.ok) {
+          showFailureToast(
+            t("serverManager.friendsError"),
+            getShareErrorText(t, result.error),
+            { channels: ["share:registerServer"] },
+          );
+          return;
+        }
+        if (result.data?.sessionId && result.data.target?.kind !== "server") {
+          toast.warning(t("serverManager.friendsBusy"));
+        }
+      } finally {
+        setIsOpeningForFriends(false);
+      }
+    }
+
+    setShareOwnerAccountKey(getShareAccountKey(account));
+    setIsShareModalOpen(true);
+  }, [
+    account,
+    isSharedHere,
+    serverPath,
+    setIsShareModalOpen,
+    setShareOwnerAccountKey,
+    t,
+  ]);
+
   if (!server) {
     return (
       <Alert variant="warning">
@@ -546,10 +607,14 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                   {formatClock(uptime)}
                 </span>
               )}
-              {live?.result?.players && (
+              {(live?.result?.players || admin.snapshot.mode !== "none") && (
                 <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground tabular-nums">
                   <Users className="size-3" />
-                  {live.result.players.online}/{live.result.players.max}
+                  {admin.snapshot.mode !== "none"
+                    ? admin.snapshot.players.length
+                    : live?.result?.players?.online}
+                  /
+                  {live?.result?.players?.max ?? settings?.maxPlayers ?? "?"}
                 </span>
               )}
             </div>
@@ -575,7 +640,7 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
             <SegmentedControl
               value={view}
               ariaLabel={t("serverManager.viewLabel")}
-              options={(["console", "settings"] as const).map((value) => ({
+              options={(["console", "players", "settings"] as const).map((value) => ({
                 value,
                 label: t(`serverManager.view.${value}`),
               }))}
@@ -612,13 +677,30 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                 ) : (
                   <Play className="size-4" />
                 )}
-                {isRunning ? t("serverManager.stop") : t("serverManager.start")}
+                <span className="grid justify-items-center">
+                  <span aria-hidden className="invisible col-start-1 row-start-1">
+                    {t("serverManager.start")}
+                  </span>
+                  <span aria-hidden className="invisible col-start-1 row-start-1">
+                    {t("serverManager.stop")}
+                  </span>
+                  <span className="col-start-1 row-start-1">
+                    {isRunning ? t("serverManager.stop") : t("serverManager.start")}
+                  </span>
+                </span>
               </Button>
             )}
           </div>
         </header>
 
-        {view === "settings" && serverPath ? (
+        {view === "players" && serverPath ? (
+          <ServerPlayersPanel
+            snapshot={admin.snapshot}
+            isRunning={runState === "running" && !isForeign}
+            perform={admin.perform}
+            refresh={admin.refresh}
+          />
+        ) : view === "settings" && serverPath ? (
           <ServerSettingsPanel
             serverPath={serverPath}
             conf={server}
@@ -677,6 +759,55 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                       <Copy className="size-3 shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    disabled={
+                      isOpeningForFriends ||
+                      (!isSharedHere && (runState !== "running" || isForeign))
+                    }
+                    onClick={() => void openForFriends()}
+                    className="group flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1 text-left transition-colors hover:bg-row-hover disabled:pointer-events-none disabled:opacity-60"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-3xs text-faint">
+                        {t("serverManager.addressFriends")}
+                      </span>
+                      <Hint
+                        content={
+                          isSharedHere
+                            ? shareState.phase === "online"
+                              ? t("serverManager.friendsOpen")
+                              : t("serverManager.friendsStarting")
+                            : runState === "running"
+                              ? t("serverManager.friendsAction")
+                              : t("serverManager.friendsNeedsRun")
+                        }
+                        variant="text"
+                        truncatedOnly
+                      >
+                        <span
+                          className={
+                            isSharedHere && shareState.phase === "online"
+                              ? "block truncate text-xs text-success"
+                              : "block truncate text-xs"
+                          }
+                        >
+                          {isSharedHere
+                            ? shareState.phase === "online"
+                              ? t("serverManager.friendsOpen")
+                              : t("serverManager.friendsStarting")
+                            : runState === "running"
+                              ? t("serverManager.friendsAction")
+                              : t("serverManager.friendsNeedsRun")}
+                        </span>
+                      </Hint>
+                    </span>
+                    {isOpeningForFriends ? (
+                      <Loader2 className="size-3 shrink-0 animate-spin text-faint" />
+                    ) : (
+                      <Radio className="size-3 shrink-0 text-faint" />
+                    )}
+                  </button>
                   <p className="text-3xs text-faint">
                     {t("serverManager.shareHint")}
                   </p>
@@ -750,7 +881,28 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
                   </div>
                 )}
 
-                {live?.result?.players?.sample?.length ? (
+                {admin.snapshot.mode !== "none" &&
+                admin.snapshot.players.length > 0 ? (
+                  <div className="grid gap-1.5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t("servers.playersOnline")}
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {admin.snapshot.players.map((player) => (
+                        <Hint
+                          key={player.id ?? player.name}
+                          content={player.name}
+                          variant="text"
+                          truncatedOnly
+                        >
+                          <span className="max-w-full truncate rounded-md bg-surface-3 px-1.5 py-0.5 font-mono text-2xs">
+                            {player.name}
+                          </span>
+                        </Hint>
+                      ))}
+                    </div>
+                  </div>
+                ) : live?.result?.players?.sample?.length ? (
                   <div className="grid gap-1.5">
                     <span className="text-xs font-medium text-muted-foreground">
                       {t("servers.playersOnline")}

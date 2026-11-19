@@ -291,7 +291,8 @@
     "runtimeMissing": "This launcher release cannot start the server.",
     "view": {
       "console": "Console",
-      "settings": "Settings"
+      "settings": "Settings",
+      "players": "Players"
     },
     "console": "Console",
     "consoleEmpty": "Start the server and its output will appear here.",
@@ -322,7 +323,14 @@
     "applyAfterRestart": "takes effect after the server restarts",
     "runErrorChosenJava": "The Java chosen for this server is unavailable — pick another one in the server settings.",
     "viewLabel": "Server section",
-    "closeQuestion": "Stop the server and close the launcher?"
+    "closeQuestion": "Stop the server and close the launcher?",
+    "addressFriends": "For friends",
+    "friendsAction": "Open to friends through Grubie",
+    "friendsNeedsRun": "Start the server to open it to friends",
+    "friendsOpen": "Open — manage it in Play together",
+    "friendsStarting": "Opening…",
+    "friendsError": "Could not open the server to friends",
+    "friendsBusy": "Another world is open right now. Close it in Play together to open the server."
   },
   "serverSettings": {
     "description": "Description",
@@ -3070,7 +3078,10 @@
       "joinShareNotFound": "Your friend's available world was not found.",
       "invalidResponse": "Server returned an invalid response.",
       "unknown": "Could not open access to the world.",
-      "tunnelVersionUnsupported": "The launcher is out of date — update it to share your world again."
+      "tunnelVersionUnsupported": "The launcher is out of date — update it to share your world again.",
+      "notInvited": "The host lets in invited players only. Ask them to add you to the list.",
+      "removedByHost": "The host removed you from this game.",
+      "serverNotRunning": "The server is not running. Start it and open it again."
     },
     "description": {
       "label": "Description for players",
@@ -3091,7 +3102,8 @@
         "world": "World",
         "session": "Session",
         "channel": "Channel",
-        "open": "Access"
+        "open": "Access",
+        "server": "Server"
       },
       "stage": {
         "accountUnsupported": {
@@ -3134,6 +3146,10 @@
         "failed": {
           "title": "Access did not open",
           "description": "Something went wrong. Try opening access again."
+        },
+        "serverReady": {
+          "title": "Server is running",
+          "description": "Open access and friends join without port forwarding or VPNs; the pack installs for them on its own."
         }
       },
       "hint": {
@@ -3158,14 +3174,18 @@
         "public": "Anyone with the address",
         "applying": "Applying… for now: {{access}}.",
         "friendsHint": "Only your friends can join, straight from their launcher.",
-        "publicHint": "A network world does not check accounts: anyone who learns the address can walk in under any nickname."
+        "publicHint": "A network world does not check accounts: anyone who learns the address can walk in under any nickname.",
+        "invite": "Invite only",
+        "inviteHint": "Only the people you added to the list can join. The list is kept for this world or server.",
+        "publicShort": "Public"
       },
       "address": {
         "title": "Shared world",
         "friends": "Friends join from the launcher — no address to type.",
         "copy": "Copy address",
         "reveal": "Show address",
-        "hide": "Hide address"
+        "hide": "Hide address",
+        "titleServer": "Server address"
       },
       "health": {
         "degraded": "The channel is overloaded — players may lag.",
@@ -3177,7 +3197,11 @@
         "empty": "Nobody has joined yet.",
         "notYet": "Guests appear here once access is open.",
         "unknown": "Unknown player",
-        "connectedFor": "Time in the world"
+        "connectedFor": "Time in the world",
+        "kick": "Remove {{name}}",
+        "kicked": "{{name}} was removed and cannot come back",
+        "restore": "Let {{name}} back in",
+        "removed": "Removed"
       },
       "invite": {
         "title": "Invite",
@@ -3191,6 +3215,28 @@
         "waiting": "You can invite once access is open.",
         "notOpen": "Open access to invite friends.",
         "offlineSocket": "No connection to the friends service."
+      },
+      "seats": {
+        "title": "Guest seats",
+        "unlimited": "No limit",
+        "count_one": "{{count}} seat",
+        "count_other": "{{count}} seats",
+        "taken": "{{taken}} of {{total}}"
+      },
+      "members": {
+        "title": "Invited",
+        "empty": "The list is empty. Add friends below — only they will get in.",
+        "remove": "Remove {{name}} from the list",
+        "playing": "Playing",
+        "removed": "{{name}} is off the list",
+        "added": "{{name}} is on the invite list",
+        "add": "Add",
+        "collectHint": "Build the list in advance: once access opens, only these friends get in.",
+        "localOnly": "The Grubie server does not know about the list yet: other friends will see the game, but your launcher will keep them out."
+      },
+      "target": {
+        "server": "Server of “{{name}}”",
+        "allowlistOn": "The server allowlist is on: a friend gets in only if their name is on it (Players tab)."
       }
     },
     "publish": {
@@ -3218,6 +3264,11 @@
       },
       "worldPrivacyHint": "The world is published without your progress: player data, statistics, advancements and the player position from level.dat stay on your computer.",
       "worldWillBeRemoved": "The world is not ticked, so it will be removed from the published pack."
+    },
+    "refused": {
+      "full": "{{name}} could not join: all seats are taken.",
+      "not_invited": "{{name}} is not on the invite list and was kept out.",
+      "removed": "{{name}} tried to come back, but you removed them."
     }
   },
   "manageSkins": {
@@ -6595,5 +6646,58 @@
   },
   "diskRoom": {
     "description": "Not enough space on {{drive}}: {{needed}} needed, {{free}} free. Free up some space or move the launcher's data folder in settings."
+  },
+  "serverAdmin": {
+    "actionFailed": "The server did not complete the action",
+    "banned": "{{name}} is banned",
+    "kicked": "{{name}} was kicked",
+    "kickMessage": "You were kicked by the server owner.",
+    "stoppedTitle": "The server is stopped",
+    "stoppedDescription": "Start the server to see players, the allowlist, operators, bans and game rules here.",
+    "listsLabel": "Player lists",
+    "tabs": {
+      "online": "Online",
+      "operators": "Operators",
+      "bans": "Bans"
+    },
+    "empty": {
+      "online": "Nobody is on the server right now.",
+      "operators": "No operators. Make a player an operator from the Online tab.",
+      "bans": "Nobody is banned."
+    },
+    "op": "Make {{name}} an operator",
+    "deop": "Remove operator from {{name}}",
+    "kick": "Kick {{name}}",
+    "ban": "Ban {{name}}",
+    "pardon": "Unban {{name}}",
+    "level": "Level {{level}}",
+    "allowlist": {
+      "title": "Allowlist",
+      "enabled": "List only",
+      "placeholder": "Player name",
+      "add": "Add",
+      "empty": "Nobody on the list. While it is off, anyone can join.",
+      "remove": "Remove {{name}} from the allowlist",
+      "emptyOn": "The list is on but empty: only operators can join."
+    },
+    "rules": {
+      "title": "Game rules",
+      "search": "Find a rule",
+      "reload": "Reload rules",
+      "load": "Load rules",
+      "notLoaded": "Older server version: rules are read through console commands.",
+      "notFound": "No such rule."
+    },
+    "mode": {
+      "connecting": "Connecting…",
+      "connectingHint": "The launcher is connecting to the server management protocol.",
+      "msmp": "Management protocol",
+      "msmpSecure": "Management protocol · TLS",
+      "msmpHint": "Mojang’s official protocol with a secret, on this computer only. Encryption is off: the server’s Java has no keytool.",
+      "msmpSecureHint": "Mojang’s official protocol: an encrypted connection with a secret, on this computer only.",
+      "console": "Via console",
+      "consoleOldHint": "The management protocol exists since 1.21.9. Here commands go to the server console and lists are read from its files.",
+      "consoleFailedHint": "The management protocol did not answer, so commands go to the server console. Restarting the server usually helps."
+    }
   }
 }

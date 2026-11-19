@@ -39,6 +39,7 @@ import {
 import { assertTrustedServerCoreUrl } from "../utilities/trustedHosts";
 import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { createLineReader } from "../utilities/consoleLog";
+import { serverAdmins } from "../serverAdmin";
 import { getDataRoot } from "../utilities/dataRoot";
 import { childProcessEnv } from "../utilities/childEnv";
 import { assertRosettaFor } from "../utilities/rosetta";
@@ -602,12 +603,15 @@ export async function startServer(
   const { command: javaCommand, repointedFrom } = resolved;
 
   const args = await expandServerArgfiles(key, parsed.args);
+  const adminEnv = await serverAdmins
+    .prepare(key, path.resolve(javaCommand))
+    .catch(() => ({}) as Record<string, string>);
 
   let child: ChildProcess;
   try {
     child = spawn(path.resolve(javaCommand), args, {
       cwd: key,
-      env: childProcessEnv(),
+      env: { ...childProcessEnv(), ...adminEnv },
       windowsHide: true,
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -632,6 +636,19 @@ export async function startServer(
   runningServers.set(key, entry);
   setServerRunning(key, true);
   setState(key, entry, "starting");
+  serverAdmins.attach(key, {
+    send: (line, echo) => {
+      const stdin = entry.child.stdin;
+      if (!stdin || stdin.destroyed || entry.state === "stopping") return false;
+      try {
+        stdin.write(`${line}\n`);
+      } catch {
+        return false;
+      }
+      if (echo) pushOutput(key, entry, `> ${line}`);
+      return true;
+    },
+  });
 
   if (repointedFrom) {
     pushOutput(
@@ -643,8 +660,10 @@ export async function startServer(
 
   const stdoutReader = createLineReader((line) => {
     pushOutput(key, entry, line);
+    serverAdmins.handleOutput(key, line);
     if (entry.state === "starting" && /\bDone \(|For help, type/i.test(line)) {
       setState(key, entry, "running");
+      serverAdmins.handleReady(key);
     }
   });
   const stderrReader = createLineReader((line) => pushOutput(key, entry, line));
@@ -672,6 +691,7 @@ export async function startServer(
 
     runningServers.delete(key);
     setServerRunning(key, false);
+    serverAdmins.detach(key);
     broadcast("server:state", {
       serverPath: key,
       state: "stopped",

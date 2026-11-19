@@ -1,5 +1,9 @@
 export type ShareVisibility = 'public' | 'friends'
 
+export type ShareKind = 'world' | 'server'
+
+export type ShareAccessMode = 'friends' | 'invite' | 'public'
+
 export type ShareStatePhase =
   | 'idle'
   | 'lan_not_found'
@@ -31,6 +35,9 @@ export type ShareErrorCode =
   | 'tunnel_protocol_error'
   | 'tunnel_version_unsupported'
   | 'join_share_not_found'
+  | 'not_invited'
+  | 'removed_by_host'
+  | 'server_not_running'
   | 'invalid_response'
   | 'unknown'
 
@@ -54,6 +61,45 @@ export interface ShareLanCandidate {
   localPort: number
   detectedAt: string
   isReachable: boolean
+  kind?: ShareKind
+  serverPath?: string
+}
+
+export interface ShareMember {
+  userId: string
+  nickname: string
+}
+
+export interface ShareHostControls {
+  inviteOnly: boolean
+  members: ShareMember[]
+  maxGuests: number
+}
+
+export interface ShareRemovedGuest {
+  userId?: string
+  username?: string
+  nickname: string
+}
+
+export interface ShareHostState extends ShareHostControls {
+  removed: ShareRemovedGuest[]
+  apiSynced: boolean | null
+}
+
+export type ShareHostPatch = Partial<ShareHostControls>
+
+export interface ShareGuestRef {
+  userId?: string
+  username?: string
+}
+
+export type ShareGuestRefusal = 'removed' | 'not_invited' | 'full'
+
+export interface ShareGuestRefusedEvent extends ShareGuestRef {
+  streamId: number
+  reason: ShareGuestRefusal
+  at: string
 }
 
 export interface ShareSessionMeta {
@@ -65,6 +111,7 @@ export interface ShareSessionMeta {
 
 export interface ShareState extends ShareSessionMeta {
   phase: ShareStatePhase
+  host?: ShareHostState
   candidate: ShareLanCandidate | null
   target: ShareLanCandidate | null
   isTunnelConnected: boolean
@@ -87,6 +134,18 @@ export interface ShareStartRequest {
   mcVersion?: string
   launcherVersion?: string
   versionShareCode?: string
+  kind?: ShareKind
+  title?: string
+  inviteOnly?: boolean
+  memberUserIds?: string[]
+  maxGuests?: number
+}
+
+export interface ShareHostControlsRequest {
+  inviteOnly?: boolean
+  memberUserIds?: string[]
+  removedUserIds?: string[]
+  maxGuests?: number
 }
 
 export interface ShareStartResponse {
@@ -98,6 +157,16 @@ export interface ShareStartResponse {
   visibility: ShareVisibility
   heartbeatIntervalSec: number
   joinTicketTtlSec: number
+  host?: ShareHostControlsResponse
+}
+
+export interface ShareHostControlsResponse {
+  kind: ShareKind
+  title: string
+  inviteOnly: boolean
+  memberUserIds: string[]
+  removedUserIds: string[]
+  maxGuests: number
 }
 
 export interface ShareHeartbeatResponse {
@@ -136,6 +205,10 @@ export interface ActiveFriendShare {
   publicAddress: string
   versionShareCode?: string
   startedAt: string
+  kind?: ShareKind
+  title?: string
+  inviteOnly?: boolean
+  maxGuests?: number
 }
 
 export interface ActiveFriendSharesResponse {
