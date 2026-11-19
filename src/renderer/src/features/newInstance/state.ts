@@ -8,6 +8,7 @@ import type {
 } from "@/types/ModManager";
 import type { IServer } from "@/types/ServersList";
 import type { IUser } from "@/types/IUser";
+import type { ImportPart } from "@/types/LauncherImport";
 import type { LoaderVersion } from "@/types/VersionsService";
 import type { ServerTarget } from "./serverTarget";
 import { pickDefaultVersion, toVersionEntries } from "./versionCatalog";
@@ -18,6 +19,7 @@ export type NewInstanceSource =
   | "catalog"
   | "code"
   | "file"
+  | "launchers"
   | "server";
 
 export type PackKind = "share" | "file" | "modpack";
@@ -43,6 +45,13 @@ export interface PackAuthor {
   headUrl: string | null;
 }
 
+export interface ForeignPackSource {
+  id: string;
+  parts: ImportPart[];
+  sourceRoot: string;
+  bytes: number;
+}
+
 export interface AppliedPack {
   kind: PackKind;
   title: string;
@@ -55,6 +64,7 @@ export interface AppliedPack {
   shareVersion?: IVersionConf;
   importData?: IModpackFile;
   importModpack?: IImportedModpack;
+  foreign?: ForeignPackSource;
 }
 
 export interface NewInstanceState {

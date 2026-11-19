@@ -1,0 +1,15 @@
+{
+  "id": "MyPack",
+  "modpack": {
+    "id": 1
+  },
+  "tlauncherVersion": "2.0",
+  "libraries": [
+    {
+      "name": "net.fabricmc:fabric-loader:0.14.21"
+    },
+    {
+      "name": "net.fabricmc:intermediary:1.19.2"
+    }
+  ]
+}

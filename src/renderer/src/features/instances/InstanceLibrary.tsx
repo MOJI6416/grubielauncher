@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { showFailureToast } from "@renderer/utilities/failures";
 import {
   ArrowDown,
+  ArrowRightLeft,
   ArrowUp,
   ChevronRight,
   CloudDownload,
@@ -869,6 +870,13 @@ export function InstanceLibrary({
                 >
                   <FolderInput />
                   {t("addVersion.tabs.fromFile")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => openNewInstance({ source: "launchers" })}
+                >
+                  <ArrowRightLeft />
+                  {t("newInstance.sources.launchers")}
                 </Button>
               </>
             ) : (

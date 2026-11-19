@@ -1,5 +1,6 @@
 import { Onboarding } from "@renderer/components/Onboarding";
 import { PrivacyNotice } from "@renderer/features/privacy/PrivacyNotice";
+import { LauncherImportOffer } from "@renderer/features/launcherImport/LauncherImportOffer";
 import { WebLoginPrompt } from "@renderer/components/Modals/WebLoginPrompt";
 import { AchievementsHost } from "./hosts/AchievementsHost";
 import { BootstrapHost } from "./hosts/BootstrapHost";
@@ -73,6 +74,7 @@ export function AppHosts() {
       <PortHost />
       <InstanceDeleteHost />
       <PrivacyNotice />
+      <LauncherImportOffer />
       <Onboarding />
       <WhatsNewHost />
       <WebLoginPrompt />

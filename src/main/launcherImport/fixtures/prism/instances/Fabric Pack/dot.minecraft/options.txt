@@ -1,0 +1,2 @@
+lang:ru_ru
+fov:0.0

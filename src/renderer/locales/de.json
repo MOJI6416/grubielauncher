@@ -5675,7 +5675,8 @@
       "catalog": "Modpacks",
       "code": "Paketcode",
       "file": "Aus Datei",
-      "server": "Für einen Server"
+      "server": "Für einen Server",
+      "launchers": "Aus Launcher"
     },
     "pickHint": {
       "custom": "Wählen Sie einen Loader und eine Minecraft-Version.",
@@ -6757,6 +6758,92 @@
       "hotbars": "Schnellzugriffsleisten",
       "history_one": "{{count}} Befehl",
       "history_other": "{{count}} Befehle"
+    }
+  },
+  "launcherImport": {
+    "title": "Aus einem anderen Launcher übernehmen",
+    "copyNote": "Instanzen werden kopiert – im alten Launcher bleibt alles unverändert.",
+    "official": "Offizieller Launcher",
+    "pickFolder": "Ordner wählen",
+    "scanFailed": "Andere Launcher konnten nicht gesucht werden",
+    "folderEmpty": "In diesem Ordner gibt es keine neuen Instanzen",
+    "folderFound_one": "{{count}} Instanz gefunden",
+    "folderFound_other": "{{count}} Instanzen gefunden",
+    "emptyTitle": "Keine anderen Launcher gefunden",
+    "emptyDescription": "Gesucht wurde nach Prism, MultiMC, ATLauncher, GDLauncher, CurseForge, Modrinth App, dem offiziellen Launcher, TLauncher und Legacy Launcher. Liegt Ihr Launcher woanders, wählen Sie seinen Ordner.",
+    "shared": "Gemeinsamer Ordner",
+    "sharedHint": "Diese Version speichert Mods, Welten und Einstellungen im gemeinsamen Ordner .minecraft – zusammen mit anderen Versionen.",
+    "imported": "Bereits übernommen",
+    "partsTitle": "Übernehmen:",
+    "parts": {
+      "mods": "Mods",
+      "configs": "Configs und Spieleinstellungen",
+      "worlds": "Welten",
+      "screenshots": "Screenshots",
+      "packs": "Ressourcenpakete und Shader",
+      "memory": "Arbeitsspeicher und JVM"
+    },
+    "partsHint": "Mods werden per Hash auf Modrinth und CurseForge erkannt, damit Updates für sie funktionieren. Der Rest wird als lokale Dateien übernommen.",
+    "counts": {
+      "mods_one": "{{count}} Mod",
+      "mods_other": "{{count}} Mods",
+      "worlds_one": "{{count}} Welt",
+      "worlds_other": "{{count}} Welten",
+      "packs_one": "{{count}} Paket",
+      "packs_other": "{{count}} Pakete",
+      "screenshots_one": "{{count}} Screenshot",
+      "screenshots_other": "{{count}} Screenshots"
+    },
+    "status": {
+      "queued": "Wartet",
+      "preparing": "Mods werden erkannt …",
+      "copying": "Dateien werden kopiert …",
+      "installing": "Spiel wird installiert – Details unter „Aufgaben“",
+      "done": "Übernommen",
+      "failed": "Übernahme fehlgeschlagen",
+      "cancelled": "Abgebrochen",
+      "identified": "Übernommen · erkannte Mods: {{count}} von {{total}}",
+      "loaderFallback": "Loader ersetzt durch {{version}}",
+      "copyFailed_one": "{{count}} Datei nicht kopiert",
+      "copyFailed_other": "{{count}} Dateien nicht kopiert"
+    },
+    "open": "Öffnen",
+    "progressTitle": "Instanzen werden übernommen",
+    "finishedTitle": "Übernahme abgeschlossen",
+    "footer": {
+      "running": "{{count}} von {{total}} fertig – Sie können das Fenster minimieren, es geht weiter",
+      "selected": "{{count}} von {{total}} ausgewählt",
+      "empty": "Nichts zu übernehmen"
+    },
+    "result": {
+      "done_one": "{{count}} Instanz übernommen",
+      "done_other": "{{count}} Instanzen übernommen",
+      "partial": "Übernommen: {{count}}, fehlgeschlagen: {{failed}}"
+    },
+    "stop": "Anhalten",
+    "again": "Weitere übernehmen",
+    "finish": "Fertig",
+    "start": "Übernehmen ({{count}})",
+    "blockers": {
+      "account": "Fügen Sie ein Konto hinzu, um Instanzen zu übernehmen",
+      "internet": "Kein Internet – Spiel und Loader müssen heruntergeladen werden"
+    },
+    "errors": {
+      "gone": "Die Instanz ist nicht mehr vorhanden – aktualisieren Sie die Liste",
+      "version": "Version {{version}} ist nicht im Katalog",
+      "catalog": "Die Versionsliste konnte nicht geladen werden",
+      "loader": "Keine passende Loader-Version gefunden",
+      "backend": "Forge und NeoForge werden über den Grubie-Server installiert, der gerade nicht erreichbar ist"
+    },
+    "offer": {
+      "title": "Instanzen aus anderen Launchern gefunden",
+      "description": "Wir übernehmen Mods, Welten, Screenshots und Speichereinstellungen. Im alten Launcher ändert sich nichts.",
+      "count_one": "{{count}} Instanz",
+      "count_other": "{{count}} Instanzen",
+      "more_one": "und {{count}} weitere Instanz",
+      "more_other": "und {{count}} weitere Instanzen",
+      "later": "Nicht jetzt",
+      "open": "Übernehmen"
     }
   }
 }

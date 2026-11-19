@@ -5675,7 +5675,8 @@
       "catalog": "Modpacks",
       "code": "Pack code",
       "file": "From file",
-      "server": "For a server"
+      "server": "For a server",
+      "launchers": "From a launcher"
     },
     "pickHint": {
       "custom": "Pick a loader and a Minecraft version.",
@@ -6757,6 +6758,92 @@
       "hotbars": "hotbars",
       "history_one": "{{count}} command",
       "history_other": "{{count}} commands"
+    }
+  },
+  "launcherImport": {
+    "title": "Move from another launcher",
+    "copyNote": "Instances are copied — everything stays as it was in the old launcher.",
+    "official": "Official launcher",
+    "pickFolder": "Choose folder",
+    "scanFailed": "Could not look for other launchers",
+    "folderEmpty": "No new instances in this folder",
+    "folderFound_one": "Found {{count}} instance",
+    "folderFound_other": "Found {{count}} instances",
+    "emptyTitle": "No other launchers found",
+    "emptyDescription": "We looked for Prism, MultiMC, ATLauncher, GDLauncher, CurseForge, Modrinth App, the official launcher, TLauncher and Legacy Launcher. If yours lives somewhere else, choose its folder.",
+    "shared": "Shared folder",
+    "sharedHint": "This version keeps mods, worlds and settings in the shared .minecraft folder together with other versions.",
+    "imported": "Already moved",
+    "partsTitle": "What to move:",
+    "parts": {
+      "mods": "Mods",
+      "configs": "Configs and game settings",
+      "worlds": "Worlds",
+      "screenshots": "Screenshots",
+      "packs": "Resource packs and shaders",
+      "memory": "Memory and JVM"
+    },
+    "partsHint": "Mods are recognised by hash on Modrinth and CurseForge, so updates work for them. The rest is moved as local files.",
+    "counts": {
+      "mods_one": "{{count}} mod",
+      "mods_other": "{{count}} mods",
+      "worlds_one": "{{count}} world",
+      "worlds_other": "{{count}} worlds",
+      "packs_one": "{{count}} pack",
+      "packs_other": "{{count}} packs",
+      "screenshots_one": "{{count}} screenshot",
+      "screenshots_other": "{{count}} screenshots"
+    },
+    "status": {
+      "queued": "Waiting",
+      "preparing": "Recognising mods…",
+      "copying": "Copying files…",
+      "installing": "Installing the game — details in Tasks",
+      "done": "Moved",
+      "failed": "Could not move",
+      "cancelled": "Cancelled",
+      "identified": "Moved · mods recognised: {{count}} of {{total}}",
+      "loaderFallback": "loader replaced with {{version}}",
+      "copyFailed_one": "{{count}} file not copied",
+      "copyFailed_other": "{{count}} files not copied"
+    },
+    "open": "Open",
+    "progressTitle": "Moving instances",
+    "finishedTitle": "Move finished",
+    "footer": {
+      "running": "Done {{count}} of {{total}} — you can minimise it, the move goes on",
+      "selected": "Selected {{count}} of {{total}}",
+      "empty": "Nothing to move"
+    },
+    "result": {
+      "done_one": "Moved {{count}} instance",
+      "done_other": "Moved {{count}} instances",
+      "partial": "Moved: {{count}}, failed: {{failed}}"
+    },
+    "stop": "Stop",
+    "again": "Move more",
+    "finish": "Done",
+    "start": "Move ({{count}})",
+    "blockers": {
+      "account": "Add an account to move instances",
+      "internet": "No internet — the game and loader have to be downloaded"
+    },
+    "errors": {
+      "gone": "The instance is no longer there — refresh the list",
+      "version": "Version {{version}} is not in the catalog",
+      "catalog": "Could not load the version list",
+      "loader": "No suitable loader version found",
+      "backend": "Forge and NeoForge are installed through the Grubie server, which is unavailable right now"
+    },
+    "offer": {
+      "title": "Found instances from other launchers",
+      "description": "We will move mods, worlds, screenshots and memory settings. Nothing changes in the old launcher.",
+      "count_one": "{{count}} instance",
+      "count_other": "{{count}} instances",
+      "more_one": "and {{count}} more instance",
+      "more_other": "and {{count}} more instances",
+      "later": "Not now",
+      "open": "Move"
     }
   }
 }

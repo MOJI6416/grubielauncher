@@ -5781,7 +5781,8 @@
       "catalog": "Modpacki",
       "code": "Kod paczki",
       "file": "Z pliku",
-      "server": "Pod serwer"
+      "server": "Pod serwer",
+      "launchers": "Z launchera"
     },
     "pickHint": {
       "custom": "Wybierz loader i wersję Minecrafta.",
@@ -6885,6 +6886,110 @@
       "history_few": "{{count}} polecenia",
       "history_many": "{{count}} poleceń",
       "history_other": "{{count}} polecenia"
+    }
+  },
+  "launcherImport": {
+    "title": "Przenieś z innego launchera",
+    "copyNote": "Instancje są kopiowane — w starym launcherze wszystko zostaje bez zmian.",
+    "official": "Oficjalny launcher",
+    "pickFolder": "Wskaż folder",
+    "scanFailed": "Nie udało się wyszukać innych launcherów",
+    "folderEmpty": "W tym folderze nie ma nowych instancji",
+    "folderFound_one": "Znaleziono {{count}} instancję",
+    "folderFound_few": "Znaleziono {{count}} instancje",
+    "folderFound_many": "Znaleziono {{count}} instancji",
+    "folderFound_other": "Znaleziono {{count}} instancji",
+    "emptyTitle": "Nie znaleziono innych launcherów",
+    "emptyDescription": "Szukaliśmy Prism, MultiMC, ATLauncher, GDLauncher, CurseForge, Modrinth App, oficjalnego launchera, TLaunchera i Legacy Launchera. Jeśli Twój launcher jest gdzie indziej, wskaż jego folder.",
+    "shared": "Wspólny folder",
+    "sharedHint": "Ta wersja trzyma mody, światy i ustawienia we wspólnym folderze .minecraft — razem z innymi wersjami.",
+    "imported": "Już przeniesiona",
+    "partsTitle": "Co przenieść:",
+    "parts": {
+      "mods": "Mody",
+      "configs": "Konfiguracje i ustawienia gry",
+      "worlds": "Światy",
+      "screenshots": "Zrzuty ekranu",
+      "packs": "Paczki zasobów i shadery",
+      "memory": "Pamięć i JVM"
+    },
+    "partsHint": "Mody rozpoznajemy po hashu na Modrinth i CurseForge, więc działają dla nich aktualizacje. Reszta zostanie przeniesiona jako pliki lokalne.",
+    "counts": {
+      "mods_one": "{{count}} mod",
+      "mods_few": "{{count}} mody",
+      "mods_many": "{{count}} modów",
+      "mods_other": "{{count}} modu",
+      "worlds_one": "{{count}} świat",
+      "worlds_few": "{{count}} światy",
+      "worlds_many": "{{count}} światów",
+      "worlds_other": "{{count}} świata",
+      "packs_one": "{{count}} paczka",
+      "packs_few": "{{count}} paczki",
+      "packs_many": "{{count}} paczek",
+      "packs_other": "{{count}} paczki",
+      "screenshots_one": "{{count}} zrzut",
+      "screenshots_few": "{{count}} zrzuty",
+      "screenshots_many": "{{count}} zrzutów",
+      "screenshots_other": "{{count}} zrzutu"
+    },
+    "status": {
+      "queued": "W kolejce",
+      "preparing": "Rozpoznajemy mody…",
+      "copying": "Kopiujemy pliki…",
+      "installing": "Instalujemy grę — szczegóły w zadaniach",
+      "done": "Przeniesiona",
+      "failed": "Nie udało się przenieść",
+      "cancelled": "Anulowano",
+      "identified": "Przeniesiona · rozpoznane mody: {{count}} z {{total}}",
+      "loaderFallback": "loader zamieniony na {{version}}",
+      "copyFailed_one": "{{count}} plik nieskopiowany",
+      "copyFailed_few": "{{count}} pliki nieskopiowane",
+      "copyFailed_many": "{{count}} plików nieskopiowanych",
+      "copyFailed_other": "{{count}} pliku nieskopiowanego"
+    },
+    "open": "Otwórz",
+    "progressTitle": "Przenosimy instancje",
+    "finishedTitle": "Przenoszenie zakończone",
+    "footer": {
+      "running": "Gotowe {{count}} z {{total}} — możesz zminimalizować, przenoszenie trwa dalej",
+      "selected": "Wybrano {{count}} z {{total}}",
+      "empty": "Nie ma czego przenosić"
+    },
+    "result": {
+      "done_one": "Przeniesiono {{count}} instancję",
+      "done_few": "Przeniesiono {{count}} instancje",
+      "done_many": "Przeniesiono {{count}} instancji",
+      "done_other": "Przeniesiono {{count}} instancji",
+      "partial": "Przeniesiono: {{count}}, z błędem: {{failed}}"
+    },
+    "stop": "Zatrzymaj",
+    "again": "Przenieś więcej",
+    "finish": "Gotowe",
+    "start": "Przenieś ({{count}})",
+    "blockers": {
+      "account": "Dodaj konto, aby przenosić instancje",
+      "internet": "Brak internetu — grę i loader trzeba pobrać"
+    },
+    "errors": {
+      "gone": "Instancji już nie ma — odśwież listę",
+      "version": "Wersji {{version}} nie ma w katalogu",
+      "catalog": "Nie udało się wczytać listy wersji",
+      "loader": "Nie znaleziono pasującej wersji loadera",
+      "backend": "Forge i NeoForge instalują się przez serwer Grubie, który jest teraz niedostępny"
+    },
+    "offer": {
+      "title": "Znaleźliśmy instancje z innych launcherów",
+      "description": "Przeniesiemy mody, światy, zrzuty ekranu i ustawienia pamięci. W starym launcherze nic się nie zmieni.",
+      "count_one": "{{count}} instancja",
+      "count_few": "{{count}} instancje",
+      "count_many": "{{count}} instancji",
+      "count_other": "{{count}} instancji",
+      "more_one": "i jeszcze {{count}} instancja",
+      "more_few": "i jeszcze {{count}} instancje",
+      "more_many": "i jeszcze {{count}} instancji",
+      "more_other": "i jeszcze {{count}} instancji",
+      "later": "Nie teraz",
+      "open": "Przenieś"
     }
   }
 }

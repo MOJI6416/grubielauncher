@@ -11,6 +11,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
+  ArrowRightLeft,
   FolderInput,
   HardDriveDownload,
   Layers3,
@@ -136,6 +137,12 @@ import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { setOptionalEnabled } from "@/shared/modpackOptional";
 import { showNotEnoughSpaceToast } from "@renderer/utilities/diskRoom";
 import { Hint } from "@renderer/components/Hint";
+import { useLauncherImportWizard } from "@renderer/features/launcherImport/useLauncherImportWizard";
+import {
+  LauncherImportBody,
+  LauncherImportFooter,
+  openImportedInstance,
+} from "@renderer/features/launcherImport/LauncherImportView";
 
 const api = window.api;
 
@@ -155,6 +162,7 @@ const SOURCE_ICONS = {
   catalog: Layers3,
   code: Ticket,
   file: FolderInput,
+  launchers: ArrowRightLeft,
   server: Server,
 } as const;
 
@@ -219,6 +227,7 @@ export function NewInstancePanel({
   const installAbortRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
   const probe = useServerProbe();
+  const launcherImport = useLauncherImportWizard(state.source === "launchers");
   const ownModpacks = useOwnModpacks(
     state.source === "code" && !state.pack && isBackendOnline,
   );
@@ -1040,6 +1049,7 @@ export function NewInstancePanel({
     "catalog",
     "code",
     "file",
+    "launchers",
     "server",
   ];
 
@@ -1166,7 +1176,12 @@ export function NewInstancePanel({
 
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 pt-3.5 pb-3">
-            {isInstalling ? (
+            {state.source === "launchers" ? (
+              <LauncherImportBody
+                wizard={launcherImport}
+                onOpenInstance={(key) => openImportedInstance(key, closeModal)}
+              />
+            ) : isInstalling ? (
               <InstallView
                 name={state.name.trim()}
                 loader={state.loader}
@@ -1405,7 +1420,9 @@ export function NewInstancePanel({
           </div>
 
           <footer className="flex h-14 shrink-0 items-center gap-2 border-t border-border px-4">
-            {isInstalling ? (
+            {state.source === "launchers" ? (
+              <LauncherImportFooter wizard={launcherImport} onClose={closeModal} />
+            ) : isInstalling ? (
               <>
                 <Hint
                   content={t("newInstance.installHint")}

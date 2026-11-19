@@ -1,0 +1,16 @@
+{
+  "name": "Standard",
+  "game_configuration": {
+    "version": {
+      "Standard": {
+        "release": "1.20.1",
+        "modloaders": [
+          {
+            "type": "Fabric",
+            "version": "0.15.11"
+          }
+        ]
+      }
+    }
+  }
+}

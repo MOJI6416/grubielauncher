@@ -1,0 +1,25 @@
+{
+  "_version": "1",
+  "name": "Карбон",
+  "icon": "icon.png",
+  "last_played": "2024-06-01T12:00:00Z",
+  "seconds_played": 120,
+  "modpack": null,
+  "game_configuration": {
+    "version": {
+      "release": "1.21.1",
+      "modloaders": [
+        {
+          "type_": "Neoforge",
+          "version": "21.1.72"
+        }
+      ]
+    },
+    "global_java_args": true,
+    "extra_java_args": "-XX:+UseZGC",
+    "memory": {
+      "min_mb": 1024,
+      "max_mb": 6144
+    }
+  }
+}

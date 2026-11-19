@@ -1,0 +1,15 @@
+{
+  "name": "Create Pack",
+  "gameVersion": "1.20.1",
+  "baseModLoader": {
+    "name": "forge-47.2.0",
+    "forgeVersion": "47.2.0",
+    "minecraftVersion": "1.20.1"
+  },
+  "isMemoryOverride": true,
+  "allocatedMemory": 6144,
+  "javaArgsOverride": "-XX:+UseG1GC",
+  "lastPlayed": "2024-05-01T10:00:00Z",
+  "profileImagePath": null,
+  "installedAddons": []
+}

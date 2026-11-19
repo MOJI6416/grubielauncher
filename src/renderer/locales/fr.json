@@ -5728,7 +5728,8 @@
       "catalog": "Modpacks",
       "code": "Code du pack",
       "file": "Depuis un fichier",
-      "server": "Pour un serveur"
+      "server": "Pour un serveur",
+      "launchers": "D’un launcher"
     },
     "pickHint": {
       "custom": "Choisissez un chargeur et une version de Minecraft.",
@@ -6821,6 +6822,101 @@
       "history_one": "{{count}} commande",
       "history_many": "{{count}} commandes",
       "history_other": "{{count}} commandes"
+    }
+  },
+  "launcherImport": {
+    "title": "Transférer depuis un autre launcher",
+    "copyNote": "Les instances sont copiées : rien ne change dans l’ancien launcher.",
+    "official": "Launcher officiel",
+    "pickFolder": "Choisir un dossier",
+    "scanFailed": "Impossible de chercher les autres launchers",
+    "folderEmpty": "Aucune nouvelle instance dans ce dossier",
+    "folderFound_one": "{{count}} instance trouvée",
+    "folderFound_many": "{{count}} instances trouvées",
+    "folderFound_other": "{{count}} instances trouvées",
+    "emptyTitle": "Aucun autre launcher trouvé",
+    "emptyDescription": "Nous avons cherché Prism, MultiMC, ATLauncher, GDLauncher, CurseForge, Modrinth App, le launcher officiel, TLauncher et Legacy Launcher. Si le vôtre est ailleurs, choisissez son dossier.",
+    "shared": "Dossier partagé",
+    "sharedHint": "Cette version range ses mods, mondes et réglages dans le dossier partagé .minecraft, avec d’autres versions.",
+    "imported": "Déjà transférée",
+    "partsTitle": "À transférer :",
+    "parts": {
+      "mods": "Mods",
+      "configs": "Configs et réglages du jeu",
+      "worlds": "Mondes",
+      "screenshots": "Captures d’écran",
+      "packs": "Packs de ressources et shaders",
+      "memory": "Mémoire et JVM"
+    },
+    "partsHint": "Les mods sont reconnus par hash sur Modrinth et CurseForge : leurs mises à jour fonctionneront. Le reste est transféré en fichiers locaux.",
+    "counts": {
+      "mods_one": "{{count}} mod",
+      "mods_many": "{{count}} mods",
+      "mods_other": "{{count}} mods",
+      "worlds_one": "{{count}} monde",
+      "worlds_many": "{{count}} mondes",
+      "worlds_other": "{{count}} mondes",
+      "packs_one": "{{count}} pack",
+      "packs_many": "{{count}} packs",
+      "packs_other": "{{count}} packs",
+      "screenshots_one": "{{count}} capture",
+      "screenshots_many": "{{count}} captures",
+      "screenshots_other": "{{count}} captures"
+    },
+    "status": {
+      "queued": "En attente",
+      "preparing": "Reconnaissance des mods…",
+      "copying": "Copie des fichiers…",
+      "installing": "Installation du jeu : détails dans Tâches",
+      "done": "Transférée",
+      "failed": "Échec du transfert",
+      "cancelled": "Annulé",
+      "identified": "Transférée · mods reconnus : {{count}} sur {{total}}",
+      "loaderFallback": "loader remplacé par {{version}}",
+      "copyFailed_one": "{{count}} fichier non copié",
+      "copyFailed_many": "{{count}} fichiers non copiés",
+      "copyFailed_other": "{{count}} fichiers non copiés"
+    },
+    "open": "Ouvrir",
+    "progressTitle": "Transfert des instances",
+    "finishedTitle": "Transfert terminé",
+    "footer": {
+      "running": "{{count}} sur {{total}} terminées : vous pouvez réduire, le transfert continue",
+      "selected": "{{count}} sur {{total}} sélectionnées",
+      "empty": "Rien à transférer"
+    },
+    "result": {
+      "done_one": "{{count}} instance transférée",
+      "done_many": "{{count}} instances transférées",
+      "done_other": "{{count}} instances transférées",
+      "partial": "Transférées : {{count}}, en échec : {{failed}}"
+    },
+    "stop": "Arrêter",
+    "again": "En transférer d’autres",
+    "finish": "Terminé",
+    "start": "Transférer ({{count}})",
+    "blockers": {
+      "account": "Ajoutez un compte pour transférer des instances",
+      "internet": "Pas d’internet : le jeu et le loader doivent être téléchargés"
+    },
+    "errors": {
+      "gone": "L’instance n’existe plus : actualisez la liste",
+      "version": "La version {{version}} n’est pas dans le catalogue",
+      "catalog": "Impossible de charger la liste des versions",
+      "loader": "Aucune version de loader adaptée trouvée",
+      "backend": "Forge et NeoForge s’installent via le serveur Grubie, actuellement indisponible"
+    },
+    "offer": {
+      "title": "Instances d’autres launchers trouvées",
+      "description": "Nous transférons mods, mondes, captures et réglages de mémoire. Rien ne change dans l’ancien launcher.",
+      "count_one": "{{count}} instance",
+      "count_many": "{{count}} instances",
+      "count_other": "{{count}} instances",
+      "more_one": "et {{count}} autre instance",
+      "more_many": "et {{count}} autres instances",
+      "more_other": "et {{count}} autres instances",
+      "later": "Plus tard",
+      "open": "Transférer"
     }
   }
 }

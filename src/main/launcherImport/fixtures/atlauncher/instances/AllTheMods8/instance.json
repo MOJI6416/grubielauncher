@@ -1,0 +1,17 @@
+{
+  "id": "1.19.2",
+  "type": "release",
+  "launcher": {
+    "name": "All the Mods 8",
+    "pack": "All the Mods 8",
+    "version": "1.0.17",
+    "loaderVersion": {
+      "type": "Forge",
+      "version": "43.2.0",
+      "rawVersion": "1.19.2-43.2.0"
+    },
+    "maximumMemory": 8192,
+    "javaArguments": null,
+    "lastPlayed": 1717300000000
+  }
+}

@@ -1737,11 +1737,27 @@ async function latestBtaVersion(): Promise<string | undefined> {
   return versions[0]?.id;
 }
 
-async function prismModpackToModpack(
-  mmcPackPath: string,
-): Promise<IModpack | null> {
-  const instanceRoot = path.dirname(mmcPackPath);
-  const pack = (await fs.readJSON(mmcPackPath, "utf-8")) as MultiMcPack;
+export interface PrismInstanceInfo {
+  name: string;
+  minecraftVersion: string;
+  loader: Loader;
+  loaderVersion?: string;
+  components: MultiMcPackComponent[];
+  instanceCfg: Record<string, string>;
+}
+
+export type PrismRuntime = Pick<
+  IModpack,
+  "version" | "loader" | "loaderVersion" | "jarMods" | "mainJar" | "launchOverride"
+>;
+
+export async function readPrismInstance(
+  instanceRoot: string,
+): Promise<PrismInstanceInfo | null> {
+  const pack = (await fs
+    .readJSON(path.join(instanceRoot, "mmc-pack.json"), "utf-8")
+    .catch(() => null)) as MultiMcPack | null;
+  if (!pack) return null;
   const components = Array.isArray(pack.components) ? pack.components : [];
 
   const minecraftComponent = components.find(
@@ -1786,39 +1802,72 @@ async function prismModpackToModpack(
     ? parseKeyValueConfig(await fs.readFile(instanceCfgPath, "utf-8"))
     : {};
 
-  const gameRoot = await findExistingGameRoot(instanceRoot);
-  await copyForeignInstanceOverrides(instanceRoot, gameRoot);
-  const image = await findPrismIconPath(instanceRoot, gameRoot, instanceCfg);
-  const indexedMods = await readPrismModIndexProjects(instanceRoot, gameRoot);
-  const jarImport = await readPrismJarMods(
-    instanceRoot,
-    components,
-    path.join(instanceRoot, "overrides"),
-  );
-
-  const isFoxLoader = !!jarImport.foxLoaderVersion;
-  const baseModpack: IModpack = {
+  return {
     name:
       instanceCfg.name ||
       instanceCfg.ManagedPackName ||
       path.basename(instanceRoot),
-    version: isFoxLoader ? FOXLOADER_MINECRAFT_VERSION : minecraftVersion,
+    minecraftVersion,
+    loader,
+    loaderVersion,
+    components,
+    instanceCfg,
+  };
+}
+
+export async function resolvePrismRuntime(
+  info: PrismInstanceInfo,
+  instanceRoot: string,
+  overridesPath: string,
+): Promise<PrismRuntime> {
+  const jarImport = await readPrismJarMods(
+    instanceRoot,
+    info.components,
+    overridesPath,
+  );
+
+  const isFoxLoader = !!jarImport.foxLoaderVersion;
+  return {
+    version: isFoxLoader ? FOXLOADER_MINECRAFT_VERSION : info.minecraftVersion,
     loader: isFoxLoader
       ? "foxloader"
       : jarImport.btaVersion || jarImport.btaInstaller
         ? "bta-babric"
-        : loader,
+        : info.loader,
     loaderVersion: isFoxLoader
       ? jarImport.foxLoaderVersion
       : jarImport.btaInstaller
         ? await latestBtaVersion()
-        : (jarImport.btaVersion ?? loaderVersion),
-    mods: [...indexedMods.values()],
-    folderPath: "",
-    image,
+        : (jarImport.btaVersion ?? info.loaderVersion),
     ...(jarImport.jarMods.length > 0 ? { jarMods: jarImport.jarMods } : {}),
     ...(jarImport.mainJar ? { mainJar: jarImport.mainJar } : {}),
     ...(jarImport.launch ? { launchOverride: jarImport.launch } : {}),
+  };
+}
+
+async function prismModpackToModpack(
+  mmcPackPath: string,
+): Promise<IModpack | null> {
+  const instanceRoot = path.dirname(mmcPackPath);
+  const info = await readPrismInstance(instanceRoot);
+  if (!info) return null;
+
+  const gameRoot = await findExistingGameRoot(instanceRoot);
+  await copyForeignInstanceOverrides(instanceRoot, gameRoot);
+  const image = await findPrismIconPath(instanceRoot, gameRoot, info.instanceCfg);
+  const indexedMods = await readPrismModIndexProjects(instanceRoot, gameRoot);
+  const runtime = await resolvePrismRuntime(
+    info,
+    instanceRoot,
+    path.join(instanceRoot, "overrides"),
+  );
+
+  const baseModpack: IModpack = {
+    name: info.name,
+    ...runtime,
+    mods: [...indexedMods.values()],
+    folderPath: "",
+    image,
   };
 
   const flameManifestPath = await findFileInRootOrOneChild(

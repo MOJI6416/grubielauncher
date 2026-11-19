@@ -1,0 +1,12 @@
+{
+  "id": "neoforge-21.1.72",
+  "inheritsFrom": "1.21.1",
+  "arguments": {
+    "game": [
+      "--fml.neoForgeVersion",
+      "21.1.72",
+      "--fml.mcVersion",
+      "1.21.1"
+    ]
+  }
+}

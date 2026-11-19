@@ -1,0 +1,12 @@
+{
+  "id": "Fabric 1.20.1",
+  "jar": "1.20.1",
+  "libraries": [
+    {
+      "name": "net.fabricmc:fabric-loader:0.15.11"
+    },
+    {
+      "name": "net.fabricmc:intermediary:1.20.1"
+    }
+  ]
+}

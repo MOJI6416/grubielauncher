@@ -1,0 +1,12 @@
+{
+  "id": "ForgeOptiFine 1.20.1",
+  "tlauncherVersion": "2.0",
+  "libraries": [
+    {
+      "name": "net.minecraftforge:fmlloader:1.20.1-47.2.0"
+    },
+    {
+      "name": "optifine:OptiFine:1.20.1_HD_U_I6"
+    }
+  ]
+}

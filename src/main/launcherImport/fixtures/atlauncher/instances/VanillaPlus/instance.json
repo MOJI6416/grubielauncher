@@ -1,0 +1,13 @@
+{
+  "id": "1.21.1",
+  "launcher": {
+    "name": "Vanilla Plus",
+    "pack": "Vanilla Plus",
+    "loaderVersion": {
+      "type": "Fabric",
+      "version": "0.16.9"
+    },
+    "maximumMemory": null,
+    "javaArguments": "-XX:+UseZGC"
+  }
+}

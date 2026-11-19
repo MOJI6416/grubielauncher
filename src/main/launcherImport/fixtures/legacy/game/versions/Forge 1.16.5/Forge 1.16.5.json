@@ -1,0 +1,10 @@
+{
+  "id": "Forge 1.16.5",
+  "inheritsFrom": "1.16.5",
+  "family": "Forge-1.16",
+  "libraries": [
+    {
+      "name": "net.minecraftforge:forge:1.16.5-36.2.39"
+    }
+  ]
+}

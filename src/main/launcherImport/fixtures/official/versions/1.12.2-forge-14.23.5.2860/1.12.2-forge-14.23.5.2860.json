@@ -1,0 +1,10 @@
+{
+  "id": "1.12.2-forge-14.23.5.2860",
+  "inheritsFrom": "1.12.2",
+  "libraries": [
+    {
+      "name": "net.minecraftforge:forge:1.12.2-14.23.5.2860"
+    }
+  ],
+  "minecraftArguments": "--tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker"
+}

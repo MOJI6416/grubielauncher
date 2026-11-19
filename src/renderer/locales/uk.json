@@ -5760,7 +5760,8 @@
       "catalog": "Модпаки",
       "code": "За кодом",
       "file": "З файлу",
-      "server": "Під сервер"
+      "server": "Під сервер",
+      "launchers": "З лаунчера"
     },
     "pickHint": {
       "custom": "Виберіть завантажувач і версію Minecraft.",
@@ -6864,6 +6865,110 @@
       "history_few": "{{count}} команди",
       "history_many": "{{count}} команд",
       "history_other": "{{count}} команди"
+    }
+  },
+  "launcherImport": {
+    "title": "Перенести з іншого лаунчера",
+    "copyNote": "Збірки копіюються — у старому лаунчері все залишиться на місці.",
+    "official": "Офіційний лаунчер",
+    "pickFolder": "Вказати теку",
+    "scanFailed": "Не вдалося знайти інші лаунчери",
+    "folderEmpty": "У цій теці нових збірок немає",
+    "folderFound_one": "Знайшли {{count}} збірку",
+    "folderFound_few": "Знайшли {{count}} збірки",
+    "folderFound_many": "Знайшли {{count}} збірок",
+    "folderFound_other": "Знайшли {{count}} збірки",
+    "emptyTitle": "Інших лаунчерів не знайдено",
+    "emptyDescription": "Шукали Prism, MultiMC, ATLauncher, GDLauncher, CurseForge, Modrinth App, офіційний лаунчер, TLauncher і Legacy Launcher. Якщо ваш лаунчер стоїть деінде, вкажіть його теку.",
+    "shared": "Спільна тека",
+    "sharedHint": "Ця версія зберігає моди, світи й налаштування в спільній теці .minecraft — разом з іншими версіями.",
+    "imported": "Уже перенесена",
+    "partsTitle": "Що перенести:",
+    "parts": {
+      "mods": "Моди",
+      "configs": "Конфіги та налаштування гри",
+      "worlds": "Світи",
+      "screenshots": "Знімки екрана",
+      "packs": "Ресурспаки й шейдери",
+      "memory": "Пам’ять і JVM"
+    },
+    "partsHint": "Моди впізнаємо за хешем на Modrinth і CurseForge — для них працюватимуть оновлення. Решта перенесеться як локальні файли.",
+    "counts": {
+      "mods_one": "{{count}} мод",
+      "mods_few": "{{count}} моди",
+      "mods_many": "{{count}} модів",
+      "mods_other": "{{count}} моду",
+      "worlds_one": "{{count}} світ",
+      "worlds_few": "{{count}} світи",
+      "worlds_many": "{{count}} світів",
+      "worlds_other": "{{count}} світу",
+      "packs_one": "{{count}} пак",
+      "packs_few": "{{count}} паки",
+      "packs_many": "{{count}} паків",
+      "packs_other": "{{count}} пака",
+      "screenshots_one": "{{count}} знімок",
+      "screenshots_few": "{{count}} знімки",
+      "screenshots_many": "{{count}} знімків",
+      "screenshots_other": "{{count}} знімка"
+    },
+    "status": {
+      "queued": "У черзі",
+      "preparing": "Впізнаємо моди…",
+      "copying": "Копіюємо файли…",
+      "installing": "Встановлюємо гру — подробиці в центрі задач",
+      "done": "Перенесено",
+      "failed": "Не вдалося перенести",
+      "cancelled": "Скасовано",
+      "identified": "Перенесено · впізнано модів: {{count}} з {{total}}",
+      "loaderFallback": "завантажувач замінено на {{version}}",
+      "copyFailed_one": "{{count}} файл не скопійовано",
+      "copyFailed_few": "{{count}} файли не скопійовано",
+      "copyFailed_many": "{{count}} файлів не скопійовано",
+      "copyFailed_other": "{{count}} файлу не скопійовано"
+    },
+    "open": "Відкрити",
+    "progressTitle": "Переносимо збірки",
+    "finishedTitle": "Перенесення завершено",
+    "footer": {
+      "running": "Готово {{count}} з {{total}} — можна згорнути, перенесення триватиме",
+      "selected": "Вибрано {{count}} з {{total}}",
+      "empty": "Переносити нічого"
+    },
+    "result": {
+      "done_one": "Перенесено {{count}} збірку",
+      "done_few": "Перенесено {{count}} збірки",
+      "done_many": "Перенесено {{count}} збірок",
+      "done_other": "Перенесено {{count}} збірки",
+      "partial": "Перенесено: {{count}}, з помилкою: {{failed}}"
+    },
+    "stop": "Зупинити",
+    "again": "Перенести ще",
+    "finish": "Готово",
+    "start": "Перенести ({{count}})",
+    "blockers": {
+      "account": "Додайте акаунт, щоб переносити збірки",
+      "internet": "Немає інтернету — гру й завантажувач треба завантажити"
+    },
+    "errors": {
+      "gone": "Збірку більше не знайдено — оновіть список",
+      "version": "Версії {{version}} немає в каталозі",
+      "catalog": "Не вдалося завантажити список версій",
+      "loader": "Не знайшли відповідну версію завантажувача",
+      "backend": "Forge і NeoForge встановлюються через сервер Grubie — зараз він недоступний"
+    },
+    "offer": {
+      "title": "Знайшли збірки з інших лаунчерів",
+      "description": "Перенесемо моди, світи, знімки екрана й налаштування пам’яті. У старому лаунчері нічого не зміниться.",
+      "count_one": "{{count}} збірка",
+      "count_few": "{{count}} збірки",
+      "count_many": "{{count}} збірок",
+      "count_other": "{{count}} збірки",
+      "more_one": "і ще {{count}} збірка",
+      "more_few": "і ще {{count}} збірки",
+      "more_many": "і ще {{count}} збірок",
+      "more_other": "і ще {{count}} збірки",
+      "later": "Не зараз",
+      "open": "Перенести"
     }
   }
 }

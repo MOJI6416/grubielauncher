@@ -5675,7 +5675,8 @@
       "catalog": "Mod paketleri",
       "code": "Paket kodu",
       "file": "Dosyadan",
-      "server": "Sunucu için"
+      "server": "Sunucu için",
+      "launchers": "Launcher'dan"
     },
     "pickHint": {
       "custom": "Bir yükleyici ve Minecraft sürümü seçin.",
@@ -6757,6 +6758,92 @@
       "hotbars": "hızlı erişim çubukları",
       "history_one": "{{count}} komut",
       "history_other": "{{count}} komut"
+    }
+  },
+  "launcherImport": {
+    "title": "Başka bir launcher'dan taşı",
+    "copyNote": "Kurulumlar kopyalanır; eski launcher'da her şey olduğu gibi kalır.",
+    "official": "Resmî launcher",
+    "pickFolder": "Klasör seç",
+    "scanFailed": "Diğer launcher'lar aranamadı",
+    "folderEmpty": "Bu klasörde yeni kurulum yok",
+    "folderFound_one": "{{count}} kurulum bulundu",
+    "folderFound_other": "{{count}} kurulum bulundu",
+    "emptyTitle": "Başka launcher bulunamadı",
+    "emptyDescription": "Prism, MultiMC, ATLauncher, GDLauncher, CurseForge, Modrinth App, resmî launcher, TLauncher ve Legacy Launcher arandı. Launcher'ınız başka bir yerdeyse klasörünü seçin.",
+    "shared": "Ortak klasör",
+    "sharedHint": "Bu sürüm modları, dünyaları ve ayarları diğer sürümlerle birlikte ortak .minecraft klasöründe tutar.",
+    "imported": "Zaten taşındı",
+    "partsTitle": "Taşınacaklar:",
+    "parts": {
+      "mods": "Modlar",
+      "configs": "Yapılandırmalar ve oyun ayarları",
+      "worlds": "Dünyalar",
+      "screenshots": "Ekran görüntüleri",
+      "packs": "Kaynak paketleri ve shader'lar",
+      "memory": "Bellek ve JVM"
+    },
+    "partsHint": "Modlar Modrinth ve CurseForge'da hash ile tanınır, böylece güncellemeleri çalışır. Geri kalanı yerel dosya olarak taşınır.",
+    "counts": {
+      "mods_one": "{{count}} mod",
+      "mods_other": "{{count}} mod",
+      "worlds_one": "{{count}} dünya",
+      "worlds_other": "{{count}} dünya",
+      "packs_one": "{{count}} paket",
+      "packs_other": "{{count}} paket",
+      "screenshots_one": "{{count}} ekran görüntüsü",
+      "screenshots_other": "{{count}} ekran görüntüsü"
+    },
+    "status": {
+      "queued": "Sırada",
+      "preparing": "Modlar tanınıyor…",
+      "copying": "Dosyalar kopyalanıyor…",
+      "installing": "Oyun kuruluyor; ayrıntılar Görevler'de",
+      "done": "Taşındı",
+      "failed": "Taşınamadı",
+      "cancelled": "İptal edildi",
+      "identified": "Taşındı · tanınan modlar: {{count}}/{{total}}",
+      "loaderFallback": "yükleyici {{version}} ile değiştirildi",
+      "copyFailed_one": "{{count}} dosya kopyalanmadı",
+      "copyFailed_other": "{{count}} dosya kopyalanmadı"
+    },
+    "open": "Aç",
+    "progressTitle": "Kurulumlar taşınıyor",
+    "finishedTitle": "Taşıma tamamlandı",
+    "footer": {
+      "running": "{{total}} kurulumdan {{count}} tanesi hazır; küçültebilirsiniz, taşıma sürer",
+      "selected": "{{total}} kurulumdan {{count}} tanesi seçili",
+      "empty": "Taşınacak bir şey yok"
+    },
+    "result": {
+      "done_one": "{{count}} kurulum taşındı",
+      "done_other": "{{count}} kurulum taşındı",
+      "partial": "Taşınan: {{count}}, hatalı: {{failed}}"
+    },
+    "stop": "Durdur",
+    "again": "Daha fazla taşı",
+    "finish": "Bitti",
+    "start": "Taşı ({{count}})",
+    "blockers": {
+      "account": "Kurulumları taşımak için bir hesap ekleyin",
+      "internet": "İnternet yok; oyun ve yükleyici indirilmeli"
+    },
+    "errors": {
+      "gone": "Kurulum artık yok; listeyi yenileyin",
+      "version": "{{version}} sürümü katalogda yok",
+      "catalog": "Sürüm listesi yüklenemedi",
+      "loader": "Uygun yükleyici sürümü bulunamadı",
+      "backend": "Forge ve NeoForge, şu anda erişilemeyen Grubie sunucusu üzerinden kurulur"
+    },
+    "offer": {
+      "title": "Diğer launcher'larda kurulumlar bulundu",
+      "description": "Modları, dünyaları, ekran görüntülerini ve bellek ayarlarını taşıyacağız. Eski launcher'da hiçbir şey değişmez.",
+      "count_one": "{{count}} kurulum",
+      "count_other": "{{count}} kurulum",
+      "more_one": "ve {{count}} kurulum daha",
+      "more_other": "ve {{count}} kurulum daha",
+      "later": "Şimdi değil",
+      "open": "Taşı"
     }
   }
 }

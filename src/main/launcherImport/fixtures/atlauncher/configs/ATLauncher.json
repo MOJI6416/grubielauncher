@@ -1,0 +1,4 @@
+{
+  "maximumMemory": 3072,
+  "javaParameters": "-XX:+UseG1GC -XX:MaxGCPauseMillis=50"
+}

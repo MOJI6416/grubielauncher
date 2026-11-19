@@ -1,0 +1,13 @@
+{
+  "loader": {
+    "loaderType": "forge",
+    "loaderVersion": "1.16.5-36.2.39",
+    "mcVersion": "1.16.5",
+    "source": "curseforge",
+    "sourceName": "Pack Name"
+  },
+  "background": "background.png",
+  "javaMemory": 5000,
+  "javaArgs": "-Xss2m",
+  "timePlayed": 3600
+}

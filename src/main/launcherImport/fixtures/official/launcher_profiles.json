@@ -1,0 +1,25 @@
+{
+  "profiles": {
+    "latest": {
+      "name": "",
+      "type": "latest-release",
+      "lastVersionId": "latest-release",
+      "lastUsed": "2024-01-01T00:00:00Z"
+    },
+    "fabric": {
+      "name": "Fabric 1.20.1",
+      "type": "custom",
+      "lastVersionId": "fabric-loader-0.15.11-1.20.1",
+      "javaArgs": "-Xmx4G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "lastUsed": "2024-06-02T08:00:00.000Z"
+    },
+    "named": {
+      "name": "Old one",
+      "type": "custom",
+      "lastVersionId": "1.12.2-forge-14.23.5.2860",
+      "icon": "Furnace"
+    }
+  },
+  "version": 3
+}

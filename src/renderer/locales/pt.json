@@ -5724,7 +5724,8 @@
       "catalog": "Modpacks",
       "code": "Código do pacote",
       "file": "De arquivo",
-      "server": "Para um servidor"
+      "server": "Para um servidor",
+      "launchers": "De um launcher"
     },
     "pickHint": {
       "custom": "Escolha um loader e uma versão do Minecraft.",
@@ -6817,6 +6818,101 @@
       "history_one": "{{count}} comando",
       "history_many": "{{count}} comandos",
       "history_other": "{{count}} comandos"
+    }
+  },
+  "launcherImport": {
+    "title": "Trazer de outro launcher",
+    "copyNote": "As instâncias são copiadas: no launcher antigo tudo fica como estava.",
+    "official": "Launcher oficial",
+    "pickFolder": "Escolher pasta",
+    "scanFailed": "Não foi possível procurar outros launchers",
+    "folderEmpty": "Não há instâncias novas nesta pasta",
+    "folderFound_one": "{{count}} instância encontrada",
+    "folderFound_many": "{{count}} instâncias encontradas",
+    "folderFound_other": "{{count}} instâncias encontradas",
+    "emptyTitle": "Nenhum outro launcher encontrado",
+    "emptyDescription": "Procuramos Prism, MultiMC, ATLauncher, GDLauncher, CurseForge, Modrinth App, o launcher oficial, TLauncher e Legacy Launcher. Se o seu estiver em outro lugar, escolha a pasta dele.",
+    "shared": "Pasta compartilhada",
+    "sharedHint": "Esta versão guarda mods, mundos e configurações na pasta compartilhada .minecraft, junto com outras versões.",
+    "imported": "Já trazida",
+    "partsTitle": "O que trazer:",
+    "parts": {
+      "mods": "Mods",
+      "configs": "Configs e configurações do jogo",
+      "worlds": "Mundos",
+      "screenshots": "Capturas de tela",
+      "packs": "Pacotes de recursos e shaders",
+      "memory": "Memória e JVM"
+    },
+    "partsHint": "Os mods são reconhecidos pelo hash no Modrinth e no CurseForge, assim as atualizações funcionam. O resto vem como arquivos locais.",
+    "counts": {
+      "mods_one": "{{count}} mod",
+      "mods_many": "{{count}} mods",
+      "mods_other": "{{count}} mods",
+      "worlds_one": "{{count}} mundo",
+      "worlds_many": "{{count}} mundos",
+      "worlds_other": "{{count}} mundos",
+      "packs_one": "{{count}} pacote",
+      "packs_many": "{{count}} pacotes",
+      "packs_other": "{{count}} pacotes",
+      "screenshots_one": "{{count}} captura",
+      "screenshots_many": "{{count}} capturas",
+      "screenshots_other": "{{count}} capturas"
+    },
+    "status": {
+      "queued": "Na fila",
+      "preparing": "Reconhecendo mods…",
+      "copying": "Copiando arquivos…",
+      "installing": "Instalando o jogo: detalhes em Tarefas",
+      "done": "Trazida",
+      "failed": "Não foi possível trazer",
+      "cancelled": "Cancelado",
+      "identified": "Trazida · mods reconhecidos: {{count}} de {{total}}",
+      "loaderFallback": "loader trocado por {{version}}",
+      "copyFailed_one": "{{count}} arquivo não copiado",
+      "copyFailed_many": "{{count}} arquivos não copiados",
+      "copyFailed_other": "{{count}} arquivos não copiados"
+    },
+    "open": "Abrir",
+    "progressTitle": "Trazendo instâncias",
+    "finishedTitle": "Transferência concluída",
+    "footer": {
+      "running": "Prontas {{count}} de {{total}}: pode minimizar, a transferência continua",
+      "selected": "Selecionadas {{count}} de {{total}}",
+      "empty": "Nada para trazer"
+    },
+    "result": {
+      "done_one": "{{count}} instância trazida",
+      "done_many": "{{count}} instâncias trazidas",
+      "done_other": "{{count}} instâncias trazidas",
+      "partial": "Trazidas: {{count}}, com erro: {{failed}}"
+    },
+    "stop": "Parar",
+    "again": "Trazer mais",
+    "finish": "Concluir",
+    "start": "Trazer ({{count}})",
+    "blockers": {
+      "account": "Adicione uma conta para trazer instâncias",
+      "internet": "Sem internet: é preciso baixar o jogo e o loader"
+    },
+    "errors": {
+      "gone": "A instância não existe mais: atualize a lista",
+      "version": "A versão {{version}} não está no catálogo",
+      "catalog": "Não foi possível carregar a lista de versões",
+      "loader": "Nenhuma versão de loader adequada encontrada",
+      "backend": "Forge e NeoForge são instalados pelo servidor do Grubie, que está indisponível agora"
+    },
+    "offer": {
+      "title": "Encontramos instâncias de outros launchers",
+      "description": "Vamos trazer mods, mundos, capturas e configurações de memória. Nada muda no launcher antigo.",
+      "count_one": "{{count}} instância",
+      "count_many": "{{count}} instâncias",
+      "count_other": "{{count}} instâncias",
+      "more_one": "e mais {{count}} instância",
+      "more_many": "e mais {{count}} instâncias",
+      "more_other": "e mais {{count}} instâncias",
+      "later": "Agora não",
+      "open": "Trazer"
     }
   }
 }

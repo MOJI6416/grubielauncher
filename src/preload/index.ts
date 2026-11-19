@@ -248,6 +248,12 @@ import {
   StorageCleanupKind,
   StorageClearResult,
 } from "@/types/Storage";
+import type {
+  ForeignCopyProgress,
+  ForeignImportPlan,
+  ImportPart,
+  LauncherScanResult,
+} from "@/types/LauncherImport";
 import { BlessedPathInfo } from "@/types/AllowedPath";
 import type { TrayAction, TrayCommand, TrayModel } from "@/types/Tray";
 import type { AppUpdateState } from "@/types/AppUpdate";
@@ -378,6 +384,21 @@ export interface IElectronAPI {
       kind: StorageCleanupKind,
       names?: string[],
     ) => Promise<StorageClearResult>;
+  };
+  launcherImport: {
+    scan: () => Promise<LauncherScanResult>;
+    scanFolder: (
+      folder: string,
+    ) => Promise<{ result: LauncherScanResult; added: number }>;
+    plan: (id: string, parts: ImportPart[]) => Promise<ForeignImportPlan | null>;
+    copy: (
+      id: string,
+      versionPath: string,
+      parts: ImportPart[],
+    ) => Promise<{ copied: number; skipped: number; failed: string[] } | null>;
+    onCopyProgress: (
+      callback: (progress: ForeignCopyProgress) => void,
+    ) => () => void;
   };
   dataLocation: {
     get: () => Promise<DataLocationInfo>;
@@ -1628,6 +1649,19 @@ export const api: IElectronAPI = {
     clearCache: () => invoke("storage:clearCache"),
     cleanup: (kind: StorageCleanupKind, names?: string[]) =>
       invoke("storage:cleanup", kind, names),
+  },
+  launcherImport: {
+    scan: () => invoke("launcherImport:scan"),
+    scanFolder: (folder: string) => invoke("launcherImport:scanFolder", folder),
+    plan: (id: string, parts: ImportPart[]) =>
+      invoke("launcherImport:plan", id, parts),
+    copy: (id: string, versionPath: string, parts: ImportPart[]) =>
+      invoke("launcherImport:copy", id, versionPath, parts),
+    onCopyProgress: (callback: (progress: ForeignCopyProgress) => void) => {
+      const listener = (_event, progress) => callback(progress);
+      ipcRenderer.on("launcherImport:copyProgress", listener);
+      return () => ipcRenderer.off("launcherImport:copyProgress", listener);
+    },
   },
   dataLocation: {
     get: () => invoke("dataLocation:get"),

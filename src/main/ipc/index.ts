@@ -30,3 +30,4 @@ export { registerStreamerIpc } from "./streamerIpc";
 export { registerJavaIpc } from "./javaIpc";
 export { registerThemeIpc } from "./themeIpc";
 export { registerSharedSettingsIpc } from "./sharedSettingsIpc";
+export { registerLauncherImportIpc } from "./launcherImportIpc";

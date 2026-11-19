@@ -34,10 +34,12 @@ import {
   sanitizeExtraFileSegments,
 } from "@renderer/utilities/versionPure";
 import { withCleanroomCompanions } from "./cleanroomCompanions";
+import { rebaseLocalPaths } from "@renderer/features/launcherImport/rebase";
 import { parseInlineImage } from "./inlineImage";
 import type { AppliedPack } from "./state";
 import { stripJavaOverride } from "@/shared/javaRuntime";
 import {
+  type InstanceSettingsOverrides,
   withoutLaunchCommands,
   withoutOverrides,
 } from "@/shared/instanceSettings";
@@ -55,6 +57,7 @@ export const INSTANCE_CONTENT_FAILED = "INSTANCE_CONTENT_FAILED";
 export interface CreateInstanceResult {
   instance: Version;
   extraFilesFailed: boolean;
+  copyFailed: number;
 }
 
 export interface CreateInstanceRequest {
@@ -70,6 +73,7 @@ export interface CreateInstanceRequest {
   quickServer: string;
   pack: AppliedPack | null;
   blockedMods: IBlockedMod[];
+  overrides?: InstanceSettingsOverrides;
   signal?: AbortSignal;
 }
 
@@ -269,6 +273,7 @@ export async function createInstance(
   const pack = request.pack;
   const importData = pack?.importData;
   const importModpack = pack?.importModpack;
+  const foreign = pack?.foreign;
   const skipContentDownload = !!importData;
   const signal = request.signal;
 
@@ -283,7 +288,11 @@ export async function createInstance(
 
   await ensureDiskRoom(
     versionPath,
-    importData ? 0 : contentBytes(mods, importModpack?.extraFiles),
+    foreign
+      ? foreign.bytes
+      : importData
+        ? 0
+        : contentBytes(mods, importModpack?.extraFiles),
     importData
       ? [importData.path]
       : importModpack
@@ -295,6 +304,7 @@ export async function createInstance(
 
   let instance: Version | undefined;
   let extraFilesFailed = false;
+  let copyFailed = 0;
 
   try {
     throwIfAborted(signal);
@@ -340,6 +350,7 @@ export async function createInstance(
         ? { launchOverride: importModpack.launchOverride }
         : {}),
       ...(importModpack?.source ? { modpack: importModpack.source } : {}),
+      ...(request.overrides ? { overrides: request.overrides } : {}),
       ...(pack?.shareVersion
         ? { owner: base.owner, ownerId: base.ownerId }
         : ownerRecordFor(account)),
@@ -360,25 +371,37 @@ export async function createInstance(
     if (importData) {
       assertWritten(await api.fs.copy(importData.path, versionPath));
     } else if (importModpack) {
+      if (foreign) {
+        const copied = await api.launcherImport.copy(
+          foreign.id,
+          versionPath,
+          foreign.parts,
+        );
+        assertWritten(!!copied);
+        copyFailed = copied?.failed.length ?? 0;
+      }
       await copyImportedFolders(importModpack.folderPath, versionPath);
-      assertWritten(
-        await api.modpack.writeBase(versionPath, importModpack.folderPath, {
-          versionId:
-            importModpack.source?.versionId ?? importModpack.versionId ?? "",
-          loaderVersion: importModpack.loaderVersion,
-          projects: baseProjectsOf(importModpack.mods),
-          extraFiles: importModpack.extraFiles ?? [],
-          label:
-            importModpack.source?.versionNumber ?? importModpack.versionLabel,
-          title: importModpack.source?.title ?? importModpack.name,
-        }),
-      );
+      if (!foreign) {
+        assertWritten(
+          await api.modpack.writeBase(versionPath, importModpack.folderPath, {
+            versionId:
+              importModpack.source?.versionId ?? importModpack.versionId ?? "",
+            loaderVersion: importModpack.loaderVersion,
+            projects: baseProjectsOf(importModpack.mods),
+            extraFiles: importModpack.extraFiles ?? [],
+            label:
+              importModpack.source?.versionNumber ?? importModpack.versionLabel,
+            title: importModpack.source?.title ?? importModpack.name,
+          }),
+        );
+      }
       extraFilesFailed = !(await downloadExtraFiles(
         importModpack.extraFiles ?? [],
         versionPath,
         settings.downloadLimit,
       ));
       rewriteImportedLocalPaths(mods, importModpack.folderPath, versionPath);
+      if (foreign) rebaseLocalPaths(mods, foreign.sourceRoot, versionPath);
     }
 
     if (!importData && request.servers.length > 0) {
@@ -461,7 +484,7 @@ export async function createInstance(
 
     store.set(versionsAtom, [...store.get(versionsAtom), instance]);
 
-    return { instance, extraFilesFailed };
+    return { instance, extraFilesFailed, copyFailed };
   } catch (error) {
     if (instance) {
       await instance.delete(account, false).catch(ignoreFailure);

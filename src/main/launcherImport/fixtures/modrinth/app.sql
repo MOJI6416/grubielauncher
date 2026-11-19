@@ -1,0 +1,15 @@
+CREATE TABLE settings (id INTEGER NOT NULL PRIMARY KEY, mc_memory_max INTEGER NOT NULL DEFAULT 2048, extra_launch_args JSONB NOT NULL);
+INSERT INTO settings (id, mc_memory_max, extra_launch_args) VALUES (0, 4096, jsonb_array('-XX:+UseG1GC'));
+CREATE TABLE instances (id TEXT NOT NULL, path TEXT NOT NULL, applied_content_set_id TEXT NULL, install_stage TEXT NOT NULL, launcher_feature_version TEXT NOT NULL, update_channel TEXT NOT NULL DEFAULT 'release', name TEXT NOT NULL, icon_path TEXT NULL, created INTEGER NOT NULL, modified INTEGER NOT NULL, last_played INTEGER NULL, submitted_time_played INTEGER NOT NULL DEFAULT 0, recent_time_played INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (id), UNIQUE (path));
+CREATE TABLE instance_content_sets (id TEXT NOT NULL, instance_id TEXT NOT NULL, name TEXT NOT NULL, source_kind TEXT NOT NULL, status TEXT NOT NULL, game_version TEXT NOT NULL, protocol_version INTEGER NULL, loader TEXT NOT NULL, loader_version TEXT NULL, created INTEGER NOT NULL, modified INTEGER NOT NULL, PRIMARY KEY (id));
+CREATE TABLE instance_launch_overrides (instance_id TEXT NOT NULL, overrides JSONB NOT NULL, PRIMARY KEY (instance_id));
+INSERT INTO instances VALUES ('a', 'Fabulously Optimized', 'a:default', 'installed', 'none', 'release', 'Fabulously Optimized', NULL, 1, 1, 1717400000, 0, 0);
+INSERT INTO instances VALUES ('b', 'NeoPack', 'b:default', 'installed', 'none', 'release', 'Neo Pack', NULL, 1, 1, NULL, 0, 0);
+INSERT INTO instances VALUES ('c', 'Missing', 'c:default', 'installed', 'none', 'release', 'Missing folder', NULL, 1, 1, NULL, 0, 0);
+INSERT INTO instances VALUES ('d', '../escape', 'd:default', 'installed', 'none', 'release', 'Escape', NULL, 1, 1, NULL, 0, 0);
+INSERT INTO instance_content_sets VALUES ('a:default', 'a', 'Default', 'modrinth_modpack', 'available', '1.21.1', NULL, 'fabric', '0.16.9', 1, 1);
+INSERT INTO instance_content_sets VALUES ('b:default', 'b', 'Default', 'local', 'available', '1.21.1', NULL, 'neoforge', '21.1.72', 1, 1);
+INSERT INTO instance_content_sets VALUES ('c:default', 'c', 'Default', 'local', 'available', '1.20.1', NULL, 'vanilla', NULL, 1, 1);
+INSERT INTO instance_content_sets VALUES ('d:default', 'd', 'Default', 'local', 'available', '1.20.1', NULL, 'vanilla', NULL, 1, 1);
+INSERT INTO instance_launch_overrides VALUES ('a', jsonb('{"java_path":null,"extra_launch_args":["-XX:+UseZGC"],"memory":{"maximum":6144},"hooks":{"pre_launch":"","wrapper":"","post_exit":""}}'));
+INSERT INTO instance_launch_overrides VALUES ('b', jsonb('{"java_path":null,"extra_launch_args":null,"memory":null}'));
