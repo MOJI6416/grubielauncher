@@ -4,6 +4,7 @@ import i18n from "@renderer/i18n";
 import type { ForeignInstanceSummary, ForeignImportPlan, ImportPart } from "@/types/LauncherImport";
 import type { InstanceSettingsOverrides } from "@/shared/instanceSettings";
 import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
+import { ProjectType, Provider } from "@/types/ModManager";
 import {
   accountAtom,
   networkAtom,
@@ -139,10 +140,11 @@ async function importOne(
       throw new ImportStepError(t("launcherImport.errors.backend"));
     }
 
+    const mods = pack.mods.filter((mod) => mod.projectType === ProjectType.MOD);
     patchItem(summary.id, {
       status: plan.bytes > 0 ? "copying" : "installing",
-      identified: plan.identified,
-      modCount: pack.mods.length,
+      identified: mods.filter((mod) => mod.provider !== Provider.LOCAL).length,
+      modCount: mods.length,
       ...(fallback ? { loaderFallback: fallback.id } : {}),
     });
 
