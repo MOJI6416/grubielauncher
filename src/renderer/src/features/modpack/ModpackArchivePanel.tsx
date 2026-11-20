@@ -102,6 +102,7 @@ export function ModpackArchivePanel(props: ModpackPanelProps) {
           restoreRemoved={flow.restoreRemoved}
           isApplying={phase === "applying"}
           onRestoreRemovedChange={flow.changeRestoreRemoved}
+          unknownJars={flow.unknownJars}
           onCancel={flow.cancelPreview}
           onApply={() => void flow.apply()}
         />

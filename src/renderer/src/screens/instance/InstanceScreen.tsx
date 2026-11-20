@@ -117,6 +117,7 @@ import {
   LazyDeleteVersion,
   LazyExport,
   LazyImageCropper,
+  LazyBisect,
   LazyLogs,
   LazyModManager,
   LazyServerControl,
@@ -130,6 +131,7 @@ import {
   visibleTabs,
 } from "@renderer/features/layout/layout";
 import { useLayout } from "@renderer/features/layout/useLayout";
+import { useBisectSession } from "@renderer/features/bisect/bisectStore";
 
 const api = window.api;
 
@@ -208,6 +210,7 @@ export function InstanceScreen({
 
   const contents = useInstanceContents(version?.versionPath);
   const modpackState = useModpackSource(version, isInternetOnline);
+  const bisectSession = useBisectSession(version?.versionPath);
   const setVersions = useSetAtom(versionsAtom);
   const updateDetails = useInstanceUpdateDetails(version);
   const syncGuard = useSyncGuard({
@@ -285,8 +288,12 @@ export function InstanceScreen({
           !!version?.version.modpack ||
           (!!version && canUpdateFromArchive(version.version, modpackState.hasBase)),
         hasModpackUpdate: !!modpackState.update,
+        hasBisect: !!bisectSession || routeTab === "bisect",
+        isBisectActive: !!bisectSession,
       }),
     [
+      bisectSession,
+      routeTab,
       modpackState.update,
       modpackState.hasBase,
       contents,
@@ -633,6 +640,15 @@ export function InstanceScreen({
                 void share.refreshPublishDiff();
               }}
             />
+          ) : activeTab === "bisect" && version ? (
+            <Suspense fallback={<PanelFallback variant="rail" />}>
+              <LazyBisect
+                version={version}
+                mods={content.mods}
+                isRunning={isVersionRunning}
+                runGame={runGame}
+              />
+            </Suspense>
           ) : activeTab === "logs" && version ? (
             <Suspense fallback={<PanelFallback variant="rail" />}>
               <LazyLogs runGame={runGame} />

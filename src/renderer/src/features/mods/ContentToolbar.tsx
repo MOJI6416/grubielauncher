@@ -11,6 +11,7 @@ import {
   Plus,
   RotateCw,
   ScanSearch,
+  SquareSplitHorizontal,
   Search,
   SlidersHorizontal,
 } from "lucide-react";
@@ -87,6 +88,7 @@ export interface ContentToolbarProps {
   hideLibraries: boolean;
   identifiable: ContentEntry[];
   identifyLocal: (onlyKeys?: ReadonlySet<string>) => Promise<void>;
+  onFindCulprit?: () => void;
   isBusy: boolean;
   isIdentifying: boolean;
   isModpacks: boolean;
@@ -157,6 +159,7 @@ export function ContentToolbar({
   hideLibraries,
   identifiable,
   identifyLocal,
+  onFindCulprit,
   isBusy,
   isIdentifying,
   isModpacks,
@@ -513,6 +516,21 @@ export function ContentToolbar({
             />
           </PopoverContent>
         </Popover>
+
+        {onFindCulprit && (
+          <Hint content={t("bisect.entry.library")} side="bottom">
+            <Button
+              size="icon-sm"
+              variant="outline"
+              className="size-8 shrink-0"
+              disabled={isBusy}
+              aria-label={t("bisect.entry.library")}
+              onClick={onFindCulprit}
+            >
+              <SquareSplitHorizontal className="size-4" />
+            </Button>
+          </Hint>
+        )}
 
         {scope === "library" &&
           canEdit &&

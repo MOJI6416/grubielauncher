@@ -15,6 +15,7 @@ const INSTANCE_TABS: InstanceTab[] = [
   "settings",
   "statistics",
   "logs",
+  "bisect",
 ];
 
 describe("routeUsage", () => {

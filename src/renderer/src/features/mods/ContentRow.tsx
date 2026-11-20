@@ -6,6 +6,7 @@ import {
   CircleArrowUp,
   CloudOff,
   Copy,
+  CopyX,
   Download,
   Heart,
   Monitor,
@@ -115,7 +116,7 @@ export const ContentRow = memo(function ContentRow({
   isUnavailable: boolean;
   isUnchecked: boolean;
   notInCatalog?: boolean;
-  duplicate?: "extra" | "review";
+  duplicate?: "extra" | "review" | "versions";
   gameVersion?: string;
   heldVersion?: string;
   foreignLoader?: string;
@@ -277,7 +278,16 @@ export const ContentRow = memo(function ContentRow({
             />
           )}
 
-          {duplicate && (
+          {duplicate === "versions" && (
+            <Hint content={t("modManager.conflict.rowHint")} className="max-w-64">
+              <span className="flex shrink-0 items-center gap-1 rounded-sm bg-warning/15 px-1.5 py-0.5 text-3xs leading-3 font-medium text-warning">
+                <CopyX className="size-2.5" />
+                {t("modManager.conflict.badge")}
+              </span>
+            </Hint>
+          )}
+
+          {duplicate && duplicate !== "versions" && (
             <Hint
               content={t(
                 duplicate === "extra"

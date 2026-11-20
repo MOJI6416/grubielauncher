@@ -228,7 +228,7 @@ export const toggleMods: AgentTool = {
       return { ok: false, error: `No instance named "${input?.instance}"` };
     }
 
-    const busy = busyError();
+    const busy = busyError(version.versionPath);
     if (busy) return { ok: false, error: busy };
 
     const enabled = input?.enabled === true;
@@ -386,7 +386,7 @@ export const updateMods: AgentTool = {
       return { ok: false, error: `No instance named "${input?.instance}"` };
     }
 
-    const busy = busyError();
+    const busy = busyError(version.versionPath);
     if (busy) return { ok: false, error: busy };
 
     const conf = version.version;

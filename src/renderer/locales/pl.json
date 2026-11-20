@@ -1138,7 +1138,30 @@
     "modpackDownloadFailed": "Nie udało się pobrać modpacka",
     "modpackDownloadFailedHint": "Archiwum modpacka nie pobrało się z {{source}}. Sprawdź połączenie i spróbuj ponownie.",
     "worldsTabFiles": "Światy i paczki danych instaluje się w karcie „Światy”",
-    "worldsTabLink": "{{type}}: instaluje się je w karcie „Światy”"
+    "worldsTabLink": "{{type}}: instaluje się je w karcie „Światy”",
+    "conflict": {
+      "title": "Zostaw jedną wersję",
+      "text": "Wybierz wersję do zostawienia. Pozostałe kopie trafią do kosza instancji — można je stamtąd przywrócić.",
+      "newest": "nowsza",
+      "apply_one": "Usuń {{count}} kopię",
+      "apply_few": "Usuń {{count}} kopie",
+      "apply_many": "Usuń {{count}} kopii",
+      "apply_other": "Usuń {{count}} kopii",
+      "rowHint": "W folderze mods jest kilka wersji tego moda — gra się wysypie albo wczyta niewłaściwą",
+      "badge": "Kilka wersji",
+      "bar_one": "{{count}} mod leży w folderze w kilku wersjach",
+      "bar_few": "{{count}} mody leżą w folderze w kilku wersjach",
+      "bar_many": "{{count}} modów leży w folderze w kilku wersjach",
+      "bar_other": "{{count}} moda leży w folderze w kilku wersjach",
+      "barHint": "Ten sam mod w różnych plikach — gra się wysypie albo wczyta niewłaściwą wersję",
+      "keepOne": "Zostaw jedną wersję",
+      "done_one": "{{count}} zbędna kopia w koszu",
+      "done_few": "{{count}} zbędne kopie w koszu",
+      "done_many": "{{count}} zbędnych kopii w koszu",
+      "done_other": "{{count}} zbędnej kopii w koszu",
+      "doneHint": "Można je przywrócić z kosza na dole biblioteki",
+      "failed": "Nie udało się usunąć kopii"
+    }
   },
   "nav": {
     "play": "Graj"
@@ -5190,7 +5213,8 @@
       "setGameOptions": "Zmieniam ustawienia grafiki „{{name}}”",
       "listModConfigs": "Przeglądam konfiguracje „{{name}}”",
       "readModConfig": "Czytam {{name}}",
-      "setModConfigValues": "Zmieniam {{name}}"
+      "setModConfigValues": "Zmieniam {{name}}",
+      "findCulprit": "Szukanie winowajcy w „{{name}}”"
     },
     "providers": {
       "title": "Dostawcy AI",
@@ -5399,7 +5423,8 @@
       "set_game_options": "Zmień ustawienia grafiki",
       "list_mod_configs": "Wypisz konfiguracje modów",
       "read_mod_config": "Czytaj konfigurację moda",
-      "set_mod_config_values": "Zmień konfigurację moda"
+      "set_mod_config_values": "Zmień konfigurację moda",
+      "find_culprit_mods": "Znajdź mod-winowajcę"
     },
     "stopped": "Zatrzymano",
     "emptyContextInstances_one": "{{count}} instancję",
@@ -5458,7 +5483,9 @@
       "loader": "Loader",
       "newestBuild": "najnowsza wersja",
       "file": "Plik",
-      "skipped": "Nie zmieni się"
+      "skipped": "Nie zmieni się",
+      "keepOn": "Nie wyłączaj",
+      "searchAmong": "Szukaj wśród"
     },
     "undo": {
       "action": "Cofnij",
@@ -5574,7 +5601,8 @@
       "logs": "Logi",
       "statistics": "Statystyki",
       "configs": "Konfiguracje",
-      "arguments": "Argumenty"
+      "arguments": "Argumenty",
+      "bisect": "Szukanie winowajcy"
     },
     "emptyInstancesHint": "Utwórz instancję lub zaimportuj ją z pliku — launcher pobierze wszystko, czego potrzebuje.",
     "offline": {
@@ -7389,7 +7417,8 @@
       "copyFailed_one": "{{count}} plik nieskopiowany",
       "copyFailed_few": "{{count}} pliki nieskopiowane",
       "copyFailed_many": "{{count}} plików nieskopiowanych",
-      "copyFailed_other": "{{count}} pliku nieskopiowanego"
+      "copyFailed_other": "{{count}} pliku nieskopiowanego",
+      "reviewing": "Sprawdź pliki, których nie ma na CurseForge ani Modrinth"
     },
     "open": "Otwórz",
     "progressTitle": "Przenosimy instancje",
@@ -7434,7 +7463,8 @@
       "more_other": "i jeszcze {{count}} instancji",
       "later": "Nie teraz",
       "open": "Przenieś"
-    }
+    },
+    "reviewContinue": "Kontynuuj przenoszenie"
   },
   "catalogInstall": {
     "title": "Zainstaluj „{{title}}”",
@@ -7605,5 +7635,135 @@
     "groupMessages_many": "{{count}} nowych wiadomości w grupie",
     "groupMessages_other": "{{count}} nowej wiadomości w grupie",
     "previewBody": "Zaprasza do gry – tak będą wyglądać zaproszenia"
+  },
+  "bisect": {
+    "title": "Szukanie winowajcy",
+    "intro": "Kreator wyłącza część modów, a Ty uruchamiasz grę i odpowiadasz, czy problem nadal występuje. Po kilku uruchomieniach zostaje jeden mod albo para. Po wyjściu z kreatora wszystkie mody wracają do poprzedniego stanu.",
+    "search": "Znajdź mod",
+    "notFound": "Nic nie znaleziono",
+    "closeGame": "Zamknij grę, aby kontynuować",
+    "failed": "Nie udało się przełączyć modów",
+    "back": "Wstecz",
+    "exit": "Wyjdź i przywróć wszystko",
+    "restore": "Przywróć wszystko",
+    "continue": "Kontynuuj",
+    "locked": "Trwa szukanie winowajcy — mody można zmienić po wyjściu z kreatora",
+    "reminder": "Szukanie winowajcy w „{{name}}” nie zostało zakończone",
+    "reminderHint": "Część modów jest teraz wyłączona. Kontynuuj szukanie lub wyjdź z kreatora — mody wrócą do poprzedniego stanu.",
+    "finished": "Mody wróciły do poprzedniego stanu",
+    "finishedDisabled_one": "Mody wróciły do poprzedniego stanu, winowajca jest wyłączony",
+    "finishedDisabled_few": "Mody wróciły do poprzedniego stanu, {{count}} mody są wyłączone",
+    "finishedDisabled_many": "Mody wróciły do poprzedniego stanu, {{count}} modów jest wyłączonych",
+    "finishedDisabled_other": "Mody wróciły do poprzedniego stanu, {{count}} moda jest wyłączone",
+    "renameFailed_one": "Nie udało się przełączyć {{count}} pliku",
+    "renameFailed_few": "Nie udało się przełączyć {{count}} plików",
+    "renameFailed_many": "Nie udało się przełączyć {{count}} plików",
+    "renameFailed_other": "Nie udało się przełączyć {{count}} pliku",
+    "renameFailedHint": "Plik jest zajęty przez inny program. Zamknij go i powtórz krok.",
+    "reason": {
+      "running": "Najpierw zamknij grę — gdy działa, pliki modów są zablokowane.",
+      "exists": "W tej instancji szukanie już trwa.",
+      "missing": "Szukanie w tej instancji już się zakończyło.",
+      "changed": "Folder z modami się zmienił. Otwórz kreator ponownie."
+    },
+    "how": {
+      "title": "Jak to działa",
+      "split": "Kreator wyłącza część podejrzanych; mody, które od nich zależą, wyłączają się razem z nimi",
+      "play": "Uruchamiasz grę i powtarzasz to, co wywoływało problem",
+      "answer": "Odpowiadasz „Nadal jest” lub „Zniknął” — lista podejrzanych zmniejsza się o połowę",
+      "restore": "Po wyjściu z kreatora mody wracają do poprzedniego stanu — nawet jeśli launcher zamknięto w trakcie szukania"
+    },
+    "setup": {
+      "keepTitle": "Nie wyłączaj",
+      "keepHint": "Zaznacz mody, bez których nie da się sprawdzić problemu",
+      "noMods": "W folderze mods nie ma włączonych modów",
+      "noSuspects": "Nie ma czego wyłączać: wszystkie mody mają oznaczenie „Nie wyłączaj”",
+      "suspects": "Podejrzane",
+      "kept": "Nie wyłączaj",
+      "runs": "Uruchomienia",
+      "start": "Zacznij szukanie"
+    },
+    "duplicates": {
+      "title": "Najpierw kopie jednego moda",
+      "text": "Jeden mod leży w folderze kilka razy. Pierwsze uruchomienie używa jednej wersji; wybierz, którą zostawić."
+    },
+    "list": {
+      "extra": "zbędna kopia",
+      "off": "Wyłączone",
+      "on": "Włączone",
+      "noneOff": "Wszystkie mody są włączone",
+      "noneOn": "Wszystkie podejrzane są wyłączone"
+    },
+    "step": {
+      "run": "Uruchomienie {{number}}",
+      "left_one": "zostało około {{count}} uruchomienia",
+      "left_few": "zostały około {{count}} uruchomienia",
+      "left_many": "zostało około {{count}} uruchomień",
+      "left_other": "zostało około {{count}} uruchomienia",
+      "duplicates_one": "Zbędna kopia moda jest wyłączona. Uruchom grę i sprawdź, czy problem nadal występuje.",
+      "duplicates_few": "Zbędne kopie modów są wyłączone ({{count}}). Uruchom grę i sprawdź, czy problem nadal występuje.",
+      "duplicates_many": "Zbędne kopie modów są wyłączone ({{count}}). Uruchom grę i sprawdź, czy problem nadal występuje.",
+      "duplicates_other": "Zbędne kopie modów są wyłączone ({{count}}). Uruchom grę i sprawdź, czy problem nadal występuje.",
+      "test": "Włączono {{enabled}} z {{total}} podejrzanych modów. Uruchom grę, powtórz to, co wywoływało problem, zamknij grę i odpowiedz.",
+      "crashed": "Gra zakończyła się błędem",
+      "contradiction": "Ta odpowiedź nie zgadza się z uruchomieniem {{number}} — problem może nie występować za każdym razem. Sprawdź ponownie lub wróć.",
+      "launch": "Uruchom grę",
+      "running": "Gra działa — sprawdź i zamknij ją",
+      "yes": "Nadal jest",
+      "no": "Zniknął"
+    },
+    "session": {
+      "started": "Rozpoczęto",
+      "answers": "Odpowiedzi"
+    },
+    "result": {
+      "found": {
+        "title": "Winowajca znaleziony",
+        "text": "Z tym modem problem występuje, bez niego — nie. Pozostałe mody są niewinne."
+      },
+      "foundMany": {
+        "title": "Połączenie modów",
+        "text": "Problem pojawia się tylko wtedy, gdy te mody są włączone razem. Sprawdź ich aktualizacje lub zostaw tylko jeden."
+      },
+      "duplicatesFound": {
+        "title": "Przyczyna: kopie jednego moda",
+        "text": "Z jedną wersją problem zniknął. Wyłącz teraz zbędne kopie, a usuń je w bibliotece."
+      },
+      "notInSuspects": {
+        "title": "To nie te mody",
+        "text": "Problem pozostał nawet przy wyłączonych wszystkich podejrzanych. Przyczyna tkwi w modach, których nie wyłączano, w ustawieniach lub w samej grze."
+      },
+      "notReproduced": {
+        "title": "Problem się nie pojawił",
+        "text": "Ze wszystkimi modami problem się nie pojawił. Jeśli nie występuje za każdym razem, wróć i sprawdź ponownie."
+      },
+      "inconsistent": {
+        "title": "Odpowiedzi się nie zgadzają",
+        "text": "Wygląda na to, że problem pojawia się tylko czasami. Wróć o krok i sprawdź uważniej."
+      },
+      "tooMany": {
+        "title": "Zbyt wiele modów naraz",
+        "text": "Problem zależy od więcej niż trzech modów. Oto te znalezione do tej pory — sprawdź ich powiązania i aktualizacje."
+      },
+      "disableCulprits_one": "Wyłącz go i wyjdź",
+      "disableCulprits_few": "Wyłącz je i wyjdź",
+      "disableCulprits_many": "Wyłącz je i wyjdź",
+      "disableCulprits_other": "Wyłącz je i wyjdź",
+      "disableExtras": "Wyłącz zbędne kopie i wyjdź"
+    },
+    "entry": {
+      "library": "Znajdź mod-winowajcę",
+      "selection": "Szukaj winowajcy",
+      "selectionHint": "Szukaj winowajcy tylko wśród zaznaczonych modów — pozostałe zostaną włączone",
+      "crash": "Znajdź mod-winowajcę"
+    }
+  },
+  "modpackScan": {
+    "unlisted": "Instancja „{{name}}” została wycofana z katalogu",
+    "unlistedHint_one": "W pliku {{files}} znaleziono znany złośliwy kod. Plik usunięto z serwera — zastąp mod i opublikuj instancję ponownie.",
+    "unlistedHint_few": "W plikach {{files}} znaleziono znany złośliwy kod. Pliki usunięto z serwera — zastąp mody i opublikuj instancję ponownie.",
+    "unlistedHint_many": "W plikach {{files}} znaleziono znany złośliwy kod. Pliki usunięto z serwera — zastąp mody i opublikuj instancję ponownie.",
+    "unlistedHint_other": "W plikach {{files}} znaleziono znany złośliwy kod. Pliki usunięto z serwera — zastąp mody i opublikuj instancję ponownie.",
+    "open": "Otwórz instancję"
   }
 }

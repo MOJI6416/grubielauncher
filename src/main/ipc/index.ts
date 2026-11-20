@@ -33,3 +33,4 @@ export { registerThemeIpc } from "./themeIpc";
 export { registerAccountSyncIpc } from "./accountSyncIpc";
 export { registerSharedSettingsIpc } from "./sharedSettingsIpc";
 export { registerLauncherImportIpc } from "./launcherImportIpc";
+export { registerModBisectIpc } from "./modBisectIpc";

@@ -29,6 +29,16 @@ import {
 import { modpackVersionLabel } from "./modpackVersions";
 import type { ModpackSourceState } from "./useModpackSource";
 import { countFeature } from "@renderer/features/usage/usage";
+import {
+  skippedJarKeys,
+  unknownJarsOf,
+  type UnknownJar,
+} from "@renderer/features/newInstance/unknownJars";
+import {
+  skipUnknownJars,
+  unknownJarItems,
+  updatePresenceItems,
+} from "./updateUnknownJars";
 
 const api = window.api;
 
@@ -68,6 +78,42 @@ export function useModpackUpdateFlow(input: ModpackFlowInput) {
     target: IProjectVersion;
   } | null>(null);
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[] | null>(null);
+  const [jarCheck, setJarCheck] = useState<{
+    checking: boolean;
+    unknown: UnknownJar[];
+  }>({ checking: false, unknown: [] });
+  const [installUnknown, setInstallUnknown] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+
+  useEffect(() => {
+    if (!prepared) {
+      setJarCheck({ checking: false, unknown: [] });
+      return;
+    }
+    const items = updatePresenceItems(prepared);
+    if (items.length === 0) {
+      setJarCheck({ checking: false, unknown: [] });
+      return;
+    }
+    let cancelled = false;
+    setJarCheck((previous) => ({ ...previous, checking: true }));
+    void api.modManager
+      .catalogPresence(items)
+      .catch(ignoreFailure)
+      .then((result) => {
+        if (cancelled) return;
+        setJarCheck({
+          checking: false,
+          unknown: result
+            ? unknownJarsOf(result)
+            : items.map((item) => ({ key: item.key, checked: false })),
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [prepared]);
 
   useEffect(() => {
     if (phase !== "preparing") return;
@@ -135,6 +181,7 @@ export function useModpackUpdateFlow(input: ModpackFlowInput) {
 
   const showPrepared = (next: PreparedModpackUpdate | null) => {
     setRestoreRemoved(false);
+    setInstallUnknown(new Set());
     setPrepared(next);
     setPhase(next ? "preview" : "idle");
   };
@@ -246,7 +293,10 @@ export function useModpackUpdateFlow(input: ModpackFlowInput) {
     try {
       const outcome = await applyModpackUpdate({
         instance,
-        update: prepared,
+        update: skipUnknownJars(
+          prepared,
+          skippedJarKeys(jarCheck.unknown, installUnknown),
+        ),
         account: input.account,
         settings,
         server: input.server,
@@ -373,6 +423,19 @@ export function useModpackUpdateFlow(input: ModpackFlowInput) {
     rollback,
     resolveBlockedPack,
     resolveBlockedMods,
+    unknownJars: prepared
+      ? {
+          items: unknownJarItems(prepared, jarCheck.unknown, installUnknown),
+          checking: jarCheck.checking,
+          onToggleInstall: (key: string, install: boolean) =>
+            setInstallUnknown((previous) => {
+              const next = new Set(previous);
+              if (install) next.add(key);
+              else next.delete(key);
+              return next;
+            }),
+        }
+      : null,
   };
 }
 

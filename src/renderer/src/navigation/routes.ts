@@ -9,7 +9,8 @@ export type InstanceTab =
   | "settings"
   | "arguments"
   | "statistics"
-  | "logs";
+  | "logs"
+  | "bisect";
 
 export type ProfileTab =
   | "profile"

@@ -1124,7 +1124,27 @@
     "modpackDownloadFailed": "Não foi possível baixar o modpack",
     "modpackDownloadFailedHint": "O arquivo do modpack não foi baixado de {{source}}. Verifique a conexão e tente de novo.",
     "worldsTabFiles": "Mundos e pacotes de dados são instalados na aba “Mundos”",
-    "worldsTabLink": "{{type}}: são instalados na aba “Mundos”"
+    "worldsTabLink": "{{type}}: são instalados na aba “Mundos”",
+    "conflict": {
+      "title": "Manter uma versão",
+      "text": "Escolha a versão que fica. As outras cópias vão para a lixeira da instância — dá para recuperá-las de lá.",
+      "newest": "mais nova",
+      "apply_one": "Remover {{count}} cópia",
+      "apply_many": "Remover {{count}} cópias",
+      "apply_other": "Remover {{count}} cópias",
+      "rowHint": "A pasta mods tem várias versões deste mod — o jogo vai travar ou carregar a errada",
+      "badge": "Várias versões",
+      "bar_one": "{{count}} mod está na pasta em várias versões",
+      "bar_many": "{{count}} mods estão na pasta em várias versões",
+      "bar_other": "{{count}} mods estão na pasta em várias versões",
+      "barHint": "O mesmo mod em arquivos diferentes — o jogo vai travar ou carregar a versão errada",
+      "keepOne": "Manter uma versão",
+      "done_one": "{{count}} cópia sobrando na lixeira",
+      "done_many": "{{count}} cópias sobrando na lixeira",
+      "done_other": "{{count}} cópias sobrando na lixeira",
+      "doneHint": "Dá para recuperá-las pela lixeira no fim da biblioteca",
+      "failed": "Não foi possível remover as cópias"
+    }
   },
   "nav": {
     "play": "Jogar"
@@ -5150,7 +5170,8 @@
       "setGameOptions": "Mudando as configurações de vídeo de “{{name}}”",
       "listModConfigs": "Olhando as configurações de “{{name}}”",
       "readModConfig": "Lendo {{name}}",
-      "setModConfigValues": "Mudando {{name}}"
+      "setModConfigValues": "Mudando {{name}}",
+      "findCulprit": "Busca do culpado em “{{name}}”"
     },
     "providers": {
       "title": "Provedores de IA",
@@ -5359,7 +5380,8 @@
       "set_game_options": "Mudar as configurações de vídeo",
       "list_mod_configs": "Listar configurações de mods",
       "read_mod_config": "Ler a configuração de um mod",
-      "set_mod_config_values": "Mudar a configuração de um mod"
+      "set_mod_config_values": "Mudar a configuração de um mod",
+      "find_culprit_mods": "Encontrar o mod culpado"
     },
     "stopped": "Parado",
     "emptyContextInstances_one": "{{count}} instância",
@@ -5415,7 +5437,9 @@
       "loader": "Loader",
       "newestBuild": "versão mais recente",
       "file": "Arquivo",
-      "skipped": "Não vai mudar"
+      "skipped": "Não vai mudar",
+      "keepOn": "Não desativar",
+      "searchAmong": "Procurar entre"
     },
     "undo": {
       "action": "Desfazer",
@@ -5530,7 +5554,8 @@
       "logs": "Logs",
       "statistics": "Estatísticas",
       "configs": "Configs",
-      "arguments": "Argumentos"
+      "arguments": "Argumentos",
+      "bisect": "Busca do culpado"
     },
     "emptyInstancesHint": "Crie uma instância ou importe uma de um arquivo — o launcher vai baixar tudo o que for preciso.",
     "offline": {
@@ -7313,7 +7338,8 @@
       "loaderFallback": "loader trocado por {{version}}",
       "copyFailed_one": "{{count}} arquivo não copiado",
       "copyFailed_many": "{{count}} arquivos não copiados",
-      "copyFailed_other": "{{count}} arquivos não copiados"
+      "copyFailed_other": "{{count}} arquivos não copiados",
+      "reviewing": "Confira os arquivos que não estão no CurseForge nem no Modrinth"
     },
     "open": "Abrir",
     "progressTitle": "Trazendo instâncias",
@@ -7355,7 +7381,8 @@
       "more_other": "e mais {{count}} instâncias",
       "later": "Agora não",
       "open": "Trazer"
-    }
+    },
+    "reviewContinue": "Continuar a transferência"
   },
   "catalogInstall": {
     "title": "Instalar “{{title}}”",
@@ -7518,5 +7545,129 @@
     "groupMessages_many": "{{count}} novas mensagens no grupo",
     "groupMessages_other": "{{count}} novas mensagens no grupo",
     "previewBody": "Convida você para jogar: assim ficarão os convites"
+  },
+  "bisect": {
+    "title": "Encontrar o culpado",
+    "intro": "O assistente desativa parte dos mods, você inicia o jogo e responde se o problema continua. Depois de alguns inícios, sobra um mod ou um par. Ao sair do assistente, todos os mods voltam a ficar como antes.",
+    "search": "Procurar mod",
+    "notFound": "Nada encontrado",
+    "closeGame": "Feche o jogo para continuar",
+    "failed": "Não foi possível alternar os mods",
+    "back": "Voltar",
+    "exit": "Sair e restaurar tudo",
+    "restore": "Restaurar tudo",
+    "continue": "Continuar",
+    "locked": "A busca pelo culpado está em andamento — você poderá alterar os mods ao sair do assistente",
+    "reminder": "A busca pelo culpado em “{{name}}” não terminou",
+    "reminderHint": "Alguns mods estão desativados agora. Continue a busca ou saia do assistente — os mods voltarão a ficar como antes.",
+    "finished": "Os mods voltaram a ficar como antes",
+    "finishedDisabled_one": "Os mods voltaram a ficar como antes, o culpado está desativado",
+    "finishedDisabled_many": "Os mods voltaram a ficar como antes, {{count}} mods estão desativados",
+    "finishedDisabled_other": "Os mods voltaram a ficar como antes, {{count}} mods estão desativados",
+    "renameFailed_one": "Não foi possível alternar {{count}} arquivo",
+    "renameFailed_many": "Não foi possível alternar {{count}} arquivos",
+    "renameFailed_other": "Não foi possível alternar {{count}} arquivos",
+    "renameFailedHint": "Outro programa está usando o arquivo. Feche-o e repita a etapa.",
+    "reason": {
+      "running": "Feche o jogo primeiro — enquanto ele roda, os arquivos dos mods ficam bloqueados.",
+      "exists": "Já há uma busca em andamento nesta instância.",
+      "missing": "A busca nesta instância já terminou.",
+      "changed": "A pasta de mods mudou. Abra o assistente de novo."
+    },
+    "how": {
+      "title": "Como funciona",
+      "split": "O assistente desativa parte dos suspeitos; os mods que dependem deles são desativados junto",
+      "play": "Você inicia o jogo e repete o que causava o problema",
+      "answer": "Você responde “Continua” ou “Sumiu” — a lista de suspeitos cai pela metade",
+      "restore": "Ao sair do assistente, os mods voltam a ficar como antes — mesmo que o launcher tenha sido fechado no meio da busca"
+    },
+    "setup": {
+      "keepTitle": "Não desativar",
+      "keepHint": "Marque os mods sem os quais não dá para verificar o problema",
+      "noMods": "Não há mods ativados na pasta mods",
+      "noSuspects": "Nada para desativar: todos os mods estão marcados como “Não desativar”",
+      "suspects": "Suspeitos",
+      "kept": "Não desativar",
+      "runs": "Inícios",
+      "start": "Iniciar a busca"
+    },
+    "duplicates": {
+      "title": "Primeiro, as cópias de um mesmo mod",
+      "text": "Um mod está várias vezes na pasta. O primeiro início usa uma só versão; escolha qual manter."
+    },
+    "list": {
+      "extra": "cópia sobrando",
+      "off": "Desativados",
+      "on": "Ativados",
+      "noneOff": "Todos os mods estão ativados",
+      "noneOn": "Todos os suspeitos estão desativados"
+    },
+    "step": {
+      "run": "Início {{number}}",
+      "left_one": "falta cerca de {{count}} início",
+      "left_many": "faltam cerca de {{count}} inícios",
+      "left_other": "faltam cerca de {{count}} inícios",
+      "duplicates_one": "A cópia sobrando do mod está desativada. Inicie o jogo e veja se o problema continua.",
+      "duplicates_many": "As cópias sobrando estão desativadas ({{count}}). Inicie o jogo e veja se o problema continua.",
+      "duplicates_other": "As cópias sobrando estão desativadas ({{count}}). Inicie o jogo e veja se o problema continua.",
+      "test": "{{enabled}} de {{total}} mods suspeitos estão ativados. Inicie o jogo, repita o que causava o problema, feche o jogo e responda.",
+      "crashed": "O jogo terminou com um erro",
+      "contradiction": "Esta resposta não bate com o início {{number}} — talvez o problema não apareça sempre. Verifique de novo ou volte.",
+      "launch": "Iniciar o jogo",
+      "running": "O jogo está aberto — verifique e feche-o",
+      "yes": "Continua",
+      "no": "Sumiu"
+    },
+    "session": {
+      "started": "Iniciada",
+      "answers": "Respostas"
+    },
+    "result": {
+      "found": {
+        "title": "Culpado encontrado",
+        "text": "Com este mod o problema aparece; sem ele, não. Os outros mods não têm nada a ver."
+      },
+      "foundMany": {
+        "title": "Uma combinação de mods",
+        "text": "O problema só aparece quando estes mods estão ativados juntos. Verifique as atualizações deles ou mantenha só um."
+      },
+      "duplicatesFound": {
+        "title": "A causa são cópias de um mesmo mod",
+        "text": "Com uma só versão o problema sumiu. Desative as cópias sobrando agora e exclua-as na biblioteca."
+      },
+      "notInSuspects": {
+        "title": "Não são estes mods",
+        "text": "O problema continuou mesmo com todos os suspeitos desativados. A causa está nos mods que você manteve ativados, nas configurações ou no próprio jogo."
+      },
+      "notReproduced": {
+        "title": "O problema não apareceu",
+        "text": "Com todos os mods, o problema não apareceu. Se ele não acontece sempre, volte e verifique de novo."
+      },
+      "inconsistent": {
+        "title": "As respostas não batem",
+        "text": "Parece que o problema só aparece às vezes. Volte uma etapa e verifique com mais atenção."
+      },
+      "tooMany": {
+        "title": "Mods demais ao mesmo tempo",
+        "text": "O problema depende de mais de três mods. Estes são os encontrados até agora — verifique as relações e atualizações deles."
+      },
+      "disableCulprits_one": "Desativá-lo e sair",
+      "disableCulprits_many": "Desativá-los e sair",
+      "disableCulprits_other": "Desativá-los e sair",
+      "disableExtras": "Desativar as cópias sobrando e sair"
+    },
+    "entry": {
+      "library": "Encontrar o mod culpado",
+      "selection": "Encontrar o culpado",
+      "selectionHint": "Procurar o culpado só entre os mods selecionados — os outros continuam ativados",
+      "crash": "Encontrar o mod culpado"
+    }
+  },
+  "modpackScan": {
+    "unlisted": "“{{name}}” foi retirada do catálogo",
+    "unlistedHint_one": "Foi encontrado código malicioso conhecido em {{files}}. O arquivo foi excluído do servidor — substitua o mod e publique a instância de novo.",
+    "unlistedHint_many": "Foi encontrado código malicioso conhecido em {{files}}. Os arquivos foram excluídos do servidor — substitua os mods e publique a instância de novo.",
+    "unlistedHint_other": "Foi encontrado código malicioso conhecido em {{files}}. Os arquivos foram excluídos do servidor — substitua os mods e publique a instância de novo.",
+    "open": "Abrir a instância"
   }
 }

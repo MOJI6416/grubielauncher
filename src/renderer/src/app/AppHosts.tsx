@@ -40,6 +40,8 @@ import { AppUpdateHost } from "./hosts/AppUpdateHost";
 import { SupportHost } from "./hosts/SupportHost";
 import { StreamerModeHost } from "./hosts/StreamerModeHost";
 import { DataMoveHost } from "./hosts/DataMoveHost";
+import { BisectHost } from "@renderer/features/bisect/BisectHost";
+import { ModpackInfectedHost } from "@renderer/features/security/ModpackInfectedHost";
 
 export function AppHosts() {
   return (
@@ -72,6 +74,8 @@ export function AppHosts() {
       <SystemEventsHost />
       <DeepLinkHost />
       <StartScreenHost />
+      <BisectHost />
+      <ModpackInfectedHost />
       <FileDropHost />
       <UnsavedCloseHost />
       <CloseChoiceHost />

@@ -119,6 +119,7 @@ export interface ContentListPaneProps {
     reset: () => void;
   };
   duplicates: DuplicateMarks;
+  conflictKeys?: ReadonlySet<string>;
   fileStates: ModFileStates;
   filterByAuthor: (provider: Provider, author: IProjectAuthor) => void;
   findInstalled: (project: MatchableProject) => ILocalProject | undefined;
@@ -220,6 +221,7 @@ export function ContentListPane({
   detailWidth,
   displayItems,
   duplicates,
+  conflictKeys,
   fileStates,
   filterByAuthor,
   findInstalled,
@@ -470,7 +472,9 @@ export function ContentListPane({
                         duplicate={
                           scope !== "library"
                             ? undefined
-                            : duplicates.extra.has(entry.key)
+                            : conflictKeys?.has(entry.key)
+                              ? "versions"
+                              : duplicates.extra.has(entry.key)
                               ? "extra"
                               : duplicates.all.has(entry.key)
                                 ? "review"

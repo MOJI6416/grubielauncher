@@ -62,6 +62,7 @@ export interface ForeignImportPlan {
   jvmArguments: string;
   keepOptimizedJvm: boolean;
   identified: number;
+  catalogChecked?: boolean;
 }
 
 export interface ForeignCopyProgress {

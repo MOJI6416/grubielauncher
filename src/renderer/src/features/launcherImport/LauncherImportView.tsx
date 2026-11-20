@@ -7,6 +7,7 @@ import {
   FolderSearch,
   Loader2,
   RefreshCw,
+  ShieldQuestion,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
+import { UnknownJarsReview } from "./UnknownJarsReview";
 import {
   IMPORT_PARTS,
   type ForeignInstanceSummary,
@@ -150,6 +152,8 @@ function statusIcon(item: ImportItemState) {
       return <Check className="size-4 text-success" />;
     case "failed":
       return <X className="size-4 text-destructive" />;
+    case "reviewing":
+      return <ShieldQuestion className="size-4 text-warning" />;
     case "cancelled":
     case "queued":
       return <CircleDashed className="size-4 text-faint" />;
@@ -239,7 +243,12 @@ export function LauncherImportBody({
         <ScrollArea className="min-h-0 flex-1 rounded-xl border border-border bg-surface-1">
           <div className="grid gap-0.5 p-1.5">
             {job.items.map((item) => (
-              <ProgressRow key={item.id} item={item} onOpen={onOpenInstance} />
+              <div key={item.id} className="grid gap-1">
+                <ProgressRow item={item} onOpen={onOpenInstance} />
+                {item.status === "reviewing" && item.unknownJars && (
+                  <UnknownJarsReview id={item.id} jars={item.unknownJars} />
+                )}
+              </div>
             ))}
           </div>
         </ScrollArea>

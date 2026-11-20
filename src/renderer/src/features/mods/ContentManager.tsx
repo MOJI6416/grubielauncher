@@ -96,6 +96,15 @@ import {
   sortLibraryEntries,
   toggleValue,
 } from "./filters";
+import { getDefaultStore } from "jotai";
+import { navigate } from "@renderer/navigation/navigate";
+import { instanceKey } from "@renderer/features/instances/selectors";
+import {
+  bisectSetupAtom,
+  useBisectSession,
+} from "@renderer/features/bisect/bisectStore";
+import { useModIdConflicts } from "./useModIdConflicts";
+import { ModIdConflictDialog } from "./ModIdConflictDialog";
 import { useModCategories } from "./useModCategories";
 import { useModGroups } from "./useModGroups";
 import {
@@ -288,6 +297,12 @@ export function ContentManager({
   const isDownloadedVersion = useAtomValue(isDownloadedVersionAtom);
   const isOwnerVersion = useAtomValue(isOwnerVersionAtom);
   const isOnline = useAtomValue(internetAtom);
+  const bisectSession = useBisectSession(
+    versionPath && versionPath === selectedVersion?.versionPath
+      ? versionPath
+      : undefined,
+  );
+  const isBisecting = !!bisectSession;
 
   const lang = settings.lang || "en";
   const sizeUnits = useMemo(
@@ -356,13 +371,19 @@ export function ContentManager({
   );
 
   const isLocked = useCallback(
-    (type: ProjectType) => running && isLockedWhileRunning(type),
-    [running],
+    (type: ProjectType) =>
+      (running && isLockedWhileRunning(type)) ||
+      (isBisecting && type === ProjectType.MOD),
+    [isBisecting, running],
   );
   const lockedHintFor = useCallback(
     (type: ProjectType) =>
-      isLocked(type) ? t("modManager.runningLocked") : undefined,
-    [isLocked, t],
+      isBisecting && type === ProjectType.MOD
+        ? t("bisect.locked")
+        : isLocked(type)
+          ? t("modManager.runningLocked")
+          : undefined,
+    [isBisecting, isLocked, t],
   );
 
   const visibleProviders = useMemo(
@@ -706,6 +727,13 @@ export function ContentManager({
     () => findDuplicates(libraryEntries, updateCheck.unavailable),
     [libraryEntries, updateCheck.unavailable],
   );
+  const modIdConflicts = useModIdConflicts(
+    instancePath,
+    scope === "library" && projectType === ProjectType.MOD && !isModpacks,
+    mods,
+    fileRevision,
+  );
+  const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
 
   const foreignKeys = useMemo(
     () =>
@@ -750,13 +778,17 @@ export function ContentManager({
     () => ({
       updatable: updateCheck.updatable,
       disabled: fileStates.disabled,
-      duplicates: duplicates.all,
+      duplicates:
+        modIdConflicts.keys.size > 0
+          ? new Set([...duplicates.all, ...modIdConflicts.keys])
+          : duplicates.all,
       foreign: foreignKeys,
       categories: modCategories.categories,
       packKeys,
     }),
     [
       duplicates,
+      modIdConflicts.keys,
       fileStates.disabled,
       foreignKeys,
       modCategories.categories,
@@ -1509,6 +1541,95 @@ export function ContentManager({
       }
     },
     [applyDeletion, canEdit, instancePath, isBusy, isLocked, mods, t],
+  );
+
+  const canFindCulprit =
+    scope === "library" &&
+    projectType === ProjectType.MOD &&
+    canEdit &&
+    !isModpacks &&
+    !!instancePath &&
+    (typeCounts.get(ProjectType.MOD) ?? 0) > 0;
+
+  const openBisect = useCallback(
+    (entries?: ContentEntry[]) => {
+      if (!instancePath || !selectedVersion) return;
+      const files = (entries ?? []).flatMap((entry) =>
+        (entry.installed?.version?.files ?? [])
+          .map((file) => String(file.filename ?? "").replace(/\.disabled$/i, ""))
+          .filter(Boolean),
+      );
+      if (!isBisecting && files.length > 0)
+        getDefaultStore().set(bisectSetupAtom, {
+          versionPath: instancePath,
+          candidates: files,
+        });
+      setSelection(new Set());
+      navigate({
+        name: "instance",
+        id: instanceKey(selectedVersion),
+        tab: "bisect",
+      });
+    },
+    [instancePath, isBisecting, selectedVersion],
+  );
+
+  const keepOneVersion = useCallback(
+    async (extras: string[]) => {
+      if (!instancePath || extras.length === 0 || isLocked(ProjectType.MOD))
+        return;
+      setIsBusy(true);
+      try {
+        const moved = await api.modManager.trashFiles(
+          instancePath,
+          ProjectType.MOD,
+          extras,
+        );
+        const movedNames = new Set(moved.map((name) => name.toLowerCase()));
+        const removed = mods.filter(
+          (mod) =>
+            mod.projectType === ProjectType.MOD &&
+            (mod.version?.files.length ?? 0) > 0 &&
+            mod.version!.files.every((file) =>
+              movedNames.has(
+                String(file.filename ?? "")
+                  .replace(/\.disabled$/i, "")
+                  .toLowerCase(),
+              ),
+            ),
+        );
+        if (moved.length > 0) {
+          countFeature("mods.keepOneVersion");
+          const title = t("modManager.conflict.done", { count: moved.length });
+          const description = t("modManager.conflict.doneHint");
+          if (removed.length > 0)
+            await commitMods(
+              mods.filter((mod) => !removed.includes(mod)),
+              {
+                title,
+                description,
+                failTitle: t("modManager.conflict.failed"),
+                sync: false,
+                undo: false,
+              },
+            );
+          else toast.success(title, { description });
+        }
+        if (moved.length < extras.length)
+          showFailureToast(t("modManager.conflict.failed"), undefined, {
+            channels: ["modManager:trashFiles"],
+          });
+      } catch (error) {
+        showFailureToast(t("modManager.conflict.failed"), error, {
+          channels: ["modManager:trashFiles"],
+        });
+      } finally {
+        await forgetModFiles(instancePath, ProjectType.MOD);
+        setFileRevision((value) => value + 1);
+        setIsBusy(false);
+      }
+    },
+    [commitMods, instancePath, isLocked, mods, t],
   );
 
   const removeDuplicateRecords = useCallback(
@@ -3172,6 +3293,10 @@ export function ContentManager({
   const bar =
     canSelectRows && selection.size > 0
       ? "selection"
+      : isBisecting && scope === "library"
+        ? "bisect"
+      : canShowUpdateBar && modIdConflicts.conflicts.length > 0
+        ? "conflicts"
       : canUseTrash && foreignFiles.length > 0
         ? "foreign"
         : canShowUpdateBar && duplicates.groups > 0
@@ -3263,6 +3388,7 @@ export function ContentManager({
           gameVersions={gameVersions}
           identifiable={identifiable}
           identifyLocal={identifyLocal}
+          onFindCulprit={canFindCulprit ? () => openBisect() : undefined}
           isBusy={isBusy}
           isIdentifying={isIdentifying}
           isModpacks={isModpacks}
@@ -3309,6 +3435,10 @@ export function ContentManager({
           bar={bar}
           clearFilterChips={clearFilterChips}
           duplicates={duplicates}
+          conflicts={modIdConflicts.conflicts.length}
+          onKeepOneVersion={() => setIsConflictDialogOpen(true)}
+          onFindCulprit={canFindCulprit ? openBisect : undefined}
+          onOpenBisect={() => openBisect()}
           filterChips={filterChips}
           foreignFiles={foreignFiles}
           isBusy={isBusy}
@@ -3345,6 +3475,7 @@ export function ContentManager({
         />
 
         <ContentListPane
+          conflictKeys={modIdConflicts.keys}
           libraryPackKeys={packKeys}
           detailRelations={detailRelations}
           relationsScanning={relationsScanning}
@@ -3448,6 +3579,15 @@ export function ContentManager({
           installed={mods}
           onAdd={addFromSet}
           onClose={() => setSetsDialog(null)}
+        />
+      )}
+
+      {isConflictDialogOpen && (
+        <ModIdConflictDialog
+          conflicts={modIdConflicts.conflicts}
+          sizeUnits={sizeUnits}
+          onApply={(extras) => void keepOneVersion(extras)}
+          onClose={() => setIsConflictDialogOpen(false)}
         />
       )}
 

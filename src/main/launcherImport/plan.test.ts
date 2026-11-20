@@ -140,8 +140,9 @@ describe("buildContentList", () => {
   it("keeps every file local when the catalogs are unreachable", async () => {
     identify.mockRejectedValue(new Error("offline"));
     const instance = await prismFabric();
-    const { mods, identified } = await buildContentList(instance, new Set<ImportPart>(["mods"]), "1.20.1");
+    const { mods, identified, checked } = await buildContentList(instance, new Set<ImportPart>(["mods"]), "1.20.1");
     expect(identified).toBe(0);
+    expect(checked).toBe(false);
     expect(mods.every((mod) => mod.provider === Provider.LOCAL)).toBe(true);
     expect(mods).toHaveLength(2);
   });
@@ -162,6 +163,7 @@ describe("planImport", () => {
       jvmArguments: "-XX:+UseZGC -Dsodium.checks=false",
       keepOptimizedJvm: false,
       identified: 1,
+      catalogChecked: true,
     });
     expect(plan.bytes).toBeGreaterThan(0);
     expect(plan.modpack).toMatchObject({

@@ -1110,7 +1110,24 @@
     "modpackDownloadFailed": "Modpack konnte nicht heruntergeladen werden",
     "modpackDownloadFailedHint": "Das Modpack-Archiv wurde nicht von {{source}} heruntergeladen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "worldsTabFiles": "Welten und Datenpakete werden im Tab „Welten“ installiert",
-    "worldsTabLink": "{{type}} werden im Tab „Welten“ installiert"
+    "worldsTabLink": "{{type}} werden im Tab „Welten“ installiert",
+    "conflict": {
+      "title": "Eine Version behalten",
+      "text": "Wählen Sie die Version, die bleiben soll. Die übrigen Kopien wandern in den Papierkorb der Instanz – von dort lassen sie sich zurückholen.",
+      "newest": "neuer",
+      "apply_one": "{{count}} Kopie entfernen",
+      "apply_other": "{{count}} Kopien entfernen",
+      "rowHint": "Im mods-Ordner liegen mehrere Versionen dieses Mods – das Spiel stürzt ab oder lädt die falsche",
+      "badge": "Mehrere Versionen",
+      "bar_one": "{{count}} Mod liegt in mehreren Versionen im Ordner",
+      "bar_other": "{{count}} Mods liegen in mehreren Versionen im Ordner",
+      "barHint": "Derselbe Mod in verschiedenen Dateien – das Spiel stürzt ab oder lädt die falsche Version",
+      "keepOne": "Eine Version behalten",
+      "done_one": "{{count}} überzählige Kopie im Papierkorb",
+      "done_other": "{{count}} überzählige Kopien im Papierkorb",
+      "doneHint": "Sie lassen sich aus dem Papierkorb unten in der Bibliothek zurückholen",
+      "failed": "Die Kopien ließen sich nicht entfernen"
+    }
   },
   "nav": {
     "play": "Spielen"
@@ -5107,7 +5124,8 @@
       "setGameOptions": "Ändert die Grafikeinstellungen von „{{name}}“",
       "listModConfigs": "Sieht die Konfigurationen von „{{name}}“ durch",
       "readModConfig": "Liest {{name}}",
-      "setModConfigValues": "Ändert {{name}}"
+      "setModConfigValues": "Ändert {{name}}",
+      "findCulprit": "Verursachersuche in „{{name}}“"
     },
     "providers": {
       "title": "KI-Anbieter",
@@ -5316,7 +5334,8 @@
       "set_game_options": "Grafikeinstellungen ändern",
       "list_mod_configs": "Mod-Konfigurationen auflisten",
       "read_mod_config": "Mod-Konfiguration lesen",
-      "set_mod_config_values": "Mod-Konfiguration ändern"
+      "set_mod_config_values": "Mod-Konfiguration ändern",
+      "find_culprit_mods": "Verursacher-Mod finden"
     },
     "stopped": "Gestoppt",
     "emptyContextInstances_one": "{{count}} Instanz",
@@ -5369,7 +5388,9 @@
       "loader": "Loader",
       "newestBuild": "neueste Version",
       "file": "Datei",
-      "skipped": "Bleibt unverändert"
+      "skipped": "Bleibt unverändert",
+      "keepOn": "Anlassen",
+      "searchAmong": "Suchen unter"
     },
     "undo": {
       "action": "Rückgängig",
@@ -5483,7 +5504,8 @@
       "logs": "Logs",
       "statistics": "Statistik",
       "configs": "Konfigs",
-      "arguments": "Argumente"
+      "arguments": "Argumente",
+      "bisect": "Verursachersuche"
     },
     "emptyInstancesHint": "Erstellen Sie eine Instanz oder importieren Sie eine aus einer Datei – der Launcher lädt alles Nötige herunter.",
     "offline": {
@@ -7242,7 +7264,8 @@
       "identified": "Übernommen · erkannte Mods: {{count}} von {{total}}",
       "loaderFallback": "Loader ersetzt durch {{version}}",
       "copyFailed_one": "{{count}} Datei nicht kopiert",
-      "copyFailed_other": "{{count}} Dateien nicht kopiert"
+      "copyFailed_other": "{{count}} Dateien nicht kopiert",
+      "reviewing": "Prüfen Sie die Dateien, die es auf CurseForge und Modrinth nicht gibt"
     },
     "open": "Öffnen",
     "progressTitle": "Instanzen werden übernommen",
@@ -7281,7 +7304,8 @@
       "more_other": "und {{count}} weitere Instanzen",
       "later": "Nicht jetzt",
       "open": "Übernehmen"
-    }
+    },
+    "reviewContinue": "Übernahme fortsetzen"
   },
   "catalogInstall": {
     "title": "„{{title}}“ installieren",
@@ -7436,5 +7460,123 @@
     "groupMessages_one": "{{count}} neue Nachricht in der Gruppe",
     "groupMessages_other": "{{count}} neue Nachrichten in der Gruppe",
     "previewBody": "Lädt Sie zum Spielen ein – so sehen Einladungen aus"
+  },
+  "bisect": {
+    "title": "Verursacher finden",
+    "intro": "Der Assistent schaltet einen Teil der Mods aus, Sie starten das Spiel und sagen, ob das Problem noch da ist. Nach wenigen Starts bleibt ein Mod oder ein Paar übrig. Wenn Sie den Assistenten verlassen, sind alle Mods wieder wie vorher.",
+    "search": "Mod suchen",
+    "notFound": "Nichts gefunden",
+    "closeGame": "Schließen Sie das Spiel, um fortzufahren",
+    "failed": "Die Mods ließen sich nicht umschalten",
+    "back": "Zurück",
+    "exit": "Beenden und alles zurücksetzen",
+    "restore": "Alles zurücksetzen",
+    "continue": "Fortsetzen",
+    "locked": "Die Verursachersuche läuft – Mods lassen sich nach dem Verlassen des Assistenten ändern",
+    "reminder": "Die Verursachersuche in „{{name}}“ ist nicht abgeschlossen",
+    "reminderHint": "Einige Mods sind gerade ausgeschaltet. Setzen Sie die Suche fort oder verlassen Sie den Assistenten – die Mods werden wiederhergestellt.",
+    "finished": "Die Mods sind wieder wie vorher",
+    "finishedDisabled_one": "Die Mods sind wieder wie vorher, der Verursacher ist aus",
+    "finishedDisabled_other": "Die Mods sind wieder wie vorher, {{count}} Mods sind aus",
+    "renameFailed_one": "{{count}} Datei ließ sich nicht umschalten",
+    "renameFailed_other": "{{count}} Dateien ließen sich nicht umschalten",
+    "renameFailedHint": "Ein anderes Programm hält die Datei. Schließen Sie es und wiederholen Sie den Schritt.",
+    "reason": {
+      "running": "Schließen Sie zuerst das Spiel – solange es läuft, sind die Mod-Dateien gesperrt.",
+      "exists": "In dieser Instanz läuft bereits eine Suche.",
+      "missing": "Die Suche in dieser Instanz ist bereits beendet.",
+      "changed": "Der Mods-Ordner hat sich geändert. Öffnen Sie den Assistenten erneut."
+    },
+    "how": {
+      "title": "So funktioniert es",
+      "split": "Der Assistent schaltet einen Teil der Verdächtigen aus; abhängige Mods gehen mit aus",
+      "play": "Sie starten das Spiel und wiederholen, was das Problem auslöste",
+      "answer": "Sie antworten „Noch da“ oder „Weg“ – die Liste der Verdächtigen halbiert sich",
+      "restore": "Beim Verlassen des Assistenten sind die Mods wieder wie vorher – auch wenn der Launcher mitten in der Suche geschlossen wurde"
+    },
+    "setup": {
+      "keepTitle": "Anlassen",
+      "keepHint": "Markieren Sie Mods, ohne die sich das Problem nicht prüfen lässt",
+      "noMods": "Im mods-Ordner sind keine aktivierten Mods",
+      "noSuspects": "Nichts zum Ausschalten: Alle Mods sind als „Anlassen“ markiert",
+      "suspects": "Verdächtige",
+      "kept": "Anlassen",
+      "runs": "Starts",
+      "start": "Suche starten"
+    },
+    "duplicates": {
+      "title": "Zuerst: Kopien eines Mods",
+      "text": "Ein Mod liegt mehrfach im Ordner. Der erste Start nutzt nur eine Version; wählen Sie, welche bleibt."
+    },
+    "list": {
+      "extra": "überzählige Kopie",
+      "off": "Aus",
+      "on": "An",
+      "noneOff": "Alle Mods sind an",
+      "noneOn": "Alle Verdächtigen sind aus"
+    },
+    "step": {
+      "run": "Start {{number}}",
+      "left_one": "noch etwa {{count}} Start",
+      "left_other": "noch etwa {{count}} Starts",
+      "duplicates_one": "Die überzählige Kopie des Mods ist aus. Starten Sie das Spiel und prüfen Sie, ob das Problem noch da ist.",
+      "duplicates_other": "Die überzähligen Kopien sind aus ({{count}}). Starten Sie das Spiel und prüfen Sie, ob das Problem noch da ist.",
+      "test": "{{enabled}} von {{total}} verdächtigen Mods sind an. Starten Sie das Spiel, wiederholen Sie, was das Problem auslöste, schließen Sie das Spiel und antworten Sie.",
+      "crashed": "Das Spiel wurde mit einem Fehler beendet",
+      "contradiction": "Diese Antwort widerspricht Start {{number}} – das Problem tritt wohl nicht jedes Mal auf. Prüfen Sie erneut oder gehen Sie zurück.",
+      "launch": "Spiel starten",
+      "running": "Das Spiel läuft – prüfen und schließen Sie es",
+      "yes": "Noch da",
+      "no": "Weg"
+    },
+    "session": {
+      "started": "Begonnen",
+      "answers": "Antworten"
+    },
+    "result": {
+      "found": {
+        "title": "Verursacher gefunden",
+        "text": "Mit diesem Mod ist das Problem da, ohne ihn nicht. Die anderen Mods sind unschuldig."
+      },
+      "foundMany": {
+        "title": "Eine Kombination von Mods",
+        "text": "Das Problem tritt nur auf, wenn diese Mods zusammen an sind. Prüfen Sie ihre Updates oder behalten Sie nur einen."
+      },
+      "duplicatesFound": {
+        "title": "Ursache: Kopien eines Mods",
+        "text": "Mit einer Version ist das Problem weg. Schalten Sie die überzähligen Kopien jetzt aus und löschen Sie sie in der Bibliothek."
+      },
+      "notInSuspects": {
+        "title": "Es liegt nicht an diesen Mods",
+        "text": "Das Problem blieb, auch als alle Verdächtigen aus waren. Die Ursache liegt in den angelassenen Mods, in den Einstellungen oder im Spiel selbst."
+      },
+      "notReproduced": {
+        "title": "Das Problem trat nicht auf",
+        "text": "Mit allen Mods trat das Problem nicht auf. Wenn es nicht jedes Mal passiert, gehen Sie zurück und prüfen Sie erneut."
+      },
+      "inconsistent": {
+        "title": "Die Antworten widersprechen sich",
+        "text": "Das Problem scheint nur manchmal aufzutreten. Gehen Sie einen Schritt zurück und prüfen Sie genauer."
+      },
+      "tooMany": {
+        "title": "Zu viele Mods auf einmal",
+        "text": "Das Problem hängt von mehr als drei Mods ab. Hier sind die bisher gefundenen – prüfen Sie ihre Abhängigkeiten und Updates."
+      },
+      "disableCulprits_one": "Ausschalten und beenden",
+      "disableCulprits_other": "Ausschalten und beenden",
+      "disableExtras": "Überzählige Kopien ausschalten und beenden"
+    },
+    "entry": {
+      "library": "Verursacher-Mod finden",
+      "selection": "Verursacher finden",
+      "selectionHint": "Den Verursacher nur unter den ausgewählten Mods suchen – die übrigen bleiben an",
+      "crash": "Verursacher-Mod finden"
+    }
+  },
+  "modpackScan": {
+    "unlisted": "„{{name}}“ wurde aus dem Katalog genommen",
+    "unlistedHint_one": "In {{files}} wurde bekannter Schadcode gefunden. Die Datei wurde vom Server gelöscht – ersetzen Sie den Mod und veröffentlichen Sie die Instanz erneut.",
+    "unlistedHint_other": "In {{files}} wurde bekannter Schadcode gefunden. Die Dateien wurden vom Server gelöscht – ersetzen Sie die Mods und veröffentlichen Sie die Instanz erneut.",
+    "open": "Instanz öffnen"
   }
 }

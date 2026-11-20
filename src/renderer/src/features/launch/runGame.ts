@@ -38,6 +38,7 @@ import {
   showFailureToast,
 } from "@renderer/utilities/failures";
 import { uiJournal } from "@renderer/utilities/journal";
+import { isBisectActive } from "@renderer/features/bisect/bisectStore";
 import { checkDiffenceUpdateData, isOwner } from "@renderer/utilities/version";
 import {
   launchCheckFailedAtom,
@@ -148,7 +149,7 @@ export async function runGame(params: RunGameParams): Promise<void> {
   store.set(isRunningAtom, true);
 
   const checksModpack = shouldCheckModpack({
-    skipUpdate,
+    skipUpdate: skipUpdate || isBisectActive(launchVersion.versionPath),
     shareCode: launchVersion.version.shareCode,
     downloadedVersion: launchVersion.version.downloadedVersion,
     isNetwork: store.get(networkAtom),

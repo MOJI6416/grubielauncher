@@ -224,7 +224,7 @@ export const addMods: AgentTool = {
       return { ok: false, error: `No instance named "${input?.instance}"` };
     }
 
-    const busy = busyError();
+    const busy = busyError(version.versionPath);
     if (busy) return { ok: false, error: busy };
 
     const requested = requestedProjects(input);
@@ -391,7 +391,7 @@ export const removeMods: AgentTool = {
       return { ok: false, error: `No instance named "${input?.instance}"` };
     }
 
-    const busy = busyError();
+    const busy = busyError(version.versionPath);
     if (busy) return { ok: false, error: busy };
 
     const conf = version.version;

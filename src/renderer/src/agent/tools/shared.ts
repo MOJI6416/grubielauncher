@@ -8,6 +8,7 @@ import {
   versionsAtom,
 } from "@renderer/stores/atoms";
 import { Version } from "@renderer/classes/Version";
+import { isBisectActive } from "@renderer/features/bisect/bisectStore";
 import i18n from "@renderer/i18n";
 import { formatBytes } from "@renderer/utilities/file";
 import { formatDate } from "@renderer/utilities/date";
@@ -78,8 +79,11 @@ export function settings(): TSettings {
   return getDefaultStore().get(settingsAtom);
 }
 
-export function busyError(): string | null {
+export function busyError(versionPath?: string): string | null {
   const store = getDefaultStore();
+  if (isBisectActive(versionPath)) {
+    return "The mod culprit search (bisect) is running for this instance, and it owns which mods are on. Tell the user to finish or leave it on the instance's culprit search tab first.";
+  }
   if (store.get(installActiveAtom)) {
     return "Another install or download is already running in the launcher. Ask the user to wait for it to finish.";
   }

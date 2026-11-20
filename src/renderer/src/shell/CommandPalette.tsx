@@ -33,6 +33,7 @@ import {
   Users,
   Wifi,
   SquareTerminal,
+  SquareSplitHorizontal,
 } from "lucide-react";
 import {
   accountAtom,
@@ -133,6 +134,7 @@ const TAB_ICON: Record<InstanceTab, ReactNode> = {
   arguments: <SquareTerminal className="size-4 text-faint" />,
   statistics: <ChartArea className="size-4 text-faint" />,
   logs: <ScrollText className="size-4 text-faint" />,
+  bisect: <SquareSplitHorizontal className="size-4 text-faint" />,
 };
 
 type PaletteItem = Rankable & {

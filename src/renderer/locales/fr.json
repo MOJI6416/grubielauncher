@@ -1124,7 +1124,27 @@
     "modpackDownloadFailed": "Impossible de télécharger le modpack",
     "modpackDownloadFailedHint": "L’archive du modpack n’a pas été téléchargée depuis {{source}}. Vérifiez votre connexion et réessayez.",
     "worldsTabFiles": "Les mondes et les packs de données s’installent dans l’onglet « Mondes »",
-    "worldsTabLink": "{{type}} : ils s’installent dans l’onglet « Mondes »"
+    "worldsTabLink": "{{type}} : ils s’installent dans l’onglet « Mondes »",
+    "conflict": {
+      "title": "Garder une version",
+      "text": "Choisissez la version à garder. Les autres copies iront à la corbeille de l’instance — vous pourrez les récupérer.",
+      "newest": "plus récente",
+      "apply_one": "Retirer {{count}} copie",
+      "apply_many": "Retirer {{count}} copies",
+      "apply_other": "Retirer {{count}} copies",
+      "rowHint": "Le dossier mods contient plusieurs versions de ce mod — le jeu plantera ou chargera la mauvaise",
+      "badge": "Plusieurs versions",
+      "bar_one": "{{count}} mod est présent en plusieurs versions dans le dossier",
+      "bar_many": "{{count}} mods sont présents en plusieurs versions dans le dossier",
+      "bar_other": "{{count}} mods sont présents en plusieurs versions dans le dossier",
+      "barHint": "Le même mod dans des fichiers différents — le jeu plantera ou chargera la mauvaise version",
+      "keepOne": "Garder une version",
+      "done_one": "{{count}} copie en trop mise à la corbeille",
+      "done_many": "{{count}} copies en trop mises à la corbeille",
+      "done_other": "{{count}} copies en trop mises à la corbeille",
+      "doneHint": "Vous pouvez les récupérer depuis la corbeille en bas de la bibliothèque",
+      "failed": "Impossible de retirer les copies"
+    }
   },
   "nav": {
     "play": "Jouer"
@@ -5150,7 +5170,8 @@
       "setGameOptions": "Modification des paramètres vidéo de « {{name}} »",
       "listModConfigs": "Parcours des configurations de « {{name}} »",
       "readModConfig": "Lecture de {{name}}",
-      "setModConfigValues": "Modification de {{name}}"
+      "setModConfigValues": "Modification de {{name}}",
+      "findCulprit": "Recherche du coupable dans « {{name}} »"
     },
     "providers": {
       "title": "Fournisseurs d’IA",
@@ -5359,7 +5380,8 @@
       "set_game_options": "Modifier les paramètres vidéo",
       "list_mod_configs": "Lister les configurations des mods",
       "read_mod_config": "Lire la configuration d’un mod",
-      "set_mod_config_values": "Modifier la configuration d’un mod"
+      "set_mod_config_values": "Modifier la configuration d’un mod",
+      "find_culprit_mods": "Trouver le mod coupable"
     },
     "stopped": "Arrêté",
     "emptyContextInstances_one": "{{count}} instance",
@@ -5415,7 +5437,9 @@
       "loader": "Chargeur",
       "newestBuild": "dernière version",
       "file": "Fichier",
-      "skipped": "Ne changera pas"
+      "skipped": "Ne changera pas",
+      "keepOn": "Laisser activé",
+      "searchAmong": "Chercher parmi"
     },
     "undo": {
       "action": "Annuler",
@@ -5530,7 +5554,8 @@
       "logs": "Journaux",
       "statistics": "Statistiques",
       "configs": "Configs",
-      "arguments": "Arguments"
+      "arguments": "Arguments",
+      "bisect": "Recherche du coupable"
     },
     "emptyInstancesHint": "Créez une instance ou importez-en une depuis un fichier — le launcher téléchargera tout ce qu’il faut.",
     "offline": {
@@ -7317,7 +7342,8 @@
       "loaderFallback": "loader remplacé par {{version}}",
       "copyFailed_one": "{{count}} fichier non copié",
       "copyFailed_many": "{{count}} fichiers non copiés",
-      "copyFailed_other": "{{count}} fichiers non copiés"
+      "copyFailed_other": "{{count}} fichiers non copiés",
+      "reviewing": "Vérifiez les fichiers absents de CurseForge et de Modrinth"
     },
     "open": "Ouvrir",
     "progressTitle": "Transfert des instances",
@@ -7359,7 +7385,8 @@
       "more_other": "et {{count}} autres instances",
       "later": "Plus tard",
       "open": "Transférer"
-    }
+    },
+    "reviewContinue": "Poursuivre le transfert"
   },
   "catalogInstall": {
     "title": "Installer « {{title}} »",
@@ -7522,5 +7549,129 @@
     "groupMessages_many": "{{count}} nouveaux messages dans le groupe",
     "groupMessages_other": "{{count}} nouveaux messages dans le groupe",
     "previewBody": "Vous invite à jouer : voici à quoi ressembleront les invitations"
+  },
+  "bisect": {
+    "title": "Trouver le coupable",
+    "intro": "L’assistant désactive une partie des mods, vous lancez le jeu et indiquez si le problème est toujours là. Après quelques lancements, il reste un mod ou une paire. Quand vous quittez l’assistant, tous les mods reviennent comme avant.",
+    "search": "Chercher un mod",
+    "notFound": "Aucun résultat",
+    "closeGame": "Fermez le jeu pour continuer",
+    "failed": "Impossible de basculer les mods",
+    "back": "Retour",
+    "exit": "Quitter et tout rétablir",
+    "restore": "Tout rétablir",
+    "continue": "Continuer",
+    "locked": "La recherche du coupable est en cours — vous pourrez modifier les mods après avoir quitté l’assistant",
+    "reminder": "La recherche du coupable dans « {{name}} » n’est pas terminée",
+    "reminderHint": "Certains mods sont désactivés en ce moment. Poursuivez la recherche ou quittez l’assistant — les mods reviendront comme avant.",
+    "finished": "Les mods sont revenus comme avant",
+    "finishedDisabled_one": "Les mods sont revenus comme avant, le coupable est désactivé",
+    "finishedDisabled_many": "Les mods sont revenus comme avant, {{count}} mods sont désactivés",
+    "finishedDisabled_other": "Les mods sont revenus comme avant, {{count}} mods sont désactivés",
+    "renameFailed_one": "Impossible de basculer {{count}} fichier",
+    "renameFailed_many": "Impossible de basculer {{count}} fichiers",
+    "renameFailed_other": "Impossible de basculer {{count}} fichiers",
+    "renameFailedHint": "Un autre programme utilise le fichier. Fermez-le et répétez l’étape.",
+    "reason": {
+      "running": "Fermez d’abord le jeu — tant qu’il tourne, les fichiers des mods sont verrouillés.",
+      "exists": "Une recherche est déjà en cours dans cette instance.",
+      "missing": "La recherche dans cette instance est déjà terminée.",
+      "changed": "Le dossier des mods a changé. Rouvrez l’assistant."
+    },
+    "how": {
+      "title": "Comment ça marche",
+      "split": "L’assistant désactive une partie des suspects ; les mods qui en dépendent sont désactivés avec eux",
+      "play": "Vous lancez le jeu et refaites ce qui provoquait le problème",
+      "answer": "Vous répondez « Toujours là » ou « Disparu » — la liste des suspects est divisée par deux",
+      "restore": "Quand vous quittez l’assistant, les mods reviennent comme avant — même si le launcher a été fermé en pleine recherche"
+    },
+    "setup": {
+      "keepTitle": "Laisser activé",
+      "keepHint": "Cochez les mods sans lesquels le problème ne peut pas être vérifié",
+      "noMods": "Aucun mod activé dans le dossier mods",
+      "noSuspects": "Rien à désactiver : tous les mods sont marqués « Laisser activé »",
+      "suspects": "Suspects",
+      "kept": "Laisser activé",
+      "runs": "Lancements",
+      "start": "Lancer la recherche"
+    },
+    "duplicates": {
+      "title": "D’abord, les copies d’un même mod",
+      "text": "Un mod se trouve plusieurs fois dans le dossier. Le premier lancement n’utilise qu’une version ; choisissez laquelle garder."
+    },
+    "list": {
+      "extra": "copie en trop",
+      "off": "Désactivés",
+      "on": "Activés",
+      "noneOff": "Tous les mods sont activés",
+      "noneOn": "Tous les suspects sont désactivés"
+    },
+    "step": {
+      "run": "Lancement {{number}}",
+      "left_one": "environ {{count}} lancement restant",
+      "left_many": "environ {{count}} lancements restants",
+      "left_other": "environ {{count}} lancements restants",
+      "duplicates_one": "La copie en trop du mod est désactivée. Lancez le jeu et vérifiez si le problème est toujours là.",
+      "duplicates_many": "Les copies en trop sont désactivées ({{count}}). Lancez le jeu et vérifiez si le problème est toujours là.",
+      "duplicates_other": "Les copies en trop sont désactivées ({{count}}). Lancez le jeu et vérifiez si le problème est toujours là.",
+      "test": "{{enabled}} mods suspects sur {{total}} sont activés. Lancez le jeu, refaites ce qui provoquait le problème, fermez le jeu et répondez.",
+      "crashed": "Le jeu s’est arrêté sur une erreur",
+      "contradiction": "Cette réponse contredit le lancement {{number}} — le problème n’apparaît peut-être pas à chaque fois. Vérifiez à nouveau ou revenez en arrière.",
+      "launch": "Lancer le jeu",
+      "running": "Le jeu est lancé — vérifiez puis fermez-le",
+      "yes": "Toujours là",
+      "no": "Disparu"
+    },
+    "session": {
+      "started": "Commencée",
+      "answers": "Réponses"
+    },
+    "result": {
+      "found": {
+        "title": "Coupable trouvé",
+        "text": "Avec ce mod, le problème est là ; sans lui, il disparaît. Les autres mods n’y sont pour rien."
+      },
+      "foundMany": {
+        "title": "Une combinaison de mods",
+        "text": "Le problème n’apparaît que lorsque ces mods sont activés ensemble. Vérifiez leurs mises à jour ou n’en gardez qu’un."
+      },
+      "duplicatesFound": {
+        "title": "La cause : des copies d’un même mod",
+        "text": "Avec une seule version, le problème disparaît. Désactivez les copies en trop maintenant et supprimez-les dans la bibliothèque."
+      },
+      "notInSuspects": {
+        "title": "Ce ne sont pas ces mods",
+        "text": "Le problème est resté même avec tous les suspects désactivés. La cause se trouve dans les mods laissés activés, dans les réglages ou dans le jeu lui-même."
+      },
+      "notReproduced": {
+        "title": "Le problème n’est pas apparu",
+        "text": "Avec tous les mods, le problème n’est pas apparu. S’il ne survient pas à chaque fois, revenez en arrière et vérifiez à nouveau."
+      },
+      "inconsistent": {
+        "title": "Les réponses se contredisent",
+        "text": "Le problème semble n’apparaître que parfois. Revenez d’une étape et vérifiez plus attentivement."
+      },
+      "tooMany": {
+        "title": "Trop de mods à la fois",
+        "text": "Le problème dépend de plus de trois mods. Voici ceux trouvés jusqu’ici — vérifiez leurs liens et leurs mises à jour."
+      },
+      "disableCulprits_one": "Le désactiver et quitter",
+      "disableCulprits_many": "Les désactiver et quitter",
+      "disableCulprits_other": "Les désactiver et quitter",
+      "disableExtras": "Désactiver les copies en trop et quitter"
+    },
+    "entry": {
+      "library": "Trouver le mod coupable",
+      "selection": "Trouver le coupable",
+      "selectionHint": "Chercher le coupable uniquement parmi les mods sélectionnés — les autres restent activés",
+      "crash": "Trouver le mod coupable"
+    }
+  },
+  "modpackScan": {
+    "unlisted": "« {{name}} » a été retirée du catalogue",
+    "unlistedHint_one": "Un code malveillant connu a été trouvé dans {{files}}. Le fichier a été supprimé du serveur — remplacez le mod et publiez à nouveau l’instance.",
+    "unlistedHint_many": "Un code malveillant connu a été trouvé dans {{files}}. Les fichiers ont été supprimés du serveur — remplacez les mods et publiez à nouveau l’instance.",
+    "unlistedHint_other": "Un code malveillant connu a été trouvé dans {{files}}. Les fichiers ont été supprimés du serveur — remplacez les mods et publiez à nouveau l’instance.",
+    "open": "Ouvrir l’instance"
   }
 }

@@ -97,6 +97,12 @@ const CATALOG: ToolDescriptor[] = [
   { name: "update_mods", group: "content", risk: "write", need: "internet" },
   { name: "remove_mods", group: "content", risk: "write", need: "none" },
   { name: "toggle_mods", group: "content", risk: "write", need: "none" },
+  {
+    name: "find_culprit_mods",
+    group: "content",
+    risk: "write",
+    need: "none",
+  },
 
   { name: "list_worlds", group: "worlds", risk: "read", need: "account" },
   {

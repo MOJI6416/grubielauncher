@@ -20,6 +20,8 @@ export interface InstanceTabsInput {
   hasUnsavedArguments?: boolean;
   hasModpack?: boolean;
   hasModpackUpdate?: boolean;
+  hasBisect?: boolean;
+  isBisectActive?: boolean;
 }
 
 export function buildInstanceTabs(input: InstanceTabsInput): InstanceTabItem[] {
@@ -30,6 +32,9 @@ export function buildInstanceTabs(input: InstanceTabsInput): InstanceTabItem[] {
       : []),
     { id: "content", count: input.contentCount },
   ];
+
+  if (input.hasBisect)
+    tabs.push({ id: "bisect", alert: input.isBisectActive === true });
 
   tabs.push({ id: "worlds", count: input.worldCount });
   if (input.hasServerManager) {

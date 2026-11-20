@@ -1110,7 +1110,24 @@
     "modpackDownloadFailed": "Mod paketi indirilemedi",
     "modpackDownloadFailedHint": "Mod paketi arşivi {{source}} sitesinden indirilmedi. Bağlantınızı kontrol edip tekrar deneyin.",
     "worldsTabFiles": "Dünyalar ve veri paketleri «Dünyalar» sekmesinden kurulur",
-    "worldsTabLink": "{{type}}: «Dünyalar» sekmesinden kurulur"
+    "worldsTabLink": "{{type}}: «Dünyalar» sekmesinden kurulur",
+    "conflict": {
+      "title": "Tek sürüm tut",
+      "text": "Kalacak sürümü seçin. Diğer kopyalar kurulumun çöp kutusuna gider — oradan geri getirebilirsiniz.",
+      "newest": "daha yeni",
+      "apply_one": "{{count}} kopyayı kaldır",
+      "apply_other": "{{count}} kopyayı kaldır",
+      "rowHint": "mods klasöründe bu modun birkaç sürümü var — oyun çöker ya da yanlış olanı yükler",
+      "badge": "Birkaç sürüm",
+      "bar_one": "{{count}} mod klasörde birkaç sürüm hâlinde duruyor",
+      "bar_other": "{{count}} mod klasörde birkaç sürüm hâlinde duruyor",
+      "barHint": "Aynı mod farklı dosyalarda — oyun çöker ya da yanlış sürümü yükler",
+      "keepOne": "Tek sürüm tut",
+      "done_one": "{{count}} fazla kopya çöp kutusunda",
+      "done_other": "{{count}} fazla kopya çöp kutusunda",
+      "doneHint": "Onları kütüphanenin altındaki çöp kutusundan geri getirebilirsiniz",
+      "failed": "Kopyalar kaldırılamadı"
+    }
   },
   "nav": {
     "play": "Oyna"
@@ -5107,7 +5124,8 @@
       "setGameOptions": "“{{name}}” görüntü ayarları değiştiriliyor",
       "listModConfigs": "“{{name}}” yapılandırmalarına bakılıyor",
       "readModConfig": "{{name}} okunuyor",
-      "setModConfigValues": "{{name}} değiştiriliyor"
+      "setModConfigValues": "{{name}} değiştiriliyor",
+      "findCulprit": "“{{name}}” içinde suçlu araması"
     },
     "providers": {
       "title": "Yapay zekâ sağlayıcıları",
@@ -5316,7 +5334,8 @@
       "set_game_options": "Görüntü ayarlarını değiştir",
       "list_mod_configs": "Mod yapılandırmalarını listele",
       "read_mod_config": "Mod yapılandırmasını oku",
-      "set_mod_config_values": "Mod yapılandırmasını değiştir"
+      "set_mod_config_values": "Mod yapılandırmasını değiştir",
+      "find_culprit_mods": "Suçlu modu bul"
     },
     "stopped": "Durduruldu",
     "emptyContextInstances_one": "{{count}} kurulumunu",
@@ -5369,7 +5388,9 @@
       "loader": "Yükleyici",
       "newestBuild": "en son sürüm",
       "file": "Dosya",
-      "skipped": "Değişmeyecek"
+      "skipped": "Değişmeyecek",
+      "keepOn": "Açık bırak",
+      "searchAmong": "Şunlar arasında ara"
     },
     "undo": {
       "action": "Geri al",
@@ -5483,7 +5504,8 @@
       "logs": "Günlükler",
       "statistics": "İstatistikler",
       "configs": "Yapılandırma",
-      "arguments": "Argümanlar"
+      "arguments": "Argümanlar",
+      "bisect": "Suçlu araması"
     },
     "emptyInstancesHint": "Bir kurulum oluşturun veya dosyadan içe aktarın — başlatıcı gereken her şeyi indirecek.",
     "offline": {
@@ -7242,7 +7264,8 @@
       "identified": "Taşındı · tanınan modlar: {{count}}/{{total}}",
       "loaderFallback": "yükleyici {{version}} ile değiştirildi",
       "copyFailed_one": "{{count}} dosya kopyalanmadı",
-      "copyFailed_other": "{{count}} dosya kopyalanmadı"
+      "copyFailed_other": "{{count}} dosya kopyalanmadı",
+      "reviewing": "CurseForge ve Modrinth’te olmayan dosyaları gözden geçirin"
     },
     "open": "Aç",
     "progressTitle": "Kurulumlar taşınıyor",
@@ -7281,7 +7304,8 @@
       "more_other": "ve {{count}} kurulum daha",
       "later": "Şimdi değil",
       "open": "Taşı"
-    }
+    },
+    "reviewContinue": "Taşımaya devam et"
   },
   "catalogInstall": {
     "title": "“{{title}}” yükle",
@@ -7436,5 +7460,123 @@
     "groupMessages_one": "Grupta {{count}} yeni mesaj",
     "groupMessages_other": "Grupta {{count}} yeni mesaj",
     "previewBody": "Sizi oyuna çağırıyor; davetler böyle görünecek"
+  },
+  "bisect": {
+    "title": "Suçluyu bul",
+    "intro": "Sihirbaz modların bir kısmını kapatır, siz oyunu başlatıp sorunun sürüp sürmediğini söylersiniz. Birkaç başlatmadan sonra tek bir mod ya da bir çift kalır. Sihirbazdan çıktığınızda tüm modlar eski hâline döner.",
+    "search": "Mod bul",
+    "notFound": "Hiçbir şey bulunamadı",
+    "closeGame": "Devam etmek için oyunu kapatın",
+    "failed": "Modlar değiştirilemedi",
+    "back": "Geri",
+    "exit": "Çık ve her şeyi geri getir",
+    "restore": "Her şeyi geri getir",
+    "continue": "Devam et",
+    "locked": "Suçlu aranıyor — modları sihirbazdan çıktıktan sonra değiştirebilirsiniz",
+    "reminder": "“{{name}}” içindeki suçlu araması bitmedi",
+    "reminderHint": "Şu anda bazı modlar kapalı. Aramaya devam edin ya da sihirbazdan çıkın — modlar eski hâline döner.",
+    "finished": "Modlar eski hâline döndü",
+    "finishedDisabled_one": "Modlar eski hâline döndü, suçlu kapalı",
+    "finishedDisabled_other": "Modlar eski hâline döndü, {{count}} mod kapalı",
+    "renameFailed_one": "{{count}} dosya değiştirilemedi",
+    "renameFailed_other": "{{count}} dosya değiştirilemedi",
+    "renameFailedHint": "Dosyayı başka bir program kullanıyor. Onu kapatıp adımı tekrarlayın.",
+    "reason": {
+      "running": "Önce oyunu kapatın — oyun açıkken mod dosyaları kilitlidir.",
+      "exists": "Bu kurulumda zaten bir arama sürüyor.",
+      "missing": "Bu kurulumdaki arama zaten bitti.",
+      "changed": "Mod klasörü değişti. Sihirbazı yeniden açın."
+    },
+    "how": {
+      "title": "Nasıl çalışır",
+      "split": "Sihirbaz şüphelilerin bir kısmını kapatır; onlara bağlı modlar da birlikte kapanır",
+      "play": "Oyunu başlatıp soruna yol açan şeyi tekrarlarsınız",
+      "answer": "“Hâlâ var” ya da “Geçti” diye yanıtlarsınız — şüpheli listesi yarıya iner",
+      "restore": "Sihirbazdan çıktığınızda modlar eski hâline döner — başlatıcı aramanın ortasında kapansa bile"
+    },
+    "setup": {
+      "keepTitle": "Açık bırak",
+      "keepHint": "Sorunu denetlemek için gereken modları işaretleyin",
+      "noMods": "mods klasöründe etkin mod yok",
+      "noSuspects": "Kapatılacak bir şey yok: tüm modlar “Açık bırak” olarak işaretli",
+      "suspects": "Şüpheliler",
+      "kept": "Açık bırak",
+      "runs": "Başlatma",
+      "start": "Aramayı başlat"
+    },
+    "duplicates": {
+      "title": "Önce aynı modun kopyaları",
+      "text": "Bir mod klasörde birkaç kez var. İlk başlatma tek bir sürümle yapılır; hangisinin kalacağını seçin."
+    },
+    "list": {
+      "extra": "fazla kopya",
+      "off": "Kapalı",
+      "on": "Açık",
+      "noneOff": "Tüm modlar açık",
+      "noneOn": "Tüm şüpheliler kapalı"
+    },
+    "step": {
+      "run": "Başlatma {{number}}",
+      "left_one": "yaklaşık {{count}} başlatma kaldı",
+      "left_other": "yaklaşık {{count}} başlatma kaldı",
+      "duplicates_one": "Modun fazla kopyası kapatıldı. Oyunu başlatın ve sorunun sürüp sürmediğine bakın.",
+      "duplicates_other": "Fazla kopyalar kapatıldı ({{count}}). Oyunu başlatın ve sorunun sürüp sürmediğine bakın.",
+      "test": "{{total}} şüpheli moddan {{enabled}} tanesi açık. Oyunu başlatın, soruna yol açan şeyi tekrarlayın, oyunu kapatın ve yanıtlayın.",
+      "crashed": "Oyun bir hatayla kapandı",
+      "contradiction": "Bu yanıt {{number}}. başlatmayla çelişiyor — sorun her seferinde ortaya çıkmıyor olabilir. Yeniden deneyin ya da geri dönün.",
+      "launch": "Oyunu başlat",
+      "running": "Oyun açık — denetleyip kapatın",
+      "yes": "Hâlâ var",
+      "no": "Geçti"
+    },
+    "session": {
+      "started": "Başlangıç",
+      "answers": "Yanıtlar"
+    },
+    "result": {
+      "found": {
+        "title": "Suçlu bulundu",
+        "text": "Bu modla sorun var, onsuz yok. Diğer modların bir suçu yok."
+      },
+      "foundMany": {
+        "title": "Modların bir birleşimi",
+        "text": "Sorun yalnızca bu modlar birlikte açıkken ortaya çıkıyor. Güncellemelerine bakın ya da yalnızca birini tutun."
+      },
+      "duplicatesFound": {
+        "title": "Neden: aynı modun kopyaları",
+        "text": "Tek sürümle sorun geçti. Fazla kopyaları şimdi kapatın, kütüphaneden silin."
+      },
+      "notInSuspects": {
+        "title": "Sorun bu modlarda değil",
+        "text": "Tüm şüpheliler kapalıyken bile sorun sürdü. Neden, açık bıraktığınız modlarda, ayarlarda ya da oyunun kendisinde."
+      },
+      "notReproduced": {
+        "title": "Sorun ortaya çıkmadı",
+        "text": "Tüm modlar açıkken sorun ortaya çıkmadı. Her seferinde olmuyorsa geri dönüp yeniden deneyin."
+      },
+      "inconsistent": {
+        "title": "Yanıtlar çelişiyor",
+        "text": "Sorun yalnızca bazen ortaya çıkıyor gibi. Bir adım geri dönüp daha dikkatli denetleyin."
+      },
+      "tooMany": {
+        "title": "Aynı anda çok fazla mod",
+        "text": "Sorun üçten fazla moda bağlı. Şimdiye kadar bulunanlar bunlar — aralarındaki bağlara ve güncellemelere bakın."
+      },
+      "disableCulprits_one": "Kapat ve çık",
+      "disableCulprits_other": "Kapat ve çık",
+      "disableExtras": "Fazla kopyaları kapat ve çık"
+    },
+    "entry": {
+      "library": "Suçlu modu bul",
+      "selection": "Suçluyu bul",
+      "selectionHint": "Suçluyu yalnızca seçili modlar arasında ara — diğerleri açık kalır",
+      "crash": "Suçlu modu bul"
+    }
+  },
+  "modpackScan": {
+    "unlisted": "“{{name}}” katalogdan kaldırıldı",
+    "unlistedHint_one": "{{files}} içinde bilinen kötü amaçlı kod bulundu. Dosya sunucudan silindi — modu değiştirip kurulumu yeniden yayımlayın.",
+    "unlistedHint_other": "{{files}} içinde bilinen kötü amaçlı kod bulundu. Dosyalar sunucudan silindi — modları değiştirip kurulumu yeniden yayımlayın.",
+    "open": "Kurulumu aç"
   }
 }

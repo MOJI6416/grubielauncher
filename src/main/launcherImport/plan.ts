@@ -193,10 +193,11 @@ export async function buildContentList(
   instance: ForeignInstance,
   parts: ReadonlySet<ImportPart>,
   minecraftVersion: string,
-): Promise<{ mods: ILocalProject[]; identified: number }> {
+): Promise<{ mods: ILocalProject[]; identified: number; checked: boolean }> {
   const files = await listContentFiles(instance, parts);
-  if (files.length === 0) return { mods: [], identified: 0 };
+  if (files.length === 0) return { mods: [], identified: 0, checked: true };
 
+  let checked = true;
   const result = await ModManager.identifyLocalFiles(
     files.map((file) => ({
       key: file.key,
@@ -205,7 +206,11 @@ export async function buildContentList(
       projectType: file.type,
       gameVersion: minecraftVersion,
     })),
-  ).catch(() => ({ matches: [] as ILocalIdentifyMatch[], unavailable: [] }));
+  ).catch(() => {
+    checked = false;
+    return { matches: [] as ILocalIdentifyMatch[], unavailable: [] };
+  });
+  if (result.unavailable.length > 0) checked = false;
 
   const matches = new Map(result.matches.map((match) => [match.key, match]));
   const takenProjects = new Set<string>();
@@ -226,7 +231,7 @@ export async function buildContentList(
     mods.push(await localProject(file, takenIds));
   }
 
-  return { mods, identified };
+  return { mods, identified, checked };
 }
 
 const GC_SELECTOR = /^-XX:\+Use\w*GC$/;
@@ -292,7 +297,7 @@ export async function planImport(
 ): Promise<ForeignImportPlan> {
   await fs.ensureDir(stagingDir);
   const runtime = await runtimeOf(instance, stagingDir);
-  const { mods, identified } = await buildContentList(instance, parts, runtime.version);
+  const { mods, identified, checked } = await buildContentList(instance, parts, runtime.version);
   const bytes = totalBytes(await collectCopyItems(instance, parts));
   const jvm = parts.has("memory") ? importedJvm(instance.jvmArgs) : null;
 
@@ -313,5 +318,6 @@ export async function planImport(
     jvmArguments: jvm?.jvmArguments ?? "",
     keepOptimizedJvm: jvm?.keepOptimizedJvm ?? true,
     identified,
+    catalogChecked: checked,
   };
 }

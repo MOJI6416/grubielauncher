@@ -434,6 +434,24 @@ export interface IElectronAPI {
       callback: (progress: ForeignCopyProgress) => void,
     ) => () => void;
   };
+  bisect: {
+    read: (
+      versionPath: string,
+    ) => Promise<import("@/types/ModBisect").ModBisectSession | null>;
+    list: (versionPaths: string[]) => Promise<string[]>;
+    begin: (
+      versionPath: string,
+      draft: import("@/types/ModBisect").ModBisectSession,
+    ) => Promise<import("@/types/ModBisect").ModBisectBeginResult>;
+    save: (
+      versionPath: string,
+      session: import("@/types/ModBisect").ModBisectSession,
+    ) => Promise<import("@/types/ModBisect").ModBisectApplyResult>;
+    finish: (
+      versionPath: string,
+      disable: string[],
+    ) => Promise<import("@/types/ModBisect").ModBisectApplyResult>;
+  };
   dataLocation: {
     get: () => Promise<DataLocationInfo>;
     pick: () => Promise<DataLocationPlan | null>;
@@ -1327,6 +1345,9 @@ export interface IElectronAPI {
     localDependencies: (
       versionPath: string,
     ) => Promise<import("@/types/ModManager").LocalModDependencyIndex>;
+    modIdConflicts: (
+      versionPath: string,
+    ) => Promise<import("@/types/ModBisect").ModIdConflict[]>;
     managedFiles: (
       versionPath: string,
     ) => Promise<Partial<Record<ProjectType, string[]>> | null>;
@@ -1809,6 +1830,16 @@ export const api: IElectronAPI = {
       ipcRenderer.on("launcherImport:copyProgress", listener);
       return () => ipcRenderer.off("launcherImport:copyProgress", listener);
     },
+  },
+  bisect: {
+    read: (versionPath: string) => invoke("bisect:read", versionPath),
+    list: (versionPaths: string[]) => invoke("bisect:list", versionPaths),
+    begin: (versionPath: string, draft: unknown) =>
+      invoke("bisect:begin", versionPath, draft),
+    save: (versionPath: string, session: unknown) =>
+      invoke("bisect:save", versionPath, session),
+    finish: (versionPath: string, disable: string[]) =>
+      invoke("bisect:finish", versionPath, disable),
   },
   dataLocation: {
     get: () => invoke("dataLocation:get"),
@@ -2712,6 +2743,8 @@ export const api: IElectronAPI = {
       invoke("modManager:checkLocalMod", modPath),
     localDependencies: (versionPath: string) =>
       invoke("modManager:localDependencies", versionPath),
+    modIdConflicts: (versionPath: string) =>
+      invoke("modManager:modIdConflicts", versionPath),
     managedFiles: (versionPath: string) =>
       invoke("modManager:managedFiles", versionPath),
     trashFiles: (

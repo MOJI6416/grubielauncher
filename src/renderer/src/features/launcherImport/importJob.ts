@@ -20,12 +20,22 @@ import { describeNotEnoughSpace, isNotEnoughSpace } from "@renderer/utilities/di
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { readLauncherState, writeLauncherState } from "@renderer/utilities/launcherState";
 import { ImportStepError, describeImportFailure } from "./failures";
+import {
+  skippedJarKeys,
+  withoutSkipped,
+} from "@renderer/features/newInstance/unknownJars";
+import {
+  importUnknownJars,
+  skippedFileNames,
+  type ImportUnknownJar,
+} from "./unknownJarReview";
 
 const api = window.api;
 
 export type ImportItemStatus =
   | "queued"
   | "preparing"
+  | "reviewing"
   | "copying"
   | "installing"
   | "done"
@@ -43,6 +53,7 @@ export interface ImportItemState {
   modCount?: number;
   copyFailed?: number;
   loaderFallback?: string;
+  unknownJars?: ImportUnknownJar[];
 }
 
 export interface ImportJob {
@@ -54,6 +65,29 @@ export const launcherImportJobAtom = atom<ImportJob | null>(null);
 export const importedLaunchersAtom = atom<ReadonlySet<string>>(new Set<string>());
 
 let controller: AbortController | null = null;
+const reviews = new Map<string, (install: ReadonlySet<string> | null) => void>();
+
+export function answerUnknownJars(
+  id: string,
+  install: ReadonlySet<string> | null,
+): void {
+  reviews.get(id)?.(install);
+}
+
+function waitForReview(
+  id: string,
+  signal: AbortSignal,
+): Promise<ReadonlySet<string> | null> {
+  return new Promise((resolve) => {
+    const finish = (install: ReadonlySet<string> | null) => {
+      reviews.delete(id);
+      resolve(install);
+    };
+    if (signal.aborted) return finish(null);
+    reviews.set(id, finish);
+    signal.addEventListener("abort", () => finish(null), { once: true });
+  });
+}
 
 function patchItem(id: string, patch: Partial<ImportItemState>): void {
   const store = getDefaultStore();
@@ -140,6 +174,17 @@ async function importOne(
       throw new ImportStepError(t("launcherImport.errors.backend"));
     }
 
+    const unknownJars = importUnknownJars(pack.mods, plan.catalogChecked !== false);
+    let skipped = new Set<string>();
+    if (unknownJars.length > 0) {
+      patchItem(summary.id, { status: "reviewing", unknownJars });
+      const install = await waitForReview(summary.id, signal);
+      if (!install) throw new Error(VERSION_INSTALL_CANCELLED);
+      skipped = skippedJarKeys(unknownJars, install);
+      patchItem(summary.id, { status: "preparing", unknownJars: undefined });
+    }
+    const kept = withoutSkipped(pack.mods, skipped);
+
     const mods = pack.mods.filter((mod) => mod.projectType === ProjectType.MOD);
     patchItem(summary.id, {
       status: plan.bytes > 0 ? "copying" : "installing",
@@ -155,7 +200,7 @@ async function importOne(
       loader,
       loaderVersion,
       minecraftVersion: resolution.minecraftVersion,
-      mods: pack.mods,
+      mods: kept,
       servers: [],
       options: "",
       runArguments: { jvm: plan.jvmArguments, game: "" },
@@ -164,7 +209,7 @@ async function importOne(
         kind: "file",
         title: pack.name,
         isOwner: true,
-        importModpack: pack,
+        importModpack: skipped.size > 0 ? { ...pack, mods: kept } : pack,
         foreign: {
           id: plan.id,
           parts,
@@ -176,6 +221,12 @@ async function importOne(
       overrides: overridesOf(plan),
       signal,
     });
+
+    for (const name of skippedFileNames(unknownJars, skipped)) {
+      const target = await api.path.join(instance.versionPath, "mods", name);
+      if (await api.fs.pathExists(target))
+        await api.fs.rimraf(target).catch(ignoreFailure);
+    }
 
     patchItem(summary.id, {
       status: "done",

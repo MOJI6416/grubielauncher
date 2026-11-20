@@ -29,6 +29,7 @@ import {
   setRunArguments,
 } from "./mutations";
 import { checkIntegrity, toggleMods, updateMods } from "./repair";
+import { findCulpritMods } from "./bisect";
 import {
   createWorldBackup,
   deleteWorldBackup,
@@ -59,6 +60,7 @@ const LOCAL_TOOLS: AgentTool[] = [
   listServers,
   removeMods,
   toggleMods,
+  findCulpritMods,
   setRunArguments,
   setMemory,
   setInstanceJava,

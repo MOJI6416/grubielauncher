@@ -1110,7 +1110,24 @@
     "modpackDownloadFailed": "Failed to download the modpack",
     "modpackDownloadFailedHint": "The modpack archive did not download from {{source}}. Check your connection and try again.",
     "worldsTabFiles": "Worlds and datapacks are installed in the Worlds tab",
-    "worldsTabLink": "{{type}} are installed in the Worlds tab"
+    "worldsTabLink": "{{type}} are installed in the Worlds tab",
+    "conflict": {
+      "title": "Keep one version",
+      "text": "Choose the version to keep. The other copies go to the instance trash — you can bring them back from there.",
+      "newest": "newer",
+      "apply_one": "Remove {{count}} copy",
+      "apply_other": "Remove {{count}} copies",
+      "rowHint": "The mods folder holds several versions of this mod — the game will crash or load the wrong one",
+      "badge": "Several versions",
+      "bar_one": "{{count}} mod is in the folder in several versions",
+      "bar_other": "{{count}} mods are in the folder in several versions",
+      "barHint": "The same mod in different files — the game will crash or load the wrong version",
+      "keepOne": "Keep one version",
+      "done_one": "{{count}} extra copy moved to the trash",
+      "done_other": "{{count}} extra copies moved to the trash",
+      "doneHint": "You can bring them back from the trash at the bottom of the library",
+      "failed": "Could not remove the copies"
+    }
   },
   "nav": {
     "play": "Play"
@@ -5107,7 +5124,8 @@
       "setGameOptions": "Changing the video settings of “{{name}}”",
       "listModConfigs": "Looking through the configs of “{{name}}”",
       "readModConfig": "Reading {{name}}",
-      "setModConfigValues": "Changing {{name}}"
+      "setModConfigValues": "Changing {{name}}",
+      "findCulprit": "Culprit search in “{{name}}”"
     },
     "providers": {
       "title": "AI providers",
@@ -5316,7 +5334,8 @@
       "set_game_options": "Change video settings",
       "list_mod_configs": "List mod configs",
       "read_mod_config": "Read a mod config",
-      "set_mod_config_values": "Change a mod config"
+      "set_mod_config_values": "Change a mod config",
+      "find_culprit_mods": "Find the culprit mod"
     },
     "stopped": "Stopped",
     "emptyContextInstances_one": "{{count}} instance",
@@ -5369,7 +5388,9 @@
       "loader": "Loader",
       "newestBuild": "latest version",
       "file": "File",
-      "skipped": "Will not change"
+      "skipped": "Will not change",
+      "keepOn": "Keep on",
+      "searchAmong": "Search among"
     },
     "undo": {
       "action": "Undo",
@@ -5483,7 +5504,8 @@
       "logs": "Logs",
       "statistics": "Statistics",
       "configs": "Configs",
-      "arguments": "Arguments"
+      "arguments": "Arguments",
+      "bisect": "Culprit search"
     },
     "emptyInstancesHint": "Create an instance or import one from a file — the launcher will download everything it needs.",
     "offline": {
@@ -7242,7 +7264,8 @@
       "identified": "Moved · mods recognised: {{count}} of {{total}}",
       "loaderFallback": "loader replaced with {{version}}",
       "copyFailed_one": "{{count}} file not copied",
-      "copyFailed_other": "{{count}} files not copied"
+      "copyFailed_other": "{{count}} files not copied",
+      "reviewing": "Check the files that are not on CurseForge or Modrinth"
     },
     "open": "Open",
     "progressTitle": "Moving instances",
@@ -7281,7 +7304,8 @@
       "more_other": "and {{count}} more instances",
       "later": "Not now",
       "open": "Move"
-    }
+    },
+    "reviewContinue": "Continue the move"
   },
   "catalogInstall": {
     "title": "Install “{{title}}”",
@@ -7436,5 +7460,123 @@
     "groupMessages_one": "{{count}} new message in the group",
     "groupMessages_other": "{{count}} new messages in the group",
     "previewBody": "Invites you to play — this is how invites will look"
+  },
+  "bisect": {
+    "title": "Find the culprit",
+    "intro": "The wizard switches part of your mods off, you launch the game and say whether the problem is still there. After a few runs it is down to one mod or a pair. When you leave the wizard, every mod comes back as it was.",
+    "search": "Find a mod",
+    "notFound": "Nothing found",
+    "closeGame": "Close the game to continue",
+    "failed": "Could not switch the mods",
+    "back": "Back",
+    "exit": "Leave and restore everything",
+    "restore": "Restore everything",
+    "continue": "Continue",
+    "locked": "The culprit search is running — you can change mods after you leave the wizard",
+    "reminder": "The culprit search in “{{name}}” is not finished",
+    "reminderHint": "Some mods are switched off right now. Continue the search or leave the wizard — the mods will come back as they were.",
+    "finished": "Mods are back as they were",
+    "finishedDisabled_one": "Mods are back as they were, the culprit is off",
+    "finishedDisabled_other": "Mods are back as they were, {{count}} mods are off",
+    "renameFailed_one": "Could not switch {{count}} file",
+    "renameFailed_other": "Could not switch {{count}} files",
+    "renameFailedHint": "Another program is holding the file. Close it and repeat the step.",
+    "reason": {
+      "running": "Close the game first — while it runs, the mod files are locked.",
+      "exists": "A search is already running in this instance.",
+      "missing": "The search in this instance has already finished.",
+      "changed": "The mods folder has changed. Open the wizard again."
+    },
+    "how": {
+      "title": "How it works",
+      "split": "The wizard switches part of the suspects off; mods that depend on them go off together",
+      "play": "You launch the game and repeat what caused the problem",
+      "answer": "You answer “Still there” or “Gone” — the list of suspects halves",
+      "restore": "When you leave the wizard, mods come back as they were — even if the launcher was closed mid-search"
+    },
+    "setup": {
+      "keepTitle": "Keep on",
+      "keepHint": "Tick the mods you need to check the problem",
+      "noMods": "There are no enabled mods in the mods folder",
+      "noSuspects": "Nothing to switch off: every mod is marked “Keep on”",
+      "suspects": "Suspects",
+      "kept": "Keep on",
+      "runs": "Runs",
+      "start": "Start the search"
+    },
+    "duplicates": {
+      "title": "First, copies of one mod",
+      "text": "One mod sits in the folder several times. The first run uses a single version; choose which one to keep."
+    },
+    "list": {
+      "extra": "extra copy",
+      "off": "Off",
+      "on": "On",
+      "noneOff": "Every mod is on",
+      "noneOn": "Every suspect is off"
+    },
+    "step": {
+      "run": "Run {{number}}",
+      "left_one": "about {{count}} run left",
+      "left_other": "about {{count}} runs left",
+      "duplicates_one": "The extra copy of the mod is off. Launch the game and check whether the problem is still there.",
+      "duplicates_other": "The extra copies of mods are off ({{count}}). Launch the game and check whether the problem is still there.",
+      "test": "{{enabled}} of {{total}} suspect mods are on. Launch the game, repeat what caused the problem, close the game and answer.",
+      "crashed": "The game exited with an error",
+      "contradiction": "This answer disagrees with run {{number}} — the problem may not show up every time. Check again or go back.",
+      "launch": "Launch the game",
+      "running": "The game is running — check and close it",
+      "yes": "Still there",
+      "no": "Gone"
+    },
+    "session": {
+      "started": "Started",
+      "answers": "Answers"
+    },
+    "result": {
+      "found": {
+        "title": "Culprit found",
+        "text": "With this mod the problem is there, without it — gone. The other mods are innocent."
+      },
+      "foundMany": {
+        "title": "A combination of mods",
+        "text": "The problem shows up only when these mods are on together. Check their updates or keep just one of them."
+      },
+      "duplicatesFound": {
+        "title": "The cause is copies of one mod",
+        "text": "With one version the problem is gone. Switch the extra copies off now and delete them in the library."
+      },
+      "notInSuspects": {
+        "title": "It is not these mods",
+        "text": "The problem stayed even with every suspect off. The cause is in the mods you kept on, in the settings or in the game itself."
+      },
+      "notReproduced": {
+        "title": "The problem did not show up",
+        "text": "With every mod on, the problem did not appear. If it does not happen every time, go back and check again."
+      },
+      "inconsistent": {
+        "title": "The answers disagree",
+        "text": "The problem seems to show up only sometimes. Go back a step and check more carefully."
+      },
+      "tooMany": {
+        "title": "Too many mods at once",
+        "text": "The problem depends on more than three mods. Here are the ones found so far — check how they relate and their updates."
+      },
+      "disableCulprits_one": "Switch it off and leave",
+      "disableCulprits_other": "Switch them off and leave",
+      "disableExtras": "Switch extra copies off and leave"
+    },
+    "entry": {
+      "library": "Find the culprit mod",
+      "selection": "Find the culprit",
+      "selectionHint": "Look for the culprit only among the selected mods — the rest stay on",
+      "crash": "Find the culprit mod"
+    }
+  },
+  "modpackScan": {
+    "unlisted": "“{{name}}” was removed from the catalog",
+    "unlistedHint_one": "Known malicious code was found in {{files}}. The file was deleted from the server — replace the mod and publish the instance again.",
+    "unlistedHint_other": "Known malicious code was found in {{files}}. The files were deleted from the server — replace the mods and publish the instance again.",
+    "open": "Open the instance"
   }
 }

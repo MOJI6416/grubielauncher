@@ -5,6 +5,7 @@ import {
   CircleArrowUp,
   CloudOff,
   Copy,
+  CopyX,
   FolderInput,
   FolderPlus,
   FolderTree,
@@ -15,6 +16,7 @@ import {
   PinOff,
   Plug,
   PowerOff,
+  SquareSplitHorizontal,
   Trash2,
   X,
 } from "lucide-react";
@@ -47,6 +49,8 @@ export interface ContentStatusBarProps {
   bar:
     | "selection"
     | "foreign"
+    | "bisect"
+    | "conflicts"
     | "duplicates"
     | "updates"
     | "unchecked"
@@ -54,6 +58,10 @@ export interface ContentStatusBarProps {
     | null;
   clearFilterChips: () => void;
   duplicates: DuplicateMarks;
+  conflicts: number;
+  onKeepOneVersion: () => void;
+  onFindCulprit?: (entries: ContentEntry[]) => void;
+  onOpenBisect: () => void;
   filterChips: { key: LibraryFacet; label: string }[] | CatalogFilterChip[];
   foreignFiles: string[];
   isBusy: boolean;
@@ -105,6 +113,10 @@ export function ContentStatusBar({
   createGroupFor,
   clearFilterChips,
   duplicates,
+  conflicts,
+  onKeepOneVersion,
+  onFindCulprit,
+  onOpenBisect,
   filterChips,
   foreignFiles,
   isBusy,
@@ -303,6 +315,23 @@ export function ContentStatusBar({
                 </>
               )}
 
+              {onFindCulprit &&
+                projectType === ProjectType.MOD &&
+                selectedEntries.length >= 2 && (
+                  <Hint content={t("bisect.entry.selectionHint")} className="max-w-64">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      disabled={isBusy}
+                      onClick={() => onFindCulprit(selectedEntries)}
+                    >
+                      <SquareSplitHorizontal className="size-3.5" />
+                      {t("bisect.entry.selection")}
+                    </Button>
+                  </Hint>
+                )}
+
               <Hint content={lockedHint}>
                 <Button
                   size="sm"
@@ -474,6 +503,53 @@ export function ContentStatusBar({
             >
               {t("modManager.connectorFind")}
             </Button>
+          </div>
+        ) : bar === "bisect" ? (
+          <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-info/40 bg-surface-2 px-2.5">
+            <SquareSplitHorizontal className="size-4 shrink-0 text-info" />
+            <Hint content={t("bisect.locked")} variant="text" truncatedOnly>
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                {t("bisect.locked")}
+              </span>
+            </Hint>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 shrink-0 px-2.5 text-xs"
+              onClick={onOpenBisect}
+            >
+              {t("bisect.continue")}
+            </Button>
+          </div>
+        ) : bar === "conflicts" ? (
+          <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5">
+            <CopyX className="size-4 shrink-0 text-warning" />
+            <Hint content={t("modManager.conflict.barHint")} className="max-w-72">
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                {t("modManager.conflict.bar", { count: conflicts })}
+              </span>
+            </Hint>
+            {!libraryFacets.includes("duplicate") && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 shrink-0 px-2.5 text-xs"
+                onClick={() => setLibraryFacets(["duplicate"])}
+              >
+                {t("modManager.duplicatesShow")}
+              </Button>
+            )}
+            <Hint content={lockedHint}>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-7 shrink-0 px-2.5 text-xs"
+                disabled={isBusy || locked}
+                onClick={onKeepOneVersion}
+              >
+                {t("modManager.conflict.keepOne")}
+              </Button>
+            </Hint>
           </div>
         ) : bar === "duplicates" ? (
           <div className="mb-2.5 flex h-9 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-2.5">

@@ -8,6 +8,7 @@ import {
   Loader2,
   Pin,
   ShieldCheck,
+  ShieldQuestion,
   Trash2,
   TriangleAlert,
   UserRound,
@@ -23,6 +24,10 @@ import type { PreparedModpackUpdate } from "./modpackUpdate";
 import { modpackVersionLabel } from "./modpackVersions";
 import { Hint } from "@renderer/components/Hint";
 import { Empty, EmptyDescription } from "@/components/ui/empty";
+import {
+  PackContentList,
+  type PackContentItem,
+} from "@renderer/features/newInstance/PackContentList";
 
 function Note({
   icon: Icon,
@@ -58,7 +63,13 @@ export function ModpackUpdatePreview({
   onRestoreRemovedChange,
   onCancel,
   onApply,
+  unknownJars,
 }: {
+  unknownJars?: {
+    items: PackContentItem[];
+    checking: boolean;
+    onToggleInstall: (key: string, install: boolean) => void;
+  } | null;
   update: PreparedModpackUpdate;
   currentLabel: string;
   isOlder: boolean;
@@ -106,7 +117,7 @@ export function ModpackUpdatePreview({
           type="button"
           size="sm"
           variant="secondary"
-          disabled={isApplying}
+          disabled={isApplying || !!unknownJars?.checking}
           onClick={onApply}
         >
           {isApplying && <Loader2 className="animate-spin" />}
@@ -179,8 +190,25 @@ export function ModpackUpdatePreview({
             {t("modpack.preview.kept", { count: files.kept.length })}
           </Note>
         )}
+        {unknownJars?.checking ? (
+          <Note icon={ShieldQuestion}>{t("packContent.checkingJars")}</Note>
+        ) : unknownJars && unknownJars.items.length > 0 ? (
+          <Note icon={ShieldQuestion} tone="warning">
+            {t("packContent.unknownFooter")}
+          </Note>
+        ) : null}
         <Note icon={ShieldCheck}>{t("modpack.preview.protected")}</Note>
       </ul>
+
+      {unknownJars && unknownJars.items.length > 0 && (
+        <PackContentList
+          title={t("addVersion.preview.content")}
+          items={unknownJars.items}
+          emptyText={t("packContent.notFound")}
+          onToggleInstall={unknownJars.onToggleInstall}
+          className="max-h-44 flex-none"
+        />
+      )}
 
       {isEmptyDiff(diff) ? (
         <Empty className="min-h-0 flex-1 border border-border bg-card px-6">

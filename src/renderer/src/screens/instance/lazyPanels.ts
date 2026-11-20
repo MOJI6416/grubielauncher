@@ -58,6 +58,12 @@ export const LazyWorlds = lazyWithPreload(() =>
   })),
 );
 
+export const LazyBisect = lazyWithPreload(() =>
+  import("@renderer/features/bisect/BisectPanel").then((module) => ({
+    default: module.BisectPanel,
+  })),
+);
+
 export const LazyLogs = lazyWithPreload(() =>
   import("@renderer/features/logs/LogsPanel").then((module) => ({
     default: module.LogsPanel,
