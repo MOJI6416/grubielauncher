@@ -2150,6 +2150,11 @@
         "description": "Der Verlauf des Assistenten verlässt diesen Computer",
         "keywords": "assistent ki chat synchronisierung verlauf cloud konto datenschutz"
       },
+      "accountSync": {
+        "title": "Über das Grubie-Konto synchronisieren",
+        "description": "Designs, Skins und Einstellungen folgen Ihnen auf einen anderen Computer",
+        "keywords": "synchronisierung konto cloud designs skins garderobe einstellungen anderer computer"
+      },
       "notifications": {
         "title": "Telegram-Benachrichtigungen",
         "description": "Spieleinladungen und Freundschaftsanfragen bei geschlossenem Launcher",
@@ -2319,6 +2324,8 @@
     "voicePttCaptureTimeout": "Es wurde keine Taste gedrückt – das Tastenkürzel bleibt unverändert.",
     "voicePttCaptureUnavailable": "Der Launcher kann globale Tasten nicht lesen. Prüfen Sie, ob Ihr Virenscanner das erlaubt, und starten Sie ihn neu.",
     "agentChatSync": "Assistenten-Chats synchronisieren",
+    "accountSync": "Über das Grubie-Konto synchronisieren",
+    "accountSyncDescription": "Eigene Designs, „Meine Skins“ und die Launcher-Einstellungen im Grubie-Konto speichern, damit sie Ihnen auf einen anderen Computer folgen. Arbeitsspeicher, Java, Grafikkarte, Ordner und andere Einstellungen dieses Computers bleiben hier.",
     "agentChatSyncDescription": "Den Verlauf des Assistenten im Grubie-Konto speichern, damit er Ihnen auf einen anderen Computer folgt. Er enthält, was der Assistent gelesen hat: Instanznamen, Log-Auszüge und die Adressen Ihrer gespeicherten Server.",
     "system": {
       "closeToTray": "Beim Schließen des Fensters",

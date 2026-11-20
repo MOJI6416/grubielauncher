@@ -57,11 +57,13 @@ type SkinRegistrationOptions = {
   name?: string
   remoteId?: string
   syncCape?: boolean
+  updatedAt?: number
 }
 
 type CapeRegistrationOptions = {
   alias?: string
   remoteId?: string
+  updatedAt?: number
 }
 
 export type SkinsPlatform = 'microsoft' | 'discord' | 'elyby' | 'littleskin'
@@ -275,6 +277,10 @@ export class SkinsManager extends BaseService {
         existingSkin.name = this.getSkinName(options.name, hash, existingSkin.id)
       }
 
+      if (options.updatedAt !== undefined) {
+        existingSkin.updatedAt = options.updatedAt
+      }
+
       return existingSkin
     }
 
@@ -286,7 +292,8 @@ export class SkinsManager extends BaseService {
       name: this.getSkinName(options.name, hash, hash),
       url: toFileUrl(normalizedPath),
       character,
-      capeId: options.syncCape ? options.capeId : undefined
+      capeId: options.syncCape ? options.capeId : undefined,
+      updatedAt: options.updatedAt ?? Date.now()
     }
 
     this.skins.skins.push(skin)
@@ -316,6 +323,10 @@ export class SkinsManager extends BaseService {
         existingCape.alias = options.alias.trim()
       }
 
+      if (options.updatedAt !== undefined) {
+        existingCape.updatedAt = options.updatedAt
+      }
+
       return existingCape
     }
 
@@ -325,7 +336,8 @@ export class SkinsManager extends BaseService {
       remoteId: options.remoteId,
       alias,
       url: toFileUrl(normalizedPath),
-      cape: capePreview
+      cape: capePreview,
+      updatedAt: options.updatedAt ?? Date.now()
     }
 
     this.capes.push(cape)
@@ -421,7 +433,8 @@ export class SkinsManager extends BaseService {
 
       const cape = await this.registerCapeFromFile(capePath, {
         alias: storedCape.alias,
-        remoteId: storedCape.remoteId
+        remoteId: storedCape.remoteId,
+        updatedAt: storedCape.updatedAt ?? 0
       }).catch((error) => {
         console.error(`Failed to load the stored cape ${capePath}:`, error)
         this.unloadableStoredCapes.push(storedCape)
@@ -481,7 +494,8 @@ export class SkinsManager extends BaseService {
         model: storedSkin.model,
         name: storedSkin.name,
         remoteId: storedSkin.remoteId,
-        syncCape: Object.prototype.hasOwnProperty.call(storedSkin, 'capeId')
+        syncCape: Object.prototype.hasOwnProperty.call(storedSkin, 'capeId'),
+        updatedAt: storedSkin.updatedAt ?? 0
       }).catch((error) => {
         console.error(`Failed to load the stored skin ${skinPath}:`, error)
         this.unloadableStoredSkins.push(storedSkin)
@@ -693,8 +707,10 @@ export class SkinsManager extends BaseService {
 
         if (!localSkin) continue
 
+        const variant = mojangSkin.variant == 'SLIM' ? 'slim' : 'classic'
+        if (localSkin.model !== variant) localSkin.updatedAt = Date.now()
         localSkin.remoteId = mojangSkin.id
-        localSkin.model = mojangSkin.variant == 'SLIM' ? 'slim' : 'classic'
+        localSkin.model = variant
 
         if (mojangSkin.state == 'ACTIVE') {
           this.activeSkin = localSkin.id
@@ -743,6 +759,7 @@ export class SkinsManager extends BaseService {
 
     const skin = this.findSkinById(this.selectedSkin)
     if (!skin) throw new Error('skin_not_selected')
+    if (skin.capeId !== capeId) skin.updatedAt = Date.now()
     skin.capeId = capeId
     this.capeChoiceTouched.add(skin.id)
   }
@@ -750,6 +767,7 @@ export class SkinsManager extends BaseService {
   public async changeModel(model: 'classic' | 'slim') {
     const skin = this.findSkinById(this.selectedSkin)
     if (!skin) throw new Error('skin_not_selected')
+    if (skin.model !== model) skin.updatedAt = Date.now()
     skin.model = model
   }
 
@@ -1282,8 +1300,26 @@ export class SkinsManager extends BaseService {
     const skin = this.findSkinById(skinId)
 
     if (skin) {
-      skin.name = this.getSkinName(newName, skin.hash, skin.id)
+      const name = this.getSkinName(newName, skin.hash, skin.id)
+      if (skin.name !== name) skin.updatedAt = Date.now()
+      skin.name = name
       await this.saveSkins()
+    }
+  }
+
+  public async reloadWardrobe() {
+    if (this.platform !== 'microsoft') {
+      this.capes = []
+      this.legacyCapeIdMap.clear()
+      await this.getLocalCapes()
+    }
+    await this.loadSkinsFromIndex({ loadCapes: this.platform !== 'microsoft' })
+    await this.checkSkins(false)
+    if (!this.findSkinById(this.selectedSkin)) {
+      this.selectedSkin = this.skins.skins[0]?.id ?? null
+    }
+    if (this.activeSkin && !this.findSkinById(this.activeSkin)) {
+      this.activeSkin = undefined
     }
   }
 

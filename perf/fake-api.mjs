@@ -4,6 +4,7 @@ import net from "node:net";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
+import crypto from "node:crypto";
 import { createRequire } from "node:module";
 
 const require = createRequire(new URL("../package.json", import.meta.url));
@@ -354,6 +355,142 @@ fixture("DELETE", /^[^/]+\/themes\/([0-9a-f]{24})$/, ({ match }) => {
 fixture("GET", /^[^/]+\/theme-media\/([\d.]+)\.webp$/, ({ match }) => ({ body: coverWebp(match[1]), type: "image/webp" }));
 fixture("GET", "/__perf/themes/last-publish", () => ({ body: lastThemePublish ?? {} }));
 
+const syncState = { settings: { values: {}, stamps: {} }, themes: new Map(), wardrobe: new Map() };
+const syncId = () => crypto.randomBytes(12).toString("hex");
+const sha = (algorithm, data) => crypto.createHash(algorithm).update(data).digest("hex");
+
+function multipart(raw, contentType) {
+  const boundary = /boundary=([^;]+)/.exec(contentType || "")?.[1];
+  const fields = {};
+  const files = {};
+  if (!boundary) return { fields, files };
+  const marker = Buffer.from(`--${boundary}`);
+  let start = raw.indexOf(marker);
+  while (start !== -1) {
+    const next = raw.indexOf(marker, start + marker.length);
+    if (next === -1) break;
+    const part = raw.subarray(start + marker.length + 2, next - 2);
+    const split = part.indexOf("\r\n\r\n");
+    const head = part.subarray(0, split).toString("utf8");
+    const content = part.subarray(split + 4);
+    const name = /name="([^"]+)"/.exec(head)?.[1];
+    if (name && /filename="/.test(head)) files[name] = Buffer.from(content);
+    else if (name) fields[name] = content.toString("utf8");
+    start = next;
+  }
+  return { fields, files };
+}
+
+function syncTheme(theme) {
+  const { picture: _picture, ...rest } = theme;
+  return rest;
+}
+
+function privateThemeFrom(fields, files, current) {
+  const backdrop = fields.backdrop ? JSON.parse(fields.backdrop) : null;
+  let picture = null;
+  if (backdrop) {
+    if (files.backdrop) picture = files.backdrop;
+    else if (fields.keepPicture === "1" && current?.picture) picture = current.picture;
+    else return { error: { status: 400, body: { code: "picture_required" } } };
+  }
+  const pictureHash = picture ? sha("sha256", picture) : null;
+  const theme = {
+    name: fields.name,
+    mode: fields.mode === "light" ? "light" : "dark",
+    colors: JSON.parse(fields.colors || "{}"),
+    backdrop: backdrop ? { ...backdrop, hash: pictureHash } : null,
+    clientId: fields.clientId || null,
+    changedAt: Math.min(Number(fields.changedAt) || 1, Date.now()),
+    picture,
+  };
+  theme.hash = sha("sha256", JSON.stringify([theme.name, theme.mode, theme.colors, backdrop, pictureHash]));
+  return { theme };
+}
+
+fixture("GET", "/sync/settings", () => ({ body: syncState.settings }));
+fixture("PUT", "/sync/settings", ({ body }) => {
+  const incoming = JSON.parse(body || "{}");
+  const merged = syncState.settings;
+  for (const [key, value] of Object.entries(incoming.values || {})) {
+    const stamp = Math.min(Number(incoming.stamps?.[key]) || 0, Date.now());
+    if (!(stamp > 0) || (merged.stamps[key] !== undefined && stamp <= merged.stamps[key])) continue;
+    merged.values[key] = value;
+    merged.stamps[key] = stamp;
+  }
+  return { body: merged };
+});
+fixture("GET", "/sync/themes", () => ({ body: { items: [...syncState.themes.values()].map(syncTheme) } }));
+fixture("POST", "/sync/themes", ({ raw, req }) => {
+  const { fields, files } = multipart(raw, req.headers["content-type"]);
+  const { theme, error } = privateThemeFrom(fields, files, null);
+  if (error) return error;
+  const duplicate = [...syncState.themes.values()].find((item) => item.hash === theme.hash);
+  if (duplicate) return { status: 409, body: { code: "duplicate", id: duplicate.id } };
+  theme.id = syncId();
+  syncState.themes.set(theme.id, theme);
+  return { status: 201, body: syncTheme(theme) };
+});
+fixture("PUT", /^[^/]+\/sync\/themes\/([0-9a-f]{24})$/, ({ raw, req, match }) => {
+  const current = syncState.themes.get(match[1]);
+  if (!current) return { status: 404, body: { message: "Not Found" } };
+  const { fields, files } = multipart(raw, req.headers["content-type"]);
+  const { theme, error } = privateThemeFrom(fields, files, current);
+  if (error) return error;
+  if (theme.changedAt <= current.changedAt) return { body: syncTheme(current) };
+  const duplicate = [...syncState.themes.values()].find((item) => item.hash === theme.hash && item.id !== current.id);
+  if (duplicate) return { status: 409, body: { code: "duplicate", id: duplicate.id } };
+  Object.assign(current, theme, { id: current.id, clientId: theme.clientId ?? current.clientId });
+  return { body: syncTheme(current) };
+});
+fixture("DELETE", /^[^/]+\/sync\/themes\/([0-9a-f]{24})$/, ({ match }) => {
+  if (!syncState.themes.delete(match[1])) return { status: 404, body: { message: "Not Found" } };
+  return { body: { ok: true } };
+});
+fixture("GET", /^[^/]+\/sync\/themes\/([0-9a-f]{24})\/backdrop$/, ({ match }) => {
+  const picture = syncState.themes.get(match[1])?.picture;
+  return picture ? { body: picture, type: "image/webp" } : { status: 404, body: { message: "Not Found" } };
+});
+const wardrobeKey = (kind, hash) => `${kind}:${hash}`;
+const wardrobeItem = ({ data: _data, ...item }) => item;
+fixture("GET", "/sync/wardrobe", () => ({ body: { items: [...syncState.wardrobe.values()].map(wardrobeItem) } }));
+fixture("PUT", /^[^/]+\/sync\/wardrobe\/(skin|cape)\/([a-f0-9]{40})$/, ({ body, match }) => {
+  const [, kind, hash] = match;
+  const dto = JSON.parse(body || "{}");
+  const changedAt = Math.min(Number(dto.changedAt) || 1, Date.now());
+  const current = syncState.wardrobe.get(wardrobeKey(kind, hash));
+  if (current && changedAt <= current.changedAt) return { body: wardrobeItem(current) };
+  if (!current && !dto.data) return { status: 400, body: { code: "data_required" } };
+  const data = current?.data ?? Buffer.from(dto.data, "base64");
+  if (sha("sha1", data) !== hash) return { status: 400, body: { code: "hash_mismatch" } };
+  const item = {
+    kind,
+    hash,
+    name: dto.name || hash.slice(0, 12),
+    model: kind === "skin" ? (dto.model === "slim" ? "slim" : "classic") : null,
+    cape: kind === "skin" ? dto.cape || null : null,
+    changedAt,
+    data,
+  };
+  syncState.wardrobe.set(wardrobeKey(kind, hash), item);
+  return { body: wardrobeItem(item) };
+});
+fixture("GET", /^[^/]+\/sync\/wardrobe\/(skin|cape)\/([a-f0-9]{40})\/texture$/, ({ match }) => {
+  const item = syncState.wardrobe.get(wardrobeKey(match[1], match[2]));
+  return item ? { body: item.data, type: "image/png" } : { status: 404, body: { message: "Not Found" } };
+});
+fixture("DELETE", /^[^/]+\/sync\/wardrobe\/(skin|cape)\/([a-f0-9]{40})$/, ({ match }) => {
+  const removed = syncState.wardrobe.delete(wardrobeKey(match[1], match[2]));
+  return { body: { ok: true, removed } };
+});
+fixture("GET", "/__perf/sync/state", () => ({
+  body: {
+    settings: syncState.settings,
+    themes: [...syncState.themes.values()].map((theme) => ({ ...syncTheme(theme), pictureBytes: theme.picture?.length ?? 0 })),
+    wardrobe: [...syncState.wardrobe.values()].map(wardrobeItem),
+  },
+}));
+
 function send(res, status, body, type = "application/json") {
   const payload = typeof body === "string" || Buffer.isBuffer(body) ? body : JSON.stringify(body);
   res.writeHead(status, {
@@ -390,7 +527,8 @@ const server = https.createServer(
         const target = `${host}${url.pathname}`;
         const match = typeof pattern === "string" ? target === pattern || url.pathname === pattern : target.match(pattern);
         if (!match) continue;
-        const result = handler({ url, host, req, body: Buffer.concat(chunks).toString("utf8"), match });
+        const raw = Buffer.concat(chunks);
+        const result = handler({ url, host, req, body: raw.toString("utf8"), raw, match });
         record({ t: Date.now(), m: req.method, host, path: url.pathname, q: url.search, s: result.status ?? 200, fx: true });
         if (result.png) return send(res, 200, image(result.png, hash(url.pathname)), "image/png");
         return send(res, result.status ?? 200, result.body ?? {}, result.type);

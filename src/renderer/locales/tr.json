@@ -2150,6 +2150,11 @@
         "description": "Asistan geçmişi bu bilgisayarın dışına çıkar",
         "keywords": "asistan yapay zeka ai sohbet eşitleme geçmiş bulut hesap gizlilik"
       },
+      "accountSync": {
+        "title": "Grubie hesabıyla eşitle",
+        "description": "Temalar, skinler ve ayarlar başka bir bilgisayarda da sizinle",
+        "keywords": "eşitleme hesap bulut tema skin gardırop ayarlar başka bilgisayar"
+      },
       "notifications": {
         "title": "Telegram bildirimleri",
         "description": "Başlatıcı kapalıyken oyun davetleri ve arkadaşlık istekleri",
@@ -2319,6 +2324,8 @@
     "voicePttCaptureTimeout": "Hiçbir tuşa basılmadı — kısayol değişmedi.",
     "voicePttCaptureUnavailable": "Başlatıcı genel tuşları okuyamıyor. Antivirüsünüzün buna izin verdiğini kontrol edip başlatıcıyı yeniden başlatın.",
     "agentChatSync": "Asistan sohbetlerini eşitle",
+    "accountSync": "Grubie hesabıyla eşitle",
+    "accountSyncDescription": "Kendi temalarınızı, “Skinlerim” bölümünü ve başlatıcı ayarlarını Grubie hesabında tutar, böylece başka bir bilgisayarda da sizinle olur. Bellek, Java, ekran kartı, klasörler ve bu bilgisayara özgü diğer ayarlar burada kalır.",
     "agentChatSyncDescription": "Asistan geçmişini Grubie hesabında tutar, böylece başka bir bilgisayarda da sizinle olur. Asistanın okuduklarını içerir: kurulum adları, günlük alıntıları ve kayıtlı sunucularınızın adresleri.",
     "system": {
       "closeToTray": "Pencere kapatılırken",

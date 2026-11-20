@@ -74,6 +74,7 @@ export type SettingsEntryId =
   | "packAnalytics"
   | "aiLogAnalysis"
   | "agentChatSync"
+  | "accountSync"
   | "devMode"
   | "allowedPaths"
   | "storageUsage"
@@ -226,6 +227,7 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "packAnalytics", section: "privacy", keys: ["packAnalytics"] },
   { id: "aiLogAnalysis", section: "privacy", keys: ["aiLogAnalysis"] },
   { id: "agentChatSync", section: "privacy", keys: ["agentChatSync"] },
+  { id: "accountSync", section: "privacy", keys: ["accountSync"] },
   { id: "allowedPaths", section: "privacy", keys: [] },
   { id: "storageUsage", section: "storage", keys: [] },
   { id: "dataLocation", section: "storage", keys: [] },

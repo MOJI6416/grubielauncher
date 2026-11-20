@@ -219,6 +219,13 @@ import type { UiScaleState } from "@/shared/uiScale";
 import type { LaunchOutcome, LinuxLaunchTools } from "@/shared/launchCommand";
 import type { LaunchShortcutTarget } from "@/shared/launchLink";
 import type { ThemeFileManifest } from "@/shared/themeFile";
+import type { RemoteSettings } from "@/shared/settingsSync";
+import type { RemoteTheme } from "@/shared/themeSync";
+import type {
+  SyncResult,
+  ThemePushPayload,
+  WardrobeSyncResult,
+} from "@/types/AccountSync";
 import type { ModTranslationStatus } from "@/types/ModTranslations";
 import type {
   SharedInstanceChoice,
@@ -877,6 +884,29 @@ export interface IElectronAPI {
     ) => Promise<PublishResult>;
     mine: (token: string) => Promise<PublishedTheme[] | null>;
     unpublish: (token: string, id: string) => Promise<boolean>;
+  };
+  sync: {
+    settings: (
+      token: string,
+      payload: RemoteSettings,
+    ) => Promise<SyncResult<RemoteSettings>>;
+    themes: {
+      list: (token: string) => Promise<SyncResult<RemoteTheme[]>>;
+      push: (
+        token: string,
+        remoteId: string | null,
+        payload: ThemePushPayload,
+        picture: Uint8Array | null,
+        keepPicture: boolean,
+      ) => Promise<SyncResult<RemoteTheme>>;
+      remove: (token: string, remoteId: string) => Promise<SyncResult<unknown>>;
+      picture: (token: string, remoteId: string) => Promise<string | null>;
+    };
+    wardrobe: (
+      token: string,
+      launcherPath: string,
+      userId: string,
+    ) => Promise<WardrobeSyncResult>;
   };
   voice: {
     setPtt: (
@@ -2159,6 +2189,26 @@ export const api: IElectronAPI = {
       invoke("theme:publish", token, payload, images),
     mine: (token: string) => invoke("theme:mine", token),
     unpublish: (token: string, id: string) => invoke("theme:unpublish", token, id),
+  },
+  sync: {
+    settings: (token: string, payload: RemoteSettings) =>
+      invoke("sync:settings", token, payload),
+    themes: {
+      list: (token: string) => invoke("sync:themes:list", token),
+      push: (
+        token: string,
+        remoteId: string | null,
+        payload: ThemePushPayload,
+        picture: Uint8Array | null,
+        keepPicture: boolean,
+      ) => invoke("sync:themes:push", token, remoteId, payload, picture, keepPicture),
+      remove: (token: string, remoteId: string) =>
+        invoke("sync:themes:delete", token, remoteId),
+      picture: (token: string, remoteId: string) =>
+        invoke("sync:themes:picture", token, remoteId),
+    },
+    wardrobe: (token: string, launcherPath: string, userId: string) =>
+      invoke("sync:wardrobe", token, launcherPath, userId),
   },
   voice: {
     setPtt: (bind: { type: "key" | "mouse"; code: number } | null) =>

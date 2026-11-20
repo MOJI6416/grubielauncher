@@ -1,6 +1,9 @@
 import axios from 'axios'
+import path from 'path'
 import { getSkin } from '../utilities/skin'
 import { SkinsManager } from '../game/SkinsManager'
+import { syncWardrobe } from '../game/wardrobeSync'
+import type { WardrobeSyncResult } from '@/types/AccountSync'
 import { attachApiHostFallback } from '../utilities/apiHost'
 import type {
   CatalogListParams,
@@ -46,6 +49,28 @@ function queueSkinsLoad<T>(storeKey: string, task: () => Promise<T>): Promise<T>
     })
 
   return next
+}
+
+export function syncWardrobeQueued(
+  launcherPath: string,
+  token: string,
+  userId: string
+): Promise<WardrobeSyncResult> {
+  assertWritablePath(launcherPath, 'sync:wardrobe')
+  const skinsPath = path.join(launcherPath, 'skins')
+
+  return queueSkinsLoad(launcherPath, async () => {
+    const result = await syncWardrobe(launcherPath, token, userId)
+    if (!result.ok || !result.changed) return result
+
+    for (const manager of skinsManagers.values()) {
+      if (path.resolve(manager.skinsPath) !== path.resolve(skinsPath)) continue
+      await manager.reloadWardrobe().catch((error) => {
+        console.error('Failed to reload the wardrobe after a sync:', error)
+      })
+    }
+    return result
+  })
 }
 
 function getManager(platform: unknown, userId: string): SkinsManager | null {

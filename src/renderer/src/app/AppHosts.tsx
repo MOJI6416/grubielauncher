@@ -26,6 +26,7 @@ import { SystemEventsHost } from "./hosts/SystemEventsHost";
 import { UnsavedCloseHost } from "./hosts/UnsavedCloseHost";
 import { CloseChoiceHost } from "./hosts/CloseChoiceHost";
 import { UsageStatsHost } from "./hosts/UsageStatsHost";
+import { AccountSyncHost } from "./hosts/AccountSyncHost";
 import { VoiceCallHost } from "./hosts/VoiceCallHost";
 import { VoiceOverlayHost } from "./hosts/VoiceOverlayHost";
 import { WhatsNewHost } from "./hosts/WhatsNewHost";
@@ -74,6 +75,7 @@ export function AppHosts() {
       <UnsavedCloseHost />
       <CloseChoiceHost />
       <UsageStatsHost />
+      <AccountSyncHost />
       <PortHost />
       <CatalogInstallHost />
       <InstanceDeleteHost />

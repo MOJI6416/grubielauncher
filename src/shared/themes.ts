@@ -40,6 +40,7 @@ export interface ThemeDefinition {
   colors: ThemeColors;
   backdrop: ThemeBackdrop | null;
   galleryId?: string;
+  updatedAt?: number;
 }
 
 export interface ThemesFile {
@@ -171,6 +172,7 @@ export function normalizeTheme(value: unknown): ThemeDefinition | null {
     typeof raw.galleryId === "string" && /^[a-f0-9]{24}$/.test(raw.galleryId)
       ? raw.galleryId
       : undefined;
+  const updatedAt = Number(raw.updatedAt);
 
   return {
     id,
@@ -185,6 +187,7 @@ export function normalizeTheme(value: unknown): ThemeDefinition | null {
     },
     backdrop: normalizeBackdrop(raw.backdrop),
     ...(galleryId ? { galleryId } : {}),
+    ...(Number.isFinite(updatedAt) && updatedAt > 0 ? { updatedAt: Math.floor(updatedAt) } : {}),
   };
 }
 

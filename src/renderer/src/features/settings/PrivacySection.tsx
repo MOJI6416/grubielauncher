@@ -280,6 +280,24 @@ export function PrivacySection({
             }
           />
         )}
+
+        {visible("accountSync") && (
+          <SettingRow
+            htmlFor="settings-account-sync"
+            title={t("settings.accountSync")}
+            description={t("settings.accountSyncDescription")}
+            query={query}
+            changed={isChanged("accountSync")}
+            onReset={() => reset("accountSync")}
+            control={
+              <Switch
+                id="settings-account-sync"
+                checked={settings.accountSync}
+                onCheckedChange={(value) => commit({ accountSync: value })}
+              />
+            }
+          />
+        )}
       </SettingsGroup>
 
       {visible("allowedPaths") && (

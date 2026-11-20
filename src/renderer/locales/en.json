@@ -2150,6 +2150,11 @@
         "description": "Assistant history leaves this computer",
         "keywords": "assistant ai chat sync history cloud account privacy"
       },
+      "accountSync": {
+        "title": "Sync through the Grubie account",
+        "description": "Themes, skins and settings follow you to another computer",
+        "keywords": "sync account cloud themes skins wardrobe settings another computer backup"
+      },
       "notifications": {
         "title": "Telegram notifications",
         "description": "Play invites and friend requests while the launcher is closed",
@@ -2319,6 +2324,8 @@
     "voicePttCaptureTimeout": "No key was pressed — the shortcut is unchanged.",
     "voicePttCaptureUnavailable": "The launcher cannot read global keys. Check that it is allowed by your antivirus and restart it.",
     "agentChatSync": "Sync assistant chats",
+    "accountSync": "Sync through the Grubie account",
+    "accountSyncDescription": "Keep your own themes, My skins and the launcher settings on the Grubie account, so they follow you to another computer. Memory, Java, the graphics card, folders and other settings of this computer stay on it.",
     "agentChatSyncDescription": "Keep the assistant history on the Grubie account so it follows you to another computer. It carries what the assistant read: instance names, log excerpts and the addresses of your saved servers.",
     "system": {
       "closeToTray": "When closing the window",

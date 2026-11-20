@@ -2186,6 +2186,11 @@
         "description": "Historia asystenta opuszcza ten komputer",
         "keywords": "asystent ai czat synchronizacja historia chmura konto prywatność"
       },
+      "accountSync": {
+        "title": "Synchronizacja przez konto Grubie",
+        "description": "Motywy, skiny i ustawienia także na innym komputerze",
+        "keywords": "synchronizacja konto chmura motywy skiny garderoba ustawienia inny komputer"
+      },
       "notifications": {
         "title": "Powiadomienia w Telegramie",
         "description": "Zaproszenia do gry i do znajomych, gdy launcher jest zamknięty",
@@ -2355,6 +2360,8 @@
     "voicePttCaptureTimeout": "Nie naciśnięto żadnego klawisza — skrót się nie zmienił.",
     "voicePttCaptureUnavailable": "Launcher nie może odczytywać klawiszy globalnie. Sprawdź, czy antywirus na to pozwala, i uruchom go ponownie.",
     "agentChatSync": "Synchronizacja czatów asystenta",
+    "accountSync": "Synchronizacja przez konto Grubie",
+    "accountSyncDescription": "Przechowuje Twoje motywy, „Moje skiny” i ustawienia launchera na koncie Grubie, aby były dostępne na innym komputerze. Pamięć, Java, karta graficzna, foldery i inne ustawienia tego komputera zostają na nim.",
     "agentChatSyncDescription": "Przechowuje historię asystenta na koncie Grubie, aby była dostępna na innym komputerze. Zawiera to, co asystent przeczytał: nazwy instancji, fragmenty logów i adresy zapisanych serwerów.",
     "system": {
       "closeToTray": "Przy zamykaniu okna",

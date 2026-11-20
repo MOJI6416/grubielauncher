@@ -8,6 +8,8 @@ import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
 import { toFileUrl } from "@renderer/utilities/exportVersion";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { stampThemes } from "@/shared/themeSync";
+import { scheduleAccountSync } from "@renderer/features/sync/syncSchedule";
 
 const api = window.api;
 
@@ -42,19 +44,26 @@ export async function hydrateUserThemes(launcher: string): Promise<void> {
   }
 }
 
-export async function saveUserThemes(themes: ThemeDefinition[]): Promise<boolean> {
+export async function saveUserThemes(
+  themes: ThemeDefinition[],
+  options: { synced?: boolean } = {},
+): Promise<boolean> {
   const store = getDefaultStore();
   const { launcher } = store.get(pathsAtom);
   if (!launcher) return false;
 
   const dir = await themesDir(launcher);
-  const normalized = normalizeThemesFile({ themes }).themes;
+  const stamped = options.synced
+    ? themes
+    : stampThemes(store.get(userThemesAtom), themes, Date.now());
+  const normalized = normalizeThemesFile({ themes: stamped }).themes;
   if (!(await api.fs.ensure(dir))) return false;
   const saved = await api.fs.writeJSON(await api.path.join(dir, "themes.json"), {
     version: 1,
     themes: normalized,
   });
   if (saved) store.set(userThemesAtom, normalized);
+  if (saved && !options.synced) scheduleAccountSync();
   return saved;
 }
 

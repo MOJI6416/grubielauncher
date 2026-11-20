@@ -2168,6 +2168,11 @@
         "description": "L’historique de l’assistant quitte cet ordinateur",
         "keywords": "assistant ia chat synchronisation historique cloud compte confidentialité"
       },
+      "accountSync": {
+        "title": "Synchroniser via le compte Grubie",
+        "description": "Thèmes, skins et paramètres sur un autre ordinateur",
+        "keywords": "synchronisation compte cloud thèmes skins garde-robe paramètres autre ordinateur"
+      },
       "notifications": {
         "title": "Notifications Telegram",
         "description": "Invitations à jouer et demandes d’ami quand le launcher est fermé",
@@ -2337,6 +2342,8 @@
     "voicePttCaptureTimeout": "Aucune touche n’a été pressée — le raccourci reste inchangé.",
     "voicePttCaptureUnavailable": "Le launcher ne peut pas lire les touches globales. Vérifiez que votre antivirus l’autorise et redémarrez-le.",
     "agentChatSync": "Synchroniser les chats de l’assistant",
+    "accountSync": "Synchroniser via le compte Grubie",
+    "accountSyncDescription": "Conserver vos thèmes, « Mes skins » et les paramètres du launcher sur le compte Grubie pour les retrouver sur un autre ordinateur. La mémoire, Java, la carte graphique, les dossiers et les autres réglages de cet ordinateur restent ici.",
     "agentChatSyncDescription": "Conserver l’historique de l’assistant sur le compte Grubie pour le retrouver sur un autre ordinateur. Il contient ce que l’assistant a lu : noms des instances, extraits de journaux et adresses de vos serveurs enregistrés.",
     "system": {
       "closeToTray": "À la fermeture de la fenêtre",

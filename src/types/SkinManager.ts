@@ -11,6 +11,7 @@ export interface ISkinEntry {
   id: string
   url: string
   character?: string
+  updatedAt?: number
 }
 
 export interface SkinsData {
@@ -53,6 +54,7 @@ export interface ICape {
   alias: string
   url: string
   cape: string
+  updatedAt?: number
 }
 
 export type CatalogSkinSource = 'official' | 'community'

@@ -175,6 +175,7 @@ export type TSettings = {
   packAnalytics: boolean;
   aiLogAnalysis: boolean;
   agentChatSync: boolean;
+  accountSync: boolean;
   sounds: boolean;
   hideServerInRpc: boolean;
   directConnect: boolean;
@@ -252,6 +253,7 @@ export const DEFAULT_SETTINGS: TSettings = {
   packAnalytics: true,
   aiLogAnalysis: false,
   agentChatSync: true,
+  accountSync: true,
   sounds: true,
   hideServerInRpc: true,
   directConnect: true,
@@ -430,6 +432,7 @@ export function normalizeSettings(
       typeof value?.agentChatSync === "boolean"
         ? value.agentChatSync
         : DEFAULT_SETTINGS.agentChatSync,
+    accountSync: booleanOr(value?.accountSync, DEFAULT_SETTINGS.accountSync),
     sounds:
       typeof value?.sounds === "boolean"
         ? value.sounds

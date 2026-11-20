@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 import { SkinsData } from "@/types/SkinManager";
 import {
@@ -6,6 +6,8 @@ import {
   authDataAtom,
   pathsAtom,
 } from "@renderer/stores/atoms";
+import { wardrobeSyncedAtom } from "@renderer/features/sync/accountSync";
+import { scheduleAccountSync } from "@renderer/features/sync/syncSchedule";
 
 const api = window.api;
 
@@ -15,8 +17,9 @@ export function useSkinsData() {
   const paths = useAtomValue(pathsAtom);
   const account = useAtomValue(accountAtom);
   const authData = useAtomValue(authDataAtom);
+  const wardrobeSynced = useAtomValue(wardrobeSyncedAtom);
 
-  const [data, setData] = useState<SkinsData | null>(null);
+  const [data, setLoadedData] = useState<SkinsData | null>(null);
   const [status, setStatus] = useState<SkinsStatus>("loading");
 
   const accessToken =
@@ -36,6 +39,11 @@ export function useSkinsData() {
     );
   }, [account, authData, paths.launcher, accessToken]);
 
+  const setData = useCallback((next: SkinsData | null) => {
+    setLoadedData(next);
+    scheduleAccountSync();
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
@@ -45,7 +53,7 @@ export function useSkinsData() {
         const next = await load();
         if (cancelled) return;
 
-        setData(next);
+        setLoadedData(next);
         setStatus(next ? "ready" : "error");
       } catch {
         if (cancelled) return;
@@ -62,7 +70,7 @@ export function useSkinsData() {
     try {
       const next = await load();
       if (next) {
-        setData(next);
+        setLoadedData(next);
         setStatus("ready");
       }
       return next;
@@ -71,6 +79,13 @@ export function useSkinsData() {
       return null;
     }
   }, [load]);
+
+  const seenSync = useRef(wardrobeSynced);
+  useEffect(() => {
+    if (seenSync.current === wardrobeSynced) return;
+    seenSync.current = wardrobeSynced;
+    void reload();
+  }, [reload, wardrobeSynced]);
 
   return {
     data,
