@@ -22,7 +22,7 @@ export function parseLangPath(name: string): LangPath | null {
   };
 }
 
-function lenientJson(text: string): unknown {
+export function lenientJson(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {

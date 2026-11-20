@@ -1,5 +1,6 @@
 import type { NamespaceLang } from "./jarScan";
 import { LangFormat, langFileName, serializeLangFile } from "./langFiles";
+import type { ModContext } from "./modContext";
 import { LangEntries, needsTranslation, unitHash } from "./unitHash";
 
 export interface PlannedUnit {
@@ -7,6 +8,7 @@ export interface PlannedUnit {
   namespace: string;
   format: LangFormat;
   entries: LangEntries;
+  context?: ModContext;
 }
 
 const IGNORED_NAMESPACES = new Set(["minecraft", "realms"]);
@@ -50,6 +52,7 @@ export function planUnits(
           namespace: lang.namespace,
           format: lang.format,
           entries,
+          ...(lang.context ? { context: lang.context } : {}),
         });
       }
     }

@@ -1,4 +1,5 @@
 import { BaseService } from "../../services/Base";
+import type { ModContext } from "./modContext";
 import type { LangEntries } from "./unitHash";
 
 export interface RemotePack {
@@ -30,6 +31,8 @@ export interface SubmitUnit {
   hash: string;
   namespace: string;
   entries: LangEntries;
+  kind?: "book";
+  context?: ModContext;
 }
 
 export interface SubmitResult {
@@ -44,7 +47,11 @@ function statusOf(error: unknown): number | undefined {
   return (error as { response?: { status?: number } })?.response?.status;
 }
 
+export const UNSUPPORTED_REASON = "unsupported";
+
 export class TranslationApi extends BaseService {
+  private legacy = false;
+
   private url(path: string) {
     return `${this.baseUrl}/mod-translations${path}`;
   }
@@ -85,7 +92,29 @@ export class TranslationApi extends BaseService {
   }
 
   async submit(lang: string, units: SubmitUnit[]): Promise<SubmitResult> {
-    return this.post<SubmitResult>("/units", { lang, units });
+    const extended = units.some((unit) => unit.kind || unit.context);
+    if (!this.legacy || !extended) {
+      try {
+        return await this.post<SubmitResult>("/units", { lang, units });
+      } catch (error) {
+        if (statusOf(error) !== 400 || !extended) throw error;
+        this.legacy = true;
+      }
+    }
+    const plain = units
+      .filter((unit) => !unit.kind)
+      .map(({ hash, namespace, entries }) => ({ hash, namespace, entries }));
+    const unsupported = units
+      .filter((unit) => unit.kind)
+      .map((unit) => ({ hash: unit.hash, reason: UNSUPPORTED_REASON }));
+    if (plain.length === 0) {
+      return { accepted: [], queued: 0, rejected: unsupported };
+    }
+    const result = await this.post<SubmitResult>("/units", {
+      lang,
+      units: plain,
+    });
+    return { ...result, rejected: [...(result.rejected ?? []), ...unsupported] };
   }
 
   hasToken(): boolean {

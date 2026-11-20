@@ -21,8 +21,23 @@ import {
 } from "../../utilities/archiver";
 import { Downloader } from "../../utilities/downloader";
 import { journal } from "../../journal/journal";
-import { NamespaceLang, scanJarLang, scanPackKeys } from "./jarScan";
+import {
+  BookGroup,
+  bookPackFiles,
+  collectBookGroups,
+  installedBookFormats,
+  planBookUnits,
+} from "./books";
+import {
+  FTB_QUESTS_BOOK,
+  FTB_QUESTS_LANG_DIR,
+  planQuestUnits,
+  renderQuestLang,
+} from "./ftbQuests";
+import { PackCoverage, scanPackCoverage, scanSource, SourceScan } from "./jarScan";
 import { langFormatFor } from "./langFiles";
+import type { ModContext } from "./modContext";
+import { ContentSource, listModpackPacks } from "./packSources";
 import {
   applyTranslationOptions,
   gameResourceFormat,
@@ -37,19 +52,21 @@ import {
   chunkBySize,
   modNamespaces,
   planUnits,
-  PlannedUnit,
   translationPackFiles,
 } from "./plan";
 import {
   isUnauthorized,
   RemotePack,
+  SubmitUnit,
   TranslationApi,
   TranslationApiUnavailable,
+  UNSUPPORTED_REASON,
 } from "./translationApi";
 import type { LangEntries } from "./unitHash";
 
-const PROTOCOL = 1;
-const SCAN_VERSION = 1;
+const PROTOCOL = 2;
+const SCAN_VERSION = 2;
+const BOOKS_VERSION = 1;
 const LOOKUP_BATCH = 100;
 const SUBMIT_BATCH_UNITS = 40;
 const SUBMIT_BATCH_CHARS = 400_000;
@@ -83,6 +100,8 @@ interface StoredUnit {
   hash: string;
   namespace: string;
   keys: number;
+  kind?: "book";
+  book?: string;
 }
 
 interface TranslationState {
@@ -95,6 +114,8 @@ interface TranslationState {
   failed: string[];
   aiFile: string | null;
   aiDigest: string | null;
+  questFile: string | null;
+  questDigest: string | null;
   mods: number;
   needsAccount: boolean;
   error: string | null;
@@ -104,10 +125,14 @@ interface TranslationState {
 interface ScanCache {
   version: number;
   locale: string;
-  jars: Record<
-    string,
-    { size: number; mtimeMs: number; namespaces: NamespaceLang[] }
-  >;
+  sources: Record<string, { identity: string; scan: SourceScan }>;
+}
+
+interface BooksFile {
+  version: number;
+  locale: string;
+  groups: BookGroup[];
+  quests?: string | null;
 }
 
 interface JarFile {
@@ -116,6 +141,8 @@ interface JarFile {
   size: number;
   mtimeMs: number;
 }
+
+type PendingUnit = SubmitUnit & { keys: number; book?: string };
 
 interface Runtime {
   stage: ModTranslationStage | null;
@@ -130,7 +157,7 @@ interface Runtime {
 }
 
 const runtimes = new Map<string, Runtime>();
-const packKeyCache = new Map<string, Set<string>>();
+const packCoverageCache = new Map<string, PackCoverage>();
 
 function emptyState(): TranslationState {
   return {
@@ -143,6 +170,8 @@ function emptyState(): TranslationState {
     failed: [],
     aiFile: null,
     aiDigest: null,
+    questFile: null,
+    questDigest: null,
     mods: 0,
     needsAccount: false,
     error: null,
@@ -176,6 +205,10 @@ function storageDir(versionPath: string): string {
 
 function packsDir(versionPath: string): string {
   return path.join(versionPath, "resourcepacks");
+}
+
+function booksPath(versionPath: string): string {
+  return path.join(storageDir(versionPath), "books.json");
 }
 
 function unitCacheDir(locale: string): string {
@@ -355,51 +388,78 @@ function digest(value: unknown): string {
   return createHash("sha1").update(JSON.stringify(value)).digest("hex");
 }
 
-async function scanJars(
+function jarSources(jars: JarFile[]): ContentSource[] {
+  return jars.map((jar) => ({
+    id: jar.name,
+    path: jar.path,
+    identity: `${jar.size}:${jar.mtimeMs}`,
+    label: jar.name,
+  }));
+}
+
+function emptyScan(): SourceScan {
+  return {
+    context: null,
+    namespaces: [],
+    books: [],
+    translatedDocs: [],
+    patchouliI18n: [],
+  };
+}
+
+function withFallbackContext(scan: SourceScan, label: string): SourceScan {
+  if (scan.context) return scan;
+  const context: ModContext = { name: label };
+  return {
+    ...scan,
+    context,
+    namespaces: scan.namespaces.map((lang) =>
+      lang.context ? lang : { ...lang, context },
+    ),
+  };
+}
+
+async function scanSources(
   versionPath: string,
-  jars: JarFile[],
+  sources: ContentSource[],
+  packIds: ReadonlySet<string>,
   locale: string,
-): Promise<NamespaceLang[][]> {
+): Promise<SourceScan[]> {
   const cachePath = path.join(storageDir(versionPath), "scan.json");
   const stored = (await fs.readJSON(cachePath).catch(() => null)) as
     | ScanCache
     | null;
   const previous =
     stored?.version === SCAN_VERSION && stored.locale === locale
-      ? stored.jars
+      ? stored.sources
       : {};
-  const next: ScanCache = { version: SCAN_VERSION, locale, jars: {} };
+  const next: ScanCache = { version: SCAN_VERSION, locale, sources: {} };
   const limit = pLimit(SCAN_CONCURRENCY);
   let done = 0;
   let failed = 0;
 
   const results = await Promise.all(
-    jars.map((jar) =>
+    sources.map((source) =>
       limit(async () => {
-        const cached = previous[jar.name];
-        let namespaces: NamespaceLang[];
-        if (
-          cached &&
-          cached.size === jar.size &&
-          cached.mtimeMs === jar.mtimeMs
-        ) {
-          namespaces = cached.namespaces;
+        const cached = previous[source.id];
+        let scan: SourceScan;
+        if (cached && cached.identity === source.identity) {
+          scan = cached.scan;
         } else {
           try {
-            namespaces = await scanJarLang(jar.path, locale);
+            scan = await scanSource(source.path, locale);
+            if (packIds.has(source.id)) {
+              scan = withFallbackContext(scan, source.label);
+            }
           } catch {
             failed++;
-            namespaces = [];
+            scan = emptyScan();
           }
         }
-        next.jars[jar.name] = {
-          size: jar.size,
-          mtimeMs: jar.mtimeMs,
-          namespaces,
-        };
+        next.sources[source.id] = { identity: source.identity, scan };
         done++;
-        setStage(versionPath, "scanning", { done, total: jars.length });
-        return namespaces;
+        setStage(versionPath, "scanning", { done, total: sources.length });
+        return scan;
       }),
     ),
   );
@@ -409,7 +469,7 @@ async function scanJars(
   if (failed > 0) {
     journal.warn("translations", "some mods could not be read", {
       failed,
-      total: jars.length,
+      total: sources.length,
     });
   }
   return results;
@@ -488,21 +548,24 @@ async function removeStaleManaged(
   }
 }
 
-async function packKeys(
+async function packCoverage(
   filePath: string,
   locale: string,
   identity: string,
-): Promise<Set<string>> {
+): Promise<PackCoverage> {
   const cacheKey = `${identity}:${locale}`;
-  const cached = packKeyCache.get(cacheKey);
+  const cached = packCoverageCache.get(cacheKey);
   if (cached) return cached;
-  const keys = await scanPackKeys(filePath, locale).catch(() => new Set<string>());
-  if (packKeyCache.size >= 8) {
-    const oldest = packKeyCache.keys().next().value;
-    if (oldest) packKeyCache.delete(oldest);
+  const coverage = await scanPackCoverage(filePath, locale).catch(() => ({
+    keys: new Set<string>(),
+    docs: new Set<string>(),
+  }));
+  if (packCoverageCache.size >= 8) {
+    const oldest = packCoverageCache.keys().next().value;
+    if (oldest) packCoverageCache.delete(oldest);
   }
-  packKeyCache.set(cacheKey, keys);
-  return keys;
+  packCoverageCache.set(cacheKey, coverage);
+  return coverage;
 }
 
 interface PackSource {
@@ -529,13 +592,13 @@ async function playerPacks(versionPath: string): Promise<PackSource[]> {
   return sources;
 }
 
-async function coveredKeys(
+async function covered(
   locale: string,
   folder: string,
   packs: InstalledPack[],
   player: PackSource[],
-): Promise<Set<string>> {
-  const covered = new Set<string>();
+): Promise<PackCoverage> {
+  const result: PackCoverage = { keys: new Set(), docs: new Set() };
   const sources: PackSource[] = [
     ...packs.map((pack) => ({
       file: path.join(folder, pack.fileName),
@@ -544,11 +607,11 @@ async function coveredKeys(
     ...player,
   ];
   for (const source of sources) {
-    for (const key of await packKeys(source.file, locale, source.identity)) {
-      covered.add(key);
-    }
+    const coverage = await packCoverage(source.file, locale, source.identity);
+    for (const key of coverage.keys) result.keys.add(key);
+    for (const id of coverage.docs) result.docs.add(id);
   }
-  return covered;
+  return result;
 }
 
 async function resolveUnits(
@@ -576,15 +639,22 @@ async function resolveUnits(
   return { missing, failed };
 }
 
+interface SubmitOutcome {
+  needsAccount: boolean;
+  quota: boolean;
+  unsupported: string[];
+}
+
 async function submitUnits(
   api: TranslationApi,
   locale: string,
-  units: PlannedUnit[],
-): Promise<{ needsAccount: boolean; quota: boolean }> {
-  if (units.length === 0) return { needsAccount: false, quota: false };
-  if (!api.hasToken()) return { needsAccount: true, quota: false };
+  units: PendingUnit[],
+): Promise<SubmitOutcome> {
+  const unsupported: string[] = [];
+  if (units.length === 0) return { needsAccount: false, quota: false, unsupported };
+  if (!api.hasToken()) return { needsAccount: true, quota: false, unsupported };
 
-  const size = (unit: PlannedUnit) =>
+  const size = (unit: PendingUnit) =>
     Object.values(unit.entries).reduce((sum, value) => sum + value.length, 0);
   let quota = false;
   for (const batch of chunkBySize(
@@ -596,22 +666,135 @@ async function submitUnits(
     try {
       const result = await api.submit(
         locale,
-        batch.map(({ hash, namespace, entries }) => ({
+        batch.map(({ hash, namespace, entries, kind, context }) => ({
           hash,
           namespace,
           entries,
+          ...(kind ? { kind } : {}),
+          ...(context ? { context } : {}),
         })),
       );
+      for (const entry of result.rejected ?? []) {
+        if (entry.reason === UNSUPPORTED_REASON) unsupported.push(entry.hash);
+      }
       if (result.rejected?.some((entry) => entry.reason === "quota")) {
         quota = true;
         break;
       }
     } catch (error) {
-      if (isUnauthorized(error)) return { needsAccount: true, quota };
+      if (isUnauthorized(error)) return { needsAccount: true, quota, unsupported };
       throw error;
     }
   }
-  return { needsAccount: false, quota };
+  return { needsAccount: false, quota, unsupported };
+}
+
+async function readBooks(
+  versionPath: string,
+  locale: string,
+): Promise<{ groups: BookGroup[]; quests: string | null }> {
+  const stored = (await fs.readJSON(booksPath(versionPath)).catch(() => null)) as
+    | BooksFile
+    | null;
+  if (stored?.version !== BOOKS_VERSION || stored.locale !== locale) {
+    return { groups: [], quests: null };
+  }
+  return {
+    groups: Array.isArray(stored.groups) ? stored.groups : [],
+    quests: typeof stored.quests === "string" ? stored.quests : null,
+  };
+}
+
+async function writeBooks(
+  versionPath: string,
+  locale: string,
+  groups: BookGroup[],
+  quests: string | null,
+): Promise<void> {
+  await fs.ensureDir(storageDir(versionPath));
+  await writeJsonAtomic(booksPath(versionPath), {
+    version: BOOKS_VERSION,
+    locale,
+    groups,
+    quests,
+  } satisfies BooksFile);
+}
+
+function questLangPath(versionPath: string, locale: string): string {
+  return path.join(versionPath, ...FTB_QUESTS_LANG_DIR, `${locale}.snbt`);
+}
+
+async function fileDigest(file: string): Promise<string | null> {
+  const data = await fs.readFile(file).catch(() => null);
+  return data ? createHash("sha1").update(data).digest("hex") : null;
+}
+
+async function ownsQuestFile(
+  versionPath: string,
+  state: TranslationState,
+  file: string,
+): Promise<boolean> {
+  if (!state.questFile || !state.questDigest) return false;
+  if (path.resolve(versionPath, state.questFile) !== path.resolve(file)) return false;
+  return (await fileDigest(file)) === state.questDigest;
+}
+
+async function questSource(
+  versionPath: string,
+  state: TranslationState,
+  locale: string,
+): Promise<string | null> {
+  const target = questLangPath(versionPath, locale);
+  if ((await fs.pathExists(target)) && !(await ownsQuestFile(versionPath, state, target))) {
+    return null;
+  }
+  return fs.readFile(questLangPath(versionPath, "en_us"), "utf8").catch(() => null);
+}
+
+async function removeOwnQuestFile(
+  versionPath: string,
+  state: TranslationState,
+): Promise<void> {
+  if (!state.questFile) return;
+  const file = path.resolve(versionPath, state.questFile);
+  if (await ownsQuestFile(versionPath, state, file)) {
+    await fs.remove(file).catch(() => undefined);
+  }
+}
+
+async function applyQuestLang(
+  versionPath: string,
+  state: TranslationState,
+  locale: string,
+  translations: LangEntries,
+): Promise<{ questFile: string | null; questDigest: string | null }> {
+  const target = questLangPath(versionPath, locale);
+  const relative = path.relative(versionPath, target);
+  const previous = state.questFile ? path.resolve(versionPath, state.questFile) : null;
+  if (previous && previous !== path.resolve(target)) {
+    await removeOwnQuestFile(versionPath, state);
+  }
+  const owned = await ownsQuestFile(versionPath, state, target);
+  if ((await fs.pathExists(target)) && !owned) {
+    return { questFile: null, questDigest: null };
+  }
+  const { quests } = await readBooks(versionPath, locale);
+  const text =
+    quests && Object.keys(translations).length > 0
+      ? renderQuestLang(quests, translations)
+      : null;
+  if (!text) {
+    if (owned) await fs.remove(target).catch(() => undefined);
+    return { questFile: null, questDigest: null };
+  }
+  const digest = createHash("sha1").update(text, "utf8").digest("hex");
+  if (!(owned && digest === state.questDigest)) {
+    const temp = `${target}.grubie-tmp`;
+    await fs.ensureDir(path.dirname(target));
+    await fs.writeFile(temp, text, "utf8");
+    await fs.move(temp, target, { overwrite: true });
+  }
+  return { questFile: relative, questDigest: digest };
 }
 
 async function buildAiPack(
@@ -619,30 +802,43 @@ async function buildAiPack(
   state: TranslationState,
   locale: string,
   mcVersion: string,
-): Promise<{ file: string | null; digest: string | null }> {
+): Promise<{ file: string | null; digest: string | null; quests: LangEntries }> {
   const known = await loadCachedHashes(locale);
   const units: Array<{ namespace: string; entries: LangEntries }> = [];
+  const bookTranslations = new Map<string, LangEntries>();
   for (const unit of state.units) {
     if (!known.has(unit.hash)) continue;
     const entries = await readCachedUnit(locale, unit.hash);
-    if (entries && Object.keys(entries).length > 0) {
+    if (!entries || Object.keys(entries).length === 0) continue;
+    if (unit.kind === "book" && unit.book) {
+      bookTranslations.set(unit.book, {
+        ...(bookTranslations.get(unit.book) ?? {}),
+        ...entries,
+      });
+    } else if (!unit.kind) {
       units.push({ namespace: unit.namespace, entries });
     }
   }
 
   const fileName = `${MANAGED_PACK_PREFIX}ai-${locale}.zip`;
   const target = path.join(packsDir(versionPath), fileName);
-  if (units.length === 0) {
+  const quests = bookTranslations.get(FTB_QUESTS_BOOK) ?? {};
+  bookTranslations.delete(FTB_QUESTS_BOOK);
+  const files = [
+    ...translationPackFiles(units, locale, mcVersion, langFormatFor(mcVersion)),
+    ...(bookTranslations.size > 0
+      ? bookPackFiles(
+          (await readBooks(versionPath, locale)).groups,
+          bookTranslations,
+          locale,
+        )
+      : []),
+  ];
+  if (files.length === 0) {
     await fs.remove(target).catch(() => undefined);
-    return { file: null, digest: null };
+    return { file: null, digest: null, quests };
   }
 
-  const files = translationPackFiles(
-    units,
-    locale,
-    mcVersion,
-    langFormatFor(mcVersion),
-  );
   const description = PACK_DESCRIPTIONS[locale] ?? "Grubie: AI translation of mods";
   files.unshift({
     name: "pack.mcmeta",
@@ -653,7 +849,7 @@ async function buildAiPack(
   const value = contentDigest.digest("hex");
 
   if (value === state.aiDigest && (await fs.pathExists(target))) {
-    return { file: fileName, digest: value };
+    return { file: fileName, digest: value, quests };
   }
 
   setStage(versionPath, "building");
@@ -662,7 +858,7 @@ async function buildAiPack(
   await createZipArchive([], temp, undefined, 9, undefined, files);
   await fs.ensureDir(packsDir(versionPath));
   await fs.move(temp, target, { overwrite: true });
-  return { file: fileName, digest: value };
+  return { file: fileName, digest: value, quests };
 }
 
 async function readGameResourceFormat(
@@ -730,10 +926,15 @@ async function cleanup(
   mcVersion: string | undefined,
 ): Promise<void> {
   const hadAnything =
-    state.packs.length > 0 || state.aiFile || state.units.length > 0;
+    state.packs.length > 0 ||
+    state.aiFile ||
+    state.units.length > 0 ||
+    state.questFile;
   if (!hadAnything) return;
   if (isVersionRunning(versionPath)) return;
   await removeStaleManaged(versionPath, new Set());
+  await removeOwnQuestFile(versionPath, state);
+  await fs.remove(booksPath(versionPath)).catch(() => undefined);
   if (mcVersion) await applyOptions(versionPath, mcVersion, [], null);
   await writeState(versionPath, {
     ...emptyState(),
@@ -770,6 +971,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
 
   const api = new TranslationApi(runtime.context?.token);
   const jars = await listJars(versionPath);
+  const modpackPacks = await listModpackPacks(versionPath);
   const skipProjects = userPackProjects(conf);
   const player = await playerPacks(versionPath);
   const fingerprint = digest([
@@ -777,6 +979,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     locale,
     mcVersion,
     jars.map((jar) => [jar.name, jar.size, jar.mtimeMs]),
+    modpackPacks.map((pack) => [pack.id, pack.identity]),
     skipProjects,
     player.map((pack) => pack.identity),
   ]);
@@ -810,9 +1013,16 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     }
 
     if (fullPass) {
-      setStage(versionPath, "scanning", { done: 0, total: jars.length });
-      const scanned = await scanJars(versionPath, jars, locale);
-      const namespaces = modNamespaces(scanned);
+      const sources = [...jarSources(jars), ...modpackPacks];
+      setStage(versionPath, "scanning", { done: 0, total: sources.length });
+      const scanned = await scanSources(
+        versionPath,
+        sources,
+        new Set(modpackPacks.map((pack) => pack.id)),
+        locale,
+      );
+      const langs = scanned.map((scan) => scan.namespaces);
+      const namespaces = modNamespaces(langs);
 
       setStage(versionPath, "packs");
       let packs = state.packs;
@@ -840,13 +1050,43 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
       await removeStaleManaged(versionPath, keep);
 
       setStage(versionPath, "translating");
-      const covered = await coveredKeys(
+      const coverage = await covered(
         locale,
         packsDir(versionPath),
         packs,
         player,
       );
-      const units = planUnits(scanned, covered);
+      const groups = collectBookGroups(
+        scanned,
+        coverage.docs,
+        installedBookFormats(langs.flat().map((lang) => lang.namespace)),
+      );
+      const quests = await questSource(versionPath, state, locale);
+      const questUnits = quests ? planQuestUnits(quests) : [];
+      const units: PendingUnit[] = [
+        ...planUnits(langs, coverage.keys).map((unit) => ({
+          hash: unit.hash,
+          namespace: unit.namespace,
+          entries: unit.entries,
+          keys: Object.keys(unit.entries).length,
+          ...(unit.context ? { context: unit.context } : {}),
+        })),
+        ...[...planBookUnits(groups), ...questUnits].map((unit) => ({
+          hash: unit.hash,
+          namespace: unit.namespace,
+          entries: unit.entries,
+          keys: Object.keys(unit.entries).length,
+          kind: "book" as const,
+          book: unit.book,
+          ...(unit.context ? { context: unit.context } : {}),
+        })),
+      ];
+      await writeBooks(
+        versionPath,
+        locale,
+        groups.filter((group) => units.some((unit) => unit.book === group.key)),
+        questUnits.length > 0 ? quests : null,
+      );
       const { missing, failed } = await resolveUnits(
         api,
         locale,
@@ -866,9 +1106,10 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
         units: units.map((unit) => ({
           hash: unit.hash,
           namespace: unit.namespace,
-          keys: Object.keys(unit.entries).length,
+          keys: unit.keys,
+          ...(unit.kind ? { kind: unit.kind, book: unit.book } : {}),
         })),
-        failed,
+        failed: [...new Set([...failed, ...submitted.unsupported])],
         mods: jars.length,
         needsAccount: submitted.needsAccount,
         error: next.error ?? (submitted.quota ? "quota" : null),
@@ -892,6 +1133,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
   const ai = await buildAiPack(versionPath, next, locale, mcVersion);
   next.aiFile = ai.file;
   next.aiDigest = ai.digest;
+  Object.assign(next, await applyQuestLang(versionPath, next, locale, ai.quests));
   await applyOptions(versionPath, mcVersion, ourPackFiles(next), locale);
   await writeState(versionPath, next);
   schedulePoll(versionPath, next);
