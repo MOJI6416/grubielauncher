@@ -10,6 +10,9 @@ import {
   crashRulePatterns,
   extractCrashSignature,
   MAX_CULPRITS,
+  MOD_NEWER_JAVA_RULE_ID,
+  newerJavaModCulprit,
+  refineCrashMatch,
   sanitizeCrashRules,
   selectCrashRule,
   UNSUPPORTED_JAVA_OVERRIDE_MESSAGES,
@@ -21,6 +24,7 @@ import {
 } from "./crashRules";
 import { instanceGraphicsBackend } from "@/shared/instanceSettings";
 import { supportsGraphicsBackend } from "@/shared/graphicsBackend";
+import { mcVersionToJavaMajor } from "@/shared/javaVersions";
 import { runCrashRegexJobs } from "./crashRegexWorker";
 import { readableCrashText } from "./crashMappings";
 import { app } from "electron";
@@ -212,7 +216,12 @@ export async function analyzeCrashSource(
   exitCode?: number,
 ): Promise<CrashAnalysisPayload | null> {
   const rules = await getCrashRules();
-  const { match } = await matchCrashRulesOffThread(text || "", rules, exitCode);
+  const { match: found } = await matchCrashRulesOffThread(
+    text || "",
+    rules,
+    exitCode,
+  );
+  const match = refineCrashMatch(found, text || "");
   if (!match) return null;
 
   return {
@@ -226,6 +235,7 @@ export async function analyzeCrashSource(
 export async function analyzeGameCrash(
   versionPath: string,
   exitCode?: number,
+  launchOutput?: string,
 ): Promise<CrashAnalysisPayload | null> {
   const reportPath = await findRecentCrashReport(versionPath);
 
@@ -239,12 +249,19 @@ export async function analyzeGameCrash(
   }
 
   if (text) text = await readableCrashText(versionPath, text);
+  if (launchOutput) text = text ? `${text}\n${launchOutput}` : launchOutput;
 
   const rules = await getCrashRules();
-  const { match: matched, complete } = await matchCrashRulesOffThread(
+  const { match: found, complete } = await matchCrashRulesOffThread(
     text || "",
     rules,
     exitCode,
+  );
+  const matched = await refineGameCrash(
+    versionPath,
+    found,
+    text || "",
+    reportPath,
   );
   const match =
     vulkanStartupOutranks(matched?.ruleId ?? null) &&
@@ -300,6 +317,50 @@ async function crashedStartingVulkan(
     logText: logText ?? crashText,
     forcedBackend: instanceGraphicsBackend(conf?.overrides),
   });
+}
+
+async function refineGameCrash(
+  versionPath: string,
+  found: CrashMatch | null,
+  text: string,
+  reportPath: string | null,
+): Promise<CrashMatch | null> {
+  if (found?.ruleId !== UNSUPPORTED_JAVA_RULE_ID) {
+    return refineCrashMatch(found, text);
+  }
+
+  const refined = refineCrashMatch(found, text, {
+    requiredJavaMajor: await requiredJavaMajor(versionPath),
+  });
+  if (
+    refined?.ruleId !== MOD_NEWER_JAVA_RULE_ID ||
+    refined.culprits.length > 0 ||
+    !reportPath
+  ) {
+    return refined;
+  }
+
+  const log = await readCrashSource(
+    path.join(versionPath, "logs", "latest.log"),
+  );
+  const mod = log ? newerJavaModCulprit(log) : null;
+  return mod ? { ...refined, culprits: [mod] } : refined;
+}
+
+async function requiredJavaMajor(
+  versionPath: string,
+): Promise<number | undefined> {
+  const conf = (await fs
+    .readJSON(path.join(versionPath, "version.json"))
+    .catch(() => null)) as IVersionConf | null;
+  const id = conf?.version?.id;
+  if (!id) return undefined;
+
+  const manifest = (await fs
+    .readJSON(path.join(versionPath, `${id}.json`))
+    .catch(() => null)) as { javaVersion?: { majorVersion?: number } } | null;
+
+  return manifest?.javaVersion?.majorVersion ?? mcVersionToJavaMajor(id);
 }
 
 async function hasJavaOverride(versionPath: string): Promise<boolean> {

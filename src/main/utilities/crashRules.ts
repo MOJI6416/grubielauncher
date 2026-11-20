@@ -15,6 +15,11 @@ export const UNSUPPORTED_JAVA_OVERRIDE_MESSAGES: CrashRuleMessages = {
   tr: "Bu kurulumun ayarlarında elle seçilen Java bu Minecraft sürümüne uygun değil. Kurulum ayarlarını açın ve Java seçimini yeniden otomatik yapın.",
 };
 
+export const NEOFORGE_DEP_VERSION_RULE_ID = "neoforge_dep_version";
+export const FABRIC_API_MISSING_RULE_ID = "fabric_api_missing";
+export const TICKING_PLAYER_MOD_RULE_ID = "ticking_player_mod";
+export const MOD_NEWER_JAVA_RULE_ID = "mod_newer_java";
+
 export const VULKAN_STARTUP_RULE_ID = "vulkan_startup";
 
 export const VULKAN_STARTUP_MESSAGES: CrashRuleMessages = {
@@ -164,6 +169,24 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
     },
   },
   {
+    id: NEOFORGE_DEP_VERSION_RULE_ID,
+    priority: 89,
+    pattern:
+      "(?:Failure message|Error during pre-loading phase): Mod [\\w.-]+ requires ",
+    culpritPattern: "Mod (\\S+) requires",
+    messages: {
+      en: "A mod needs a different version of a dependency, or the dependency is missing. Install the version it asks for, or remove one of the conflicting mods in the mod manager.",
+      ru: "Моду нужна другая версия зависимости или её нет в сборке. Поставьте нужную версию зависимости или удалите один из конфликтующих модов в мод-менеджере.",
+      uk: "Моду потрібна інша версія залежності або її немає у збірці. Встановіть потрібну версію залежності або видаліть один із конфліктних модів у мод-менеджері.",
+      de: "Ein Mod braucht eine andere Version einer Abhängigkeit, oder die Abhängigkeit fehlt. Installieren Sie die verlangte Version oder entfernen Sie im Mod-Manager einen der Mods, die sich nicht vertragen.",
+      es: "Un mod necesita otra versión de una dependencia, o la dependencia falta. Instale la versión que pide o elimine uno de los mods en conflicto en el gestor de mods.",
+      fr: "Un mod a besoin d’une autre version d’une dépendance, ou la dépendance est absente. Installez la version demandée, ou supprimez l’un des mods en conflit dans le gestionnaire de mods.",
+      pl: "Mod potrzebuje innej wersji zależności albo tej zależności brakuje. Zainstaluj wymaganą wersję albo usuń jeden z kolidujących modów w menedżerze modów.",
+      pt: "Um mod precisa de outra versão de uma dependência, ou a dependência está ausente. Instale a versão pedida ou remova um dos mods em conflito no gerenciador de mods.",
+      tr: "Bir mod, bir bağımlılığın farklı bir sürümüne ihtiyaç duyuyor ya da bağımlılık eksik. İstenen sürümü kurun veya mod yöneticisinden çakışan modlardan birini kaldırın.",
+    },
+  },
+  {
     id: "mixin_error",
     priority: 35,
     pattern:
@@ -252,7 +275,7 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
   {
     id: "watchdog",
     priority: 45,
-    pattern: "ServerHangWatchdog|A single server tick took",
+    pattern: "ServerHangWatchdog|A single server tick (?:took|has taken)",
     messages: {
       en: "The game froze on a heavy tick and was killed by the watchdog. Usually an overloaded mod, a chunk with too many entities, or heavy redstone.",
       ru: "Игра зависла на тяжёлом тике и была остановлена watchdog'ом. Обычно виноват перегруженный мод, чанк с кучей сущностей или тяжёлая редстоун-схема.",
@@ -280,6 +303,23 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
       pl: "Sesja gry wygasła. Wybierz ponownie konto w launcherze (lub zaloguj się jeszcze raz) i uruchom grę ponownie.",
       pt: "A sessão do jogo expirou. Selecione sua conta de novo no launcher (ou entre novamente) e inicie o jogo outra vez.",
       tr: "Oyun oturumunun süresi doldu. Başlatıcıda hesabınızı yeniden seçin (veya yeniden giriş yapın) ve oyunu tekrar başlatın.",
+    },
+  },
+  {
+    id: "auth_server_unreachable",
+    priority: 97,
+    pattern: "\\[authlib-injector\\] \\[ERROR\\] Failed to fetch metadata",
+    flags: "",
+    messages: {
+      en: "The account login server (Ely.by, LittleSkin or Grubie) did not respond, so the game could not start. Check your internet connection and VPN, then start the game again.",
+      ru: "Сервер входа аккаунта (Ely.by, LittleSkin или Grubie) не ответил, поэтому игра не запустилась. Проверьте подключение к интернету и VPN и запустите игру снова.",
+      uk: "Сервер входу акаунта (Ely.by, LittleSkin або Grubie) не відповів, тому гра не запустилася. Перевірте підключення до інтернету та VPN і запустіть гру знову.",
+      de: "Der Anmeldeserver des Kontos (Ely.by, LittleSkin oder Grubie) hat nicht geantwortet, daher konnte das Spiel nicht starten. Prüfen Sie die Internetverbindung und das VPN und starten Sie das Spiel erneut.",
+      es: "El servidor de inicio de sesión de la cuenta (Ely.by, LittleSkin o Grubie) no respondió, así que el juego no pudo iniciarse. Compruebe la conexión a internet y la VPN y vuelva a iniciar el juego.",
+      fr: "Le serveur de connexion du compte (Ely.by, LittleSkin ou Grubie) n’a pas répondu, le jeu n’a donc pas pu démarrer. Vérifiez la connexion Internet et le VPN, puis relancez le jeu.",
+      pl: "Serwer logowania konta (Ely.by, LittleSkin lub Grubie) nie odpowiedział, więc gra się nie uruchomiła. Sprawdź połączenie z internetem i VPN, a potem uruchom grę ponownie.",
+      pt: "O servidor de login da conta (Ely.by, LittleSkin ou Grubie) não respondeu, então o jogo não pôde iniciar. Verifique a conexão com a internet e a VPN e inicie o jogo novamente.",
+      tr: "Hesabın giriş sunucusu (Ely.by, LittleSkin veya Grubie) yanıt vermedi, bu yüzden oyun başlatılamadı. İnternet bağlantınızı ve VPN'i kontrol edip oyunu yeniden başlatın.",
     },
   },
   {
@@ -377,7 +417,8 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
     id: "corrupted_files",
     priority: 68,
     pattern:
-      "Invalid or corrupt jarfile|error in opening zip file|Unexpected end of ZLIB input stream|zip END header not found|zip file is empty|Could not find or load main class|NoClassDefFoundError|ClassNotFoundException",
+      'Invalid or corrupt jarfile|error in opening zip file|Unexpected end of ZLIB input stream|zip END header not found|zip file is empty|Could not find or load main class|^\\s*(?:Caused by: |Exception in thread "[^"\\n]*" )?java\\.lang\\.(?:NoClassDefFoundError|ClassNotFoundException)',
+    flags: "im",
     culpritPattern: "(?:corrupt jarfile|opening zip file)\\s+\\S*?([^\\s/\\\\:]+\\.jar)",
     messages: {
       en: "A game or mod file is damaged and won’t open (corrupted .jar/archive). If a file is named below, delete and re-download that mod; otherwise run “Check integrity” in the version settings to restore game files.",
@@ -389,6 +430,22 @@ export const BUILT_IN_CRASH_RULES: CrashRule[] = [
       pl: "Plik gry lub moda jest uszkodzony i nie daje się otworzyć (uszkodzony .jar lub archiwum). Jeśli poniżej podano plik, usuń ten mod i pobierz go ponownie; w przeciwnym razie uruchom „Sprawdź integralność” w ustawieniach wersji, aby przywrócić pliki gry.",
       pt: "Um arquivo do jogo ou de um mod está danificado e não abre (.jar ou arquivo compactado corrompido). Se um arquivo aparecer abaixo, apague esse mod e baixe-o de novo; caso contrário, execute “Verificar integridade” nas configurações da versão para restaurar os arquivos do jogo.",
       tr: "Bir oyun veya mod dosyası hasarlı ve açılmıyor (bozuk .jar/arşiv). Aşağıda bir dosya adı varsa o modu silip yeniden indirin; yoksa oyun dosyalarını geri yüklemek için sürüm ayarlarında “Bütünlüğü denetle” işlemini çalıştırın.",
+    },
+  },
+  {
+    id: "game_not_responding",
+    priority: 71,
+    exitCodes: [3489660927, -805306369],
+    messages: {
+      en: "The game stopped responding and was closed. A large modpack can take several minutes to load — give it time; if it freezes in-game, lower the render distance.",
+      ru: "Игра перестала отвечать и была закрыта. Большая сборка может грузиться несколько минут — подождите; если зависает в игре, снизьте дальность прорисовки.",
+      uk: "Гра перестала відповідати й була закрита. Велика збірка може завантажуватися кілька хвилин — зачекайте; якщо зависає в грі, зменште дальність промальовування.",
+      de: "Das Spiel hat nicht mehr reagiert und wurde geschlossen. Ein großes Modpack kann mehrere Minuten zum Laden brauchen — warten Sie ab; wenn es im Spiel hängt, verringern Sie die Sichtweite.",
+      es: "El juego dejó de responder y se cerró. Un modpack grande puede tardar varios minutos en cargar: espere; si se congela durante la partida, reduzca la distancia de renderizado.",
+      fr: "Le jeu ne répondait plus et a été fermé. Un gros modpack peut mettre plusieurs minutes à charger — patientez ; s’il se fige en jeu, réduisez la distance d’affichage.",
+      pl: "Gra przestała odpowiadać i została zamknięta. Duża paczka modów może ładować się kilka minut — poczekaj; jeśli zawiesza się w grze, zmniejsz zasięg renderowania.",
+      pt: "O jogo parou de responder e foi fechado. Um modpack grande pode levar vários minutos para carregar — aguarde; se travar durante o jogo, diminua a distância de renderização.",
+      tr: "Oyun yanıt vermeyi bıraktı ve kapatıldı. Büyük bir mod paketinin yüklenmesi birkaç dakika sürebilir — bekleyin; oyun içinde donuyorsa görüş mesafesini düşürün.",
     },
   },
   {
@@ -1524,10 +1581,142 @@ export function selectCrashRule(
   return best;
 }
 
+const FABRIC_API_MISSING_MESSAGES: CrashRuleMessages = {
+  en: "Fabric API is not installed — the mods in this instance need it. Install Fabric API from the mod manager.",
+  ru: "Не установлен Fabric API — без него моды сборки не работают. Установите Fabric API в мод-менеджере.",
+  uk: "Не встановлено Fabric API — без нього моди збірки не працюють. Встановіть Fabric API у мод-менеджері.",
+  de: "Fabric API ist nicht installiert — die Mods dieser Instanz brauchen es. Installieren Sie Fabric API im Mod-Manager.",
+  es: "Fabric API no está instalado y los mods de esta instancia lo necesitan. Instale Fabric API desde el gestor de mods.",
+  fr: "Fabric API n’est pas installé — les mods de cette instance en ont besoin. Installez Fabric API depuis le gestionnaire de mods.",
+  pl: "Fabric API nie jest zainstalowane — mody tej instancji go wymagają. Zainstaluj Fabric API w menedżerze modów.",
+  pt: "O Fabric API não está instalado — os mods desta instância precisam dele. Instale o Fabric API pelo gerenciador de mods.",
+  tr: "Fabric API kurulu değil — bu kurulumdaki modların ona ihtiyacı var. Fabric API'yi mod yöneticisinden kurun.",
+};
+
+const TICKING_PLAYER_MOD_MESSAGES: CrashRuleMessages = {
+  en: "The game crashed while updating the player — this is a bug in a mod’s code, not a damaged world, so there is no need to restore it. Update or disable the mod the error came from.",
+  ru: "Игра упала при обработке персонажа — это ошибка в коде мода, а не повреждение мира, восстанавливать мир не нужно. Обновите или отключите мод, в котором произошла ошибка.",
+  uk: "Гра впала під час обробки персонажа — це помилка в коді мода, а не пошкодження світу, відновлювати світ не потрібно. Оновіть або вимкніть мод, у якому сталася помилка.",
+  de: "Das Spiel ist beim Verarbeiten der Spielfigur abgestürzt — das ist ein Fehler im Code eines Mods, die Welt ist nicht beschädigt und muss nicht wiederhergestellt werden. Aktualisieren oder deaktivieren Sie den Mod, aus dem der Fehler stammt.",
+  es: "El juego se cerró al procesar al jugador: es un error en el código de un mod, no un mundo dañado, así que no hace falta restaurarlo. Actualice o desactive el mod que causó el error.",
+  fr: "Le jeu a planté pendant la mise à jour du joueur — c’est un bug dans le code d’un mod, pas un monde endommagé, inutile de le restaurer. Mettez à jour ou désactivez le mod à l’origine de l’erreur.",
+  pl: "Gra uległa awarii podczas przetwarzania postaci gracza — to błąd w kodzie moda, a nie uszkodzony świat, więc nie trzeba go przywracać. Zaktualizuj albo wyłącz mod, w którym wystąpił błąd.",
+  pt: "O jogo travou ao processar o jogador — é um bug no código de um mod, não um mundo danificado, então não é preciso restaurá-lo. Atualize ou desative o mod em que o erro ocorreu.",
+  tr: "Oyun, oyuncu karakteri işlenirken çöktü — bu bir modun kodundaki hata, dünya bozulmadı ve geri yüklemeye gerek yok. Hatanın çıktığı modu güncelleyin veya devre dışı bırakın.",
+};
+
+const MOD_NEWER_JAVA_MESSAGES: CrashRuleMessages = {
+  en: "A mod was built for a newer Java and Minecraft version than this instance uses. Install the version of the mod made for your Minecraft version in the mod manager, or remove it.",
+  ru: "Мод собран под более новую Java и версию игры, чем у этой сборки. Нужна версия мода для вашей версии Minecraft — замените его в мод-менеджере или удалите.",
+  uk: "Мод зібрано під новішу Java і версію гри, ніж у цієї збірки. Потрібна версія мода для вашої версії Minecraft — замініть його в мод-менеджері або видаліть.",
+  de: "Ein Mod wurde für eine neuere Java- und Minecraft-Version gebaut, als diese Instanz nutzt. Installieren Sie im Mod-Manager die Version des Mods für Ihre Minecraft-Version oder entfernen Sie ihn.",
+  es: "Un mod se compiló para una versión de Java y de Minecraft más nueva que la de esta instancia. Instale en el gestor de mods la versión del mod para su versión de Minecraft o elimínelo.",
+  fr: "Un mod a été compilé pour une version de Java et de Minecraft plus récente que celle de cette instance. Installez dans le gestionnaire de mods la version du mod prévue pour votre version de Minecraft, ou supprimez-le.",
+  pl: "Mod został zbudowany dla nowszej Javy i wersji Minecrafta niż ta instancja. Zainstaluj w menedżerze modów wersję moda dla swojej wersji Minecrafta albo go usuń.",
+  pt: "Um mod foi compilado para um Java e uma versão do Minecraft mais novos que os desta instância. Instale no gerenciador de mods a versão do mod para a sua versão do Minecraft ou remova-o.",
+  tr: "Bir mod, bu kurulumun kullandığından daha yeni bir Java ve Minecraft sürümü için derlenmiş. Mod yöneticisinden modun Minecraft sürümünüze uygun sürümünü kurun veya modu kaldırın.",
+};
+
+const FABRIC_MISSING_ID = /of (?:mod )?([\w.+-]+), which is missing/g;
+const FABRIC_API_ID = /^fabric-api$|^fabric-[a-z0-9-]+-v\d+$/i;
+const PLAYER_ENTITY_TYPE = "minecraft:player";
+const TRANSFORMER_FRAME = /\bat TRANSFORMER\/([a-z][a-z0-9_]*)@/g;
+const CORE_MOD_ID = /^(?:minecraft|neoforge|forge|fml\w*|fabric\w*)$/;
+const MOD_LOADING_ISSUE = /-- Mod loading issue for: (\S+) --/;
+const MIXIN_PLUGIN_OUTGROWN =
+  /for mixin config \[([a-z0-9_-]+)(?:\.[\w-]+)*\][^\n]*UnsupportedClassVersionError/i;
+const CLASS_FILE_VERSIONS =
+  /class file version (\d+)(?:\.\d+)?\), this version of the Java Runtime only recognizes class file versions up to (\d+)/;
+const CLASS_FILE_JAVA_OFFSET = 44;
+
+export interface CrashMatchContext {
+  requiredJavaMajor?: number;
+}
+
+function missingFabricDependencies(text: string): string[] {
+  const ids = new Set<string>();
+  for (const match of text.matchAll(FABRIC_MISSING_ID)) ids.add(match[1]);
+  return [...ids];
+}
+
+function firstModFrame(text: string, from: number): string | null {
+  for (const match of text.slice(from).matchAll(TRANSFORMER_FRAME)) {
+    if (!CORE_MOD_ID.test(match[1])) return match[1];
+  }
+  return null;
+}
+
+function playerCrashStart(text: string): number {
+  const entity = text.indexOf(`Entity Type: ${PLAYER_ENTITY_TYPE}`);
+  const head = entity === -1 ? text : text.slice(0, entity);
+  return Math.max(head.lastIndexOf("Description:"), 0);
+}
+
+function modBuiltForNewerJava(text: string, requiredJavaMajor: number): boolean {
+  const match = CLASS_FILE_VERSIONS.exec(text);
+  if (!match) return false;
+  return Number(match[2]) - CLASS_FILE_JAVA_OFFSET >= requiredJavaMajor;
+}
+
+export function newerJavaModCulprit(text: string): string | null {
+  const loadingIssue = MOD_LOADING_ISSUE.exec(text)?.[1];
+  if (loadingIssue) return loadingIssue;
+
+  const mixinPlugin = MIXIN_PLUGIN_OUTGROWN.exec(text)?.[1];
+  if (mixinPlugin) return mixinPlugin;
+
+  const error = text.search(CLASS_FILE_VERSIONS);
+  return error === -1 ? null : firstModFrame(text, error);
+}
+
+export function refineCrashMatch(
+  match: CrashMatch | null,
+  text: string,
+  context: CrashMatchContext = {},
+): CrashMatch | null {
+  if (!match || !text) return match;
+
+  if (match.ruleId === "fabric_missing_dep") {
+    const missing = missingFabricDependencies(text);
+    if (missing.length > 0 && missing.every((id) => FABRIC_API_ID.test(id))) {
+      return {
+        ruleId: FABRIC_API_MISSING_RULE_ID,
+        messages: FABRIC_API_MISSING_MESSAGES,
+        culprits: [],
+      };
+    }
+    return match;
+  }
+
+  if (match.ruleId === "ticking_entity") {
+    if (match.culprits[0] !== PLAYER_ENTITY_TYPE) return match;
+    const mod = firstModFrame(text, playerCrashStart(text));
+    return {
+      ruleId: TICKING_PLAYER_MOD_RULE_ID,
+      messages: TICKING_PLAYER_MOD_MESSAGES,
+      culprits: mod ? [mod] : [],
+    };
+  }
+
+  if (match.ruleId === UNSUPPORTED_JAVA_RULE_ID) {
+    const required = context.requiredJavaMajor;
+    if (!required || !modBuiltForNewerJava(text, required)) return match;
+    const mod = newerJavaModCulprit(text);
+    return {
+      ruleId: MOD_NEWER_JAVA_RULE_ID,
+      messages: MOD_NEWER_JAVA_MESSAGES,
+      culprits: mod ? [mod] : [],
+    };
+  }
+
+  return match;
+}
+
 export function matchCrashRules(
   text: string,
   rules: CrashRule[] = BUILT_IN_CRASH_RULES,
   exitCode?: number,
+  context: CrashMatchContext = {},
 ): CrashMatch | null {
   const best = selectCrashRule(
     rules,
@@ -1544,9 +1733,13 @@ export function matchCrashRules(
 
   if (!best) return null;
 
-  return {
-    ruleId: best.id,
-    messages: best.messages,
-    culprits: extractCulprits(best, text),
-  };
+  return refineCrashMatch(
+    {
+      ruleId: best.id,
+      messages: best.messages,
+      culprits: extractCulprits(best, text),
+    },
+    text,
+    context,
+  );
 }

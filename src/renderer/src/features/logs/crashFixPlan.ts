@@ -29,8 +29,11 @@ export type CrashFixInput = {
 const DISABLE_RULES = new Set([
   "fabric_missing_dep",
   "forge_missing_dep",
+  "neoforge_dep_version",
   "mixin_error",
   "mod_resolution",
+  "ticking_player_mod",
+  "mod_newer_java",
 ]);
 
 export const VULKAN_RULE_ID = "vulkan_startup";

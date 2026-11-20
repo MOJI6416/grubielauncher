@@ -908,3 +908,181 @@ describe("native crash exit codes", () => {
     expect(nativeRule?.exitCodes).not.toContain(1073740791);
   });
 });
+
+describe("rules from the November 2026 support reports", () => {
+  const NEOFORGE_LOADING_REPORT = [
+    "Description: Mod loading failures have occurred; consult the issue messages for more details",
+    "",
+    "net.neoforged.neoforge.logging.CrashReportExtender$ModLoadingCrashException: Mod loading has failed",
+    "",
+    "-- Mod loading issue for: lrtactical --",
+    "Details:",
+    "\tMod file: /C:/Users/player/AppData/Roaming/.grubielauncher/minecraft/versions/NeoForge 1.21.1/mods/lrtactical-neoforge-1.21.1-0.4.4.jar",
+    "\tFailure message: Mod lrtactical requires tacz 1.2.0-hotfix or above, and below 1.3",
+    "\t\tCurrently, tacz is 1.2.0",
+    "\tMod version: 0.4.4",
+    "\tException message: <No associated exception found>",
+  ].join("\n");
+
+  it("names the NeoForge mod whose dependency has the wrong version", () => {
+    const match = matchCrashRules(NEOFORGE_LOADING_REPORT);
+    expect(match?.ruleId).toBe("neoforge_dep_version");
+    expect(match?.culprits).toEqual(["lrtactical"]);
+  });
+
+  it("gives the same answer from the log, where the sorter also complains", () => {
+    const log = [
+      "[19лист.2026 02:02:17.596] [main/ERROR] [net.neoforged.fml.loading.ModSorter/LOADING]: Missing or unsupported mandatory dependencies:",
+      "\tMod ID: 'tacz', Requested by: 'villagerguardgunners', Expected range: '[1.2.0,1.2.0]', Actual version: '1.2.0-hotfix'",
+      "[19лист.2026 02:03:02.840] [Render thread/FATAL] [net.neoforged.fml.ModLoader/CORE]: Error during pre-loading phase: Mod villagerguardgunners requires tacz 1.2.0",
+    ].join("\n");
+    const match = matchCrashRules(log);
+    expect(match?.ruleId).toBe("neoforge_dep_version");
+    expect(match?.culprits).toEqual(["villagerguardgunners"]);
+  });
+
+  it("does not call mixin's optional-class warnings corrupted files", () => {
+    const log = [
+      "[04нояб.2026 18:26:56.268] [main/WARN] [mixin/]: Error loading class: tschipp/carryon/common/config/ListHandler (java.lang.ClassNotFoundException: tschipp.carryon.common.config.ListHandler)",
+      "[04нояб.2026 18:26:58.767] [main/WARN] [mixin/]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)",
+    ].join("\n");
+    expect(matchCrashRules(log)).toBeNull();
+  });
+
+  it("still takes a class missing at the start of an exception for corrupted files", () => {
+    expect(
+      matchCrashRules(
+        "java.lang.RuntimeException: boom\nCaused by: java.lang.ClassNotFoundException: net.foo.Bar",
+      )?.ruleId,
+    ).toBe("corrupted_files");
+    expect(
+      matchCrashRules(
+        'Exception in thread "main" java.lang.NoClassDefFoundError: net/foo/Bar',
+      )?.ruleId,
+    ).toBe("corrupted_files");
+  });
+
+  it("explains the Windows not-responding exit code in both spellings", () => {
+    const warnings =
+      "[04нояб.2026 18:26:56.268] [main/WARN] [mixin/]: Error loading class: tschipp/carryon/common/carry/PickupHandler (java.lang.ClassNotFoundException: tschipp.carryon.common.carry.PickupHandler)";
+    expect(matchCrashRules(warnings, undefined, 3489660927)?.ruleId).toBe(
+      "game_not_responding",
+    );
+    expect(matchCrashRules("", undefined, -805306369)?.ruleId).toBe(
+      "game_not_responding",
+    );
+  });
+
+  it("ranks the not-responding exit between corrupted files and memory", () => {
+    expect(
+      matchCrashRules(
+        "Caused by: java.lang.NoClassDefFoundError: net/foo/Bar",
+        undefined,
+        3489660927,
+      )?.ruleId,
+    ).toBe("game_not_responding");
+    expect(
+      matchCrashRules(
+        "java.lang.OutOfMemoryError: Java heap space",
+        undefined,
+        3489660927,
+      )?.ruleId,
+    ).toBe("out_of_memory");
+  });
+
+  it("reads ModernFix's watchdog wording", () => {
+    expect(
+      matchCrashRules(
+        "[13:25:19] [ModernFix integrated server watchdog/ERROR] [or.em.mo.wo.IntegratedWatchdog/]: A single server tick has taken 125233, more than 40000 milliseconds",
+      )?.ruleId,
+    ).toBe("watchdog");
+  });
+
+  it("blames the login server when authlib-injector cannot fetch its metadata", () => {
+    const output = [
+      "[authlib-injector] [INFO] Authentication server: https://ely.by",
+      "[authlib-injector] [ERROR] Failed to fetch metadata: java.net.SocketException: Попытка установить соединение была безуспешной",
+    ].join("\n");
+    expect(matchCrashRules(output, undefined, 1)?.ruleId).toBe(
+      "auth_server_unreachable",
+    );
+  });
+
+  it("says Fabric API is missing when every missing id belongs to it", () => {
+    const log = [
+      "\t - Mod 'Emotecraft' (emotecraft) 3.5.0-b.build.179 requires any version of fabric-command-api-v2, which is missing!",
+      "\t - Mod 'Emotecraft' (emotecraft) 3.5.0-b.build.179 requires version 12.5.1+fbe231d52c or later of fabric-rendering-v1, which is missing!",
+      "\t - Mod 'Plasmo Voice' (plasmovoice) 2.1.17 requires any version of fabric-api, which is missing!",
+    ].join("\n");
+    const match = matchCrashRules(log);
+    expect(match?.ruleId).toBe("fabric_api_missing");
+    expect(match?.messages.ru).toContain("Fabric API");
+    expect(match?.culprits).toEqual([]);
+  });
+
+  it("keeps the generic dependency answer when another mod is missing too", () => {
+    const log = [
+      "\t - Mod 'Online PatPat' (online-patpat) 1.3.2+26.3 requires version 0.2.4 or later of proxlib, which is missing!",
+      "\t - Mod 'Plasmo Voice' (plasmovoice) 2.1.17 requires any version of fabric-api, which is missing!",
+    ].join("\n");
+    expect(matchCrashRules(log)?.ruleId).toBe("fabric_missing_dep");
+  });
+
+  const PLAYER_TICK_REPORT = [
+    "Description: Ticking entity",
+    "",
+    "java.util.ConcurrentModificationException: null",
+    "\tat java.base/java.util.HashMap$KeySpliterator.forEachRemaining(Unknown Source) ~[?:?] {}",
+    "\tat TRANSFORMER/aether_ii@1.0-alpha.4.1/com.aetherteam.aetherii.client.AetherIIClientProxy.stopOtherMusicPlayerSound(AetherIIClientProxy.java:56) ~[aether_ii-26.1.2-alpha.4.1-neoforge-fixed.jar:?] {}",
+    "\tat net.neoforged.bus.EventBus.post(EventBus.java:360) ~[bus-8.0.5.jar:?] {}",
+    "\tat TRANSFORMER/neoforge@26.1.2.126/net.neoforged.neoforge.event.EventHooks.fireEntityTickPost(EventHooks.java:972) ~[neoforge-26.1.2.126-universal.jar:?] {}",
+    "\tat TRANSFORMER/minecraft@26.1.2/net.minecraft.client.multiplayer.ClientLevel.tickNonPassenger(ClientLevel.java:366) ~[minecraft-client-patched-26.1.2.126.jar:?] {neoforge:mixin[APP:lithium.mixins.json:collections.entity_ticking.EntityTickListMixin from mod lithium]}",
+    "-- Entity being ticked --",
+    "Details:",
+    "\tEntity Type: minecraft:player (net.minecraft.client.player.LocalPlayer)",
+  ].join("\n");
+
+  it("blames the mod in the stack, not the world, when the player is the ticking entity", () => {
+    const match = matchCrashRules(PLAYER_TICK_REPORT);
+    expect(match?.ruleId).toBe("ticking_player_mod");
+    expect(match?.culprits).toEqual(["aether_ii"]);
+    expect(match?.messages.ru).not.toContain("бэкап");
+  });
+
+  it("skips mod frames printed before the crash report in the log", () => {
+    const log = [
+      "[21:58:39] [Immersive Optimization Worker/INFO] [STDERR/]: [net.conczin.immersive_optimization.TickScheduler$Worker:run:73]: \tat TRANSFORMER/immersive_optimization@0.2.0/net.conczin.immersive_optimization.TickScheduler$Worker.run(TickScheduler.java:73)",
+      PLAYER_TICK_REPORT,
+    ].join("\n");
+    expect(matchCrashRules(log)?.culprits).toEqual(["aether_ii"]);
+  });
+
+  const NEWER_CLASS =
+    "java.lang.UnsupportedClassVersionError: net/minecraft/class_2272 has been compiled by a more recent version of the Java Runtime (class file version 69.0), this version of the Java Runtime only recognizes class file versions up to 65.0";
+
+  it("blames a mod when the game already runs on the Java it needs", () => {
+    const match = matchCrashRules(NEWER_CLASS, undefined, 1, {
+      requiredJavaMajor: 21,
+    });
+    expect(match?.ruleId).toBe("mod_newer_java");
+    expect(match?.culprits).toEqual([]);
+  });
+
+  it("names the mod whose mixin plugin was built for the newer Java", () => {
+    const log = [
+      "[18:43:03] [main/ERROR]: Error loading companion plugin class [com.moigferdsrte.kaleidoscopehodgepodge.mixin.plugin.KHMixinPlugin] for mixin config [kaleidoscope_hodgepodge.compat.mixins.json]. The plugin may be out of date: UnsupportedClassVersionError:com/moigferdsrte/kaleidoscopehodgepodge/mixin/plugin/KHMixinPlugin has been compiled by a more recent version of the Java Runtime (class file version 69.0), this version of the Java Runtime only recognizes class file versions up to 65.0",
+      "java.lang.UnsupportedClassVersionError: com/moigferdsrte/kaleidoscopehodgepodge/mixin/plugin/KHMixinPlugin has been compiled by a more recent version of the Java Runtime (class file version 69.0), this version of the Java Runtime only recognizes class file versions up to 65.0",
+    ].join("\n");
+    const match = matchCrashRules(log, undefined, 1, { requiredJavaMajor: 21 });
+    expect(match?.ruleId).toBe("mod_newer_java");
+    expect(match?.culprits).toEqual(["kaleidoscope_hodgepodge"]);
+  });
+
+  it("keeps asking for another Java when the game runs on an older one than it needs", () => {
+    expect(
+      matchCrashRules(NEWER_CLASS, undefined, 1, { requiredJavaMajor: 25 })
+        ?.ruleId,
+    ).toBe("unsupported_java");
+    expect(matchCrashRules(NEWER_CLASS)?.ruleId).toBe("unsupported_java");
+  });
+});

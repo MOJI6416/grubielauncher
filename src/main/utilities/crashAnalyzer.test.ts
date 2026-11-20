@@ -36,6 +36,10 @@ vi.mock("./crashRegexWorker", () => ({
   runCrashRegexJobs: (...args: unknown[]) => runCrashRegexJobs(...args),
 }));
 
+vi.mock("./crashMappings", () => ({
+  readableCrashText: async (_versionPath: string, text: string) => text,
+}));
+
 import { analyzeGameCrash } from "./crashAnalyzer";
 
 const versionPath = path.join(TMP, "version");
@@ -70,6 +74,69 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await fs.remove(TMP);
+});
+
+function runInProcess(text: string, jobs: (Job & { flags: string; capture?: boolean })[]) {
+  return {
+    results: jobs.map((job) => {
+      const expression = new RegExp(job.pattern, job.flags);
+      if (!job.capture) return expression.test(text);
+      const found: string[] = [];
+      let match: RegExpExecArray | null;
+      while ((match = expression.exec(text)) && found.length < 5) {
+        if (match[1] && !found.includes(match[1])) found.push(match[1]);
+        if (match.index === expression.lastIndex) expression.lastIndex += 1;
+      }
+      return found;
+    }),
+    stalledAt: null,
+  };
+}
+
+describe("analyzeGameCrash on real report shapes", () => {
+  beforeEach(() => {
+    runCrashRegexJobs.mockImplementation(async (text: string, jobs) =>
+      runInProcess(text, jobs),
+    );
+  });
+
+  it("lets the launch output outrank a log left over from an earlier run", async () => {
+    const analysis = await analyzeGameCrash(
+      versionPath,
+      1,
+      "[authlib-injector] [ERROR] Failed to fetch metadata: java.net.SocketException: Попытка установить соединение была безуспешной",
+    );
+    expect(analysis?.ruleId).toBe("auth_server_unreachable");
+  });
+
+  it("blames a mod built for a newer Java and finds it in the log when the report has no name", async () => {
+    await fs.writeJSON(path.join(versionPath, "version.json"), {
+      version: { id: "1.21.1" },
+      loader: { name: "fabric" },
+    });
+    await fs.writeJSON(path.join(versionPath, "1.21.1.json"), {
+      javaVersion: { majorVersion: 21 },
+    });
+    await fs.ensureDir(path.join(versionPath, "crash-reports"));
+    await fs.writeFile(
+      path.join(versionPath, "crash-reports", "crash-2026-11-18_18.43.31-client.txt"),
+      [
+        "Description: Bootstrap",
+        "",
+        "java.lang.UnsupportedClassVersionError: net/minecraft/class_2272 has been compiled by a more recent version of the Java Runtime (class file version 69.0), this version of the Java Runtime only recognizes class file versions up to 65.0",
+        "\tat java.base/java.lang.ClassLoader.defineClass1(Native Method)",
+      ].join("\n"),
+    );
+    await fs.writeFile(
+      path.join(versionPath, "logs", "latest.log"),
+      "[18:43:03] [main/ERROR]: Error loading companion plugin class [com.moigferdsrte.kaleidoscopehodgepodge.mixin.plugin.KHMixinPlugin] for mixin config [kaleidoscope_hodgepodge.compat.mixins.json]. The plugin may be out of date: UnsupportedClassVersionError:com/moigferdsrte/kaleidoscopehodgepodge/mixin/plugin/KHMixinPlugin has been compiled by a more recent version of the Java Runtime (class file version 69.0), this version of the Java Runtime only recognizes class file versions up to 65.0\n",
+    );
+
+    const analysis = await analyzeGameCrash(versionPath, 4294967295);
+    expect(analysis?.ruleId).toBe("mod_newer_java");
+    expect(analysis?.culprits).toEqual(["kaleidoscope_hodgepodge"]);
+    expect(analysis?.reportPath).toContain("crash-2026-11-18_18.43.31-client.txt");
+  });
 });
 
 describe("analyzeGameCrash", () => {

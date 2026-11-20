@@ -63,6 +63,18 @@ describe("planCrashFixes", () => {
     ).toEqual([{ kind: "disableMod", title: "Sodium" }]);
   });
 
+  it("offers to turn off the mod named by the newer mod-culprit rules", () => {
+    for (const ruleId of [
+      "neoforge_dep_version",
+      "ticking_player_mod",
+      "mod_newer_java",
+    ]) {
+      expect(planCrashFixes({ ...base, ruleId, culprits: ["create"] })).toEqual(
+        [{ kind: "disableMod", title: "Create" }],
+      );
+    }
+  });
+
   it("does not guess a mod for rules whose culprit is not a mod", () => {
     expect(
       planCrashFixes({

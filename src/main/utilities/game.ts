@@ -2,7 +2,7 @@ import { ChildProcessWithoutNullStreams, execFile, spawn } from "child_process";
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
-import { analyzeGameCrash } from "./crashAnalyzer";
+import { GameExitTrace, reportGameExit } from "./gameExit";
 import { clearConsoleOutput, recordConsoleOutput } from "./consoleBuffer";
 import { gameProcesses, gameRuntime } from "./runtime";
 import { mainWindow } from "../windows/mainWindow";
@@ -525,6 +525,7 @@ export function runGame(
     instance,
     header: { versionName, instance, launch: span.id },
   });
+  const exitTrace = new GameExitTrace();
 
   span.step("spawning", {
     cwd: workingDirectory || versionPath,
@@ -687,6 +688,7 @@ export function runGame(
   const stdoutReader = createLineReader((message) => {
     watch.line("out", message);
     outputLog?.line("out", message);
+    exitTrace.line(message);
     metrics.line(message);
     gameRuntime.emitStdout({
       key: instanceKey,
@@ -719,6 +721,7 @@ export function runGame(
   const stderrReader = createLineReader((message) => {
     watch.line("err", message);
     outputLog?.line("err", message);
+    exitTrace.line(message);
     gameRuntime.emitStderr({
       key: instanceKey,
       versionName,
@@ -831,34 +834,16 @@ export function runGame(
       safeSend("consoleChangeStatus", versionName, instance, "error");
       msg.type = "error";
       msg.tips.push("checkIntegrity");
-
-      void analyzeGameCrash(versionPath, code)
-        .catch((error) => {
-          console.error(
-            `[crash] could not analyse the crash of ${versionName}:`,
-            error,
-          );
-          return null;
-        })
-        .then((analysis) => {
-          journal.info("game", "crash analysis", {
-            versionName,
-            instance,
-            code,
-            analysis: analysis ?? null,
-          });
-          if (!analysis) {
-            safeSend("crashUnresolved", {
-              versionName,
-              instance,
-              versionPath,
-              exitCode: code,
-            });
-            return;
-          }
-          safeSend("crashAnalysis", versionName, instance, analysis);
-        });
     }
+
+    void reportGameExit({
+      versionPath,
+      versionName,
+      instance,
+      code,
+      trace: exitTrace,
+      send: safeSend,
+    });
 
     safeSend("consoleMessage", versionName, instance, msg);
 
