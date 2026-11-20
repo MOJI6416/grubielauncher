@@ -23,7 +23,6 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
-  Globe2,
   ListRestart,
   Loader2,
   Package,
@@ -199,7 +198,6 @@ export interface ContentListPaneProps {
   shaderSupport: ShaderSupport | null;
   onOpenShaderLoader: (slug: string) => void;
   canInstallShaderLoader: boolean;
-  onOpenWorlds?: () => void;
 }
 
 export function ContentListPane({
@@ -285,7 +283,6 @@ export function ContentListPane({
   shaderSupport,
   onOpenShaderLoader,
   canInstallShaderLoader,
-  onOpenWorlds,
 }: ContentListPaneProps) {
   const modSets = useModSets();
   const favoriteItem =
@@ -330,28 +327,6 @@ export function ContentListPane({
         className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-card"
       >
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {onOpenWorlds &&
-            scope === "library" &&
-            (projectType === ProjectType.WORLD ||
-              projectType === ProjectType.DATAPACK) && (
-              <div className="flex min-h-10 shrink-0 items-center gap-2.5 border-b border-border px-3 py-1.5 text-xs">
-                <Globe2 className="size-3.5 shrink-0 text-faint" />
-                <span className="min-w-0 flex-1 leading-snug text-muted-foreground">
-                  {projectType === ProjectType.WORLD
-                    ? t("modManager.worldsElsewhere")
-                    : t("modManager.datapacksElsewhere")}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 shrink-0 px-2.5 text-xs"
-                  onClick={onOpenWorlds}
-                >
-                  {t("modManager.openWorlds")}
-                </Button>
-              </div>
-            )}
-
           {shaderSupport && shaderSupport.state !== "ready" && (
             <div className="flex min-h-10 shrink-0 items-center gap-2.5 border-b border-border px-3 py-1.5 text-xs">
               <SunMoon className="size-3.5 shrink-0 text-warning" />

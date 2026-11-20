@@ -150,10 +150,16 @@ import { ISkinData } from "@/types/Skin";
 import {
   IWorld,
   IWorldStatsAggregate,
+  IWorldAdvancements,
   WorldDuplicateResult,
   WorldExportResult,
   WorldImportResult,
 } from "@/types/World";
+import type {
+  ISchematicFile,
+  SchematicInspectResult,
+  SchematicTransferResult,
+} from "@/types/Schematic";
 import {
   IWorldBackupList,
   WorldBackupCreateResult,
@@ -1407,7 +1413,15 @@ export interface IElectronAPI {
     import: (
       zipPath: string,
       versionPath: string,
+      freeName?: boolean,
     ) => Promise<WorldImportResult>;
+    advancements: (
+      worldPath: string,
+      account: ILocalAccount,
+      gameVersion?: string,
+      disabledDatapacks?: string[],
+    ) => Promise<IWorldAdvancements | null>;
+    archiveName: (zipPath: string) => Promise<string | null>;
     listBackups: (worldPath: string) => Promise<IWorldBackupList>;
     countBackups: (versionPath: string) => Promise<Record<string, number>>;
     createBackup: (
@@ -1421,6 +1435,16 @@ export interface IElectronAPI {
     ) => Promise<WorldBackupRestoreResult>;
     deleteBackup: (backupId: string) => Promise<WorldBackupDeleteResult>;
     deletePreserved: (targetPath: string) => Promise<WorldBackupDeleteResult>;
+  };
+  schematics: {
+    list: (versionPath: string) => Promise<ISchematicFile[]>;
+    inspect: (filePath: string) => Promise<SchematicInspectResult>;
+    transfer: (
+      sourceVersionPath: string,
+      relativePath: string,
+      targetVersionPath: string,
+      mode: "copy" | "move",
+    ) => Promise<SchematicTransferResult>;
   };
   worldChunks: {
     dimensions: (worldPath: string) => Promise<IChunkDimension[]>;
@@ -2749,8 +2773,22 @@ export const api: IElectronAPI = {
       invoke("worlds:duplicate", worldPath, newName),
     export: (worldPath: string, destinationDir: string) =>
       invoke("worlds:export", worldPath, destinationDir),
-    import: (zipPath: string, versionPath: string) =>
-      invoke("worlds:import", zipPath, versionPath),
+    import: (zipPath: string, versionPath: string, freeName?: boolean) =>
+      invoke("worlds:import", zipPath, versionPath, freeName),
+    advancements: (
+      worldPath: string,
+      account: ILocalAccount,
+      gameVersion?: string,
+      disabledDatapacks?: string[],
+    ) =>
+      invoke(
+        "worlds:advancements",
+        worldPath,
+        account,
+        gameVersion,
+        disabledDatapacks,
+      ),
+    archiveName: (zipPath: string) => invoke("worlds:archiveName", zipPath),
     listBackups: (worldPath: string) => invoke("worlds:listBackups", worldPath),
     countBackups: (versionPath: string) =>
       invoke("worlds:countBackups", versionPath),
@@ -2761,6 +2799,23 @@ export const api: IElectronAPI = {
     deleteBackup: (backupId: string) => invoke("worlds:deleteBackup", backupId),
     deletePreserved: (targetPath: string) =>
       invoke("worlds:deletePreserved", targetPath),
+  },
+  schematics: {
+    list: (versionPath: string) => invoke("schematics:list", versionPath),
+    inspect: (filePath: string) => invoke("schematics:inspect", filePath),
+    transfer: (
+      sourceVersionPath: string,
+      relativePath: string,
+      targetVersionPath: string,
+      mode: "copy" | "move",
+    ) =>
+      invoke(
+        "schematics:transfer",
+        sourceVersionPath,
+        relativePath,
+        targetVersionPath,
+        mode,
+      ),
   },
   worldChunks: {
     dimensions: (worldPath: string) =>

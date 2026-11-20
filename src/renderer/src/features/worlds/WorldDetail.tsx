@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { IWorld } from "@/types/World";
+import { ILocalProject } from "@/types/ModManager";
 import { Version } from "@renderer/classes/Version";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
@@ -30,6 +31,7 @@ import { WorldChunksTab } from "./WorldChunksTab";
 import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
 import { WorldActions, WorldMenuItems } from "./worldActions";
+import { useWorldAdvancements } from "./WorldAdvancements";
 
 const api = window.api;
 
@@ -52,6 +54,7 @@ export function WorldDetail({
   backupCount,
   takenNames,
   datapackOptions,
+  mods,
   locale,
   actions,
   renameRequested,
@@ -69,6 +72,7 @@ export function WorldDetail({
   backupCount: number;
   takenNames: string[];
   datapackOptions: DatapackOption[];
+  mods: ILocalProject[] | undefined;
   locale: string;
   actions: WorldActions;
   renameRequested: boolean;
@@ -106,6 +110,10 @@ export function WorldDetail({
   }, [actions, onRenameHandled, renameRequested, world]);
 
   const isLocked = actions.isLocked(world);
+  const advancements = useWorldAdvancements(
+    world,
+    version.version.version.id,
+  );
   const canPlay = Boolean(version.isQuickPlaySingleplayer) && !isVersionRunning;
   const otherNames = takenNames.filter((name) => name !== world.name);
 
@@ -385,14 +393,25 @@ export function WorldDetail({
               sizeBytes={sizeBytes}
               backupCount={backupCount}
               locale={locale}
+              advancements={advancements}
+              onOpenStats={() => setTab("stats")}
             />
           )}
-          {tab === "stats" && <WorldStatsTab world={world} locale={locale} />}
+          {tab === "stats" && (
+            <WorldStatsTab
+              world={world}
+              locale={locale}
+              advancements={advancements}
+              mods={mods}
+            />
+          )}
           {tab === "datapacks" && (
             <WorldDatapacksTab
               world={world}
+              version={version}
               options={datapackOptions}
               disabled={isLocked}
+              lockReason={lockReason}
               onChange={(datapacks) => onWorldPatched({ datapacks })}
             />
           )}

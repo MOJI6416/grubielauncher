@@ -43,13 +43,17 @@ describe("supportsDatapacks", () => {
 });
 
 describe("fittingTypes", () => {
-  it("never offers worlds on Modrinth", () => {
-    expect(
-      fittingTypes(Provider.MODRINTH, target("fabric", "1.21.1")),
-    ).not.toContain(ProjectType.WORLD);
+  it("leaves worlds and datapacks to the Worlds tab", () => {
+    for (const provider of [Provider.MODRINTH, Provider.CURSEFORGE] as const) {
+      for (const loader of ["fabric", "vanilla"] as const) {
+        const types = fittingTypes(provider, target(loader, "1.21.1"));
+        expect(types).not.toContain(ProjectType.WORLD);
+        expect(types).not.toContain(ProjectType.DATAPACK);
+      }
+    }
     expect(
       fittingTypes(Provider.CURSEFORGE, target("fabric", "1.21.1")),
-    ).toContain(ProjectType.WORLD);
+    ).toContain(ProjectType.RESOURCEPACK);
   });
 
   it("drops CurseForge mods for loaders CurseForge does not host", () => {
@@ -64,15 +68,6 @@ describe("fittingTypes", () => {
     expect(
       fittingTypes(Provider.CURSEFORGE, target("legacy-fabric", "1.12.2")),
     ).toContain(ProjectType.MOD);
-  });
-
-  it("drops datapacks for old game versions", () => {
-    expect(
-      fittingTypes(Provider.MODRINTH, target("forge", "1.12.2")),
-    ).not.toContain(ProjectType.DATAPACK);
-    expect(
-      fittingTypes(Provider.MODRINTH, target("vanilla", "1.20.1")),
-    ).toContain(ProjectType.DATAPACK);
   });
 
   it("offers plugins only for plugin servers", () => {
@@ -153,11 +148,27 @@ describe("providerTypes and libraryTypes", () => {
     ).toEqual([ProjectType.MOD, ProjectType.RESOURCEPACK, ProjectType.SHADER]);
   });
 
+  it("keeps installed worlds and datapacks out of the library", () => {
+    expect(
+      libraryTypes(
+        target("fabric", "1.21.1"),
+        {},
+        new Map([
+          [ProjectType.WORLD, 1],
+          [ProjectType.DATAPACK, 3],
+        ]),
+      ),
+    ).toEqual([
+      ProjectType.MOD,
+      ProjectType.RESOURCEPACK,
+      ProjectType.SHADER,
+    ]);
+  });
+
   it("shows every fitting type until probes answer", () => {
     expect(providerTypes(Provider.CURSEFORGE, beta, {})).toEqual([
       ProjectType.RESOURCEPACK,
       ProjectType.SHADER,
-      ProjectType.WORLD,
     ]);
   });
 });

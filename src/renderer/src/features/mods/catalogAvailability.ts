@@ -19,6 +19,11 @@ export const BROWSE_PREFERENCE: readonly CatalogProvider[] = [
 
 export type CatalogAvailability = "available" | "empty" | "unknown";
 
+export const WORLDS_TAB_TYPES: ReadonlySet<ProjectType> = new Set([
+  ProjectType.WORLD,
+  ProjectType.DATAPACK,
+]);
+
 export interface CatalogTarget {
   loader: Loader | undefined;
   server: IServerConf | undefined;
@@ -51,6 +56,7 @@ export function fittingTypes(
   target: CatalogTarget,
 ): ProjectType[] {
   return getProjectTypes(target.loader ?? "vanilla", target.server, provider)
+    .filter((type) => !WORLDS_TAB_TYPES.has(type))
     .filter(
       (type) =>
         !(
@@ -59,10 +65,6 @@ export function fittingTypes(
           target.loader &&
           LOADERS_WITHOUT_CURSEFORGE_MODS.has(target.loader)
         ),
-    )
-    .filter(
-      (type) =>
-        type !== ProjectType.DATAPACK || supportsDatapacks(target.mcVersion),
     );
 }
 
@@ -127,5 +129,9 @@ export function libraryTypes(
     target.loader ?? "vanilla",
     target.server,
     Provider.CURSEFORGE,
-  ).filter((type) => offered.has(type) || (installed.get(type) ?? 0) > 0);
+  ).filter(
+    (type) =>
+      !WORLDS_TAB_TYPES.has(type) &&
+      (offered.has(type) || (installed.get(type) ?? 0) > 0),
+  );
 }

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart3 } from "lucide-react";
 import { IWorld } from "@/types/World";
+import { ILocalProject } from "@/types/ModManager";
 import {
   Empty,
   EmptyDescription,
@@ -13,13 +14,21 @@ import { Hint } from "@renderer/components/Hint";
 import { worldDisplayStats } from "@renderer/utilities/worldStats";
 import { formatDuration } from "@renderer/utilities/duration";
 import { formatNumber } from "@renderer/utilities/numbers";
+import {
+  AdvancementsBreakdown,
+  WorldAdvancementsState,
+} from "./WorldAdvancements";
 
 export function WorldStatsTab({
   world,
   locale,
+  advancements,
+  mods,
 }: {
   world: IWorld;
   locale: string;
+  advancements: WorldAdvancementsState;
+  mods: ILocalProject[] | undefined;
 }) {
   const { t } = useTranslation();
   const stats = useMemo(
@@ -27,17 +36,24 @@ export function WorldStatsTab({
     [world.statistics],
   );
 
+  const breakdown = (
+    <AdvancementsBreakdown state={advancements} mods={mods} locale={locale} />
+  );
+
   if (!stats.hasData) {
     return (
-      <Empty className="h-full border border-dashed border-border bg-surface-1">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <BarChart3 />
-          </EmptyMedia>
-          <EmptyTitle>{t("worldStats.noData")}</EmptyTitle>
-          <EmptyDescription>{t("worldStats.noDataHint")}</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        {breakdown}
+        <Empty className="min-h-0 flex-1 border border-dashed border-border bg-surface-1">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <BarChart3 />
+            </EmptyMedia>
+            <EmptyTitle>{t("worldStats.noData")}</EmptyTitle>
+            <EmptyDescription>{t("worldStats.noDataHint")}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     );
   }
 
@@ -85,6 +101,8 @@ export function WorldStatsTab({
           value={nf(stats.damageTaken)}
         />
       </div>
+
+      {breakdown}
 
       <div className="grid gap-2 lg:grid-cols-2">
         <TopList

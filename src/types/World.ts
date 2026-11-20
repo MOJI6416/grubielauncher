@@ -31,6 +31,23 @@ export interface IWorldStatistics {
   stats: Record<string, Record<string, number>>
 }
 
+export type WorldAdvancementSource = 'game' | 'mod' | 'datapack'
+
+export interface IWorldAdvancementGroup {
+  namespace: string
+  source: WorldAdvancementSource
+  file: string | null
+  done: number
+  total: number
+}
+
+export interface IWorldAdvancements {
+  done: number
+  total: number
+  groups: IWorldAdvancementGroup[]
+  hasProgress: boolean
+}
+
 export interface IWorldStatsAggregate {
   worlds: number
   playTimeTicks: number

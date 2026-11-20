@@ -1039,8 +1039,6 @@
     "dropReadOnly": "Cette instance ne peut pas être modifiée : les fichiers n’ont pas été ajoutés",
     "runningLocked": "Vous pourrez modifier les mods après la fermeture du jeu",
     "categoriesExplain": "Les catégories viennent de Modrinth et CurseForge et servent à filtrer. Elles ne se modifient pas.",
-    "worldsElsewhere": "Voici les mondes installés depuis le catalogue. Tous les mondes de l’instance et leurs sauvegardes sont dans l’onglet « Mondes ».",
-    "datapacksElsewhere": "Voici les packs de données téléchargés dans l’instance. On les ajoute à un monde dans l’onglet « Mondes ».",
     "openWorlds": "Ouvrir « Mondes »",
     "count": {
       "mod_one": "{{count}} mod",
@@ -1116,7 +1114,9 @@
       "declared": "Déclaré pour la version {{version}}"
     },
     "modpackDownloadFailed": "Impossible de télécharger le modpack",
-    "modpackDownloadFailedHint": "L’archive du modpack n’a pas été téléchargée depuis {{source}}. Vérifiez votre connexion et réessayez."
+    "modpackDownloadFailedHint": "L’archive du modpack n’a pas été téléchargée depuis {{source}}. Vérifiez votre connexion et réessayez.",
+    "worldsTabFiles": "Les mondes et les packs de données s’installent dans l’onglet « Mondes »",
+    "worldsTabLink": "{{type}} : ils s’installent dans l’onglet « Mondes »"
   },
   "nav": {
     "play": "Jouer"
@@ -2920,6 +2920,75 @@
     "topKilled": "Créatures les plus vaincues",
     "topEmpty": "Rien pour l’instant — jouez d’abord dans ce monde"
   },
+  "worldAdvancements": {
+    "title": "Progrès",
+    "progress": "{{done}} sur {{total}} · {{percent}} %",
+    "notStarted": "Pas encore commencé",
+    "notStartedHint": "La progression apparaîtra une fois que vous aurez joué dans ce monde avec le compte choisi."
+  },
+  "worldCatalog": {
+    "worldsTitle": "Mondes du catalogue",
+    "datapacksTitle": "Packs de données du catalogue",
+    "source": "Source",
+    "search": "Rechercher dans le catalogue",
+    "nothing": "Rien trouvé",
+    "nothingHint": "Essayez une autre recherche.",
+    "nothingForVersion": "Rien ici pour Minecraft {{version}} pour l’instant.",
+    "more": "Afficher plus",
+    "downloads": "{{value}} téléchargements",
+    "openPage": "Ouvrir la page",
+    "install": "Installer",
+    "installed": "Installé",
+    "openWorlds": "Catalogue",
+    "findDatapacks": "Chercher dans le catalogue",
+    "alreadyInWorld": "Ce pack de données est déjà dans le monde",
+    "noVersion": "Aucune version pour Minecraft {{version}}",
+    "blocked": "L’auteur n’autorise le téléchargement que depuis le site CurseForge — ouvrez la page du projet",
+    "downloadFailed": "L’archive ne s’est pas téléchargée. Vérifiez la connexion et réessayez."
+  },
+  "schematics": {
+    "title": "Schémas",
+    "structure": "Structure",
+    "search": "Rechercher des schémas",
+    "notFound": "Rien trouvé",
+    "empty": "Aucun schéma pour l’instant",
+    "emptyTitle": "Les schémas apparaîtront ici",
+    "emptyHint": "Litematica, WorldEdit et Create les gardent dans le dossier schematics de cette instance.",
+    "openFolder": "Dossier schematics",
+    "openFolderError": "Impossible d’ouvrir le dossier des schémas",
+    "showInFolder": "Afficher dans le dossier",
+    "deleted": "Schéma supprimé",
+    "deleteError": "Impossible de supprimer le schéma",
+    "unreadable": "Impossible de lire le schéma",
+    "errors": {
+      "missing": "Le fichier n’est plus sur le disque.",
+      "tooLarge": "Le fichier est trop volumineux pour l’aperçu.",
+      "unreadable": "Le fichier est endommagé ou n’est pas un schéma."
+    },
+    "size": "Taille",
+    "blocks": "Blocs",
+    "blockTypes": "Types de blocs",
+    "author": "Auteur",
+    "blockList": "Blocs",
+    "volume": "volume {{value}}",
+    "tooBigToCount": "Le schéma est trop grand pour compter ses blocs.",
+    "noBlocks": "Le schéma ne contient que de l’air.",
+    "moreTypes_one": "Et {{count}} autre type de bloc",
+    "moreTypes_many": "Et {{count}} autres types de blocs",
+    "moreTypes_other": "Et {{count}} autres types de blocs",
+    "transfer": "Transférer",
+    "moveTo": "Déplacer vers l’instance",
+    "copyTo": "Copier vers l’instance",
+    "moved": "Schéma déplacé vers « {{instance}} »",
+    "copied": "Schéma copié vers « {{instance}} »",
+    "transferError": "Impossible de transférer le schéma",
+    "transferErrors": {
+      "missing": "Le fichier n’est plus sur le disque.",
+      "sameInstance": "Le schéma est déjà dans cette instance.",
+      "invalidPath": "Le fichier est en dehors des dossiers de schémas.",
+      "failed": "Vérifiez l’espace libre sur le disque et réessayez."
+    }
+  },
   "versionStatistics": {
     "title": "Statistiques",
     "averageSession": "Session moyenne",
@@ -3739,7 +3808,7 @@
   "worlds": {
     "title": "Mondes",
     "noWorlds": "Aucun monde pour l’instant",
-    "noWorldsHint": "Créez-en un dans le jeu, ou importez une archive de monde enregistrée auparavant.",
+    "noWorldsHint": "Créez-en un dans le jeu, importez une archive ou téléchargez une carte du catalogue.",
     "loadError": "Impossible de lire les mondes",
     "loadErrorHint": "Le dossier saves est indisponible. Fermez le jeu et réessayez.",
     "search": "Rechercher des mondes",
@@ -3779,7 +3848,7 @@
     "cheats": "Commandes",
     "fromCatalog": "Depuis le catalogue",
     "versionMismatch": "Enregistré en {{world}}, l’instance tourne en {{instance}} — certains chunks seront régénérés.",
-    "downloadedHint": "Installé depuis le catalogue — gérez-le dans Contenu",
+    "downloadedHint": "Depuis le catalogue : vous pouvez y jouer et le supprimer, pas le modifier",
     "notOwnerHint": "Lecture seule : l’instance appartient à un autre joueur",
     "quickPlayUnsupported": "Cette version du jeu ne peut pas ouvrir un monde directement",
     "disabledWhileRunning": "Fermez le jeu pour modifier ce monde",
@@ -3814,7 +3883,7 @@
     "deletedErrorHint": "Impossible de mettre le dossier du monde à la corbeille. Fermez le jeu et réessayez.",
     "datapacksInWorld": "Attachés au monde",
     "noDatapacks": "Aucun pack de données installé",
-    "noDatapacksHint": "Les packs de données ajoutés à l’instance comme contenu peuvent être attachés à ce monde.",
+    "noDatapacksHint": "Trouvez un pack de données dans le catalogue, ou placez son archive dans le dossier datapacks de ce monde.",
     "datapackPick": "Choisir un pack de données",
     "datapackNoSource": "Cette instance n’a aucun pack de données",
     "datapackAdd": "Ajouter",
@@ -3848,7 +3917,11 @@
     "filterLabel": "Filtre des mondes",
     "openSavesError": "Impossible d’ouvrir le dossier saves",
     "statsLater": "Le temps de jeu, les morts, les éliminations et la distance apparaîtront après une partie dans ce monde.",
-    "datapackRemoved": "Pack de données supprimé"
+    "datapackRemoved": "Pack de données supprimé",
+    "seedMap": "Carte de la graine",
+    "seedMapHint": "Ouvrir la carte de la graine sur Chunkbase",
+    "viewLabel": "Mondes ou schémas",
+    "catalogEntryMissing": "Le contenu de l’instance n’a aucune trace de ce monde. Supprimez son dossier à la main."
   },
   "worldChunks": {
     "title": "Éditeur de chunks",

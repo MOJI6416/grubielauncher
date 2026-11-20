@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   Copy,
   FolderArchive,
   FolderOpen,
   ImageOff,
+  Map as MapIcon,
   MonitorDown,
   Pencil,
   Trash,
@@ -25,6 +27,7 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { nextAvailableName } from "./worldFacts";
 import { removeWithUndo } from "@renderer/utilities/removeWithUndo";
 import { countFeature } from "@renderer/features/usage/usage";
+import { seedMapUrl } from "./seedMap";
 
 const api = window.api;
 
@@ -33,6 +36,7 @@ export type WorldBusy = "duplicate" | "export" | null;
 export interface WorldActions {
   busy: WorldBusy;
   isLocked: (world: IWorld) => boolean;
+  canRemove: (world: IWorld) => boolean;
   duplicate: (world: IWorld) => Promise<void>;
   exportWorld: (world: IWorld) => Promise<void>;
   resetIcon: (world: IWorld) => Promise<void>;
@@ -48,11 +52,13 @@ export function useWorldActions({
   onRestored,
   onDuplicated,
   onPatched,
+  removeCatalog,
 }: {
   version: Version | undefined;
   isOwner: boolean;
   isVersionRunning: boolean;
   takenNames: string[];
+  removeCatalog?: (world: IWorld) => Promise<void>;
   onRemoved: (world: IWorld) => void;
   onRestored: (world: IWorld) => void;
   onDuplicated: (folderName: string) => void;
@@ -63,6 +69,11 @@ export function useWorldActions({
 
   const isLocked = (world: IWorld) =>
     !isOwner || Boolean(world.isDownloaded) || isVersionRunning;
+
+  const canRemove = (world: IWorld) =>
+    isOwner &&
+    !isVersionRunning &&
+    (!world.isDownloaded || Boolean(removeCatalog));
 
   const duplicate = async (world: IWorld) => {
     countFeature("worlds.duplicate");
@@ -150,7 +161,11 @@ export function useWorldActions({
   };
 
   const remove = async (world: IWorld) => {
-    if (!version || isLocked(world)) return;
+    if (!version || !canRemove(world)) return;
+    if (world.isDownloaded) {
+      await removeCatalog?.(world);
+      return;
+    }
 
     await removeWithUndo({
       target: world.path,
@@ -164,7 +179,15 @@ export function useWorldActions({
     });
   };
 
-  return { busy, isLocked, duplicate, exportWorld, resetIcon, remove };
+  return {
+    busy,
+    isLocked,
+    canRemove,
+    duplicate,
+    exportWorld,
+    resetIcon,
+    remove,
+  };
 }
 
 export function WorldMenuItems({
@@ -189,6 +212,7 @@ export function WorldMenuItems({
   const Separator =
     menu === "context" ? ContextMenuSeparator : DropdownMenuSeparator;
   const locked = actions.isLocked(world);
+  const mapUrl = worldSeedMapUrl(world, version);
 
   return (
     <>
@@ -234,6 +258,14 @@ export function WorldMenuItems({
         <span>{t("worlds.createShortcut")}</span>
       </Item>
 
+      <Item
+        disabled={!mapUrl}
+        onSelect={() => mapUrl && openSeedMap(mapUrl, t)}
+      >
+        <MapIcon />
+        <span>{t("worlds.seedMap")}</span>
+      </Item>
+
       <Item onSelect={() => void api.shell.openPath(world.path)}>
         <FolderOpen />
         <span>{t("worlds.openFolder")}</span>
@@ -243,12 +275,29 @@ export function WorldMenuItems({
 
       <Item
         variant="destructive"
-        disabled={locked}
+        disabled={!actions.canRemove(world)}
         onSelect={() => void actions.remove(world)}
       >
         <Trash />
         <span>{t("common.delete")}</span>
       </Item>
     </>
+  );
+}
+
+export function worldSeedMapUrl(world: IWorld, version: Version): string | null {
+  return seedMapUrl({
+    seed: world.seed,
+    version: world.versionName || version.version.version.id,
+    spawn: world.spawn,
+  });
+}
+
+export function openSeedMap(url: string, t: TFunction) {
+  countFeature("worlds.seedMap");
+  void api.shell.openExternal(url).catch((error) =>
+    showFailureToast(t("settings.about.openLinkFailed"), error, {
+      channels: ["shell:openExternal"],
+    }),
   );
 }

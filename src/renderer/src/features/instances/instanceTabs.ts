@@ -10,7 +10,6 @@ export interface InstanceTabsInput {
   contentCount: number;
   worldCount: number;
   serverCount: number;
-  hasSaves: boolean;
   hasConfigs: boolean;
   hasStatistics: boolean;
   hasServerManager: boolean;
@@ -30,7 +29,7 @@ export function buildInstanceTabs(input: InstanceTabsInput): InstanceTabItem[] {
     { id: "content", count: input.contentCount },
   ];
 
-  if (input.hasSaves) tabs.push({ id: "worlds", count: input.worldCount });
+  tabs.push({ id: "worlds", count: input.worldCount });
   if (input.hasServerManager) {
     tabs.push({ id: "servers", count: input.serverCount });
   }

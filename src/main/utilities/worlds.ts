@@ -36,7 +36,7 @@ const deflateAsync = promisify(zlib.deflate);
 
 type NbtCompression = "gzip" | "deflate" | "none";
 
-function getAccountUuids(account: ILocalAccount): string[] {
+export function getAccountUuids(account: ILocalAccount): string[] {
   if (
     account.accessToken &&
     typeof account.accessToken === "string" &&
@@ -685,11 +685,12 @@ export async function getWorldName(zipPath: string) {
 export async function extractWorldArchive(
   zipPath: string,
   savesPath: string,
+  folderName?: string,
 ): Promise<string | null> {
   const archiveInfo = await getWorldArchiveInfo(zipPath);
   if (!archiveInfo) return null;
 
-  const destination = path.join(savesPath, archiveInfo.worldName);
+  const destination = path.join(savesPath, folderName ?? archiveInfo.worldName);
   const { prefix } = archiveInfo;
 
   const { LARGE_ARCHIVE_LIMITS, extractZipEntries, getSafeExtractPath } =
@@ -879,9 +880,21 @@ export async function exportWorld(
   }
 }
 
+async function freeWorldFolder(
+  savesPath: string,
+  worldName: string,
+): Promise<string | null> {
+  for (let attempt = 1; attempt <= 100; attempt += 1) {
+    const candidate = attempt === 1 ? worldName : `${worldName} (${attempt})`;
+    if (!(await fs.pathExists(path.join(savesPath, candidate)))) return candidate;
+  }
+  return null;
+}
+
 export async function importWorldArchive(
   zipPath: string,
   versionPath: string,
+  options: { freeName?: boolean } = {},
 ): Promise<WorldImportResult> {
   const resolvedZipPath = path.resolve(zipPath);
   const savesPath = path.join(path.resolve(versionPath), "saves");
@@ -900,11 +913,18 @@ export async function importWorldArchive(
 
     await fs.ensureDir(savesPath);
 
-    if (await fs.pathExists(path.join(savesPath, worldName))) {
+    const folderName = options.freeName
+      ? await freeWorldFolder(savesPath, worldName)
+      : worldName;
+    if (!folderName || (await fs.pathExists(path.join(savesPath, folderName)))) {
       return { ok: false, error: "nameTaken" };
     }
 
-    const imported = await extractWorldArchive(resolvedZipPath, savesPath);
+    const imported = await extractWorldArchive(
+      resolvedZipPath,
+      savesPath,
+      folderName,
+    );
     if (!imported) return { ok: false, error: "archiveInvalid" };
 
     if (!(await fs.pathExists(path.join(imported, "level.dat")))) {

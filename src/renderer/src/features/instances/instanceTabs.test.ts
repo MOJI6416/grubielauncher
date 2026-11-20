@@ -5,7 +5,6 @@ const base = {
   contentCount: 0,
   worldCount: 0,
   serverCount: 0,
-  hasSaves: false,
   hasConfigs: false,
   hasStatistics: false,
   hasServerManager: false,
@@ -13,10 +12,11 @@ const base = {
 };
 
 describe("buildInstanceTabs", () => {
-  it("always keeps overview, content, settings and logs", () => {
+  it("always keeps overview, content, worlds, settings and logs", () => {
     expect(buildInstanceTabs(base).map((tab) => tab.id)).toEqual([
       "overview",
       "content",
+      "worlds",
       "settings",
       "arguments",
       "logs",
@@ -26,7 +26,6 @@ describe("buildInstanceTabs", () => {
   it("keeps logs last so launch history stays reachable", () => {
     const tabs = buildInstanceTabs({
       ...base,
-      hasSaves: true,
       hasConfigs: true,
       hasStatistics: true,
       hasServerManager: true,
@@ -69,7 +68,6 @@ describe("buildInstanceTabs", () => {
       contentCount: 90,
       worldCount: 3,
       serverCount: 2,
-      hasSaves: true,
       hasServerManager: true,
     });
 
@@ -101,7 +99,7 @@ describe("buildInstanceTabs", () => {
 describe("resolveActiveTab", () => {
   it("falls back to overview for a tab that is not present", () => {
     const tabs = buildInstanceTabs(base);
-    expect(resolveActiveTab(tabs, "worlds")).toBe("overview");
+    expect(resolveActiveTab(tabs, "configs")).toBe("overview");
   });
 
   it("keeps a requested tab that exists", () => {

@@ -1032,8 +1032,6 @@
     "dropReadOnly": "This instance can't be changed — the files were not added",
     "runningLocked": "You can change mods once the game closes",
     "categoriesExplain": "Categories come from Modrinth and CurseForge and are handy for filtering. They can't be changed.",
-    "worldsElsewhere": "These are worlds installed from the catalog. All worlds of the instance and their backups are in the Worlds tab.",
-    "datapacksElsewhere": "These are datapacks downloaded into the instance. You add them to a world in the Worlds tab.",
     "openWorlds": "Open Worlds",
     "count": {
       "mod_one": "{{count}} mod",
@@ -1102,7 +1100,9 @@
       "declared": "Declared for version {{version}}"
     },
     "modpackDownloadFailed": "Failed to download the modpack",
-    "modpackDownloadFailedHint": "The modpack archive did not download from {{source}}. Check your connection and try again."
+    "modpackDownloadFailedHint": "The modpack archive did not download from {{source}}. Check your connection and try again.",
+    "worldsTabFiles": "Worlds and datapacks are installed in the Worlds tab",
+    "worldsTabLink": "{{type}} are installed in the Worlds tab"
   },
   "nav": {
     "play": "Play"
@@ -2898,6 +2898,74 @@
     "topKilled": "Top defeated mobs",
     "topEmpty": "Nothing yet — play this world first"
   },
+  "worldAdvancements": {
+    "title": "Advancements",
+    "progress": "{{done}} of {{total}} · {{percent}}%",
+    "notStarted": "Not started yet",
+    "notStartedHint": "Progress shows up once you play this world with the selected account."
+  },
+  "worldCatalog": {
+    "worldsTitle": "Worlds from the catalog",
+    "datapacksTitle": "Datapacks from the catalog",
+    "source": "Source",
+    "search": "Search the catalog",
+    "nothing": "Nothing found",
+    "nothingHint": "Try another search.",
+    "nothingForVersion": "Nothing here for Minecraft {{version}} yet.",
+    "more": "Show more",
+    "downloads": "{{value}} downloads",
+    "openPage": "Open page",
+    "install": "Install",
+    "installed": "Installed",
+    "openWorlds": "Catalog",
+    "findDatapacks": "Find in the catalog",
+    "alreadyInWorld": "This datapack is already in the world",
+    "noVersion": "No version for Minecraft {{version}}",
+    "blocked": "The author allows downloads only from the CurseForge site — open the project page",
+    "downloadFailed": "The archive did not download. Check your connection and try again."
+  },
+  "schematics": {
+    "title": "Schematics",
+    "structure": "Structure",
+    "search": "Search schematics",
+    "notFound": "Nothing found",
+    "empty": "No schematics yet",
+    "emptyTitle": "Schematics show up here",
+    "emptyHint": "Litematica, WorldEdit and Create keep them in this instance’s schematics folder.",
+    "openFolder": "Schematics folder",
+    "openFolderError": "Couldn't open the schematics folder",
+    "showInFolder": "Show in folder",
+    "deleted": "Schematic deleted",
+    "deleteError": "Couldn't delete the schematic",
+    "unreadable": "Couldn't read the schematic",
+    "errors": {
+      "missing": "The file is no longer on disk.",
+      "tooLarge": "The file is too large to preview.",
+      "unreadable": "The file is damaged or is not a schematic."
+    },
+    "size": "Size",
+    "blocks": "Blocks",
+    "blockTypes": "Block types",
+    "author": "Author",
+    "blockList": "Blocks",
+    "volume": "volume {{value}}",
+    "tooBigToCount": "The schematic is too large to count its blocks.",
+    "noBlocks": "The schematic holds only air.",
+    "moreTypes_one": "And {{count}} more block type",
+    "moreTypes_other": "And {{count}} more block types",
+    "transfer": "Transfer",
+    "moveTo": "Move to instance",
+    "copyTo": "Copy to instance",
+    "moved": "Schematic moved to “{{instance}}”",
+    "copied": "Schematic copied to “{{instance}}”",
+    "transferError": "Couldn't transfer the schematic",
+    "transferErrors": {
+      "missing": "The file is no longer on disk.",
+      "sameInstance": "The schematic is already in this instance.",
+      "invalidPath": "The file is outside the schematic folders.",
+      "failed": "Check free disk space and try again."
+    }
+  },
   "versionStatistics": {
     "title": "Statistics",
     "averageSession": "Average session",
@@ -3709,7 +3777,7 @@
   "worlds": {
     "title": "Worlds",
     "noWorlds": "No worlds yet",
-    "noWorldsHint": "Create one in the game, or import a world archive you saved earlier.",
+    "noWorldsHint": "Create one in the game, import an archive, or download a map from the catalog.",
     "loadError": "Couldn't read the worlds",
     "loadErrorHint": "The saves folder is unavailable. Close the game and try again.",
     "search": "Search worlds",
@@ -3749,7 +3817,7 @@
     "cheats": "Cheats",
     "fromCatalog": "From the catalog",
     "versionMismatch": "Saved in {{world}}, the instance runs {{instance}} — some chunks will be regenerated.",
-    "downloadedHint": "Installed from the catalog — manage it under Content",
+    "downloadedHint": "From the catalog: you can play and delete it, not change it",
     "notOwnerHint": "Read-only: the instance belongs to another player",
     "quickPlayUnsupported": "This game version cannot open a world directly",
     "disabledWhileRunning": "Close the game to change this world",
@@ -3784,7 +3852,7 @@
     "deletedErrorHint": "The world folder could not be moved to the recycle bin. Close the game and try again.",
     "datapacksInWorld": "Attached to the world",
     "noDatapacks": "No datapacks installed",
-    "noDatapacksHint": "Datapacks added to the instance as content can be attached to this world.",
+    "noDatapacksHint": "Find a datapack in the catalog, or put its archive into this world’s datapacks folder.",
     "datapackPick": "Pick a datapack",
     "datapackNoSource": "This instance has no datapacks",
     "datapackAdd": "Add",
@@ -3818,7 +3886,11 @@
     "filterLabel": "World filter",
     "openSavesError": "Couldn't open the saves folder",
     "statsLater": "Play time, deaths, kills and distance appear after you play this world.",
-    "datapackRemoved": "Datapack removed"
+    "datapackRemoved": "Datapack removed",
+    "seedMap": "Seed map",
+    "seedMapHint": "Open the seed map on Chunkbase",
+    "viewLabel": "Worlds or schematics",
+    "catalogEntryMissing": "The instance content has no record of this world. Delete its folder by hand."
   },
   "worldChunks": {
     "title": "Chunk editor",

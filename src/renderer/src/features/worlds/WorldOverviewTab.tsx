@@ -8,6 +8,7 @@ import {
   Footprints,
   FolderOpen,
   HardDrive,
+  Map as MapIcon,
   MapPin,
   Skull,
   Sprout,
@@ -32,6 +33,8 @@ import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { formatDuration } from "@renderer/utilities/duration";
 import { formatNumber } from "@renderer/utilities/numbers";
+import { AdvancementsSummary, WorldAdvancementsState } from "./WorldAdvancements";
+import { openSeedMap, worldSeedMapUrl } from "./worldActions";
 
 const api = window.api;
 
@@ -41,14 +44,19 @@ export function WorldOverviewTab({
   sizeBytes,
   backupCount,
   locale,
+  advancements,
+  onOpenStats,
 }: {
   world: IWorld;
   version: Version;
   sizeBytes: number | null;
   backupCount: number;
   locale: string;
+  advancements: WorldAdvancementsState;
+  onOpenStats: () => void;
 }) {
   const { t } = useTranslation();
+  const mapUrl = worldSeedMapUrl(world, version);
   const redact = useRedact();
   const stats = worldDisplayStats(world.statistics);
   const nf = (value: number) => formatNumber(value, locale);
@@ -143,6 +151,12 @@ export function WorldOverviewTab({
         />
       </div>
 
+      <AdvancementsSummary
+        state={advancements}
+        locale={locale}
+        onOpenDetails={onOpenStats}
+      />
+
       {!stats.hasData && (
         <div className="flex shrink-0 items-center gap-2.5 rounded-xl border bg-surface-1 px-3 py-2.5">
           <BarChart3 className="size-4 shrink-0 text-faint" />
@@ -183,6 +197,19 @@ export function WorldOverviewTab({
             }}
           >
             <Copy className="size-3.5" />
+          </Button>
+        </Hint>
+
+        <Hint content={t("worlds.seedMapHint")}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="size-7 shrink-0 text-muted-foreground"
+            disabled={!mapUrl}
+            aria-label={t("worlds.seedMapHint")}
+            onClick={() => mapUrl && openSeedMap(mapUrl, t)}
+          >
+            <MapIcon className="size-3.5" />
           </Button>
         </Hint>
       </div>

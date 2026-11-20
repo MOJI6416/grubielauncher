@@ -1,8 +1,17 @@
 import { useMemo, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { FolderOpen, Loader2, Package, PackagePlus, Trash } from "lucide-react";
+import {
+  FolderOpen,
+  Loader2,
+  Package,
+  PackagePlus,
+  Search,
+  Trash,
+} from "lucide-react";
 import { IWorld } from "@/types/World";
+import { IProject, ProjectType } from "@/types/ModManager";
+import { Version } from "@renderer/classes/Version";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -22,6 +31,7 @@ import { Hint } from "@renderer/components/Hint";
 import { settingsAtom } from "@renderer/stores/atoms";
 import { toFileUrl } from "@renderer/utilities/exportVersion";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { toast } from "sonner";
 import { DatapackOption } from "./useWorldsData";
 import { splitDatapacks } from "./worldFacts";
@@ -29,24 +39,38 @@ import { removeWithUndo } from "@renderer/utilities/removeWithUndo";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { bumpInstanceDataRevision } from "@renderer/features/instances/instanceRevision";
 import { countFeature } from "@renderer/features/usage/usage";
+import { displayTitle } from "@renderer/features/mods/titles";
+import { supportsDatapacks } from "@renderer/features/mods/catalogAvailability";
+import { WorldCatalog } from "./WorldCatalog";
+import { installCatalogDatapack } from "./worldCatalogInstall";
 
 const api = window.api;
 
 export function WorldDatapacksTab({
   world,
+  version,
   options,
   disabled,
+  lockReason,
   onChange,
 }: {
   world: IWorld;
+  version: Version;
   options: DatapackOption[];
   disabled: boolean;
+  lockReason?: string;
   onChange: (datapacks: string[]) => void;
 }) {
   const { t } = useTranslation();
   const settings = useAtomValue(settingsAtom);
   const [picked, setPicked] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [browsing, setBrowsing] = useState(false);
+  const [installing, setInstalling] = useState<string | null>(null);
+  const [installedIds, setInstalledIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const hasCatalog = supportsDatapacks(version.version.version.id);
 
   const installed = useMemo(
     () =>
@@ -160,6 +184,55 @@ export function WorldDatapacksTab({
     }
   };
 
+  const installFromCatalog = async (project: IProject) => {
+    setInstalling(project.id);
+
+    try {
+      const outcome = await installCatalogDatapack(
+        version,
+        world.path,
+        latestDatapacks.current,
+        project,
+        settings,
+      );
+
+      if (outcome.status === "installed") {
+        countFeature("mods.install");
+        countFeature("worlds.datapack");
+        onChange([...latestDatapacks.current, outcome.name]);
+        setInstalledIds((previous) => new Set([...previous, project.id]));
+        toast.success(t("worlds.datapackAdded"), {
+          description: displayTitle(project.title),
+        });
+      } else if (outcome.status === "already") {
+        setInstalledIds((previous) => new Set([...previous, project.id]));
+        toast(t("worldCatalog.alreadyInWorld"));
+      } else if (outcome.status === "noVersion") {
+        toast.warning(
+          t("worldCatalog.noVersion", { version: version.version.version.id }),
+        );
+      } else if (outcome.status === "blocked") {
+        toast.warning(t("worldCatalog.blocked"), {
+          action: {
+            label: t("worldCatalog.openPage"),
+            onClick: () =>
+              void api.shell.openExternal(outcome.url).catch(ignoreFailure),
+          },
+        });
+      } else {
+        showFailureToast(t("worlds.datapackAddError"), undefined, {
+          channels: ["file:download", "modManager:getVersions"],
+        });
+      }
+    } catch (error) {
+      showFailureToast(t("worlds.datapackAddError"), error, {
+        channels: ["file:download", "modManager:getVersions"],
+      });
+    } finally {
+      setInstalling(null);
+    }
+  };
+
   const openFolder = async () => {
     try {
       const folder = api.path.join(world.path, "datapacks");
@@ -172,9 +245,37 @@ export function WorldDatapacksTab({
     }
   };
 
+  if (browsing) {
+    return (
+      <WorldCatalog
+        projectType={ProjectType.DATAPACK}
+        version={version}
+        busyId={installing}
+        installedIds={installedIds}
+        blockedReason={disabled ? lockReason : undefined}
+        onInstall={(project) => void installFromCatalog(project)}
+        onClose={() => setBrowsing(false)}
+      />
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex shrink-0 items-center gap-2">
+        {hasCatalog && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0"
+            disabled={disabled}
+            onClick={() => setBrowsing(true)}
+          >
+            <Search className="size-3.5" />
+            {t("worldCatalog.findDatapacks")}
+          </Button>
+        )}
+
+        {options.length > 0 && (
         <Select
           value={picked}
           disabled={disabled || !options.length}
@@ -217,20 +318,24 @@ export function WorldDatapacksTab({
           </SelectContent>
         </Select>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 shrink-0"
-          disabled={disabled || !selected || busy !== null}
-          onClick={() => selected && void add(selected)}
-        >
-          {busy === picked && picked ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <PackagePlus className="size-3.5" />
-          )}
-          {t("worlds.datapackAdd")}
-        </Button>
+        )}
+
+        {options.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0"
+            disabled={disabled || !selected || busy !== null}
+            onClick={() => selected && void add(selected)}
+          >
+            {busy === picked && picked ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <PackagePlus className="size-3.5" />
+            )}
+            {t("worlds.datapackAdd")}
+          </Button>
+        )}
 
         <Hint content={t("worlds.openDatapacksFolder")}>
           <Button
@@ -254,10 +359,28 @@ export function WorldDatapacksTab({
             <EmptyTitle>{t("worlds.noDatapacks")}</EmptyTitle>
             <EmptyDescription>{t("worlds.noDatapacksHint")}</EmptyDescription>
           </EmptyHeader>
-          <Button variant="outline" size="sm" onClick={() => void openFolder()}>
-            <FolderOpen className="size-3.5" />
-            {t("worlds.openDatapacksFolder")}
-          </Button>
+          <div className="flex items-center gap-2">
+            {hasCatalog && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={disabled}
+                onClick={() => setBrowsing(true)}
+              >
+                <Search className="size-3.5" />
+                {t("worldCatalog.findDatapacks")}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => void openFolder()}
+            >
+              <FolderOpen className="size-3.5" />
+              {t("worlds.openDatapacksFolder")}
+            </Button>
+          </div>
         </Empty>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col rounded-xl border bg-surface-1">

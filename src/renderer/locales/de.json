@@ -1032,8 +1032,6 @@
     "dropReadOnly": "Diese Instanz kann nicht geändert werden – die Dateien wurden nicht hinzugefügt",
     "runningLocked": "Mods lassen sich ändern, sobald das Spiel geschlossen ist",
     "categoriesExplain": "Kategorien stammen von Modrinth und CurseForge und helfen beim Filtern. Ändern lassen sie sich nicht.",
-    "worldsElsewhere": "Hier stehen Welten aus dem Katalog. Alle Welten der Instanz und ihre Backups finden Sie im Tab „Welten“.",
-    "datapacksElsewhere": "Hier stehen Datenpakete, die in die Instanz geladen wurden. Zu einer Welt fügen Sie sie im Tab „Welten“ hinzu.",
     "openWorlds": "„Welten“ öffnen",
     "count": {
       "mod_one": "{{count}} Mod",
@@ -1102,7 +1100,9 @@
       "declared": "Angegeben für Version {{version}}"
     },
     "modpackDownloadFailed": "Modpack konnte nicht heruntergeladen werden",
-    "modpackDownloadFailedHint": "Das Modpack-Archiv wurde nicht von {{source}} heruntergeladen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+    "modpackDownloadFailedHint": "Das Modpack-Archiv wurde nicht von {{source}} heruntergeladen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "worldsTabFiles": "Welten und Datenpakete werden im Tab „Welten“ installiert",
+    "worldsTabLink": "{{type}} werden im Tab „Welten“ installiert"
   },
   "nav": {
     "play": "Spielen"
@@ -2898,6 +2898,74 @@
     "topKilled": "Meist erlegte Kreaturen",
     "topEmpty": "Noch leer — spielen Sie zuerst in dieser Welt"
   },
+  "worldAdvancements": {
+    "title": "Fortschritte",
+    "progress": "{{done}} von {{total}} · {{percent}} %",
+    "notStarted": "Noch nicht begonnen",
+    "notStartedHint": "Der Fortschritt erscheint, sobald Sie diese Welt mit dem gewählten Konto spielen."
+  },
+  "worldCatalog": {
+    "worldsTitle": "Welten aus dem Katalog",
+    "datapacksTitle": "Datenpakete aus dem Katalog",
+    "source": "Quelle",
+    "search": "Im Katalog suchen",
+    "nothing": "Nichts gefunden",
+    "nothingHint": "Versuchen Sie eine andere Suche.",
+    "nothingForVersion": "Für Minecraft {{version}} gibt es hier noch nichts.",
+    "more": "Mehr anzeigen",
+    "downloads": "{{value}} Downloads",
+    "openPage": "Seite öffnen",
+    "install": "Installieren",
+    "installed": "Installiert",
+    "openWorlds": "Katalog",
+    "findDatapacks": "Im Katalog suchen",
+    "alreadyInWorld": "Dieses Datenpaket ist schon in der Welt",
+    "noVersion": "Keine Version für Minecraft {{version}}",
+    "blocked": "Der Autor erlaubt Downloads nur über die CurseForge-Website – öffnen Sie die Projektseite",
+    "downloadFailed": "Das Archiv wurde nicht heruntergeladen. Prüfen Sie die Verbindung und versuchen Sie es erneut."
+  },
+  "schematics": {
+    "title": "Schematics",
+    "structure": "Konstruktion",
+    "search": "Schematics suchen",
+    "notFound": "Nichts gefunden",
+    "empty": "Noch keine Schematics",
+    "emptyTitle": "Hier erscheinen Schematics",
+    "emptyHint": "Litematica, WorldEdit und Create legen sie im Ordner schematics dieser Instanz ab.",
+    "openFolder": "Ordner schematics",
+    "openFolderError": "Der Ordner mit den Schematics ließ sich nicht öffnen",
+    "showInFolder": "Im Ordner zeigen",
+    "deleted": "Schematic gelöscht",
+    "deleteError": "Das Schematic ließ sich nicht löschen",
+    "unreadable": "Das Schematic ließ sich nicht lesen",
+    "errors": {
+      "missing": "Die Datei ist nicht mehr auf dem Datenträger.",
+      "tooLarge": "Die Datei ist zu groß für eine Vorschau.",
+      "unreadable": "Die Datei ist beschädigt oder kein Schematic."
+    },
+    "size": "Größe",
+    "blocks": "Blöcke",
+    "blockTypes": "Blockarten",
+    "author": "Autor",
+    "blockList": "Blöcke",
+    "volume": "Volumen {{value}}",
+    "tooBigToCount": "Das Schematic ist zu groß, um die Blöcke zu zählen.",
+    "noBlocks": "Das Schematic enthält nur Luft.",
+    "moreTypes_one": "Und {{count}} weitere Blockart",
+    "moreTypes_other": "Und {{count}} weitere Blockarten",
+    "transfer": "Übertragen",
+    "moveTo": "In Instanz verschieben",
+    "copyTo": "In Instanz kopieren",
+    "moved": "Schematic nach „{{instance}}“ verschoben",
+    "copied": "Schematic nach „{{instance}}“ kopiert",
+    "transferError": "Das Schematic ließ sich nicht übertragen",
+    "transferErrors": {
+      "missing": "Die Datei ist nicht mehr auf dem Datenträger.",
+      "sameInstance": "Das Schematic liegt schon in dieser Instanz.",
+      "invalidPath": "Die Datei liegt außerhalb der Schematic-Ordner.",
+      "failed": "Prüfen Sie den freien Speicherplatz und versuchen Sie es erneut."
+    }
+  },
   "versionStatistics": {
     "title": "Statistiken",
     "averageSession": "Durchschnittliche Sitzung",
@@ -3709,7 +3777,7 @@
   "worlds": {
     "title": "Welten",
     "noWorlds": "Noch keine Welten",
-    "noWorldsHint": "Erstellen Sie eine im Spiel oder importieren Sie ein früher gespeichertes Weltarchiv.",
+    "noWorldsHint": "Erstellen Sie eine im Spiel, importieren Sie ein Archiv oder laden Sie eine Karte aus dem Katalog.",
     "loadError": "Welten konnten nicht gelesen werden",
     "loadErrorHint": "Der Ordner saves ist nicht verfügbar. Schließen Sie das Spiel und versuchen Sie es erneut.",
     "search": "Welten suchen",
@@ -3749,7 +3817,7 @@
     "cheats": "Cheats",
     "fromCatalog": "Aus dem Katalog",
     "versionMismatch": "Gespeichert in {{world}}, die Instanz läuft mit {{instance}} – einige Chunks werden neu generiert.",
-    "downloadedHint": "Aus dem Katalog installiert – verwalten Sie sie unter „Inhalt“",
+    "downloadedHint": "Aus dem Katalog: Sie können sie spielen und löschen, aber nicht ändern",
     "notOwnerHint": "Schreibgeschützt: Die Instanz gehört einem anderen Spieler",
     "quickPlayUnsupported": "Diese Spielversion kann eine Welt nicht direkt öffnen",
     "disabledWhileRunning": "Schließen Sie das Spiel, um diese Welt zu ändern",
@@ -3784,7 +3852,7 @@
     "deletedErrorHint": "Der Weltordner konnte nicht in den Papierkorb verschoben werden. Schließen Sie das Spiel und versuchen Sie es erneut.",
     "datapacksInWorld": "Mit der Welt verbunden",
     "noDatapacks": "Keine Datenpakete installiert",
-    "noDatapacksHint": "Datenpakete, die der Instanz als Inhalt hinzugefügt wurden, lassen sich mit dieser Welt verbinden.",
+    "noDatapacksHint": "Suchen Sie ein Datenpaket im Katalog oder legen Sie sein Archiv in den Ordner datapacks dieser Welt.",
     "datapackPick": "Datenpaket wählen",
     "datapackNoSource": "Diese Instanz hat keine Datenpakete",
     "datapackAdd": "Hinzufügen",
@@ -3818,7 +3886,11 @@
     "filterLabel": "Weltfilter",
     "openSavesError": "Der Ordner saves konnte nicht geöffnet werden",
     "statsLater": "Spielzeit, Tode, Kills und zurückgelegte Strecke erscheinen, nachdem Sie in dieser Welt gespielt haben.",
-    "datapackRemoved": "Datenpaket entfernt"
+    "datapackRemoved": "Datenpaket entfernt",
+    "seedMap": "Startwert-Karte",
+    "seedMapHint": "Startwert-Karte auf Chunkbase öffnen",
+    "viewLabel": "Welten oder Schematics",
+    "catalogEntryMissing": "Der Inhalt der Instanz kennt diese Welt nicht. Löschen Sie ihren Ordner von Hand."
   },
   "worldChunks": {
     "title": "Chunk-Editor",

@@ -5,6 +5,7 @@ import {
   duplicateWorld,
   exportWorld,
   getWorldFolderSizes,
+  getWorldName,
   importWorldArchive,
   loadGlobalAchievementStats,
   loadVersionWorldStatistics,
@@ -39,6 +40,13 @@ import {
   WorldExportResult,
   WorldImportResult,
 } from '@/types/World'
+import { loadWorldAdvancements } from '../utilities/worldAdvancements'
+import {
+  inspectSchematic,
+  listSchematics,
+  transferSchematic,
+} from '../utilities/schematics'
+import { ISchematicFile, SchematicInspectResult, SchematicTransferResult } from '@/types/Schematic'
 
 const LIST_FALLBACK: IWorldBackupList = {
   backups: [],
@@ -51,6 +59,9 @@ const DELETE_FALLBACK: WorldBackupDeleteResult = { ok: false, error: 'failed' }
 const DUPLICATE_FALLBACK: WorldDuplicateResult = { ok: false, error: 'failed' }
 const EXPORT_FALLBACK: WorldExportResult = { ok: false, error: 'failed' }
 const IMPORT_FALLBACK: WorldImportResult = { ok: false, error: 'failed' }
+const INSPECT_FALLBACK: SchematicInspectResult = { ok: false, error: 'unreadable' }
+const TRANSFER_FALLBACK: SchematicTransferResult = { ok: false, error: 'failed' }
+const NO_SCHEMATICS: ISchematicFile[] = []
 
 const isPath = check.nonEmptyString(4096)
 const isAccount = check.optional(check.object())
@@ -147,8 +158,8 @@ export function registerWorldIpc() {
   handleSafe(
     'worlds:import',
     IMPORT_FALLBACK,
-    [isPath, isPath],
-    async (_, zipPath: string, versionPath: string) => {
+    [isPath, isPath, check.optional(check.boolean())],
+    async (_, zipPath: string, versionPath: string, freeName?: boolean) => {
       assertReadablePath(zipPath, 'worlds:import')
       assertWritablePath(versionPath, 'worlds:import')
 
@@ -156,7 +167,49 @@ export function registerWorldIpc() {
         return { ok: false, error: 'versionRunning' } as WorldImportResult
       }
 
-      return await importWorldArchive(zipPath, versionPath)
+      return await importWorldArchive(zipPath, versionPath, { freeName: freeName === true })
+    },
+  )
+
+  handleSafe('worlds:archiveName', null, [isPath], async (_, zipPath: string) => {
+    assertReadablePath(zipPath, 'worlds:archiveName')
+    return await getWorldName(zipPath)
+  })
+
+  handleSafe(
+    'worlds:advancements',
+    null,
+    [isPath, isAccount, check.optional(check.string(128)), check.optional(check.arrayOf(check.string(512)))],
+    async (_, worldPath: string, account: ILocalAccount, gameVersion?: string, disabled?: string[]) => {
+      assertReadablePath(worldPath, 'worlds:advancements')
+      return await loadWorldAdvancements(
+        getVersionPathFromWorldPath(worldPath),
+        worldPath,
+        account,
+        gameVersion ?? null,
+        disabled ?? [],
+      )
+    },
+  )
+
+  handleSafe('schematics:list', NO_SCHEMATICS, [isPath], async (_, versionPath: string) => {
+    assertReadablePath(versionPath, 'schematics:list')
+    return await listSchematics(versionPath)
+  })
+
+  handleSafe('schematics:inspect', INSPECT_FALLBACK, [isPath], async (_, filePath: string) => {
+    assertReadablePath(filePath, 'schematics:inspect')
+    return await inspectSchematic(filePath)
+  })
+
+  handleSafe(
+    'schematics:transfer',
+    TRANSFER_FALLBACK,
+    [isPath, check.nonEmptyString(1024), isPath, check.oneOf('copy', 'move')],
+    async (_, sourceVersionPath: string, relativePath: string, targetVersionPath: string, mode: 'copy' | 'move') => {
+      assertWritablePath(sourceVersionPath, 'schematics:transfer')
+      assertWritablePath(targetVersionPath, 'schematics:transfer')
+      return await transferSchematic(sourceVersionPath, relativePath, targetVersionPath, mode)
     },
   )
 

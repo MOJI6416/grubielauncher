@@ -272,7 +272,6 @@ export function InstanceScreen({
         contentCount: countContent(content.mods),
         worldCount: contents.worlds,
         serverCount: editor.servers.length,
-        hasSaves: contents.hasSaves,
         hasConfigs: contents.hasConfigs,
         hasStatistics: contents.hasStatistics || isPackAuthor,
         hasServerManager: !!version?.version.version?.serverManager,
@@ -821,6 +820,7 @@ export function InstanceScreen({
                 }}
                 runGame={runGame}
                 mods={content.mods}
+                commitMods={content.commitMods}
               />
             </Suspense>
           ) : activeTab === "content" && version ? (
@@ -837,9 +837,7 @@ export function InstanceScreen({
                 setVersion={() => {}}
                 running={isVersionRunning}
                 versionPath={version.versionPath}
-                onOpenWorlds={
-                  contents.hasSaves ? () => setActiveTab("worlds") : undefined
-                }
+                onOpenWorlds={() => setActiveTab("worlds")}
               />
             </Suspense>
           ) : version ? (

@@ -1032,8 +1032,6 @@
     "dropReadOnly": "Bu kurulum değiştirilemez; dosyalar eklenmedi",
     "runningLocked": "Modları oyun kapandıktan sonra değiştirebilirsiniz",
     "categoriesExplain": "Kategoriler Modrinth ve CurseForge'dan gelir ve filtrelemeye yarar. Değiştirilemezler.",
-    "worldsElsewhere": "Burada katalogdan yüklenen dünyalar var. Kurulumun tüm dünyaları ve yedekleri «Dünyalar» sekmesinde.",
-    "datapacksElsewhere": "Burada kuruluma indirilen veri paketleri var. Bir dünyaya «Dünyalar» sekmesinde eklenirler.",
     "openWorlds": "«Dünyalar»ı aç",
     "count": {
       "mod_one": "{{count}} mod",
@@ -1102,7 +1100,9 @@
       "declared": "{{version}} sürümü için belirtilen"
     },
     "modpackDownloadFailed": "Mod paketi indirilemedi",
-    "modpackDownloadFailedHint": "Mod paketi arşivi {{source}} sitesinden indirilmedi. Bağlantınızı kontrol edip tekrar deneyin."
+    "modpackDownloadFailedHint": "Mod paketi arşivi {{source}} sitesinden indirilmedi. Bağlantınızı kontrol edip tekrar deneyin.",
+    "worldsTabFiles": "Dünyalar ve veri paketleri «Dünyalar» sekmesinden kurulur",
+    "worldsTabLink": "{{type}}: «Dünyalar» sekmesinden kurulur"
   },
   "nav": {
     "play": "Oyna"
@@ -2898,6 +2898,74 @@
     "topKilled": "En çok yenilen canlılar",
     "topEmpty": "Henüz boş — önce bu dünyada oynayın"
   },
+  "worldAdvancements": {
+    "title": "Gelişimler",
+    "progress": "{{done}}/{{total}} · %{{percent}}",
+    "notStarted": "Henüz başlanmadı",
+    "notStartedHint": "Bu dünyada seçili hesapla oynadığınızda ilerleme görünür."
+  },
+  "worldCatalog": {
+    "worldsTitle": "Katalogdan dünyalar",
+    "datapacksTitle": "Katalogdan veri paketleri",
+    "source": "Kaynak",
+    "search": "Katalogda ara",
+    "nothing": "Hiçbir şey bulunamadı",
+    "nothingHint": "Başka bir arama deneyin.",
+    "nothingForVersion": "Minecraft {{version}} için burada henüz bir şey yok.",
+    "more": "Daha fazla göster",
+    "downloads": "{{value}} indirme",
+    "openPage": "Sayfayı aç",
+    "install": "Kur",
+    "installed": "Kurulu",
+    "openWorlds": "Katalog",
+    "findDatapacks": "Katalogda ara",
+    "alreadyInWorld": "Bu veri paketi zaten dünyada",
+    "noVersion": "Minecraft {{version}} için sürüm yok",
+    "blocked": "Yazar dosyanın yalnızca CurseForge sitesinden indirilmesine izin veriyor — proje sayfasını açın",
+    "downloadFailed": "Arşiv inmedi. Bağlantınızı kontrol edip tekrar deneyin."
+  },
+  "schematics": {
+    "title": "Şemalar",
+    "structure": "Yapı",
+    "search": "Şema ara",
+    "notFound": "Hiçbir şey bulunamadı",
+    "empty": "Henüz şema yok",
+    "emptyTitle": "Şemalar burada görünür",
+    "emptyHint": "Litematica, WorldEdit ve Create bunları bu kurulumun schematics klasöründe tutar.",
+    "openFolder": "schematics klasörü",
+    "openFolderError": "Şema klasörü açılamadı",
+    "showInFolder": "Klasörde göster",
+    "deleted": "Şema silindi",
+    "deleteError": "Şema silinemedi",
+    "unreadable": "Şema okunamadı",
+    "errors": {
+      "missing": "Dosya artık diskte değil.",
+      "tooLarge": "Dosya önizleme için çok büyük.",
+      "unreadable": "Dosya bozuk veya bir şema değil."
+    },
+    "size": "Boyut",
+    "blocks": "Blok",
+    "blockTypes": "Blok türü",
+    "author": "Yazar",
+    "blockList": "Bloklar",
+    "volume": "hacim {{value}}",
+    "tooBigToCount": "Şema, blokları saymak için çok büyük.",
+    "noBlocks": "Şemada yalnızca hava var.",
+    "moreTypes_one": "Ve {{count}} blok türü daha",
+    "moreTypes_other": "Ve {{count}} blok türü daha",
+    "transfer": "Aktar",
+    "moveTo": "Kuruluma taşı",
+    "copyTo": "Kuruluma kopyala",
+    "moved": "Şema «{{instance}}» kurulumuna taşındı",
+    "copied": "Şema «{{instance}}» kurulumuna kopyalandı",
+    "transferError": "Şema aktarılamadı",
+    "transferErrors": {
+      "missing": "Dosya artık diskte değil.",
+      "sameInstance": "Şema zaten bu kurulumda.",
+      "invalidPath": "Dosya şema klasörlerinin dışında.",
+      "failed": "Diskteki boş alanı kontrol edip tekrar deneyin."
+    }
+  },
   "versionStatistics": {
     "title": "İstatistikler",
     "averageSession": "Ortalama oturum",
@@ -3709,7 +3777,7 @@
   "worlds": {
     "title": "Dünyalar",
     "noWorlds": "Henüz dünya yok",
-    "noWorldsHint": "Oyunda bir dünya oluşturun veya daha önce kaydettiğiniz bir dünya arşivini içe aktarın.",
+    "noWorldsHint": "Oyunda bir dünya oluşturun, bir arşivi içe aktarın veya katalogdan bir harita indirin.",
     "loadError": "Dünyalar okunamadı",
     "loadErrorHint": "saves klasörü kullanılamıyor. Oyunu kapatıp tekrar deneyin.",
     "search": "Dünya ara",
@@ -3749,7 +3817,7 @@
     "cheats": "Hileler",
     "fromCatalog": "Katalogdan",
     "versionMismatch": "{{world}} sürümünde kaydedildi, kurulum {{instance}} kullanıyor — bazı yığınlar yeniden oluşturulacak.",
-    "downloadedHint": "Katalogdan kuruldu — İçerik bölümünden yönetin",
+    "downloadedHint": "Katalogdan: oynayabilir ve silebilirsiniz, ama değiştiremezsiniz",
     "notOwnerHint": "Salt okunur: kurulum başka bir oyuncuya ait",
     "quickPlayUnsupported": "Bu oyun sürümü bir dünyayı doğrudan açamıyor",
     "disabledWhileRunning": "Bu dünyayı değiştirmek için oyunu kapatın",
@@ -3784,7 +3852,7 @@
     "deletedErrorHint": "Dünya klasörü geri dönüşüm kutusuna taşınamadı. Oyunu kapatıp tekrar deneyin.",
     "datapacksInWorld": "Dünyaya bağlı",
     "noDatapacks": "Kurulu veri paketi yok",
-    "noDatapacksHint": "Kuruluma içerik olarak eklenen veri paketleri bu dünyaya bağlanabilir.",
+    "noDatapacksHint": "Katalogda bir veri paketi bulun ya da arşivini bu dünyanın datapacks klasörüne koyun.",
     "datapackPick": "Veri paketi seçin",
     "datapackNoSource": "Bu kurulumda veri paketi yok",
     "datapackAdd": "Ekle",
@@ -3818,7 +3886,11 @@
     "filterLabel": "Dünya filtresi",
     "openSavesError": "saves klasörü açılamadı",
     "statsLater": "Oyun süresi, ölümler, öldürmeler ve kat edilen mesafe bu dünyada oynadıktan sonra görünür.",
-    "datapackRemoved": "Veri paketi kaldırıldı"
+    "datapackRemoved": "Veri paketi kaldırıldı",
+    "seedMap": "Chunkbase haritası",
+    "seedMapHint": "Dünyayı Chunkbase haritasında açın",
+    "viewLabel": "Dünyalar veya şemalar",
+    "catalogEntryMissing": "Kurulum içeriğinde bu dünyanın kaydı yok. Klasörünü elle silin."
   },
   "worldChunks": {
     "title": "Yığın düzenleyici",

@@ -128,6 +128,7 @@ import {
   CatalogTarget,
   libraryTypes,
   providerTypes,
+  WORLDS_TAB_TYPES,
 } from "./catalogAvailability";
 import { createOrnitheVersionGuard } from "./ornitheVersions";
 import { useUpdateCheck } from "./useUpdateCheck";
@@ -1888,15 +1889,36 @@ export function ContentManager({
         setIsBusy(false);
       }
 
-      if (collected.length === 0) {
-        toast.warning(t("modManager.invalidMod"));
+      const elsewhere = collected.filter(
+        (item) =>
+          item.status !== "invalid" &&
+          WORLDS_TAB_TYPES.has(item.project.projectType),
+      );
+      const kept = collected.filter((item) => !elsewhere.includes(item));
+
+      if (elsewhere.length > 0) {
+        toast(
+          t("modManager.worldsTabFiles"),
+          onOpenWorlds
+            ? {
+                action: {
+                  label: t("modManager.openWorlds"),
+                  onClick: onOpenWorlds,
+                },
+              }
+            : undefined,
+        );
+      }
+
+      if (kept.length === 0) {
+        if (elsewhere.length === 0) toast.warning(t("modManager.invalidMod"));
         return;
       }
 
-      setImporting(collected);
+      setImporting(kept);
       setIsImportOpen(true);
     },
-    [lockedHint, mods, projectType, t],
+    [lockedHint, mods, onOpenWorlds, projectType, t],
   );
 
   const canUseTrash =
@@ -2573,6 +2595,23 @@ export function ContentManager({
         return true;
       }
 
+      if (WORLDS_TAB_TYPES.has(project.projectType)) {
+        toast(
+          t("modManager.worldsTabLink", {
+            type: t(`modManager.projectTypes.${project.projectType}`),
+          }),
+          onOpenWorlds
+            ? {
+                action: {
+                  label: t("modManager.openWorlds"),
+                  onClick: onOpenWorlds,
+                },
+              }
+            : undefined,
+        );
+        return true;
+      }
+
       const target = project.provider as Scope;
       const lockedLink = lockedHintFor(project.projectType);
       if (lockedLink && project.projectType === ProjectType.MOD) {
@@ -2607,6 +2646,7 @@ export function ContentManager({
       isOnline,
       loadDetail,
       lockedHintFor,
+      onOpenWorlds,
       openSets,
       projectType,
       scope,
@@ -3313,7 +3353,6 @@ export function ContentManager({
           shaderSupport={shaderState}
           onOpenShaderLoader={(slug) => void openShaderLoader(slug)}
           canInstallShaderLoader={canEdit && isOnline}
-          onOpenWorlds={onOpenWorlds}
           account={account}
           activeIndex={activeIndex}
           busyKey={busyKey}

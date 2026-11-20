@@ -1039,8 +1039,6 @@
     "dropReadOnly": "Esta instância não pode ser alterada — os arquivos não foram adicionados",
     "runningLocked": "Você poderá alterar os mods quando o jogo fechar",
     "categoriesExplain": "As categorias vêm do Modrinth e do CurseForge e servem para filtrar. Elas não podem ser alteradas.",
-    "worldsElsewhere": "Aqui estão os mundos instalados pelo catálogo. Todos os mundos da instância e os backups deles ficam na aba “Mundos”.",
-    "datapacksElsewhere": "Aqui estão os pacotes de dados baixados para a instância. Você os adiciona a um mundo na aba “Mundos”.",
     "openWorlds": "Abrir “Mundos”",
     "count": {
       "mod_one": "{{count}} mod",
@@ -1116,7 +1114,9 @@
       "declared": "Declarado para a versão {{version}}"
     },
     "modpackDownloadFailed": "Não foi possível baixar o modpack",
-    "modpackDownloadFailedHint": "O arquivo do modpack não foi baixado de {{source}}. Verifique a conexão e tente de novo."
+    "modpackDownloadFailedHint": "O arquivo do modpack não foi baixado de {{source}}. Verifique a conexão e tente de novo.",
+    "worldsTabFiles": "Mundos e pacotes de dados são instalados na aba “Mundos”",
+    "worldsTabLink": "{{type}}: são instalados na aba “Mundos”"
   },
   "nav": {
     "play": "Jogar"
@@ -2920,6 +2920,75 @@
     "topKilled": "Criaturas mais derrotadas",
     "topEmpty": "Ainda vazio — jogue neste mundo primeiro"
   },
+  "worldAdvancements": {
+    "title": "Progressos",
+    "progress": "{{done}} de {{total}} · {{percent}}%",
+    "notStarted": "Ainda não começou",
+    "notStartedHint": "O progresso aparece quando você jogar neste mundo com a conta escolhida."
+  },
+  "worldCatalog": {
+    "worldsTitle": "Mundos do catálogo",
+    "datapacksTitle": "Pacotes de dados do catálogo",
+    "source": "Fonte",
+    "search": "Buscar no catálogo",
+    "nothing": "Nada encontrado",
+    "nothingHint": "Tente outra busca.",
+    "nothingForVersion": "Ainda não há nada aqui para o Minecraft {{version}}.",
+    "more": "Mostrar mais",
+    "downloads": "{{value}} downloads",
+    "openPage": "Abrir a página",
+    "install": "Instalar",
+    "installed": "Instalado",
+    "openWorlds": "Catálogo",
+    "findDatapacks": "Buscar no catálogo",
+    "alreadyInWorld": "Este pacote de dados já está no mundo",
+    "noVersion": "Não há versão para o Minecraft {{version}}",
+    "blocked": "O autor só permite baixar o arquivo pelo site do CurseForge — abra a página do projeto",
+    "downloadFailed": "O arquivo não foi baixado. Confira a conexão e tente de novo."
+  },
+  "schematics": {
+    "title": "Esquemas",
+    "structure": "Estrutura",
+    "search": "Buscar esquemas",
+    "notFound": "Nada encontrado",
+    "empty": "Ainda não há esquemas",
+    "emptyTitle": "Os esquemas aparecem aqui",
+    "emptyHint": "Litematica, WorldEdit e Create guardam esses arquivos na pasta schematics desta instância.",
+    "openFolder": "Pasta schematics",
+    "openFolderError": "Não foi possível abrir a pasta de esquemas",
+    "showInFolder": "Mostrar na pasta",
+    "deleted": "Esquema excluído",
+    "deleteError": "Não foi possível excluir o esquema",
+    "unreadable": "Não foi possível ler o esquema",
+    "errors": {
+      "missing": "O arquivo não está mais no disco.",
+      "tooLarge": "O arquivo é grande demais para a prévia.",
+      "unreadable": "O arquivo está danificado ou não é um esquema."
+    },
+    "size": "Tamanho",
+    "blocks": "Blocos",
+    "blockTypes": "Tipos de bloco",
+    "author": "Autor",
+    "blockList": "Blocos",
+    "volume": "volume {{value}}",
+    "tooBigToCount": "O esquema é grande demais para contar os blocos.",
+    "noBlocks": "O esquema tem só ar.",
+    "moreTypes_one": "E mais {{count}} tipo de bloco",
+    "moreTypes_many": "E mais {{count}} tipos de bloco",
+    "moreTypes_other": "E mais {{count}} tipos de bloco",
+    "transfer": "Transferir",
+    "moveTo": "Mover para a instância",
+    "copyTo": "Copiar para a instância",
+    "moved": "Esquema movido para “{{instance}}”",
+    "copied": "Esquema copiado para “{{instance}}”",
+    "transferError": "Não foi possível transferir o esquema",
+    "transferErrors": {
+      "missing": "O arquivo não está mais no disco.",
+      "sameInstance": "O esquema já está nesta instância.",
+      "invalidPath": "O arquivo está fora das pastas de esquemas.",
+      "failed": "Confira o espaço livre no disco e tente de novo."
+    }
+  },
   "versionStatistics": {
     "title": "Estatísticas",
     "averageSession": "Sessão média",
@@ -3739,7 +3808,7 @@
   "worlds": {
     "title": "Mundos",
     "noWorlds": "Ainda não há mundos",
-    "noWorldsHint": "Crie um no jogo ou importe um arquivo de mundo que você salvou antes.",
+    "noWorldsHint": "Crie um no jogo, importe um arquivo ou baixe um mapa do catálogo.",
     "loadError": "Não foi possível ler os mundos",
     "loadErrorHint": "A pasta saves está indisponível. Feche o jogo e tente de novo.",
     "search": "Buscar mundos",
@@ -3779,7 +3848,7 @@
     "cheats": "Trapaças",
     "fromCatalog": "Do catálogo",
     "versionMismatch": "Salvo na {{world}}, a instância roda {{instance}} — alguns chunks serão regenerados.",
-    "downloadedHint": "Instalado do catálogo — gerencie em Conteúdo",
+    "downloadedHint": "Do catálogo: você pode jogar e excluir, mas não alterar",
     "notOwnerHint": "Somente leitura: a instância pertence a outro jogador",
     "quickPlayUnsupported": "Esta versão do jogo não consegue abrir um mundo diretamente",
     "disabledWhileRunning": "Feche o jogo para alterar este mundo",
@@ -3814,7 +3883,7 @@
     "deletedErrorHint": "Não foi possível mover a pasta do mundo para a lixeira. Feche o jogo e tente de novo.",
     "datapacksInWorld": "Ligados ao mundo",
     "noDatapacks": "Nenhum pacote de dados instalado",
-    "noDatapacksHint": "Os pacotes de dados adicionados à instância como conteúdo podem ser ligados a este mundo.",
+    "noDatapacksHint": "Encontre um pacote de dados no catálogo ou coloque o arquivo dele na pasta datapacks deste mundo.",
     "datapackPick": "Escolha um pacote de dados",
     "datapackNoSource": "Esta instância não tem pacotes de dados",
     "datapackAdd": "Adicionar",
@@ -3848,7 +3917,11 @@
     "filterLabel": "Filtro de mundos",
     "openSavesError": "Não foi possível abrir a pasta saves",
     "statsLater": "O tempo de jogo, as mortes, os abates e a distância aparecem depois que você jogar neste mundo.",
-    "datapackRemoved": "Pacote de dados removido"
+    "datapackRemoved": "Pacote de dados removido",
+    "seedMap": "Mapa da semente",
+    "seedMapHint": "Abrir o mapa da semente no Chunkbase",
+    "viewLabel": "Mundos ou esquemas",
+    "catalogEntryMissing": "O conteúdo da instância não tem registro deste mundo. Exclua a pasta dele manualmente."
   },
   "worldChunks": {
     "title": "Editor de chunks",

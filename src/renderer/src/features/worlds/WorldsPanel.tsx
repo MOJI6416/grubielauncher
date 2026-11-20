@@ -9,6 +9,7 @@ import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
   Archive,
+  Download,
   Earth,
   FolderOpen,
   Import,
@@ -18,7 +19,9 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { IWorld } from "@/types/World";
-import { ILocalProject } from "@/types/ModManager";
+import { ILocalProject, IProject, ProjectType } from "@/types/ModManager";
+import { ISchematicFile } from "@/types/Schematic";
+import type { CommitMods } from "@renderer/features/mods/contentCommit";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { PanelFallback } from "@renderer/components/PanelFallback";
@@ -45,10 +48,12 @@ import {
   consolesAtom,
   isOwnerVersionAtom,
   selectedVersionAtom,
+  settingsAtom,
 } from "@renderer/stores/atoms";
 import { formatBytes } from "@renderer/utilities/file";
 import { formatRelative } from "@renderer/utilities/date";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { worldDisplayStats } from "@renderer/utilities/worldStats";
 import { toast } from "sonner";
 import {
@@ -68,6 +73,34 @@ import { WorldIcon } from "./WorldIcon";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { useWorldActions, WorldMenuItems } from "./worldActions";
 import { countFeature } from "@renderer/features/usage/usage";
+import { WorldCatalog } from "./WorldCatalog";
+import { installCatalogWorld } from "./worldCatalogInstall";
+import { SchematicsView, useSchematics } from "./SchematicsView";
+
+type PanelView = "worlds" | "schematics";
+
+async function findCatalogEntry(
+  versionPath: string,
+  mods: ILocalProject[],
+  folderName: string,
+): Promise<ILocalProject | null> {
+  for (const mod of mods) {
+    if (mod.projectType !== ProjectType.WORLD) continue;
+    for (const file of mod.version?.files ?? []) {
+      const archives = [
+        api.path.join(versionPath, "storage", "worlds", file.filename),
+        file.localPath,
+      ].filter((entry): entry is string => Boolean(entry));
+
+      for (const archive of archives) {
+        if (!(await api.fs.pathExists(archive).catch(ignoreFailure))) continue;
+        const name = await api.worlds.archiveName(archive).catch(ignoreFailure);
+        if (name === folderName) return mod;
+      }
+    }
+  }
+  return null;
+}
 
 const api = window.api;
 
@@ -75,15 +108,22 @@ export function Worlds({
   onClose,
   runGame,
   mods,
+  commitMods,
 }: {
   onClose: (isFull?: boolean) => void;
   runGame: (params: RunGameParams) => Promise<void>;
   mods?: ILocalProject[];
+  commitMods?: CommitMods;
 }) {
   const version = useAtomValue(selectedVersionAtom);
   const isOwner = useAtomValue(isOwnerVersionAtom);
   const consoles = useAtomValue(consolesAtom);
+  const settings = useAtomValue(settingsAtom);
   const { t, i18n } = useTranslation();
+  const [view, setView] = useState<PanelView>("worlds");
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [catalogBusy, setCatalogBusy] = useState<string | null>(null);
+  const schematics = useSchematics(version);
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<WorldFilter>("all");
@@ -152,6 +192,7 @@ export function Worlds({
   const revealWorld = useCallback((folderName: string) => {
     setQuery("");
     setFilter("all");
+    setCatalogOpen(false);
     setSelected(folderName);
   }, []);
 
@@ -177,10 +218,40 @@ export function Worlds({
     [reloadCounters, setWorlds],
   );
 
+  const removeCatalog = useCallback(
+    async (world: IWorld) => {
+      if (!version || !commitMods || !mods) return;
+
+      const entry = await findCatalogEntry(
+        version.versionPath,
+        mods,
+        world.folderName,
+      );
+      if (!entry) {
+        showFailureToast(t("worlds.deletedError"), undefined, {
+          channels: ["worlds:archiveName"],
+          fallbackDescription: t("worlds.catalogEntryMissing"),
+        });
+        return;
+      }
+
+      await commitMods(
+        mods.filter((mod) => mod !== entry),
+        {
+          title: t("worlds.deleted"),
+          description: world.name,
+          failTitle: t("worlds.deletedError"),
+        },
+      );
+    },
+    [commitMods, mods, t, version],
+  );
+
   const actions = useWorldActions({
     version,
     isOwner,
     isVersionRunning,
+    removeCatalog: commitMods && mods ? removeCatalog : undefined,
     takenNames: worlds.map((entry) => entry.name),
     onRemoved: onWorldRemoved,
     onRestored: (world) => {
@@ -247,10 +318,65 @@ export function Worlds({
     }
   }, [revealWorld, t, version]);
 
+  const installWorld = useCallback(
+    async (project: IProject) => {
+      if (!version) return;
+      setCatalogBusy(project.id);
+
+      try {
+        const outcome = await installCatalogWorld(version, project, settings);
+
+        if (outcome.status === "installed") {
+          countFeature("mods.install");
+          toast.success(t("worlds.imported", { name: outcome.name }));
+          revealWorld(api.path.basename(outcome.path));
+          bumpInstanceDataRevision();
+        } else if (outcome.status === "noVersion") {
+          toast.warning(
+            t("worldCatalog.noVersion", {
+              version: version.version.version.id,
+            }),
+          );
+        } else if (outcome.status === "blocked") {
+          toast.warning(t("worldCatalog.blocked"), {
+            action: {
+              label: t("worldCatalog.openPage"),
+              onClick: () =>
+                void api.shell.openExternal(outcome.url).catch(ignoreFailure),
+            },
+          });
+        } else {
+          showFailureToast(t("worlds.importError"), undefined, {
+            channels: ["file:download", "worlds:import"],
+            fallbackDescription:
+              outcome.status === "failed" && outcome.reason
+                ? t(`worlds.transferErrors.${outcome.reason}`)
+                : t("worldCatalog.downloadFailed"),
+          });
+        }
+      } catch (error) {
+        showFailureToast(t("worlds.importError"), error, {
+          channels: ["file:download", "worlds:import", "modManager:getVersions"],
+        });
+      } finally {
+        setCatalogBusy(null);
+      }
+    },
+    [revealWorld, settings, t, version],
+  );
+
+  const onSchematicRemoved = useCallback(
+    (file: ISchematicFile) =>
+      schematics.setFiles((previous) =>
+        previous.filter((entry) => entry.path !== file.path),
+      ),
+    [schematics],
+  );
+
   const handleKeyNav = useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key === "Delete") {
-        if (!selectedWorld || actions.isLocked(selectedWorld)) return;
+        if (!selectedWorld || !actions.canRemove(selectedWorld)) return;
         event.preventDefault();
         void actions.remove(selectedWorld);
         return;
@@ -307,7 +433,59 @@ export function Worlds({
     );
   }
 
-  if (!worlds.length) {
+  const hasSchematics = schematics.files.length > 0;
+  const catalogNode = (
+    <WorldCatalog
+      projectType={ProjectType.WORLD}
+      version={version}
+      busyId={catalogBusy}
+      blockedReason={importBlockedReason}
+      onInstall={(project) => void installWorld(project)}
+      onClose={() => setCatalogOpen(false)}
+    />
+  );
+  const viewSwitch = hasSchematics ? (
+    <SegmentedControl
+      value={view}
+      stretch
+      ariaLabel={t("worlds.viewLabel")}
+      options={[
+        { value: "worlds", label: t("worlds.title"), count: worlds.length },
+        {
+          value: "schematics",
+          label: t("schematics.title"),
+          count: schematics.files.length,
+        },
+      ]}
+      onChange={(next) => {
+        if (next === "schematics") countFeature("schematics.view");
+        setView(next);
+      }}
+    />
+  ) : null;
+
+  if (view === "schematics" && hasSchematics) {
+    return (
+      <SchematicsView
+        version={version}
+        files={schematics.files}
+        status={schematics.status}
+        header={viewSwitch}
+        onRemoved={onSchematicRemoved}
+        onRestored={() => void schematics.reload()}
+      />
+    );
+  }
+
+  if (!worlds.length && !hasSchematics && catalogOpen) {
+    return (
+      <div className="h-full min-h-0 rounded-xl border bg-card p-3">
+        {catalogNode}
+      </div>
+    );
+  }
+
+  if (!worlds.length && !hasSchematics) {
     return (
       <Empty className="h-full border border-dashed border-border bg-card">
         <EmptyHeader>
@@ -334,6 +512,16 @@ export function Worlds({
           </Button>
 
           <Button
+            variant="outline"
+            size="sm"
+            disabled={Boolean(importBlockedReason)}
+            onClick={() => setCatalogOpen(true)}
+          >
+            <Download className="size-3.5" />
+            {t("worldCatalog.openWorlds")}
+          </Button>
+
+          <Button
             variant="ghost"
             size="sm"
             className="text-muted-foreground"
@@ -354,6 +542,8 @@ export function Worlds({
   return (
     <div className="grid h-full min-h-0 grid-cols-[16.5rem_minmax(0,1fr)] gap-3">
       <div className="flex min-h-0 flex-col gap-2 rounded-xl border bg-card p-2">
+        {viewSwitch}
+
         <div className="flex items-center gap-1.5">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-faint" />
@@ -401,7 +591,13 @@ export function Worlds({
               isResultWave && "result-wave",
             )}
           >
-            {items.length === 0 && (
+            {items.length === 0 && !worlds.length && (
+              <p className="px-1.5 py-3 text-xs text-muted-foreground">
+                {t("worlds.noWorlds")}
+              </p>
+            )}
+
+            {items.length === 0 && worlds.length > 0 && (
               <Empty className="gap-3 p-4">
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
@@ -437,7 +633,10 @@ export function Worlds({
                           aria-selected={isActive}
                           data-wave-row
                           style={{ "--wave-index": index } as CSSProperties}
-                          onClick={() => setSelected(world.folderName)}
+                          onClick={() => {
+                            setCatalogOpen(false);
+                            setSelected(world.folderName);
+                          }}
                           onContextMenu={() => setSelected(world.folderName)}
                           className="flex w-full min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-row-hover aria-selected:bg-row-selected"
                         >
@@ -565,6 +764,22 @@ export function Worlds({
             </Hint>
           </Button>
 
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 min-w-0 flex-1 justify-start bg-transparent px-1.5 text-xs text-muted-foreground",
+              catalogOpen && "bg-row-selected text-foreground",
+            )}
+            disabled={Boolean(importBlockedReason)}
+            onClick={() => setCatalogOpen((open) => !open)}
+          >
+            <Download className="size-3.5" />
+            <Hint content={t("worldCatalog.openWorlds")} variant="text" truncatedOnly>
+              <span className="truncate">{t("worldCatalog.openWorlds")}</span>
+            </Hint>
+          </Button>
+
           <Hint content={t("worlds.openSaves")}>
             <Button
               variant="ghost"
@@ -579,7 +794,11 @@ export function Worlds({
         </div>
       </div>
 
-      {selectedWorld ? (
+      {catalogOpen ? (
+        <div className="min-h-0 rounded-xl border bg-card p-3">
+          {catalogNode}
+        </div>
+      ) : selectedWorld ? (
         <WorldDetail
           key={selectedWorld.path}
           world={selectedWorld}
@@ -594,6 +813,7 @@ export function Worlds({
           backupCount={backups[selectedWorld.folderName] ?? 0}
           takenNames={worlds.map((entry) => entry.name)}
           datapackOptions={datapackOptions}
+          mods={mods}
           locale={i18n.resolvedLanguage || i18n.language}
           actions={actions}
           renameRequested={renameRequest === selectedWorld.path}
@@ -625,6 +845,16 @@ export function Worlds({
             )
           }
         />
+      ) : !worlds.length ? (
+        <Empty className="h-full border border-dashed border-border bg-card">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Earth />
+            </EmptyMedia>
+            <EmptyTitle>{t("worlds.noWorlds")}</EmptyTitle>
+            <EmptyDescription>{t("worlds.noWorldsHint")}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <div className="flex items-center justify-center rounded-xl border bg-card text-sm text-muted-foreground">
           {t("worlds.selectWorld")}
