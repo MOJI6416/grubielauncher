@@ -2930,7 +2930,6 @@
     "nothing": "Hiçbir şey bulunamadı",
     "nothingHint": "Başka bir arama deneyin.",
     "nothingForVersion": "Minecraft {{version}} için burada henüz bir şey yok.",
-    "more": "Daha fazla göster",
     "downloads": "{{value}} indirme",
     "openPage": "Sayfayı aç",
     "install": "Kur",
@@ -7265,8 +7264,7 @@
     "anyLoader": "Herhangi bir yükleyici",
     "offline": "Katalog için internet bağlantısı gerekir",
     "failed": "{{source}} yanıt vermedi",
-    "installTo": "Şuraya yükle…",
-    "more": "Daha fazla göster"
+    "installTo": "Şuraya yükle…"
   },
   "packAuthor": {
     "channel": {

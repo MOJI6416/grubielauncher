@@ -140,6 +140,11 @@ export function SchematicsView({
   const formatLabel = useFormatLabel();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const folder = api.path.join(version.versionPath, "schematics");
+
+  useEffect(() => {
+    void api.fs.ensure(folder).catch(ignoreFailure);
+  }, [folder]);
 
   const sizeLabels = [
     t("sizes.0"),
@@ -182,8 +187,9 @@ export function SchematicsView({
         await api.shell.showItemInFolder(target.path);
         return;
       }
-      const folder = api.path.join(version.versionPath, "schematics");
-      await api.fs.ensure(folder);
+      if (!(await api.fs.ensure(folder))) {
+        throw new Error(`Could not create ${folder}`);
+      }
       await api.shell.openPath(folder);
     } catch (error) {
       showFailureToast(t("schematics.openFolderError"), error, {

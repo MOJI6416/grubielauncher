@@ -402,7 +402,7 @@ export function Worlds({
       onClose={() => setCatalogOpen(false)}
     />
   );
-  const viewSwitch = hasSchematics ? (
+  const viewSwitch = (
     <SegmentedControl
       value={view}
       stretch
@@ -420,9 +420,9 @@ export function Worlds({
         setView(next);
       }}
     />
-  ) : null;
+  );
 
-  if (view === "schematics" && hasSchematics) {
+  if (view === "schematics") {
     return (
       <SchematicsView
         version={version}
@@ -446,6 +446,7 @@ export function Worlds({
   if (!worlds.length && !hasSchematics) {
     return (
       <Empty className="h-full border border-dashed border-border bg-card">
+        <div className="w-64">{viewSwitch}</div>
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <Earth />

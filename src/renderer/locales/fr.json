@@ -2952,7 +2952,6 @@
     "nothing": "Rien trouvé",
     "nothingHint": "Essayez une autre recherche.",
     "nothingForVersion": "Rien ici pour Minecraft {{version}} pour l’instant.",
-    "more": "Afficher plus",
     "downloads": "{{value}} téléchargements",
     "openPage": "Ouvrir la page",
     "install": "Installer",
@@ -7342,8 +7341,7 @@
     "anyLoader": "Tout loader",
     "offline": "Le catalogue nécessite une connexion Internet",
     "failed": "{{source}} n’a pas répondu",
-    "installTo": "Installer dans…",
-    "more": "Afficher plus"
+    "installTo": "Installer dans…"
   },
   "packAuthor": {
     "channel": {

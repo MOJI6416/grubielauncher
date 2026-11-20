@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Download, Loader2, Package, Search } from "lucide-react";
+import { Download, Package, Search } from "lucide-react";
 import { PROJECT_TYPE_ICONS } from "@renderer/features/mods/contentManagerParts";
 import { IProject, ProjectType, Provider } from "@/types/ModManager";
 import type { IVersion } from "@/types/IVersion";
@@ -20,12 +20,18 @@ import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Hint } from "@renderer/components/Hint";
 import { ListSkeleton } from "@renderer/components/ListSkeleton";
 import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
+import { LoadMoreRow } from "@renderer/components/LoadMoreRow";
 import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 import { LoaderLabel } from "@renderer/components/Loaders";
 import { formatCompactNumber } from "@renderer/utilities/numbers";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
-import { useCatalogSearch } from "@renderer/features/mods/useCatalogSearch";
+import { useLoadOnScroll } from "@renderer/utilities/useLoadOnScroll";
+import {
+  useCatalogMeta,
+  useCatalogSearch,
+} from "@renderer/features/mods/useCatalogSearch";
 import { ProjectIcon } from "@renderer/features/mods/ProjectIcon";
 import { displayTitle } from "@renderer/features/mods/titles";
 import { parseProjectLink } from "@renderer/features/mods/projectLinks";
@@ -56,6 +62,7 @@ export function CatalogScreen() {
   const [query, setQuery] = useState("");
   const [gameVersion, setGameVersion] = useState<string>(ANY);
   const [loader, setLoader] = useState<string>(ANY);
+  const [sort, setSort] = useState("");
   const [versions, setVersions] = useState<IVersion[]>([]);
 
   useEffect(() => {
@@ -103,12 +110,15 @@ export function CatalogScreen() {
     return () => clearTimeout(timer);
   }, [rawQuery, t]);
 
+  const meta = useCatalogMeta(provider, projectType, isOnline);
+  const activeSort = meta.sorts.includes(sort) ? sort : (meta.sorts[0] ?? "");
+
   const request = useMemo(
     () => ({
       provider,
       projectType,
       query,
-      sort: "",
+      sort: activeSort,
       filters: [],
       gameVersion: gameVersion === ANY ? undefined : gameVersion,
       loader:
@@ -116,9 +126,18 @@ export function CatalogScreen() {
           ? (loader as Loader)
           : undefined,
     }),
-    [gameVersion, loader, projectType, provider, query],
+    [activeSort, gameVersion, loader, projectType, provider, query],
   );
-  const catalog = useCatalogSearch(request, isOnline);
+  const catalog = useCatalogSearch(request, isOnline && meta.isReady);
+  const setScroller = useLoadOnScroll(
+    catalog.hasMore &&
+      !catalog.isLoading &&
+      !catalog.isLoadingMore &&
+      !catalog.error,
+    () => catalog.loadMore(),
+    catalog.items.length,
+  );
+  const sourceName = provider === Provider.MODRINTH ? "Modrinth" : "CurseForge";
   const isWave = useEntranceWave(catalog.isLoading);
   const lang = settings.lang || "en";
 
@@ -195,21 +214,28 @@ export function CatalogScreen() {
             </SelectContent>
           </Select>
         )}
+        <SortMenu
+          value={activeSort}
+          disabled={meta.sorts.length === 0}
+          options={meta.sorts.map((value) => ({
+            value,
+            label: t(`modManager.sorts.${value}`),
+          }))}
+          onChange={setSort}
+        />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div ref={setScroller} className="min-h-0 flex-1 overflow-y-auto pr-1">
         {!isOnline ? (
           <Empty className="mt-6 gap-2">
             <EmptyTitle className="text-sm">{t("catalog.offline")}</EmptyTitle>
           </Empty>
-        ) : catalog.isLoading ? (
+        ) : catalog.isLoading || !meta.isReady ? (
           <ListSkeleton rows={9} />
-        ) : catalog.error ? (
+        ) : catalog.error && catalog.items.length === 0 ? (
           <Empty className="mt-6 gap-2">
             <EmptyTitle className="text-sm">
-              {t("catalog.failed", {
-                source: provider === Provider.MODRINTH ? "Modrinth" : "CurseForge",
-              })}
+              {t("catalog.failed", { source: sourceName })}
             </EmptyTitle>
             <Button size="sm" variant="outline" onClick={catalog.reload}>
               {t("common.retry")}
@@ -269,18 +295,15 @@ export function CatalogScreen() {
                 </div>
               );
             })}
-            {catalog.hasMore && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-1 self-center"
-                disabled={catalog.isLoadingMore}
-                onClick={() => catalog.loadMore()}
-              >
-                {catalog.isLoadingMore && <Loader2 className="size-3.5 animate-spin" />}
-                {t("catalog.more")}
-              </Button>
-            )}
+            <LoadMoreRow
+              isLoading={catalog.isLoadingMore}
+              failedText={
+                catalog.error
+                  ? t("catalog.failed", { source: sourceName })
+                  : undefined
+              }
+              onRetry={() => catalog.loadMore(true)}
+            />
           </div>
         )}
       </div>

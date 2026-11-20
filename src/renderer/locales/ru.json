@@ -2965,7 +2965,6 @@
     "nothing": "Ничего не нашлось",
     "nothingHint": "Попробуйте другой запрос.",
     "nothingForVersion": "Для Minecraft {{version}} здесь пока ничего нет.",
-    "more": "Показать ещё",
     "downloads": "загрузки: {{value}}",
     "openPage": "Открыть страницу",
     "install": "Установить",
@@ -7395,8 +7394,7 @@
     "anyLoader": "Любой загрузчик",
     "offline": "Для каталога нужен интернет",
     "failed": "{{source}} не ответил",
-    "installTo": "Установить в…",
-    "more": "Показать ещё"
+    "installTo": "Установить в…"
   },
   "packAuthor": {
     "channel": {

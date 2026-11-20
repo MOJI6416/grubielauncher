@@ -23,6 +23,8 @@ import {
 import { Hint } from "@renderer/components/Hint";
 import { ListSkeleton } from "@renderer/components/ListSkeleton";
 import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { SortMenu } from "@renderer/components/SortMenu";
+import { LoadMoreRow } from "@renderer/components/LoadMoreRow";
 import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 import { ProjectIcon } from "@renderer/features/mods/ProjectIcon";
 import { displayTitle } from "@renderer/features/mods/titles";
@@ -31,6 +33,7 @@ import {
   useCatalogSearch,
 } from "@renderer/features/mods/useCatalogSearch";
 import { useEntranceWave } from "@renderer/utilities/useEntranceWave";
+import { useLoadOnScroll } from "@renderer/utilities/useLoadOnScroll";
 import { formatCompactNumber } from "@renderer/utilities/numbers";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { cn } from "@/lib/utils";
@@ -70,6 +73,7 @@ export function WorldCatalog({
   const [provider, setProvider] = useState<CatalogSource>(providers[0]);
   const [rawQuery, setRawQuery] = useState("");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("");
 
   useEffect(() => {
     const timer = window.setTimeout(() => setQuery(rawQuery), QUERY_DELAY_MS);
@@ -77,17 +81,26 @@ export function WorldCatalog({
   }, [rawQuery]);
 
   const meta = useCatalogMeta(provider, projectType, true);
+  const activeSort = meta.sorts.includes(sort) ? sort : (meta.sorts[0] ?? "");
   const catalog = useCatalogSearch(
     {
       provider,
       projectType,
       query,
-      sort: meta.sorts[0] ?? "",
+      sort: activeSort,
       filters: [],
       gameVersion: version.version.version.id,
       loader: version.version.loader.name,
     },
     meta.isReady,
+  );
+  const setScroller = useLoadOnScroll(
+    catalog.hasMore &&
+      !catalog.isLoading &&
+      !catalog.isLoadingMore &&
+      !catalog.error,
+    () => catalog.loadMore(),
+    catalog.items.length,
   );
   const isWave = useEntranceWave(catalog.isLoading);
 
@@ -133,6 +146,16 @@ export function WorldCatalog({
           />
         </div>
 
+        <SortMenu
+          value={activeSort}
+          disabled={meta.sorts.length === 0}
+          options={meta.sorts.map((value) => ({
+            value,
+            label: t(`modManager.sorts.${value}`),
+          }))}
+          onChange={setSort}
+        />
+
         <Hint content={t("common.close")}>
           <Button
             variant="ghost"
@@ -150,7 +173,7 @@ export function WorldCatalog({
         <p className="shrink-0 text-2xs text-warning">{blockedReason}</p>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={setScroller} className="min-h-0 flex-1 overflow-y-auto">
         {catalog.isLoading || !meta.isReady ? (
           <ListSkeleton rows={6} rowClassName="h-14" />
         ) : catalog.error && catalog.items.length === 0 ? (
@@ -199,18 +222,17 @@ export function WorldCatalog({
               />
             ))}
 
-            {catalog.hasMore && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-1 self-center text-muted-foreground"
-                disabled={catalog.isLoadingMore}
-                onClick={() => catalog.loadMore()}
-              >
-                {catalog.isLoadingMore && <Loader2 className="animate-spin" />}
-                {t("worldCatalog.more")}
-              </Button>
-            )}
+            <LoadMoreRow
+              isLoading={catalog.isLoadingMore}
+              failedText={
+                catalog.error
+                  ? t("modManager.searchFailedSource", {
+                      source: SOURCE_NAMES[provider],
+                    })
+                  : undefined
+              }
+              onRetry={() => catalog.loadMore(true)}
+            />
           </div>
         )}
       </div>

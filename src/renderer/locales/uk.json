@@ -2965,7 +2965,6 @@
     "nothing": "Нічого не знайшлося",
     "nothingHint": "Спробуйте інший запит.",
     "nothingForVersion": "Для Minecraft {{version}} тут поки нічого немає.",
-    "more": "Показати ще",
     "downloads": "завантаження: {{value}}",
     "openPage": "Відкрити сторінку",
     "install": "Встановити",
@@ -7395,8 +7394,7 @@
     "anyLoader": "Будь-який завантажувач",
     "offline": "Для каталогу потрібен інтернет",
     "failed": "{{source}} не відповів",
-    "installTo": "Встановити в…",
-    "more": "Показати ще"
+    "installTo": "Встановити в…"
   },
   "packAuthor": {
     "channel": {
