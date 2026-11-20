@@ -53,9 +53,9 @@ const CUBE_ALL = {
   ),
 };
 
-function png(color: [number, number, number, number]): Buffer {
-  const image = new PNG({ width: 16, height: 16 });
-  for (let index = 0; index < 256; index += 1) image.data.set(color, index * 4);
+function png(color: [number, number, number, number], width = 16, height = 16): Buffer {
+  const image = new PNG({ width, height });
+  for (let index = 0; index < width * height; index += 1) image.data.set(color, index * 4);
   return PNG.sync.write(image);
 }
 
@@ -101,6 +101,15 @@ beforeAll(async () => {
   fullBlock(game, "minecraft", "mossy_stone_bricks", [90, 120, 90, 255]);
   fullBlock(game, "minecraft", "light_gray_wool", [160, 160, 160, 255]);
   game.addFile("assets/minecraft/textures/block/water_still.png", png([200, 200, 200, 180]));
+  game.addFile(
+    "assets/minecraft/blockstates/chest.json",
+    json({ variants: { "": { model: "minecraft:block/chest" } } }),
+  );
+  game.addFile(
+    "assets/minecraft/models/block/chest.json",
+    json({ textures: { particle: "minecraft:block/oak_planks" } }),
+  );
+  game.addFile("assets/minecraft/textures/entity/chest/normal.png", png([160, 110, 40, 255], 64, 64));
   game.addFile(
     "assets/minecraft/blockstates/oak_stairs.json",
     json({
@@ -336,6 +345,16 @@ describe("block models for the 3D view", () => {
       y: 90,
       textures: { all: "oldmod:blocks/press" },
     });
+  });
+
+  it("draws a chest from its block entity model, in 3D and as an icon", async () => {
+    const set = await bakeBlockModels(instance, ["minecraft:chest[facing=east,type=single]"]);
+    const [chest] = set.blocks;
+    expect(chest.quads).toHaveLength(18);
+    expect(chest.cube).toBe(false);
+    expect(set.textures[chest.quads[0].texture].name).toBe("minecraft:entity/chest/normal");
+    const icon = await describeBlocks(instance, ["minecraft:chest"], "en");
+    expect(decodeIcon(icon["minecraft:chest"].icon).opaque).toBeGreaterThan(1500);
   });
 
   it("bakes cubes, rotated stairs, water and unknown blocks", async () => {

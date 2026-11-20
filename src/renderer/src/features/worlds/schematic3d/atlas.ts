@@ -64,17 +64,19 @@ export async function buildAtlas(textures: BlockTexture[]): Promise<Atlas> {
     const image = images[index];
 
     if (image) {
-      const frame = Math.min(image.width, image.height);
+      const animated = image.height > image.width && image.height % image.width === 0;
+      const frameWidth = image.width;
+      const frameHeight = animated ? image.width : image.height;
       for (const [dx, dy] of [
         [-1, 0],
         [1, 0],
         [0, -1],
         [0, 1],
       ]) {
-        context.drawImage(image, 0, 0, frame, frame, left + dx, top + dy, tile, tile);
+        context.drawImage(image, 0, 0, frameWidth, frameHeight, left + dx, top + dy, tile, tile);
       }
       context.clearRect(left, top, tile, tile);
-      context.drawImage(image, 0, 0, frame, frame, left, top, tile, tile);
+      context.drawImage(image, 0, 0, frameWidth, frameHeight, left, top, tile, tile);
       image.close();
     } else {
       const [r, g, b] = texture.color ?? [255, 0, 255];

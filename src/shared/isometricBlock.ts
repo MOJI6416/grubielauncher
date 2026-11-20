@@ -238,3 +238,115 @@ export function drawSprite(
   if (shadow) paintPass(offset, offset, [0, 0, 0], 0.35);
   paintPass(0, 0, null, 1);
 }
+
+export interface IsoQuad {
+  points: number[];
+  uvs: number[];
+  texture: IsoTexture;
+  tint: IsoRgb | null;
+  light: number;
+}
+
+const QUAD_SAMPLES = 3;
+const ISO_DEPTH = 1.12;
+const VIEW_Y = 0.893;
+
+function project(x: number, y: number, z: number) {
+  return { sx: x - z, sy: 0.5 * (x + z) - ISO_DEPTH * y, depth: x + VIEW_Y * y + z };
+}
+
+export function drawQuads(raster: Raster, quads: readonly IsoQuad[], widthRatio: number) {
+  const size = raster.size * QUAD_SAMPLES;
+  const projected = quads.map((quad) =>
+    [0, 1, 2, 3].map((corner) =>
+      project(quad.points[corner * 3], quad.points[corner * 3 + 1], quad.points[corner * 3 + 2]),
+    ),
+  );
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const corners of projected) {
+    for (const point of corners) {
+      minX = Math.min(minX, point.sx);
+      maxX = Math.max(maxX, point.sx);
+      minY = Math.min(minY, point.sy);
+      maxY = Math.max(maxY, point.sy);
+    }
+  }
+  if (!Number.isFinite(minX)) return;
+  const fit = (size * widthRatio) / Math.max(maxX - minX, maxY - minY, 1e-6);
+  const offsetX = size / 2 - ((minX + maxX) / 2) * fit;
+  const offsetY = size / 2 - ((minY + maxY) / 2) * fit;
+
+  const color = new Float32Array(size * size * 3);
+  const depth = new Float32Array(size * size).fill(-Infinity);
+
+  quads.forEach((quad, index) => {
+    const corners = projected[index].map((point) => ({
+      x: point.sx * fit + offsetX,
+      y: point.sy * fit + offsetY,
+      depth: point.depth,
+    }));
+    for (const [a, b, c] of [
+      [0, 1, 2],
+      [0, 2, 3],
+    ]) {
+      const p0 = corners[a];
+      const p1 = corners[b];
+      const p2 = corners[c];
+      const area = (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
+      if (Math.abs(area) < 1e-9) continue;
+      const left = Math.max(0, Math.floor(Math.min(p0.x, p1.x, p2.x)));
+      const right = Math.min(size - 1, Math.ceil(Math.max(p0.x, p1.x, p2.x)));
+      const top = Math.max(0, Math.floor(Math.min(p0.y, p1.y, p2.y)));
+      const bottom = Math.min(size - 1, Math.ceil(Math.max(p0.y, p1.y, p2.y)));
+      for (let y = top; y <= bottom; y++) {
+        for (let x = left; x <= right; x++) {
+          const px = x + 0.5;
+          const py = y + 0.5;
+          const w0 = ((p1.x - px) * (p2.y - py) - (p2.x - px) * (p1.y - py)) / area;
+          const w1 = ((p2.x - px) * (p0.y - py) - (p0.x - px) * (p2.y - py)) / area;
+          const w2 = 1 - w0 - w1;
+          if (w0 < 0 || w1 < 0 || w2 < 0) continue;
+          const z = w0 * p0.depth + w1 * p1.depth + w2 * p2.depth;
+          const cell = y * size + x;
+          if (z <= depth[cell]) continue;
+          const u = w0 * quad.uvs[a * 2] + w1 * quad.uvs[b * 2] + w2 * quad.uvs[c * 2];
+          const v = w0 * quad.uvs[a * 2 + 1] + w1 * quad.uvs[b * 2 + 1] + w2 * quad.uvs[c * 2 + 1];
+          const texture = quad.texture;
+          const tx = Math.min(texture.width - 1, Math.max(0, Math.floor(u * texture.width)));
+          const ty = Math.min(texture.height - 1, Math.max(0, Math.floor(v * texture.height)));
+          const texel = (ty * texture.width + tx) * 4;
+          if (texture.pixels[texel + 3] < 128) continue;
+          depth[cell] = z;
+          const tint = quad.tint ?? [255, 255, 255];
+          color[cell * 3] = (texture.pixels[texel] * tint[0] * quad.light) / 255;
+          color[cell * 3 + 1] = (texture.pixels[texel + 1] * tint[1] * quad.light) / 255;
+          color[cell * 3 + 2] = (texture.pixels[texel + 2] * tint[2] * quad.light) / 255;
+        }
+      }
+    }
+  });
+
+  for (let y = 0; y < raster.size; y++) {
+    for (let x = 0; x < raster.size; x++) {
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+      let hits = 0;
+      for (let sy = 0; sy < QUAD_SAMPLES; sy++) {
+        for (let sx = 0; sx < QUAD_SAMPLES; sx++) {
+          const cell = (y * QUAD_SAMPLES + sy) * size + x * QUAD_SAMPLES + sx;
+          if (depth[cell] === -Infinity) continue;
+          red += color[cell * 3];
+          green += color[cell * 3 + 1];
+          blue += color[cell * 3 + 2];
+          hits++;
+        }
+      }
+      if (hits === 0) continue;
+      blend(raster, x, y, [red / hits, green / hits, blue / hits], hits / (QUAD_SAMPLES * QUAD_SAMPLES));
+    }
+  }
+}

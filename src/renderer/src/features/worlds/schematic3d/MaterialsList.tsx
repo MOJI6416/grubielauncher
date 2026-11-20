@@ -53,6 +53,7 @@ export function useStacksLabel() {
   const locale = i18n.resolvedLanguage || i18n.language;
   return (id: string, count: number) => {
     const size = stackSizeOf(id);
+    if (size === 1) return null;
     const stacks = Math.floor(count / size);
     const rest = count - stacks * size;
     if (stacks === 0) return null;

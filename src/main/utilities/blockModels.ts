@@ -13,6 +13,7 @@ import {
   parseLenientJson,
   withAssetSession,
 } from "./blockAssets";
+import { bakeEntityModel, entityModelFor } from "./entityModels";
 
 type Vec3 = [number, number, number];
 
@@ -598,6 +599,13 @@ export async function bakeState(library: ModelLibrary, state: string): Promise<B
     if (!model.elements?.length) continue;
     quads.push(...bakeElements(model.elements, textures, ref));
     cube ||= isFullCube(model.elements);
+  }
+
+  if (!quads.length) {
+    const entity = entityModelFor(name, props);
+    if (entity && (await library.texture(entity.texture))) {
+      return { quads: bakeEntityModel(entity), cube: false, liquid: false, color: null };
+    }
   }
 
   if (!quads.length) {

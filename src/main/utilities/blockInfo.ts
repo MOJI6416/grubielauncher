@@ -8,9 +8,11 @@ import {
 } from "@/shared/blockState";
 import {
   CubeFaces,
+  IsoQuad,
   IsoTexture,
   createRaster,
   drawCube,
+  drawQuads,
   drawSprite,
 } from "@/shared/isometricBlock";
 import {
@@ -25,6 +27,7 @@ import {
 import {
   ModelLibrary,
   ResolvedModel,
+  bakeState,
   readAssetIndexObject,
   resolveTexture,
   selectVariants,
@@ -34,7 +37,7 @@ import {
 import { getLauncherPaths } from "./other";
 
 const ICON_FOLDER = "block-icons";
-const ICON_VERSION = 1;
+const ICON_VERSION = 2;
 const ICON_SIZE = 64;
 const CUBE_SCALE = 0.84;
 const MAX_LANG_TABLES = 24;
@@ -189,7 +192,52 @@ async function loadTexture(
 
 export type IconSubject =
   | { kind: "cube"; faces: CubeFaces }
-  | { kind: "sprite"; texture: IsoTexture };
+  | { kind: "sprite"; texture: IsoTexture }
+  | { kind: "quads"; quads: IsoQuad[] };
+
+const QUAD_LIGHT = [0.5, 1, 0.8, 0.8, 0.62, 0.62];
+
+function modelParts(name: string): { state: string; offset: [number, number, number] }[] | null {
+  const path = name.slice(name.indexOf(":") + 1);
+  if (path.endsWith("_bed")) {
+    return [
+      { state: `${name}[facing=south,part=foot]`, offset: [0, 0, 0] },
+      { state: `${name}[facing=south,part=head]`, offset: [0, 0, 1] },
+    ];
+  }
+  if (path.endsWith("chest")) return [{ state: `${name}[facing=south,type=single]`, offset: [0, 0, 0] }];
+  return null;
+}
+
+async function modelIcon(library: ModelLibrary, name: string): Promise<IconSubject | null> {
+  const parts = modelParts(name);
+  if (!parts) return null;
+  const textures = new Map<string, IsoTexture | null>();
+  const tint = tintOf(name);
+  const quads: IsoQuad[] = [];
+  for (const part of parts) {
+    const baked = await bakeState(library, part.state);
+    if (baked.color || !baked.quads.length) return null;
+    for (const quad of baked.quads) {
+      if (!textures.has(quad.texture)) {
+        textures.set(quad.texture, await loadTexture(library, quad.texture, null));
+      }
+      const texture = textures.get(quad.texture);
+      if (!texture) continue;
+      quads.push({
+        points: quad.positions.map((value, index) => value + part.offset[index % 3]),
+        uvs: quad.uvs,
+        texture,
+        tint:
+          quad.tinted && tint !== null
+            ? [(tint >> 16) & 255, (tint >> 8) & 255, tint & 255]
+            : null,
+        light: quad.shade >= 0 ? QUAD_LIGHT[quad.shade] : 1,
+      });
+    }
+  }
+  return quads.length ? { kind: "quads", quads } : null;
+}
 
 async function spriteOf(
   library: ModelLibrary,
@@ -267,6 +315,9 @@ export async function iconSubject(library: ModelLibrary, id: string): Promise<Ic
     }
   }
 
+  const model3d = await modelIcon(library, name).catch(() => null);
+  if (model3d) return model3d;
+
   for (const ref of selectVariants(await library.blockstate(name), {})) {
     const model = await library.model(ref.model);
     if (!model) continue;
@@ -294,6 +345,7 @@ export async function iconSubject(library: ModelLibrary, id: string): Promise<Ic
 export function renderIcon(subject: IconSubject): Buffer {
   const raster = createRaster(ICON_SIZE);
   if (subject.kind === "cube") drawCube(raster, subject.faces, CUBE_SCALE, false);
+  else if (subject.kind === "quads") drawQuads(raster, subject.quads, CUBE_SCALE);
   else drawSprite(raster, subject.texture, false);
   return encodeRgbaPng(raster.pixels, ICON_SIZE, ICON_SIZE);
 }

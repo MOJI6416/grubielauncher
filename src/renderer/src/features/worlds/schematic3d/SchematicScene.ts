@@ -41,6 +41,8 @@ interface SectionEntry {
 }
 
 const FOV = 35;
+const CLIP_MARGIN = 0.01;
+const GRID_DROP = 0.02;
 const ISO_DIRECTION = new THREE.Vector3(1, 0.85, 1.15).normalize();
 
 function cssColor(value: string): THREE.Color {
@@ -324,8 +326,8 @@ export class SchematicScene {
 
   setRange(range: LayerRange, options: { immediate?: boolean } = {}): Promise<void> {
     this.range = range;
-    this.clipLow.constant = -range.lo;
-    this.clipHigh.constant = range.hi + 1;
+    this.clipLow.constant = CLIP_MARGIN - range.lo;
+    this.clipHigh.constant = range.hi + 1 + CLIP_MARGIN;
     this.updateHelpers();
     this.dirty = true;
     if (this.rebuildTimer) clearTimeout(this.rebuildTimer);
@@ -372,7 +374,7 @@ export class SchematicScene {
     }
     if (!this.grid) return;
     const { sx, sz } = this.grid;
-    const y = this.range.lo;
+    const y = this.range.lo - GRID_DROP;
     const step = Math.max(sx, sz) <= 96 ? 1 : SECTION;
     const points: number[] = [];
     for (let x = 0; x <= sx; x += step) points.push(x, y, 0, x, y, sz);
