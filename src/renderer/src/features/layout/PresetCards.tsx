@@ -35,12 +35,7 @@ function PresetSketch({ id }: { id: LayoutPresetId }) {
         ))}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span
-          className={cn(
-            "h-2.5 rounded-sm",
-            values.ambientTint ? "bg-primary/30" : "bg-surface-3",
-          )}
-        />
+        <span className="h-2.5 rounded-sm bg-primary/30" />
         {Array.from({ length: rows }).map((_, index) => (
           <span
             key={index}

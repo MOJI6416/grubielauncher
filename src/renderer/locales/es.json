@@ -6837,7 +6837,7 @@
       },
       "minimal": {
         "title": "Mínimo",
-        "description": "Para jugar solo: sin Personas, Noticias ni efectos"
+        "description": "Para jugar solo: sin Personas, Noticias ni extras en el inicio"
       }
     },
     "resetDone": "Diseño restablecido",

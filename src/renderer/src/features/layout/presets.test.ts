@@ -37,19 +37,27 @@ describe("matchPreset", () => {
 
   it("reports a custom layout once anything differs", () => {
     expect(
-      matchPreset(settings({ ...presetValues("compact"), ambientTint: false })),
+      matchPreset(settings({ ...presetValues("compact"), instancesView: "grid" })),
     ).toBeNull();
   });
 
-  it("leaves language, scale and sounds out of presets", () => {
-    const changed = settings({ lang: "ru", uiScale: 1.25, sounds: false });
+  it("leaves language, scale, sounds and effects out of presets", () => {
+    const changed = settings({
+      lang: "ru",
+      uiScale: 1.25,
+      sounds: false,
+      ambientTint: false,
+      backgroundGrain: false,
+    });
     expect(matchPreset(changed)).toBe("standard");
     expect(Object.keys(currentPresetValues(changed)).sort()).toEqual([
-      "ambientTint",
-      "backgroundGrain",
       "instancesView",
       "interface",
       "sidebarCollapsed",
     ]);
+    for (const id of LAYOUT_PRESETS) {
+      expect(presetValues(id)).not.toHaveProperty("ambientTint");
+      expect(presetValues(id)).not.toHaveProperty("backgroundGrain");
+    }
   });
 });

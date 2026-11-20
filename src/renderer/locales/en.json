@@ -6780,7 +6780,7 @@
       },
       "minimal": {
         "title": "Minimal",
-        "description": "For playing solo: no People, News or effects"
+        "description": "For playing solo: no People, News or extras on the home screen"
       }
     },
     "resetDone": "Layout reset",

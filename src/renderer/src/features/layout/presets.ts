@@ -10,7 +10,7 @@ export const LAYOUT_PRESETS: LayoutPresetId[] = ["standard", "compact", "minimal
 
 export type PresetValues = Pick<
   TSettings,
-  "interface" | "sidebarCollapsed" | "instancesView" | "ambientTint" | "backgroundGrain"
+  "interface" | "sidebarCollapsed" | "instancesView"
 >;
 
 const PRESETS: Record<LayoutPresetId, PresetValues> = {
@@ -18,15 +18,11 @@ const PRESETS: Record<LayoutPresetId, PresetValues> = {
     interface: DEFAULT_INTERFACE_LAYOUT,
     sidebarCollapsed: false,
     instancesView: "list",
-    ambientTint: true,
-    backgroundGrain: true,
   },
   compact: {
     interface: { ...DEFAULT_INTERFACE_LAYOUT, hidden: ["home.stats"], dockLimit: 10 },
     sidebarCollapsed: true,
     instancesView: "compact",
-    ambientTint: true,
-    backgroundGrain: true,
   },
   minimal: {
     interface: {
@@ -35,8 +31,6 @@ const PRESETS: Record<LayoutPresetId, PresetValues> = {
     },
     sidebarCollapsed: false,
     instancesView: "compact",
-    ambientTint: false,
-    backgroundGrain: false,
   },
 };
 
@@ -49,8 +43,6 @@ export function currentPresetValues(settings: TSettings): PresetValues {
     interface: settings.interface,
     sidebarCollapsed: settings.sidebarCollapsed,
     instancesView: settings.instancesView,
-    ambientTint: settings.ambientTint,
-    backgroundGrain: settings.backgroundGrain,
   };
 }
 
@@ -62,9 +54,7 @@ function sameValues(a: PresetValues, b: PresetValues): boolean {
   return (
     layoutKey(a.interface) === layoutKey(b.interface) &&
     a.sidebarCollapsed === b.sidebarCollapsed &&
-    a.instancesView === b.instancesView &&
-    a.ambientTint === b.ambientTint &&
-    a.backgroundGrain === b.backgroundGrain
+    a.instancesView === b.instancesView
   );
 }
 
