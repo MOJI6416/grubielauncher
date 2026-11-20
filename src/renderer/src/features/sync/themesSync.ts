@@ -1,5 +1,6 @@
 import { getDefaultStore } from "jotai";
 import { pathsAtom } from "@renderer/stores/atoms";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import {
   newThemeId,
   saveUserThemes,
@@ -32,7 +33,7 @@ function linksFile(): string | null {
 async function readLinksFile(): Promise<LinksFile> {
   const file = linksFile();
   if (!file || !(await api.fs.pathExists(file))) return { version: 1, accounts: {} };
-  const data = await api.fs.readJSON<LinksFile>(file, "utf-8").catch(() => null);
+  const data = await api.fs.readJSON<LinksFile>(file, "utf-8").catch(ignoreFailure);
   return data?.accounts && typeof data.accounts === "object"
     ? { version: 1, accounts: data.accounts }
     : { version: 1, accounts: {} };
@@ -212,7 +213,7 @@ export async function syncThemes(
     );
     const picture =
       theme.backdrop && !keepPicture
-        ? await encodePicture(theme.backdrop.path).catch(() => null)
+        ? ((await encodePicture(theme.backdrop.path).catch(ignoreFailure)) ?? null)
         : null;
     if (theme.backdrop && !keepPicture && !picture) continue;
 

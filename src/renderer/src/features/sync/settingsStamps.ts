@@ -1,5 +1,6 @@
 import { getDefaultStore } from "jotai";
 import { pathsAtom } from "@renderer/stores/atoms";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import {
   initialStamps,
   normalizeStamps,
@@ -43,7 +44,7 @@ export function loadSettingsStamps(settings: TSettings): Promise<SettingsStamps 
 
     const stamps = (await api.fs.pathExists(file))
       ? normalizeStamps(
-          (await api.fs.readJSON<{ stamps?: unknown }>(file, "utf-8").catch(() => null))?.stamps,
+          (await api.fs.readJSON<{ stamps?: unknown }>(file, "utf-8").catch(ignoreFailure))?.stamps,
         )
       : initialStamps(settings, FIRST_SYNC_STAMP);
 
