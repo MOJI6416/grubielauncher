@@ -1,15 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Activity,
-  Check,
-  Loader2,
-  PackageCheck,
-  PackageMinus,
-  PackageSearch,
-  Server as ServerIcon,
-  X,
-} from "lucide-react";
+import { Activity, Check, Loader2, Server as ServerIcon, X } from "lucide-react";
 import { IServer } from "@/types/ServersList";
 import { toNbtSafeText } from "@/shared/nbtText";
 import { Button } from "@/components/ui/button";
@@ -33,12 +24,11 @@ import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
 
-const TEXTURE_OPTIONS: { value: number | null; icon: typeof PackageSearch }[] =
-  [
-    { value: null, icon: PackageSearch },
-    { value: 1, icon: PackageCheck },
-    { value: 0, icon: PackageMinus },
-  ];
+const TEXTURE_OPTIONS: { value: number | null }[] = [
+  { value: null },
+  { value: 1 },
+  { value: 0 },
+];
 
 export function ServerEditor({
   servers,
@@ -243,14 +233,10 @@ export function ServerEditor({
             value={String(acceptTextures)}
             stretch
             ariaLabel={t("servers.resources")}
-            options={TEXTURE_OPTIONS.map((option, index) => {
-              const Icon = option.icon;
-              return {
-                value: String(option.value),
-                label: t(`servers.resourceSets.${index}`),
-                icon: <Icon className="size-3.5" />,
-              };
-            })}
+            options={TEXTURE_OPTIONS.map((option, index) => ({
+              value: String(option.value),
+              label: t(`servers.resourceSets.${index}`),
+            }))}
             onChange={(value) =>
               setAcceptTextures(
                 TEXTURE_OPTIONS.find((option) => String(option.value) === value)

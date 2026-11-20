@@ -93,7 +93,7 @@ export function SegmentedControl<T extends string>({
       onKeyDown={onKeyDown}
       className={cn(
         "relative flex shrink-0 items-center gap-0.5 rounded-lg bg-surface-2 p-0.5",
-        stretch && "w-full",
+        stretch && "w-full min-w-0",
         className,
       )}
     >
