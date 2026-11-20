@@ -26,6 +26,7 @@ import {
 import { runConnectivityTests } from "../utilities/connectivityTest";
 import { findGameOutputFiles, gameOutputDir } from "./gameOutputLog";
 import { gameRuntime } from "../utilities/runtime";
+import { readServerConsole, recentServerPaths } from "../game/serverConsole";
 import type { IJarMod, IVersionConf } from "@/types/IVersion";
 import type { ILocalProject } from "@/types/ModManager";
 import type { ConnectivityCheckResult } from "@/types/Connectivity";
@@ -68,6 +69,7 @@ const LOADER_LOGS = [
   path.join("logs", "fml-client-latest.log"),
 ];
 const MAX_GAME_OUTPUTS = 2;
+const MAX_SERVERS = 2;
 
 interface PreparedReport {
   gz: Buffer;
@@ -284,6 +286,70 @@ export async function collectAttachments(
   return attachments;
 }
 
+export async function collectServerAttachments(
+  serverPath: string,
+  label: string,
+): Promise<SupportBundleAttachment[]> {
+  const attachments: SupportBundleAttachment[] = [];
+
+  const add = async (filePath: string, name: string, limit: number) => {
+    const tail = await readFileTail(filePath, limit);
+    if (!tail) return;
+    attachments.push({
+      name: `${label}/server/${name}`,
+      size: tail.size,
+      truncated: tail.truncated,
+      text: tail.text,
+    });
+  };
+
+  await add(path.join(serverPath, "logs", "latest.log"), "logs/latest.log", ATTACHMENT_LIMITS.latestLog);
+
+  for (const report of await newestMatching(
+    path.join(serverPath, "crash-reports"),
+    /^crash-.*\.txt$/i,
+    1,
+  )) {
+    await add(report.path, `crash-reports/${report.name}`, ATTACHMENT_LIMITS.crashReport);
+  }
+
+  for (const dump of await newestMatching(serverPath, /^hs_err_pid\d+\.log$/i, 1)) {
+    await add(dump.path, dump.name, ATTACHMENT_LIMITS.nativeDump);
+  }
+
+  for (const log of await newestMatching(serverPath, /^(?:.+\.jar|installer)\.log$/i, 1)) {
+    await add(log.path, log.name, ATTACHMENT_LIMITS.loaderLog);
+  }
+
+  const lines = readServerConsole(serverPath);
+  if (lines.length > 0) {
+    const text = lines.join("\n");
+    attachments.push({
+      name: `${label}/server/console.log`,
+      size: Buffer.byteLength(text, "utf8"),
+      truncated: false,
+      text,
+    });
+  }
+
+  return attachments;
+}
+
+async function collectServers(
+  target: { versionPath: string } | null,
+): Promise<SupportBundleAttachment[]> {
+  const serverPaths = new Set(recentServerPaths());
+  if (target) serverPaths.add(path.resolve(target.versionPath, "server"));
+
+  const attachments: SupportBundleAttachment[] = [];
+  for (const serverPath of [...serverPaths].slice(0, MAX_SERVERS)) {
+    attachments.push(
+      ...(await collectServerAttachments(serverPath, path.basename(path.dirname(serverPath)))),
+    );
+  }
+  return attachments;
+}
+
 async function collectTarget(
   target: { conf: IVersionConf; versionPath: string } | null,
 ): Promise<Record<string, unknown> | null> {
@@ -445,9 +511,10 @@ export async function buildSupportBundle(
       getFreeBytes(dataRoot),
     ]);
 
-  const attachments = target
-    ? await collectAttachments(target.versionPath, target.conf.name)
-    : [];
+  const attachments = [
+    ...(target ? await collectAttachments(target.versionPath, target.conf.name) : []),
+    ...(await collectServers(target)),
+  ];
 
   span.step("collected", {
     instances: instances.length,

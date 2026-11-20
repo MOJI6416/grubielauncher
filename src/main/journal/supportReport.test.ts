@@ -2,7 +2,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { collectAttachments } from "./supportReport";
+import { collectAttachments, collectServerAttachments } from "./supportReport";
+import { appendServerConsole, resetServerConsole } from "../game/serverConsole";
 import { GameOutputLog } from "./gameOutputLog";
 
 vi.mock("../utilities/other", () => ({ getLauncherPaths: () => ({}) }));
@@ -56,5 +57,32 @@ describe("collectAttachments", () => {
   it("works without the launcher log folder", async () => {
     const versionPath = tempDir();
     expect(await collectAttachments(versionPath, "Empty", null)).toEqual([]);
+  });
+});
+
+describe("collectServerAttachments", () => {
+  it("adds the server log, crash report, installer log and console", async () => {
+    const serverPath = path.join(tempDir(), "Pack", "server");
+    fs.mkdirSync(path.join(serverPath, "logs"), { recursive: true });
+    fs.mkdirSync(path.join(serverPath, "crash-reports"), { recursive: true });
+    fs.writeFileSync(path.join(serverPath, "logs", "latest.log"), "Preparing spawn area: 42%");
+    fs.writeFileSync(path.join(serverPath, "crash-reports", "crash-2026-11-20_21.00.00-server.txt"), "Ticking entity");
+    fs.writeFileSync(path.join(serverPath, "neoforge.jar.log"), "Downloading library");
+
+    const lines = resetServerConsole(serverPath);
+    appendServerConsole(lines, "Loading 312 mods");
+    appendServerConsole(lines, "   ");
+
+    const attachments = await collectServerAttachments(serverPath, "Pack");
+    const byName = new Map(attachments.map((item) => [item.name, item.text]));
+
+    expect(byName.get("Pack/server/logs/latest.log")).toContain("spawn area");
+    expect(byName.get("Pack/server/crash-reports/crash-2026-11-20_21.00.00-server.txt")).toBe("Ticking entity");
+    expect(byName.get("Pack/server/neoforge.jar.log")).toBe("Downloading library");
+    expect(byName.get("Pack/server/console.log")).toBe("Loading 312 mods");
+  });
+
+  it("returns nothing for a build without a server", async () => {
+    expect(await collectServerAttachments(path.join(tempDir(), "server"), "None")).toEqual([]);
   });
 });

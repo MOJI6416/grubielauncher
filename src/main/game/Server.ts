@@ -42,6 +42,8 @@ import { createLineReader } from "../utilities/consoleLog";
 import { serverAdmins } from "../serverAdmin";
 import { getDataRoot } from "../utilities/dataRoot";
 import { childProcessEnv } from "../utilities/childEnv";
+import { journal, type JournalSpan } from "../journal/journal";
+import { appendServerConsole, resetServerConsole } from "./serverConsole";
 import { assertRosettaFor } from "../utilities/rosetta";
 import {
   ServerRunResult,
@@ -454,6 +456,7 @@ export function parseRunScript(
 
 type RunningServer = {
   child: ChildProcess;
+  span: JournalSpan;
   state: ServerRunState;
   startedAt: number;
   log: string[];
@@ -628,9 +631,15 @@ export async function startServer(
 
   const entry: RunningServer = {
     child,
+    span: journal.span("server", "run", {
+      serverPath: key,
+      java: javaCommand,
+      repointedFrom: repointedFrom ?? undefined,
+      pid: child.pid,
+    }),
     state: "starting",
     startedAt: Date.now(),
-    log: [],
+    log: resetServerConsole(key),
     pending: [],
     flushTimer: null,
     stopTimer: null,
@@ -666,6 +675,7 @@ export async function startServer(
     pushOutput(key, entry, line);
     serverAdmins.handleOutput(key, line);
     if (entry.state === "starting" && /\bDone \(|For help, type/i.test(line)) {
+      entry.span.step("ready");
       setState(key, entry, "running");
       serverAdmins.handleReady(key);
     }
@@ -677,11 +687,22 @@ export async function startServer(
 
   child.on("error", (error) => {
     pushOutput(key, entry, `[launcher] ${error.message}`);
+    entry.span.warn("process error", { error: error.message });
   });
 
   child.on("close", (code, signal) => {
     stdoutReader.flush();
     stderrReader.flush();
+    const stoppedEarly =
+      entry.state === "starting" || (entry.state === "running" && code !== 0);
+    if (stoppedEarly) {
+      entry.span.fail(new Error(`Server stopped (code ${code ?? "none"}, signal ${signal ?? "none"})`), {
+        state: entry.state,
+        tail: entry.log.slice(-30),
+      });
+    } else {
+      entry.span.ok({ code, signal });
+    }
     pushOutput(
       key,
       entry,
@@ -879,6 +900,7 @@ export class ServerGame {
   private downloader: Downloader;
   private signal: AbortSignal | undefined = undefined;
   private installPlan: VersionInstallStage[] | undefined = undefined;
+  private installerConsole: string[] = [];
 
   constructor(
     account: ILocalAccount | undefined,
@@ -965,10 +987,21 @@ export class ServerGame {
 
     await fs.ensureDir(this.serverPath);
 
+    this.installerConsole = resetServerConsole(this.serverPath);
+    const span = journal.span("server", "install", {
+      serverPath: this.serverPath,
+      core: this.serverConf.core,
+      minecraft: this.version?.version.id,
+      loader: this.version?.loader.name,
+    });
     let ok = false;
     try {
       await this.installInternal();
       ok = true;
+      span.ok();
+    } catch (error) {
+      span.fail(error, { tail: this.installerConsole.slice(-30) });
+      throw error;
     } finally {
       if (!ok || !options?.keepProgressOpen) {
         this.sendInstallProgress("done", 100);
@@ -1121,6 +1154,7 @@ export class ServerGame {
     const installerProgressState = createLoaderInstallerProgressState(55);
     const handleInstallerOutput = (message: string) => {
       for (const line of message.split(/\r?\n/)) {
+        appendServerConsole(this.installerConsole, line);
         const update = parseLoaderInstallerProgressLine(
           line,
           installerProgressState,
