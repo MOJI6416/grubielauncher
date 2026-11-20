@@ -7,7 +7,7 @@ import {
 } from '@/types/Connectivity'
 import axios from 'axios'
 import net from 'net'
-import { describeStall, probePayload } from './payloadProbe'
+import { describeStall, probeAgents, probePayload } from './payloadProbe'
 import { API_PAYLOAD_PATH } from './apiRouteProbe'
 
 const HTTP_TIMEOUT_MS = 8000
@@ -81,6 +81,14 @@ function buildChecks(): ConnectivityCheck[] {
     kind: 'tcp',
     host: 'connectivity-test.join.grubielauncher.com',
     port: 25565
+  },
+  {
+    id: 'grubie_voice',
+    name: 'GrubieLauncher Voice (LiveKit)',
+    group: 'grubie',
+    kind: 'http',
+    url: 'https://livekit.grubielauncher.com/',
+    okStatus: isSuccess
   },
   {
     id: 'mojang_piston',
@@ -254,7 +262,11 @@ async function runPayloadCheck(
       target: check.url,
       ok: false,
       latencyMs: null,
-      error: error instanceof Error ? error.message : String(error)
+      error: axios.isCancel(error)
+        ? `timeout of ${PAYLOAD_TIMEOUT_MS}ms exceeded`
+        : error instanceof Error
+          ? error.message
+          : String(error)
     }
   }
 }
@@ -266,6 +278,7 @@ async function runHttpCheck(check: HttpCheck): Promise<ConnectivityCheckResult> 
 
   try {
     const response = await axios.get(check.url, {
+      ...probeAgents,
       timeout: HTTP_TIMEOUT_MS,
       validateStatus: () => true,
       maxRedirects: 0,

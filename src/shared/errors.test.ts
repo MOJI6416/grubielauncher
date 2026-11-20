@@ -161,6 +161,26 @@ describe("classifyError", () => {
     expect(classifyError(new Error("AbortError")).cause).toBe("cancelled");
   });
 
+  it("reads a failed voice signal connection as a network problem", () => {
+    const timedOut = classifyError(
+      new Error("could not establish signal connection: Abort handler called"),
+      { side: "grubie" },
+    );
+    expect(timedOut.cause).toBe("timeout");
+    expect(timedOut.code).toBe("GRB-TIMEOUT");
+
+    const blocked = classifyError(
+      new Error("could not establish signal connection: Failed to fetch"),
+      { side: "grubie" },
+    );
+    expect(blocked.cause).toBe("refused");
+    expect(
+      isTransientNetworkFailure(
+        new Error("could not establish signal connection: websocket error"),
+      ),
+    ).toBe(true);
+  });
+
   it("honours an explicit side from the context", () => {
     const info = classifyError(new Error("boom"), { side: "elyby" });
 

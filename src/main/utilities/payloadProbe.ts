@@ -1,5 +1,12 @@
 import axios from "axios";
+import http from "http";
+import https from "https";
 import type { Readable } from "stream";
+
+export const probeAgents = {
+  httpAgent: new http.Agent(),
+  httpsAgent: new https.Agent(),
+};
 
 export interface PayloadProbeResult {
   status: number;
@@ -61,6 +68,7 @@ export async function probePayload(
 
   try {
     const response = await axios.get<Readable>(url, {
+      ...probeAgents,
       timeout: timeoutMs,
       signal: controller.signal,
       validateStatus: () => true,

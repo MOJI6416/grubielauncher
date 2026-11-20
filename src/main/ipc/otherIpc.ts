@@ -70,6 +70,8 @@ const CLIPBOARD_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg'])
 const MAX_DOWNLOAD_ITEMS = 20000
 const MAX_CLIPBOARD_LENGTH = 8 * 1024 * 1024
 const MAX_NOTIFICATION_TEXT_LENGTH = 512
+const NOTIFICATION_ICON_TIMEOUT_MS = 3000
+const MAX_NOTIFICATION_ICON_BYTES = 5 * 1024 * 1024
 const MAX_DIALOG_FILTERS = 20
 const APP_PATH_KEYS = new Set([
   'home',
@@ -111,6 +113,21 @@ function sanitizeNotificationOptions(
     subtitle: toShortText(options?.subtitle),
     body: toShortText(options?.body),
     silent: options?.silent === true
+  }
+}
+
+async function loadNotificationIcon(url: unknown): Promise<NativeImage | undefined> {
+  try {
+    if (!(await isSafeRemoteFetchUrl(url))) return undefined
+    const response = await axios.get<ArrayBuffer>(url as string, {
+      responseType: 'arraybuffer',
+      timeout: NOTIFICATION_ICON_TIMEOUT_MS,
+      maxContentLength: MAX_NOTIFICATION_ICON_BYTES
+    })
+    const image = nativeImage.createFromBuffer(Buffer.from(response.data))
+    return image.isEmpty() ? undefined : image
+  } catch {
+    return undefined
   }
 }
 
@@ -410,21 +427,11 @@ export function registerOtherIpc() {
     async (_, options, clickAction) => {
       if (!options || typeof options !== 'object') return
 
-      let image: NativeImage | undefined = undefined
-
-      if (await isSafeRemoteFetchUrl(options.icon)) {
-        const response = await axios.get(options.icon as string, {
-          responseType: 'arraybuffer',
-          timeout: 10000,
-          maxContentLength: 5 * 1024 * 1024
-        })
-        const buffer = await response.data
-        image = nativeImage.createFromBuffer(Buffer.from(buffer))
-      }
+      const image = await loadNotificationIcon(options.icon)
 
       const notification = new Notification({
         ...sanitizeNotificationOptions(options),
-        icon: image ? image : icon
+        icon: image ?? icon
       })
 
       notification.show()

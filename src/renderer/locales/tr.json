@@ -5218,6 +5218,7 @@
     "palette": {
       "label": "Arama ve komutlar",
       "placeholder": "Nereye gidelim, ne yapalım?",
+      "description": "Bir ekran, kurulum, ayar veya eylem bulmak için yazın ve Enter'a basın.",
       "open": "Aç",
       "askAgent": "Asistana sor: “{{query}}”",
       "modes": {

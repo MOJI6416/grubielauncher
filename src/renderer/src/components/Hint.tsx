@@ -1,4 +1,5 @@
 import {
+  useRef,
   useState,
   type ReactElement,
   type ReactNode,
@@ -57,7 +58,15 @@ const hasClippedText = (root: HTMLElement) =>
   isClipped(root) ||
   Array.from(root.querySelectorAll<HTMLElement>("*")).some(isClipped);
 
-export function Hint({
+export function Hint(props: HintProps) {
+  const { content, children } = props;
+  if (content === undefined || content === null || content === "") {
+    return children;
+  }
+  return <HintTooltip {...props} />;
+}
+
+function HintTooltip({
   content,
   children,
   variant = "control",
@@ -67,14 +76,16 @@ export function Hint({
   className,
   wrapperClassName,
 }: HintProps) {
-  const [readable, setReadable] = useState(false);
-
-  if (content === undefined || content === null || content === "") {
-    return children;
-  }
+  const [open, setOpen] = useState(false);
+  const readable = useRef(false);
 
   const measure = (event: SyntheticEvent<HTMLElement>) => {
-    setReadable(!hasClippedText(event.currentTarget));
+    readable.current = !hasClippedText(event.currentTarget);
+    if (readable.current) setOpen(false);
+  };
+
+  const changeOpen = (next: boolean) => {
+    setOpen(next && !(truncatedOnly && readable.current));
   };
 
   const trigger = children.props.disabled ? (
@@ -86,7 +97,8 @@ export function Hint({
   return (
     <Tooltip
       delayDuration={HINT_DELAY[variant]}
-      {...(truncatedOnly && readable ? { open: false } : {})}
+      open={open}
+      onOpenChange={changeOpen}
     >
       <TooltipTrigger
         asChild

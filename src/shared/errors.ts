@@ -312,6 +312,11 @@ function causeFromMessage(message: string): FailureCause | undefined {
     return "downloadFailed";
   }
   if (text.includes("network error")) return "offline";
+  if (text.includes("could not establish signal connection")) {
+    return text.includes("abort handler called") || text.includes("timed out")
+      ? "timeout"
+      : "refused";
+  }
   if (text.includes("rosetta")) return "rosettaMissing";
   if (text.includes("timeout of") || text.includes("timed out"))
     return "timeout";

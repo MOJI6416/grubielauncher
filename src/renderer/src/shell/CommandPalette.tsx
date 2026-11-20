@@ -41,7 +41,7 @@ import {
   settingsAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
-import { DialogTitle } from "@/components/ui/dialog";
+import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useFocusReturn } from "@/components/ui/focus-return";
 import { AccountHead } from "@renderer/features/accounts/AccountHead";
 import { providerName } from "@renderer/features/accounts/ProviderMark";
@@ -550,6 +550,9 @@ export function CommandPalette({
       contentClassName="fixed top-20 left-1/2 z-50 w-[38rem] -translate-x-1/2 overflow-hidden rounded-2xl border border-input bg-popover shadow-2xl"
     >
       <DialogTitle className="sr-only">{t("shell.palette.label")}</DialogTitle>
+      <DialogDescription className="sr-only">
+        {t("shell.palette.description")}
+      </DialogDescription>
 
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3.5">
         <Search className="size-4 shrink-0 text-faint" />

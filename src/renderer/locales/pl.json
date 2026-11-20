@@ -5304,6 +5304,7 @@
     "palette": {
       "label": "Wyszukiwanie i polecenia",
       "placeholder": "Dokąd przejść lub co zrobić?",
+      "description": "Zacznij pisać, aby znaleźć ekran, instancję, ustawienie lub akcję, i naciśnij Enter.",
       "open": "Otwórz",
       "askAgent": "Zapytaj asystenta: „{{query}}”",
       "modes": {

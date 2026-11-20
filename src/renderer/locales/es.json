@@ -5261,6 +5261,7 @@
     "palette": {
       "label": "Búsqueda y comandos",
       "placeholder": "¿A dónde ir o qué hacer?",
+      "description": "Escriba para encontrar una pantalla, instancia, ajuste o acción y pulse Intro.",
       "open": "Abrir",
       "askAgent": "Preguntar al asistente: «{{query}}»",
       "modes": {

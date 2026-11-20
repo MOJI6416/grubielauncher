@@ -5261,6 +5261,7 @@
     "palette": {
       "label": "Recherche et commandes",
       "placeholder": "Où aller, ou que faire ?",
+      "description": "Tapez pour trouver un écran, une instance, un réglage ou une action, puis appuyez sur Entrée.",
       "open": "Ouvrir",
       "askAgent": "Demander à l’assistant : « {{query}} »",
       "modes": {

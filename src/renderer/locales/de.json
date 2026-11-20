@@ -5218,6 +5218,7 @@
     "palette": {
       "label": "Suche und Befehle",
       "placeholder": "Wohin oder was tun?",
+      "description": "Tippen Sie, um einen Bildschirm, eine Instanz, eine Einstellung oder eine Aktion zu finden, und drücken Sie Enter.",
       "open": "Öffnen",
       "askAgent": "Den Assistenten fragen: „{{query}}“",
       "modes": {

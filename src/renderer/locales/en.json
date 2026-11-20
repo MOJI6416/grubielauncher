@@ -5218,6 +5218,7 @@
     "palette": {
       "label": "Search and commands",
       "placeholder": "Where to, or what to do?",
+      "description": "Type to find a screen, instance, setting or action, then press Enter.",
       "open": "Open",
       "askAgent": "Ask the assistant: \"{{query}}\"",
       "modes": {

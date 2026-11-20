@@ -31,6 +31,7 @@ export async function listModFiles(
   const pending = (async () => {
     try {
       const folderPath = await api.path.join(versionPath, folderName);
+      if (!(await api.fs.pathExists(folderPath))) return new Set<string>();
       const entries = await api.fs.readdir(folderPath);
       return new Set(entries);
     } catch {

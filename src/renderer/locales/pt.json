@@ -5261,6 +5261,7 @@
     "palette": {
       "label": "Busca e comandos",
       "placeholder": "Aonde ir ou o que fazer?",
+      "description": "Digite para encontrar uma tela, instância, configuração ou ação e pressione Enter.",
       "open": "Abrir",
       "askAgent": "Perguntar ao assistente: “{{query}}”",
       "modes": {
