@@ -919,6 +919,10 @@ export interface IElectronAPI {
       bind: { type: "key" | "mouse"; code: number } | null,
     ) => Promise<boolean>;
     capturePttBind: () => Promise<VoicePttCapture>;
+    setOverlayAccept: (
+      bind: { type: "key" | "mouse"; code: number } | null,
+    ) => Promise<boolean>;
+    onOverlayAccept: (callback: () => void) => () => void;
     setSessionActive: (active: boolean) => Promise<void>;
     onPttDown: (callback: () => void) => () => void;
     onPttUp: (callback: () => void) => () => void;
@@ -2238,6 +2242,14 @@ export const api: IElectronAPI = {
     setPtt: (bind: { type: "key" | "mouse"; code: number } | null) =>
       invoke("voice:setPtt", bind),
     capturePttBind: () => invoke("voice:capturePttBind"),
+    setOverlayAccept: (
+      bind: { type: "key" | "mouse"; code: number } | null,
+    ) => invoke("voice:setOverlayAccept", bind),
+    onOverlayAccept: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("overlay:accept", listener);
+      return () => ipcRenderer.off("overlay:accept", listener);
+    },
     setSessionActive: (active: boolean) =>
       invoke("voice:setSessionActive", active),
     onPttDown: (callback: () => void) => {

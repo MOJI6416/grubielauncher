@@ -36,6 +36,12 @@ export const LazyPeopleScreen = lazyWithPreload(() =>
   })),
 );
 
+export const LazyScreenshotsScreen = lazyWithPreload(() =>
+  import("./screenshots/ScreenshotsScreen").then((module) => ({
+    default: module.ScreenshotsScreen,
+  })),
+);
+
 export const LazySettingsScreen = lazyWithPreload(() =>
   import("./settings/SettingsScreen").then((module) => ({
     default: module.SettingsScreen,

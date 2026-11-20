@@ -724,6 +724,13 @@
         "cannot_add_self": "Nie możesz dodać samego siebie",
         "invalid": "Microsoft nie przyjął zaproszenia"
       }
+    },
+    "here": {
+      "label": "Znajomi grają tutaj: {{names}}",
+      "title": "Znajomi grają tutaj",
+      "inBuild": "Instancja „{{name}}”",
+      "notPublished": "Instancja znajomego nie jest opublikowana – dołącz własną",
+      "gameRunning": "Zamknij grę, aby dołączyć instancją znajomego"
     }
   },
   "modManager": {
@@ -2357,6 +2364,11 @@
         "title": "Dostawcy AI i klucze API",
         "description": "Model asystenta i własne klucze",
         "keywords": "asystent ai dostawca klucz api token model openai anthropic openrouter adres"
+      },
+      "overlayToasts": {
+        "title": "Powiadomienia nad grą",
+        "description": "Wiadomości i zaproszenia w rogu nakładki",
+        "keywords": "nakładka overlay powiadomienie zaproszenie wiadomość połączenie klawisz akceptuj gra"
       }
     },
     "voicePttCaptureTimeout": "Nie naciśnięto żadnego klawisza — skrót się nie zmienił.",
@@ -2436,7 +2448,10 @@
       "providersHint": "w asystencie odpowiada wybrany",
       "keysNote": "Klucze zostają zaszyfrowane na tym komputerze i trafiają tylko pod adres dostawcy.",
       "dataTitle": "Czaty i analiza awarii"
-    }
+    },
+    "overlayToasts": "Powiadomienia nad grą",
+    "overlayToastsDescription": "Wiadomości, zaproszenia i połączenia pojawiają się w rogu nakładki podczas gry, zaproszenie przyjmuje się klawiszem. Nie działa w trybie wyłącznie pełnoekranowym",
+    "overlayAcceptKey": "Klawisz „Akceptuj”"
   },
   "skinView": {
     "title": "Podgląd skina",
@@ -5515,7 +5530,8 @@
           "arguments": "argumenty flagi",
           "statistics": "statystyki czas gry",
           "logs": "logi konsola dziennik"
-        }
+        },
+        "screenshots": "zrzuty ekranu zdjęcia f2 galeria screenshots"
       }
     },
     "tabs": {
@@ -6096,7 +6112,10 @@
     "publicProfileHidden": "Ten gracz ma prywatny profil",
     "publicModpacksHint1": "Paczka instaluje się w całości: mody, konfiguracje i serwery autora.",
     "publicModpacksHint2": "Gdy autor zaktualizuje paczkę, launcher zaproponuje aktualizację.",
-    "publicModpacksHint3": "Ekran potwierdzenia pokazuje wszystko, zanim cokolwiek zostanie pobrane."
+    "publicModpacksHint3": "Ekran potwierdzenia pokazuje wszystko, zanim cokolwiek zostanie pobrane.",
+    "share": "Kopiuj link do profilu",
+    "shareHiddenOwn": "Profil jest ukryty – włącz „Profil publiczny” w prywatności",
+    "shareHidden": "Gracz ukrył profil"
   },
   "tagsInput": {
     "placeholder": "Dodaj tag…",
@@ -7463,5 +7482,62 @@
       "installsCount_many": "{{count}} instalacji",
       "installsCount_other": "{{count}} instalacji"
     }
+  },
+  "screenshots": {
+    "feed": {
+      "search": "Szukaj według instancji, daty lub pliku",
+      "allInstances": "Wszystkie instancje",
+      "sort": {
+        "newest": "Najnowsze najpierw",
+        "oldest": "Najstarsze najpierw",
+        "instance": "Według instancji"
+      },
+      "count_one": "{{formatted}} zrzut",
+      "count_few": "{{formatted}} zrzuty",
+      "count_many": "{{formatted}} zrzutów",
+      "count_other": "{{formatted}} zrzutu",
+      "emptyHint": "Naciśnij F2 w grze – zrzuty ze wszystkich instancji trafią tutaj.",
+      "toInstances": "Do instancji",
+      "showAll": "Wszystkie"
+    },
+    "send": {
+      "action": "Wyślij znajomemu",
+      "title": "Wysyłanie zrzutu ekranu",
+      "to": "Do",
+      "search": "Znajomy lub grupa",
+      "groups": "Grupy",
+      "nobodyTitle": "Na razie nie ma do kogo wysłać",
+      "nobodyHint": "Dodaj znajomych lub dołącz do grupy na ekranie „Ludzie”.",
+      "pickRecipient": "Wybierz odbiorcę",
+      "submit": "Dołącz w czacie",
+      "failed": "Nie udało się przygotować zrzutu ekranu"
+    },
+    "editor": {
+      "action": "Przytnij lub rozmyj",
+      "title": "Edytowana kopia zrzutu ekranu",
+      "tool": "Narzędzie",
+      "blur": "Rozmyj",
+      "crop": "Przytnij",
+      "hideDebug": "Ukryj F3",
+      "undo": "Cofnij ostatnie",
+      "reset": "Resetuj zmiany",
+      "cropHint": "Zaznacz myszą część kadru, którą chcesz zostawić.",
+      "blurHint": "Zaznacz nick, współrzędne lub czat – ten obszar zostanie rozmyty.",
+      "saveCopy": "Zapisz kopię",
+      "saved": "Kopia zapisana obok oryginału",
+      "saveFailed": "Nie udało się zapisać kopii"
+    }
+  },
+  "overlay": {
+    "acceptHint": "{{key}} – akceptuj",
+    "messages_one": "{{count}} nowa wiadomość",
+    "messages_few": "{{count}} nowe wiadomości",
+    "messages_many": "{{count}} nowych wiadomości",
+    "messages_other": "{{count}} nowej wiadomości",
+    "groupMessages_one": "{{count}} nowa wiadomość w grupie",
+    "groupMessages_few": "{{count}} nowe wiadomości w grupie",
+    "groupMessages_many": "{{count}} nowych wiadomości w grupie",
+    "groupMessages_other": "{{count}} nowej wiadomości w grupie",
+    "previewBody": "Zaprasza do gry – tak będą wyglądać zaproszenia"
   }
 }

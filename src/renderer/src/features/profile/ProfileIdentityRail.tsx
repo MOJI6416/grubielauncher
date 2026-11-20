@@ -10,6 +10,7 @@ import {
   Copy,
   Fingerprint,
   Heart,
+  Link2,
   Loader2,
   MessageSquare,
   Shirt,
@@ -49,6 +50,9 @@ import { profileRelation } from "./profileRelation";
 import { useMutualFriends } from "./useProfileData";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { buildProfileUrl } from "@/shared/siteLinks";
+import { countFeature } from "@renderer/features/usage/usage";
+import { ownProfileVisibilityAtom } from "./ownProfileVisibility";
 
 interface PeopleEntry {
   id: string;
@@ -112,6 +116,7 @@ export function ProfileIdentityRail({
   isSkinBusy,
   canShowSkin,
   accessToken,
+  isProfileHidden = false,
 }: {
   user: IUser;
   isOwner: boolean;
@@ -123,6 +128,7 @@ export function ProfileIdentityRail({
   isSkinBusy: boolean;
   canShowSkin: boolean;
   accessToken?: string;
+  isProfileHidden?: boolean;
 }) {
   const { t } = useTranslation();
   const redact = useRedact();
@@ -131,6 +137,7 @@ export function ProfileIdentityRail({
   const authData = useAtomValue(authDataAtom);
   const isFriendsConnected = useAtomValue(isFriendsConnectedAtom);
   const setPendingFriendRequest = useSetAtom(pendingFriendRequestAtom);
+  const ownVisibility = useAtomValue(ownProfileVisibilityAtom);
 
   const points =
     pointsOverride ??
@@ -195,6 +202,24 @@ export function ProfileIdentityRail({
 
   const copy = async (value: string) => {
     await copyWithFeedback(value);
+  };
+
+  const isShareHidden = isOwner
+    ? ownVisibility?.userId === user._id
+      ? !ownVisibility.isPublic
+      : user.publicProfile === false
+    : isProfileHidden;
+  const profileUrl = buildProfileUrl(user.nickname, user._id);
+  const shareLabel = isShareHidden
+    ? isOwner
+      ? t("profile.shareHiddenOwn")
+      : t("profile.shareHidden")
+    : t("profile.share");
+
+  const shareProfile = async () => {
+    if (!profileUrl || isShareHidden) return;
+    countFeature("site.profileLink");
+    await copyWithFeedback(profileUrl);
   };
 
   return (
@@ -441,6 +466,19 @@ export function ProfileIdentityRail({
               <span className="truncate">{t("skinView.title")}</span>
             </Hint>
           </Button>
+          <Hint content={shareLabel}>
+            <span className="inline-flex shrink-0">
+              <Button
+                variant="secondary"
+                size="icon-lg"
+                aria-label={shareLabel}
+                disabled={!profileUrl || isShareHidden}
+                onClick={() => void shareProfile()}
+              >
+                <Link2 />
+              </Button>
+            </span>
+          </Hint>
           {isOwner && <ProfilePrivacy user={user} />}
         </div>
       </div>

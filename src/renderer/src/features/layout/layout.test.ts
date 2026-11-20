@@ -19,13 +19,19 @@ const layout = (patch: Partial<InterfaceLayout> = {}): InterfaceLayout => ({
 
 describe("orderedNav", () => {
   it("uses the shipped order by default", () => {
-    expect(orderedNav(layout())).toEqual(["play", "people", "news", "settings"]);
+    expect(orderedNav(layout())).toEqual([
+      "play",
+      "people",
+      "screenshots",
+      "news",
+      "settings",
+    ]);
   });
 
   it("keeps a custom order and ignores unknown entries", () => {
     expect(
       orderedNav(layout({ navOrder: ["news", "skins", "play", "people", "settings"] })),
-    ).toEqual(["news", "play", "people", "settings"]);
+    ).toEqual(["news", "play", "people", "screenshots", "settings"]);
   });
 
   it("puts entries missing from an old saved order next to their usual neighbour", () => {
@@ -33,11 +39,13 @@ describe("orderedNav", () => {
       "settings",
       "play",
       "people",
+      "screenshots",
       "news",
     ]);
     expect(orderedNav(layout({ navOrder: ["news", "settings"] }))).toEqual([
       "play",
       "people",
+      "screenshots",
       "news",
       "settings",
     ]);
@@ -49,14 +57,20 @@ describe("visibleNav", () => {
     const hidden = layout({
       hidden: ["sidebar.people", "sidebar.play", "sidebar.settings"],
     });
-    expect(visibleNav(hidden)).toEqual(["play", "news", "settings"]);
+    expect(visibleNav(hidden)).toEqual(["play", "screenshots", "news", "settings"]);
   });
 });
 
 describe("moveNav and placeNav", () => {
   it("moves an entry one step and forgets the order once it is back to default", () => {
     const moved = moveNav(layout(), "news", -1);
-    expect(moved.navOrder).toEqual(["play", "news", "people", "settings"]);
+    expect(moved.navOrder).toEqual([
+      "play",
+      "people",
+      "news",
+      "screenshots",
+      "settings",
+    ]);
     expect(moveNav(moved, "news", 1).navOrder).toEqual([]);
   });
 
@@ -70,10 +84,12 @@ describe("moveNav and placeNav", () => {
       "settings",
       "play",
       "people",
+      "screenshots",
       "news",
     ]);
     expect(placeNav(layout(), "play", null).navOrder).toEqual([
       "people",
+      "screenshots",
       "news",
       "settings",
       "play",

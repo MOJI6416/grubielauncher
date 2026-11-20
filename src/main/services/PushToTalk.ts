@@ -18,6 +18,8 @@ let listenersAttached = false;
 let hookStarted = false;
 let inputAccessDenied = false;
 let activeBind: PttInput | null = null;
+let acceptBind: PttInput | null = null;
+let isAcceptPressed = false;
 let isPressed = false;
 let captureResolve: ((result: VoicePttCapture) => void) | null = null;
 let captureTimeout: NodeJS.Timeout | null = null;
@@ -32,6 +34,14 @@ function matchesBind(input: PttInput): boolean {
     !!activeBind &&
     activeBind.type === input.type &&
     activeBind.code === input.code
+  );
+}
+
+function matchesAccept(input: PttInput): boolean {
+  return (
+    !!acceptBind &&
+    acceptBind.type === input.type &&
+    acceptBind.code === input.code
   );
 }
 
@@ -73,6 +83,11 @@ function handleDown(input: PttInput) {
     return;
   }
 
+  if (matchesAccept(input) && !isAcceptPressed) {
+    isAcceptPressed = true;
+    broadcast("overlay:accept");
+  }
+
   if (matchesBind(input) && !isPressed) {
     isPressed = true;
     broadcast("voice:pttDown");
@@ -80,6 +95,8 @@ function handleDown(input: PttInput) {
 }
 
 function handleUp(input: PttInput) {
+  if (matchesAccept(input)) isAcceptPressed = false;
+
   if (matchesBind(input) && isPressed) {
     isPressed = false;
     broadcast("voice:pttUp");
@@ -129,7 +146,7 @@ function ensureHook(): boolean {
 }
 
 function maybeStopHook() {
-  if (activeBind || captureResolve || !hookStarted) return;
+  if (activeBind || acceptBind || captureResolve || !hookStarted) return;
 
   try {
     uIOhook.stop();
@@ -164,6 +181,27 @@ export function setPttBind(bind: PttInput | null): boolean {
   return ensureHook();
 }
 
+export function setOverlayAcceptBind(bind: PttInput | null): boolean {
+  isAcceptPressed = false;
+  acceptBind = bind ? { type: bind.type, code: bind.code } : null;
+
+  if (!acceptBind) {
+    maybeStopHook();
+    return true;
+  }
+
+  if (
+    process.platform === "darwin" &&
+    !hookStarted &&
+    !systemPreferences.isTrustedAccessibilityClient(false)
+  ) {
+    acceptBind = null;
+    return false;
+  }
+
+  return ensureHook();
+}
+
 export function capturePttBind(): Promise<VoicePttCapture> {
   if (captureResolve) finishCapture({ reason: "cancelled", bind: null });
 
@@ -186,7 +224,9 @@ export function capturePttBind(): Promise<VoicePttCapture> {
 export function disposePushToTalk() {
   if (captureResolve) finishCapture({ reason: "cancelled", bind: null });
   activeBind = null;
+  acceptBind = null;
   isPressed = false;
+  isAcceptPressed = false;
 
   if (hookStarted) {
     try {

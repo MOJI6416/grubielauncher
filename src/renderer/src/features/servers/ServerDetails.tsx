@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Copy,
@@ -62,6 +63,7 @@ export function ServerDetails({
   onRecheck,
   onChangeTextures,
   onToggleQuickConnect,
+  friends,
 }: {
   server: IServer;
   status?: ServerPingState;
@@ -78,6 +80,7 @@ export function ServerDetails({
   onRecheck: () => void;
   onChangeTextures: (value: number | null) => void;
   onToggleQuickConnect: () => void;
+  friends?: ReactNode;
 }) {
   const { t } = useTranslation();
   const redact = useRedact();
@@ -194,6 +197,8 @@ export function ServerDetails({
             />
           ))}
         </FactRows>
+
+        {friends}
 
         {compatibility === "mismatch" && (
           <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-surface-1 px-2.5 py-2 text-xs text-warning">

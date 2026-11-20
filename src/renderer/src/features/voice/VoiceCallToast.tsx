@@ -13,6 +13,10 @@ import {
   voiceSessionMetaAtom,
 } from "@renderer/stores/atoms";
 import { countFeature } from "@renderer/features/usage/usage";
+import {
+  dismissOverlayToast,
+  showOverlayToast,
+} from "@renderer/features/overlay/overlayToasts";
 
 const CALL_TOAST_ID = "voice-call";
 
@@ -174,6 +178,29 @@ export function VoiceCallToast() {
       },
     );
   }, [call.status, call.callId, call.peer, friends, pending, session, t]);
+
+  useEffect(() => {
+    if (call.status !== "incoming" || !call.peer) return;
+    const peer = call.peer;
+    const callId = call.callId;
+    const id = `call:${callId ?? peer._id}`;
+
+    void showOverlayToast({
+      id,
+      kind: "call",
+      title: peer.nickname,
+      body: () => t("voiceCall.incoming"),
+      face: { _id: peer._id, nickname: peer.nickname },
+      accept: () => {
+        countFeature("voice.answer");
+        getDefaultStore()
+          .get(friendSocketAtom)
+          ?.emit("voiceCallAccept", { callId });
+      },
+    });
+
+    return () => dismissOverlayToast(id);
+  }, [call.callId, call.peer, call.status, t]);
 
   useEffect(
     () => () => {

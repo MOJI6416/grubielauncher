@@ -38,6 +38,7 @@ import {
   LazyNewInstanceScreen,
   LazyNewsScreen,
   LazyPeopleScreen,
+  LazyScreenshotsScreen,
   LazySettingsScreen,
 } from "./lazyScreens";
 import { HomeScreen } from "./home/HomeScreen";
@@ -184,6 +185,14 @@ function RouteScreen({
 
   if (route.name === "accounts") {
     return <AccountsScreen />;
+  }
+
+  if (route.name === "screenshots") {
+    return (
+      <Suspense fallback={<ScreenFallback />}>
+        <LazyScreenshotsScreen instance={route.instance} />
+      </Suspense>
+    );
   }
 
   if (route.name === "catalog") {

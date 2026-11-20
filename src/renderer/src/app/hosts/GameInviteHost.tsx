@@ -10,6 +10,8 @@ import {
 import { friendSocketAtom, localFriendsAtom } from "@renderer/stores/atoms";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { isStreamerActive } from "@renderer/features/streamer/streamerMode";
+import { showOverlayToast } from "@renderer/features/overlay/overlayToasts";
+import { acceptGameInvite } from "@renderer/features/friends/acceptGameInvite";
 
 const api = window.api;
 
@@ -36,6 +38,19 @@ export function GameInviteHost() {
         incoming,
         isStreamerActive(),
       );
+      const shown = await showOverlayToast({
+        id: `gameInvite:${incoming.inviteId}`,
+        kind: "invite",
+        title: incoming.sender.nickname,
+        body: () => tRef.current(notification.messageKey, notification.params),
+        face: { _id: incoming.sender._id, nickname: incoming.sender.nickname },
+        accept: () => {
+          setInvite(null);
+          void acceptGameInvite(incoming);
+        },
+      });
+      if (shown) return;
+
       await api.other.notify(
         {
           title: tRef.current("friends.gameInviteNotificationTitle"),

@@ -13,6 +13,7 @@ import {
 import type { TSettings } from "@/types/Settings";
 import { OverlayPlacementControls } from "@renderer/features/voice/OverlayPlacementControls";
 import { Hint } from "@renderer/components/Hint";
+import { OverlayToastsSetting } from "@renderer/features/overlay/OverlayToastsSetting";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 
@@ -223,6 +224,16 @@ export function VoiceSection({
             <OverlayPlacementControls settings={settings} commit={commit} />
           )}
         </SettingRow>
+      )}
+
+      {visible("overlayToasts") && (
+        <OverlayToastsSetting
+          settings={settings}
+          commit={commit}
+          query={query}
+          changed={isChanged("overlayToasts")}
+          onReset={() => reset("overlayToasts")}
+        />
       )}
 
       {visible("voiceAutoGain") && (

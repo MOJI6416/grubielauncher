@@ -15,6 +15,7 @@ import {
   GripVertical,
   LayoutTemplate,
   Lock,
+  Camera,
   Newspaper,
   Play,
   Settings as LSettings,
@@ -342,6 +343,12 @@ export function Sidebar({
           </span>
         ) : undefined,
       onSelect: () => navigate({ name: "people" }),
+    },
+    screenshots: {
+      icon: <Camera className="size-4" />,
+      label: t("versions.screenshots.title"),
+      current: isRoute(route, "screenshots"),
+      onSelect: () => navigate({ name: "screenshots" }),
     },
     news: {
       icon: <Newspaper className="size-4" />,

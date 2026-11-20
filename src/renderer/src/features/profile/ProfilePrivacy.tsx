@@ -23,6 +23,7 @@ import {
 } from "@renderer/utilities/accountSession";
 import { useTranslation } from "react-i18next";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { rememberProfileVisibility } from "./ownProfileVisibility";
 
 const api = window.api;
 
@@ -71,6 +72,9 @@ export function ProfilePrivacy({ user }: { user: IUser }) {
         );
         if (updated) {
           setValue(updated[field] !== false);
+          if (field === "publicProfile") {
+            rememberProfileVisibility(user._id, updated.publicProfile !== false);
+          }
         } else {
           setValue(!checked);
           showFailureToast(t("connections.saveError"), undefined, {

@@ -341,6 +341,7 @@ export function GroupChatModal({
         onMessageChange={chat.setMessageText}
         onSend={handleSend}
         onSendImageFile={chat.sendImageFile}
+        handoffKey={`group:${group._id}`}
         onCancelImageUpload={chat.cancelImageUpload}
         onSendSticker={(value) => chat.sendBody({ _type: "sticker", value })}
         onReply={chat.setReplyMessage}

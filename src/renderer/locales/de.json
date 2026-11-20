@@ -722,6 +722,13 @@
         "cannot_add_self": "Du kannst dich nicht selbst hinzufügen",
         "invalid": "Microsoft hat die Anfrage nicht angenommen"
       }
+    },
+    "here": {
+      "label": "Freunde spielen hier: {{names}}",
+      "title": "Freunde spielen hier",
+      "inBuild": "Instanz „{{name}}“",
+      "notPublished": "Die Instanz ist nicht veröffentlicht – mit eigener beitreten",
+      "gameRunning": "Schließen Sie das Spiel, um mit dieser Instanz beizutreten"
     }
   },
   "modManager": {
@@ -2318,6 +2325,11 @@
         "title": "KI-Anbieter und API-Schlüssel",
         "description": "Welches Modell der Assistent nutzt und Ihre eigenen Schlüssel",
         "keywords": "assistent ki anbieter api schlüssel token modell openai anthropic openrouter adresse"
+      },
+      "overlayToasts": {
+        "title": "Benachrichtigungen über dem Spiel",
+        "description": "Nachrichten und Einladungen in der Overlay-Ecke",
+        "keywords": "overlay benachrichtigung einladung nachricht anruf taste annehmen spiel"
       }
     },
     "voicePttCaptureTimeout": "Es wurde keine Taste gedrückt – das Tastenkürzel bleibt unverändert.",
@@ -2397,7 +2409,10 @@
       "providersHint": "im Assistenten antwortet der ausgewählte",
       "keysNote": "Schlüssel bleiben verschlüsselt auf diesem Computer und gehen nur an die Adresse des Anbieters.",
       "dataTitle": "Chats und Absturzanalyse"
-    }
+    },
+    "overlayToasts": "Benachrichtigungen über dem Spiel",
+    "overlayToastsDescription": "Nachrichten, Einladungen und Anrufe erscheinen beim Spielen in der Overlay-Ecke; Einladungen nehmen Sie per Taste an. Funktioniert nicht im exklusiven Vollbild",
+    "overlayAcceptKey": "Taste „Annehmen“"
   },
   "skinView": {
     "title": "Skin-Vorschau",
@@ -5424,7 +5439,8 @@
           "arguments": "argumente flags",
           "statistics": "statistik spielzeit",
           "logs": "logs konsole protokoll"
-        }
+        },
+        "screenshots": "screenshots bilder fotos f2 galerie"
       }
     },
     "tabs": {
@@ -5985,7 +6001,10 @@
     "publicProfileHidden": "Dieser Spieler hält sein Profil privat",
     "publicModpacksHint1": "Ein Paket wird komplett installiert: Mods, Konfigurationen und Server des Autors.",
     "publicModpacksHint2": "Wenn der Autor das Paket aktualisiert, bietet der Launcher das Update an.",
-    "publicModpacksHint3": "Der Bestätigungsbildschirm listet alles auf, bevor etwas heruntergeladen wird."
+    "publicModpacksHint3": "Der Bestätigungsbildschirm listet alles auf, bevor etwas heruntergeladen wird.",
+    "share": "Profil-Link kopieren",
+    "shareHiddenOwn": "Ihr Profil ist verborgen – aktivieren Sie „Öffentliches Profil“ in der Privatsphäre",
+    "shareHidden": "Der Spieler hat das Profil verborgen"
   },
   "tagsInput": {
     "placeholder": "Tag hinzufügen…",
@@ -7302,5 +7321,56 @@
       "installsCount_one": "{{count}} Installation",
       "installsCount_other": "{{count}} Installationen"
     }
+  },
+  "screenshots": {
+    "feed": {
+      "search": "Nach Instanz, Datum oder Datei suchen",
+      "allInstances": "Alle Instanzen",
+      "sort": {
+        "newest": "Neueste zuerst",
+        "oldest": "Älteste zuerst",
+        "instance": "Nach Instanz"
+      },
+      "count_one": "{{formatted}} Screenshot",
+      "count_other": "{{formatted}} Screenshots",
+      "emptyHint": "Drücken Sie im Spiel F2 – die Bilder aller Instanzen landen hier.",
+      "toInstances": "Zu den Instanzen",
+      "showAll": "Alle"
+    },
+    "send": {
+      "action": "An Freund senden",
+      "title": "Screenshot senden",
+      "to": "An",
+      "search": "Freund oder Gruppe",
+      "groups": "Gruppen",
+      "nobodyTitle": "Noch niemand zum Senden",
+      "nobodyHint": "Fügen Sie auf dem Bildschirm „Personen“ Freunde hinzu oder treten Sie einer Gruppe bei.",
+      "pickRecipient": "Empfänger auswählen",
+      "submit": "Im Chat anhängen",
+      "failed": "Screenshot konnte nicht vorbereitet werden"
+    },
+    "editor": {
+      "action": "Zuschneiden oder verwischen",
+      "title": "Bearbeitete Kopie des Screenshots",
+      "tool": "Werkzeug",
+      "blur": "Verwischen",
+      "crop": "Zuschneiden",
+      "hideDebug": "F3 verbergen",
+      "undo": "Letzte Änderung rückgängig",
+      "reset": "Änderungen zurücksetzen",
+      "cropHint": "Ziehen Sie über den Bildteil, der bleiben soll.",
+      "blurHint": "Ziehen Sie über Nickname, Koordinaten oder Chat – dieser Bereich wird verwischt.",
+      "saveCopy": "Kopie speichern",
+      "saved": "Kopie neben dem Original gespeichert",
+      "saveFailed": "Kopie konnte nicht gespeichert werden"
+    }
+  },
+  "overlay": {
+    "acceptHint": "{{key}} – annehmen",
+    "messages_one": "{{count}} neue Nachricht",
+    "messages_other": "{{count}} neue Nachrichten",
+    "groupMessages_one": "{{count}} neue Nachricht in der Gruppe",
+    "groupMessages_other": "{{count}} neue Nachrichten in der Gruppe",
+    "previewBody": "Lädt Sie zum Spielen ein – so sehen Einladungen aus"
   }
 }

@@ -286,6 +286,7 @@ export function ConversationPanel({
         onMessageChange={chat.setMessageText}
         onSend={handleSend}
         onSendImageFile={chat.sendImageFile}
+        handoffKey={`friend:${friend.user._id}`}
         onCancelImageUpload={chat.cancelImageUpload}
         onSendSticker={(value) => chat.sendBody({ _type: "sticker", value })}
         onReply={chat.setReplyMessage}

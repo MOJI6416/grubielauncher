@@ -723,6 +723,13 @@
         "cannot_add_self": "Vous ne pouvez pas vous ajouter vous-même",
         "invalid": "Microsoft n'a pas accepté la demande"
       }
+    },
+    "here": {
+      "label": "Amis qui jouent ici : {{names}}",
+      "title": "Amis qui jouent ici",
+      "inBuild": "Instance « {{name}} »",
+      "notPublished": "Son instance n’est pas publiée : rejoignez avec la vôtre",
+      "gameRunning": "Fermez le jeu pour rejoindre avec son instance"
     }
   },
   "modManager": {
@@ -2339,6 +2346,11 @@
         "title": "Fournisseurs d’IA et clés d’API",
         "description": "Le modèle utilisé par l’assistant et vos propres clés",
         "keywords": "assistant ia fournisseur clé api jeton modèle openai anthropic openrouter adresse"
+      },
+      "overlayToasts": {
+        "title": "Notifications par-dessus le jeu",
+        "description": "Messages et invitations dans le coin de l’overlay",
+        "keywords": "overlay notification invitation message appel touche accepter jeu"
       }
     },
     "voicePttCaptureTimeout": "Aucune touche n’a été pressée — le raccourci reste inchangé.",
@@ -2418,7 +2430,10 @@
       "providersHint": "le fournisseur choisi répond dans l’assistant",
       "keysNote": "Les clés restent chiffrées sur cet ordinateur et ne partent qu’à l’adresse du fournisseur.",
       "dataTitle": "Discussions et analyse des plantages"
-    }
+    },
+    "overlayToasts": "Notifications par-dessus le jeu",
+    "overlayToastsDescription": "Messages, invitations et appels apparaissent dans le coin de l’overlay pendant le jeu ; acceptez une invitation avec une touche. Ne fonctionne pas en plein écran exclusif",
+    "overlayAcceptKey": "Touche « Accepter »"
   },
   "skinView": {
     "title": "Aperçu du skin",
@@ -5471,7 +5486,8 @@
           "arguments": "arguments paramètres",
           "statistics": "statistiques temps de jeu",
           "logs": "journaux console"
-        }
+        },
+        "screenshots": "captures images photos f2 galerie screenshots"
       }
     },
     "tabs": {
@@ -6042,7 +6058,10 @@
     "publicProfileHidden": "Ce joueur garde son profil privé",
     "publicModpacksHint1": "Un pack s’installe en entier : les mods, configs et serveurs de l’auteur.",
     "publicModpacksHint2": "Quand l’auteur met à jour le pack, le launcher propose la mise à jour.",
-    "publicModpacksHint3": "L’écran de confirmation liste tout avant le moindre téléchargement."
+    "publicModpacksHint3": "L’écran de confirmation liste tout avant le moindre téléchargement.",
+    "share": "Copier le lien du profil",
+    "shareHiddenOwn": "Votre profil est masqué : activez « Profil public » dans la confidentialité",
+    "shareHidden": "Ce joueur a masqué son profil"
   },
   "tagsInput": {
     "placeholder": "Ajouter un tag…",
@@ -7384,5 +7403,59 @@
       "installsCount_many": "{{count}} installations",
       "installsCount_other": "{{count}} installations"
     }
+  },
+  "screenshots": {
+    "feed": {
+      "search": "Rechercher par instance, date ou fichier",
+      "allInstances": "Toutes les instances",
+      "sort": {
+        "newest": "Plus récentes d’abord",
+        "oldest": "Plus anciennes d’abord",
+        "instance": "Par instance"
+      },
+      "count_one": "{{formatted}} capture",
+      "count_many": "{{formatted}} captures",
+      "count_other": "{{formatted}} captures",
+      "emptyHint": "Appuyez sur F2 en jeu : les captures de toutes les instances arrivent ici.",
+      "toInstances": "Aux instances",
+      "showAll": "Toutes"
+    },
+    "send": {
+      "action": "Envoyer à un ami",
+      "title": "Envoyer une capture",
+      "to": "À",
+      "search": "Ami ou groupe",
+      "groups": "Groupes",
+      "nobodyTitle": "Personne à qui envoyer pour l’instant",
+      "nobodyHint": "Ajoutez des amis ou rejoignez un groupe dans l’écran « Personnes ».",
+      "pickRecipient": "Choisissez le destinataire",
+      "submit": "Joindre dans le chat",
+      "failed": "Impossible de préparer la capture"
+    },
+    "editor": {
+      "action": "Rogner ou flouter",
+      "title": "Copie modifiée de la capture",
+      "tool": "Outil",
+      "blur": "Flouter",
+      "crop": "Rogner",
+      "hideDebug": "Masquer F3",
+      "undo": "Annuler la dernière",
+      "reset": "Réinitialiser les modifications",
+      "cropHint": "Faites glisser sur la partie de l’image à garder.",
+      "blurHint": "Faites glisser sur un pseudo, des coordonnées ou le chat : la zone sera floutée.",
+      "saveCopy": "Enregistrer une copie",
+      "saved": "Copie enregistrée à côté de l’original",
+      "saveFailed": "Impossible d’enregistrer la copie"
+    }
+  },
+  "overlay": {
+    "acceptHint": "{{key}} : accepter",
+    "messages_one": "{{count}} nouveau message",
+    "messages_many": "{{count}} nouveaux messages",
+    "messages_other": "{{count}} nouveaux messages",
+    "groupMessages_one": "{{count}} nouveau message dans le groupe",
+    "groupMessages_many": "{{count}} nouveaux messages dans le groupe",
+    "groupMessages_other": "{{count}} nouveaux messages dans le groupe",
+    "previewBody": "Vous invite à jouer : voici à quoi ressembleront les invitations"
   }
 }

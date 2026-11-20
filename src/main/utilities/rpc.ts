@@ -1,6 +1,7 @@
 import rpcLocaleData from './rpcLocales.json'
 import { DISCORD_CLIENT_ID } from '@/shared/config'
-import { RpcAccountContext, RpcRendererContext } from '@/types/Rpc'
+import { RpcAccountContext, RpcPackLink, RpcRendererContext } from '@/types/Rpc'
+import { buildRpcButtons } from '@/shared/siteLinks'
 import { ShareState } from '@/types/Share'
 import * as DiscordRPC from 'discord-rpc'
 import { gameRuntime } from './runtime'
@@ -13,6 +14,8 @@ type RpcLocale = {
   buttons: {
     download: string
     discord: string
+    profile: string
+    pack: string
   }
   details: {
     launcher: string
@@ -59,6 +62,7 @@ const rpcLocales: Record<SupportedRpcLanguage, RpcLocale> = {
 }
 
 const MAX_ACTIVITY_TEXT_LENGTH = 128
+const MAX_PACK_LINKS = 16
 const MAX_RECONNECT_DELAY = 30000
 const MAX_RECONNECT_ATTEMPTS = 8
 
@@ -87,6 +91,17 @@ function formatTemplate(
   return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => String(values[key] ?? ''))
 }
 
+function packLinkMap(links: RpcPackLink[] | undefined): Map<string, string> {
+  const map = new Map<string, string>()
+  if (!Array.isArray(links)) return map
+
+  for (const link of links.slice(0, MAX_PACK_LINKS)) {
+    if (typeof link?.versionName !== 'string' || typeof link?.url !== 'string') continue
+    map.set(link.versionName, link.url)
+  }
+  return map
+}
+
 function toPresenceSignature(activity: DiscordRPC.Presence): string {
   return JSON.stringify({
     ...activity,
@@ -112,6 +127,8 @@ export class RPC {
   private account: RpcAccountContext | null = null
   private hideServer = false
   private skinVersion: string | number | undefined = undefined
+  private profileUrl: string | null = null
+  private packLinks = new Map<string, string>()
   private launchingGame: LaunchActivity | null = null
   private runningGames = new Map<string, GameActivity>()
   private publicShare: PublicShareActivity | null = null
@@ -161,6 +178,8 @@ export class RPC {
     this.account = context.account
     this.hideServer = context.hideServer === true
     this.skinVersion = context.skinVersion
+    this.profileUrl = typeof context.profileUrl === 'string' ? context.profileUrl : null
+    this.packLinks = packLinkMap(context.packLinks)
     await this.queuePresenceSync()
   }
 
@@ -453,18 +472,16 @@ export class RPC {
       state: locale.states.idle,
       largeImageKey: 'icon',
       largeImageText: locale.details.launcher,
-      instance: false,
-      buttons: [
-        {
-          label: locale.buttons.download,
-          url: 'https://grubielauncher.com'
-        },
-        {
-          label: locale.buttons.discord,
-          url: 'https://discord.gg/URrKha9hk7'
-        }
-      ]
+      instance: false
     }
+
+    const runningGame = this.getMostRecentRunningGame()
+    const shownGame = runningGame ?? this.launchingGame
+    activity.buttons = buildRpcButtons({
+      profileUrl: this.profileUrl,
+      packUrl: shownGame ? this.packLinks.get(shownGame.versionName) : null,
+      labels: locale.buttons
+    })
 
     const smallImageText = truncateText(this.account?.nickname)
     if (smallImageText) {
@@ -474,7 +491,6 @@ export class RPC {
       activity.smallImageText = smallImageText
     }
 
-    const runningGame = this.getMostRecentRunningGame()
     if (runningGame) {
       const isPublicShareHost = this.publicShare?.key === runningGame.key
       const serverAddress =

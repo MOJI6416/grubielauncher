@@ -3,7 +3,9 @@
     "playing": "Playing",
     "buttons": {
       "download": "Download",
-      "discord": "Discord"
+      "discord": "Discord",
+      "profile": "Profile",
+      "pack": "Modpack"
     },
     "details": {
       "launcher": "Grubie Launcher",
@@ -22,7 +24,9 @@
     "playing": "Играет в",
     "buttons": {
       "download": "Скачать",
-      "discord": "Discord"
+      "discord": "Discord",
+      "profile": "Профиль",
+      "pack": "Сборка"
     },
     "details": {
       "launcher": "Grubie Launcher",
@@ -41,7 +45,9 @@
     "playing": "Грає в",
     "buttons": {
       "download": "Завантажити",
-      "discord": "Discord"
+      "discord": "Discord",
+      "profile": "Профіль",
+      "pack": "Збірка"
     },
     "details": {
       "launcher": "Grubie Launcher",
@@ -60,7 +66,9 @@
     "playing": "Spielt",
     "buttons": {
       "download": "Herunterladen",
-      "discord": "Discord"
+      "discord": "Discord",
+      "profile": "Profil",
+      "pack": "Modpack"
     },
     "details": {
       "launcher": "Grubie Launcher",
@@ -79,7 +87,9 @@
     "playing": "Jugando",
     "buttons": {
       "download": "Descargar",
-      "discord": "Discord"
+      "discord": "Discord",
+      "profile": "Perfil",
+      "pack": "Modpack"
     },
     "details": {
       "launcher": "Grubie Launcher",
@@ -98,7 +108,9 @@
     "playing": "Joue à",
     "buttons": {
       "download": "Télécharger",
-      "discord": "Discord"
+      "discord": "Discord",
+      "profile": "Profil",
+      "pack": "Modpack"
     },
     "details": {
       "launcher": "Grubie Launcher",
@@ -117,7 +129,9 @@
     "playing": "Gra w",
     "buttons": {
       "download": "Pobierz",
-      "discord": "Discord"
+      "discord": "Discord",
+      "profile": "Profil",
+      "pack": "Modpack"
     },
     "details": {
       "launcher": "Grubie Launcher",
@@ -136,7 +150,9 @@
     "playing": "Jogando",
     "buttons": {
       "download": "Baixar",
-      "discord": "Discord"
+      "discord": "Discord",
+      "profile": "Perfil",
+      "pack": "Modpack"
     },
     "details": {
       "launcher": "Grubie Launcher",
@@ -155,7 +171,9 @@
     "playing": "Oynuyor",
     "buttons": {
       "download": "İndir",
-      "discord": "Discord"
+      "discord": "Discord",
+      "profile": "Profil",
+      "pack": "Mod paketi"
     },
     "details": {
       "launcher": "Grubie Launcher",

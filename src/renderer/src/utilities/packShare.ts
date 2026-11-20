@@ -1,12 +1,13 @@
+import { buildPackUrl } from "@/shared/siteLinks";
+
 const SITE_HOST = "grubielauncher.com";
-const PACK_SHARE_BASE_URL = `https://${SITE_HOST}/pack`;
 const GROUP_INVITE_BASE_URL = `https://${SITE_HOST}/g`;
 const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
 const SHORT_CODE_PATTERN = /^[A-HJ-NP-Z2-9]{4}-?[A-HJ-NP-Z2-9]{4}$/i;
 const GROUP_CODE_PATTERN = /^[a-zA-Z0-9]{4}-?[a-zA-Z0-9]{4}$/;
 
 export function buildPackShareUrl(shareCode: string) {
-  return `${PACK_SHARE_BASE_URL}/${encodeURIComponent(shareCode)}`;
+  return buildPackUrl(shareCode);
 }
 
 export function buildGroupInviteUrl(code: string) {

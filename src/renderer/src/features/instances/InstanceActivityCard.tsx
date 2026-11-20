@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Camera,
   FolderOpen,
+  GalleryHorizontalEnd,
   History,
   ListChecks,
   type LucideIcon,
@@ -44,11 +45,13 @@ export function ScreenshotsCard({
   folder,
   className,
   onUseAsCover,
+  onShowAll,
 }: {
   screenshots: InstanceScreenshot[] | null;
   folder: string;
   className?: string;
   onUseAsCover?: (file: string) => void;
+  onShowAll?: () => void;
 }) {
   const { t } = useTranslation();
   const [viewing, setViewing] = useState<string | null>(null);
@@ -60,17 +63,31 @@ export function ScreenshotsCard({
       className={className}
       action={
         screenshots?.length ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-2xs text-faint"
-            disabled={!folder}
-            onClick={() => void api.shell.openPath(folder)}
-          >
-            <FolderOpen />
-            {t("common.openFolder")}
-          </Button>
+          <span className="flex items-center gap-1">
+            {onShowAll && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-2xs text-faint"
+                onClick={onShowAll}
+              >
+                <GalleryHorizontalEnd />
+                {t("screenshots.feed.showAll")}
+              </Button>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-2xs text-faint"
+              disabled={!folder}
+              onClick={() => void api.shell.openPath(folder)}
+            >
+              <FolderOpen />
+              {t("common.openFolder")}
+            </Button>
+          </span>
         ) : undefined
       }
     >

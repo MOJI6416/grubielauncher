@@ -11,10 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { joinFriendWorld } from "@renderer/features/launch/joinFriendWorld";
+import { acceptGameInvite } from "./acceptGameInvite";
 import { describeIncomingInvite } from "./gameInvite";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
-import { countFeature } from "@renderer/features/usage/usage";
 
 export function GameInviteDialog({
   invite,
@@ -29,19 +28,11 @@ export function GameInviteDialog({
 
   const join = async () => {
     if (isJoining) return;
-    countFeature("share.acceptInvite");
 
     setIsJoining(true);
     try {
       onClose();
-      await joinFriendWorld({
-        versionCode: invite.versionCode,
-        hostNickname: invite.sender.nickname,
-        hostUserId: invite.sender._id,
-        slug: invite.target.type === "world" ? invite.target.slug : undefined,
-        address:
-          invite.target.type === "server" ? invite.target.address : undefined,
-      });
+      await acceptGameInvite(invite);
     } finally {
       setIsJoining(false);
     }

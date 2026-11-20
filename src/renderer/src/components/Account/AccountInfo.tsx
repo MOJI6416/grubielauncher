@@ -281,6 +281,9 @@ export default function AccountInfo({
             isSkinBusy={isSkinBusy}
             canShowSkin={canUseSkinPreview}
             accessToken={localAccount?.accessToken}
+            isProfileHidden={
+              !isOwner && isPublicProfileHiddenError(publicProfile.error)
+            }
           />
         )}
 

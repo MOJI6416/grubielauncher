@@ -4,6 +4,7 @@ import {
   ArrowDown,
   ArrowUp,
   BookUser,
+  Camera,
   LayoutGrid,
   LayoutTemplate,
   Lock,
@@ -68,6 +69,7 @@ const SORTS: InstancesSort[] = ["activity", "playtime", "name", "manual"];
 const NAV_ICONS: Record<NavSlot, ReactNode> = {
   play: <Play className="size-4" />,
   people: <BookUser className="size-4" />,
+  screenshots: <Camera className="size-4" />,
   news: <Newspaper className="size-4" />,
   settings: <LSettings className="size-4" />,
 };
@@ -75,6 +77,7 @@ const NAV_ICONS: Record<NavSlot, ReactNode> = {
 const NAV_LABELS: Record<NavSlot, string> = {
   play: "nav.play",
   people: "shell.nav.people",
+  screenshots: "versions.screenshots.title",
   news: "news.title",
   settings: "settings.title",
 };

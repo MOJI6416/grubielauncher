@@ -722,6 +722,13 @@
         "cannot_add_self": "Kendini ekleyemezsin",
         "invalid": "Microsoft isteği kabul etmedi"
       }
+    },
+    "here": {
+      "label": "Burada oynayan arkadaşlar: {{names}}",
+      "title": "Burada oynayan arkadaşlar",
+      "inBuild": "“{{name}}” kurulumu",
+      "notPublished": "Arkadaşınızın kurulumu yayımlanmamış, kendi kurulumunuzla girin",
+      "gameRunning": "Arkadaşınızın kurulumuyla girmek için oyunu kapatın"
     }
   },
   "modManager": {
@@ -2318,6 +2325,11 @@
         "title": "Yapay zekâ sağlayıcıları ve API anahtarları",
         "description": "Asistanın kullandığı model ve kendi anahtarlarınız",
         "keywords": "asistan yapay zeka ai sağlayıcı api anahtar token model openai anthropic openrouter adres"
+      },
+      "overlayToasts": {
+        "title": "Oyun üstünde bildirimler",
+        "description": "Kaplama köşesinde mesajlar ve davetler",
+        "keywords": "kaplama overlay bildirim davet mesaj arama tuş kabul oyun"
       }
     },
     "voicePttCaptureTimeout": "Hiçbir tuşa basılmadı — kısayol değişmedi.",
@@ -2397,7 +2409,10 @@
       "providersHint": "asistanda seçili olan yanıt verir",
       "keysNote": "Anahtarlar bu bilgisayarda şifreli olarak kalır ve yalnızca sağlayıcının adresine gönderilir.",
       "dataTitle": "Sohbetler ve çökme analizi"
-    }
+    },
+    "overlayToasts": "Oyun üstünde bildirimler",
+    "overlayToastsDescription": "Oynarken mesajlar, davetler ve aramalar kaplama köşesinde görünür; daveti bir tuşla kabul edin. Özel tam ekranda çalışmaz",
+    "overlayAcceptKey": "“Kabul et” tuşu"
   },
   "skinView": {
     "title": "Skin önizlemesi",
@@ -5424,7 +5439,8 @@
           "arguments": "argümanlar parametreler",
           "statistics": "istatistikler oynama süresi",
           "logs": "günlükler konsol"
-        }
+        },
+        "screenshots": "ekran görüntüleri fotoğraflar f2 galeri screenshots"
       }
     },
     "tabs": {
@@ -5985,7 +6001,10 @@
     "publicProfileHidden": "Bu oyuncu profilini gizli tutuyor",
     "publicModpacksHint1": "Paket bütün olarak kurulur: yazarın modları, yapılandırmaları ve sunucuları.",
     "publicModpacksHint2": "Yazar paketi güncellediğinde başlatıcı güncellemeyi önerir.",
-    "publicModpacksHint3": "Onay ekranı, herhangi bir şey indirilmeden önce her şeyi listeler."
+    "publicModpacksHint3": "Onay ekranı, herhangi bir şey indirilmeden önce her şeyi listeler.",
+    "share": "Profil bağlantısını kopyala",
+    "shareHiddenOwn": "Profiliniz gizli; gizlilik bölümünde “Herkese açık profil”i açın",
+    "shareHidden": "Oyuncu profilini gizledi"
   },
   "tagsInput": {
     "placeholder": "Etiket ekle…",
@@ -7302,5 +7321,56 @@
       "installsCount_one": "{{count}} kurulum",
       "installsCount_other": "{{count}} kurulum"
     }
+  },
+  "screenshots": {
+    "feed": {
+      "search": "Kurulum, tarih veya dosyaya göre ara",
+      "allInstances": "Tüm kurulumlar",
+      "sort": {
+        "newest": "Önce en yeniler",
+        "oldest": "Önce en eskiler",
+        "instance": "Kuruluma göre"
+      },
+      "count_one": "{{formatted}} ekran görüntüsü",
+      "count_other": "{{formatted}} ekran görüntüsü",
+      "emptyHint": "Oyunda F2'ye basın, tüm kurulumların ekran görüntüleri burada toplanır.",
+      "toInstances": "Kurulumlara git",
+      "showAll": "Tümü"
+    },
+    "send": {
+      "action": "Arkadaşa gönder",
+      "title": "Ekran görüntüsü gönder",
+      "to": "Kime",
+      "search": "Arkadaş veya grup",
+      "groups": "Gruplar",
+      "nobodyTitle": "Henüz gönderilecek kimse yok",
+      "nobodyHint": "Kişiler ekranında arkadaş ekleyin veya bir gruba katılın.",
+      "pickRecipient": "Kime gönderileceğini seçin",
+      "submit": "Sohbete ekle",
+      "failed": "Ekran görüntüsü hazırlanamadı"
+    },
+    "editor": {
+      "action": "Kırp veya bulanıklaştır",
+      "title": "Ekran görüntüsünün düzenlenmiş kopyası",
+      "tool": "Araç",
+      "blur": "Bulanıklaştır",
+      "crop": "Kırp",
+      "hideDebug": "F3'ü gizle",
+      "undo": "Sonuncuyu geri al",
+      "reset": "Düzenlemeleri sıfırla",
+      "cropHint": "Kalacak bölümü fareyle seçin.",
+      "blurHint": "Bir takma adı, koordinatları veya sohbeti seçin; o alan bulanıklaşır.",
+      "saveCopy": "Kopya kaydet",
+      "saved": "Kopya orijinalin yanına kaydedildi",
+      "saveFailed": "Kopya kaydedilemedi"
+    }
+  },
+  "overlay": {
+    "acceptHint": "{{key}}: kabul et",
+    "messages_one": "{{count}} yeni mesaj",
+    "messages_other": "{{count}} yeni mesaj",
+    "groupMessages_one": "Grupta {{count}} yeni mesaj",
+    "groupMessages_other": "Grupta {{count}} yeni mesaj",
+    "previewBody": "Sizi oyuna çağırıyor; davetler böyle görünecek"
   }
 }

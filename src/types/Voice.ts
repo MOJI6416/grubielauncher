@@ -139,9 +139,22 @@ export interface VoiceOverlayPlacement {
   displayId: number;
 }
 
+export type OverlayToastKind = "message" | "invite" | "call";
+
+export interface OverlayToast {
+  id: string;
+  kind: OverlayToastKind;
+  title: string;
+  body: string;
+  initials: string;
+  headUrl: string | null;
+  action: string | null;
+}
+
 export interface VoiceOverlayState {
   visible: boolean;
   speakers: VoiceOverlaySpeaker[];
+  toasts?: OverlayToast[];
   corner?: OverlayCorner;
   displayId?: number;
 }

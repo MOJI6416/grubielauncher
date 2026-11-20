@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { IVoiceParticipantState } from "@/types/Voice";
-import { buildOverlayState, sameOverlayState } from "./overlay";
+import {
+  buildOverlayState,
+  sameOverlayState,
+  withOverlayToasts,
+} from "./overlay";
 
 function participant(
   patch: Partial<IVoiceParticipantState> & { identity: string },
@@ -121,5 +125,57 @@ describe("overlay placement", () => {
     );
     expect(sameOverlayState(top, { ...top, corner: "bottom-left" })).toBe(false);
     expect(sameOverlayState(top, { ...top, displayId: 3 })).toBe(false);
+  });
+});
+
+describe("toasts over the game", () => {
+  const toast = {
+    id: "invite:1",
+    kind: "invite" as const,
+    title: "Alex",
+    body: "Зовёт в группу «Ферма»",
+    initials: "AL",
+    headUrl: null,
+    action: "F7 — принять",
+  };
+
+  it("shows the window for a toast even without a call", () => {
+    const hidden = buildOverlayState(
+      { state: "disconnected", participants },
+      true,
+      true,
+    );
+    const state = withOverlayToasts(hidden, [toast], true, {
+      corner: "top-right",
+      displayId: 2,
+    });
+    expect(state).toEqual({
+      visible: true,
+      speakers: [],
+      toasts: [toast],
+      corner: "top-right",
+      displayId: 2,
+    });
+  });
+
+  it("keeps the window closed when the game is not running", () => {
+    const hidden = buildOverlayState(
+      { state: "disconnected", participants },
+      false,
+      true,
+    );
+    expect(withOverlayToasts(hidden, [toast], false).visible).toBe(false);
+  });
+
+  it("treats a new toast as a change", () => {
+    const base = withOverlayToasts(
+      buildOverlayState({ state: "connected", participants }, true, true),
+      [toast],
+      true,
+    );
+    expect(sameOverlayState(base, { ...base })).toBe(true);
+    expect(
+      sameOverlayState(base, { ...base, toasts: [{ ...toast, body: "2" }] }),
+    ).toBe(false);
   });
 });

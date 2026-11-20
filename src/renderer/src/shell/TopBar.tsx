@@ -81,6 +81,8 @@ function useCrumbs(route: Route): { kind?: string; title: string } {
       return { title: t("accounts.accounts") };
     case "catalog":
       return { title: t("catalog.title") };
+    case "screenshots":
+      return { title: t("versions.screenshots.title") };
     case "settings":
       return { title: t("settings.title") };
   }

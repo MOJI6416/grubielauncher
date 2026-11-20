@@ -1,6 +1,10 @@
 import { app, powerSaveBlocker } from "electron";
 import { handleSafe } from "../utilities/ipc";
-import { capturePttBind, setPttBind } from "../services/PushToTalk";
+import {
+  capturePttBind,
+  setOverlayAcceptBind,
+  setPttBind,
+} from "../services/PushToTalk";
 import {
   destroyVoiceOverlay,
   listOverlayDisplays,
@@ -26,6 +30,14 @@ export function registerVoiceIpc() {
     false,
     async (_, bind: { type: "key" | "mouse"; code: number } | null) => {
       return setPttBind(bind);
+    },
+  );
+
+  handleSafe(
+    "voice:setOverlayAccept",
+    false,
+    async (_, bind: { type: "key" | "mouse"; code: number } | null) => {
+      return setOverlayAcceptBind(bind);
     },
   );
 

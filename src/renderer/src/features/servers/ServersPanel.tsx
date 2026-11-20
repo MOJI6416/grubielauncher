@@ -81,6 +81,12 @@ import { createDesktopShortcut } from "@renderer/features/instances/instanceActi
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 import { countFeature } from "@renderer/features/usage/usage";
+import {
+  FriendHeads,
+  ServerFriendsSection,
+  useFriendsByServer,
+} from "@renderer/features/friends/ServerFriends";
+import { friendsOn } from "@renderer/features/friends/friendsOnServers";
 
 const api = window.api;
 
@@ -111,6 +117,7 @@ export function ServersPanel({
   const isOwnerVersion = useAtomValue(isOwnerVersionAtom);
   const selectedVersion = useAtomValue(selectedVersionAtom);
   const isInternetOnline = useAtomValue(internetAtom);
+  const friendsByServer = useFriendsByServer();
 
   const [statuses, setStatuses] = useState<Record<string, ServerPingState>>({});
   const [query, setQuery] = useState("");
@@ -637,6 +644,10 @@ export function ServersPanel({
                             )}
                           </div>
 
+                          <FriendHeads
+                            friends={friendsOn(friendsByServer, server.ip)}
+                          />
+
                           <div className="flex shrink-0 flex-col items-end gap-0.5">
                             <span className="font-mono text-xs whitespace-nowrap tabular-nums">
                               {status?.result?.players
@@ -768,6 +779,12 @@ export function ServersPanel({
                   setQuickConnectIp(
                     quickConnectIp === current.ip ? "" : current.ip,
                   )
+                }
+                friends={
+                  <ServerFriendsSection
+                    groups={friendsByServer}
+                    address={current.ip}
+                  />
                 }
               />
             ) : (

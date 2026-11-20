@@ -25,6 +25,7 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { playSound } from "@renderer/utilities/sounds";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { voiceConnect } from "@renderer/utilities/voiceClient";
+import { showOverlayToast } from "@renderer/features/overlay/overlayToasts";
 
 const api = window.api;
 
@@ -113,16 +114,25 @@ export function FriendsEventsHost() {
         return;
       }
 
-      await api.other.notify(
-        {
-          title: tRef.current("friends.newMessage"),
-          body: tRef.current("friends.sentMessage", {
-            nickname: user.nickname,
-          }),
-          icon: user.image || "",
-        },
-        { type: "friend_message", friendId: user._id },
-      );
+      const shown = await showOverlayToast({
+        id: `message:${user._id}`,
+        kind: "message",
+        title: user.nickname,
+        body: (count) => tRef.current("overlay.messages", { count }),
+        face: { _id: user._id, nickname: user.nickname },
+      });
+      if (!shown) {
+        await api.other.notify(
+          {
+            title: tRef.current("friends.newMessage"),
+            body: tRef.current("friends.sentMessage", {
+              nickname: user.nickname,
+            }),
+            icon: user.image || "",
+          },
+          { type: "friend_message", friendId: user._id },
+        );
+      }
       toast(tRef.current("friends.newMessage"), {
         description: tRef.current("friends.sentMessage", {
           nickname: user.nickname,
@@ -174,6 +184,17 @@ export function FriendsEventsHost() {
         group: invite.group.name,
       });
 
+      const shown = await showOverlayToast({
+        id: `groupInvite:${invite._id}`,
+        kind: "invite",
+        title: invite.inviter.nickname,
+        body: () => description,
+        face: { _id: invite.inviter._id, nickname: invite.inviter.nickname },
+        accept: () => {
+          friendSocket.emit("acceptGroupInvite", { inviteId: invite._id });
+        },
+      });
+
       toast(tRef.current("groupInvite.title"), {
         description,
         duration: 15000,
@@ -185,6 +206,7 @@ export function FriendsEventsHost() {
         },
       });
 
+      if (shown) return;
       await api.other.notify({
         title: tRef.current("groupInvite.title"),
         body: description,
@@ -257,6 +279,16 @@ export function FriendsEventsHost() {
 
       if (mutedGroupsRef.current.includes(groupId)) return;
       playSound("notify");
+
+      const group = store.get(groupsAtom).find((entry) => entry._id === groupId);
+      if (!group) return;
+      void showOverlayToast({
+        id: `group:${groupId}`,
+        kind: "message",
+        title: group.name,
+        body: (count) => tRef.current("overlay.groupMessages", { count }),
+        face: null,
+      });
     };
 
     const onGroupVoicePinged = (data: {
@@ -271,41 +303,50 @@ export function FriendsEventsHost() {
       if (lf?.isMuted) return;
       if (mutedGroupsRef.current.includes(group._id)) return;
 
+      const joinVoice = async () => {
+        const token = store.get(accountAtom)?.accessToken;
+        if (!token) return;
+        const grant = await api.backend.groupJoinVoice(token, group._id);
+        if (!grant) {
+          showFailureToast(tRef.current("groups.joinError"), undefined, {
+            channels: ["backend:groupJoinVoice"],
+          });
+          return;
+        }
+        try {
+          await voiceConnect(grant, {
+            roomId: group._id,
+            roomName: group.name,
+            isRoomOwner: false,
+          });
+        } catch (error) {
+          showFailureToast(tRef.current("groups.joinError"), error, {
+            context: { side: "grubie" },
+          });
+        }
+      };
+      const description = tRef.current("groups.voicePingBody", {
+        nickname: sender.nickname,
+        group: group.name,
+      });
+
       toast(tRef.current("groups.voicePingTitle"), {
-        description: tRef.current("groups.voicePingBody", {
-          nickname: sender.nickname,
-          group: group.name,
-        }),
+        description,
         duration: 15000,
         action: {
           label: tRef.current("groups.voicePingJoin"),
-          onClick: () => {
-            void (async () => {
-              const token = store.get(accountAtom)?.accessToken;
-              if (!token) return;
-              const grant = await api.backend.groupJoinVoice(token, group._id);
-              if (!grant) {
-                showFailureToast(tRef.current("groups.joinError"), undefined, {
-                  channels: ["backend:groupJoinVoice"],
-                });
-                return;
-              }
-              try {
-                await voiceConnect(grant, {
-                  roomId: group._id,
-                  roomName: group.name,
-                  isRoomOwner: false,
-                });
-              } catch (error) {
-                showFailureToast(tRef.current("groups.joinError"), error, {
-                  context: { side: "grubie" },
-                });
-              }
-            })();
-          },
+          onClick: () => void joinVoice(),
         },
       });
       playSound("notify");
+      void showOverlayToast({
+        id: `voicePing:${group._id}`,
+        kind: "invite",
+        title: sender.nickname,
+        body: () => description,
+        face: { _id: sender._id, nickname: sender.nickname },
+        accept: () => void joinVoice(),
+      });
     };
 
     const onGroupInviteResult = (result: { ok: boolean; code?: string }) => {

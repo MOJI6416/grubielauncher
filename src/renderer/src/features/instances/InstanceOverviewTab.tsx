@@ -48,6 +48,8 @@ import { useLayout } from "@renderer/features/layout/useLayout";
 import { formatDuration } from "@renderer/utilities/duration";
 import { formatNumber } from "@renderer/utilities/numbers";
 import { formatGigabytes } from "@renderer/features/settings/memory";
+import { navigate } from "@renderer/navigation/navigate";
+import { instanceKey } from "./selectors";
 
 export interface OverviewAction {
   id: string;
@@ -321,6 +323,12 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
                 screenshots={screenshots}
                 folder={folder}
                 onUseAsCover={props.onUseScreenshotAsCover}
+                onShowAll={() =>
+                  navigate({
+                    name: "screenshots",
+                    instance: instanceKey(instance),
+                  })
+                }
               />
             )
           )}

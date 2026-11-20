@@ -191,6 +191,8 @@ export type TSettings = {
   voiceOverlay: boolean;
   voiceOverlayCorner: OverlayCorner;
   voiceOverlayDisplay: number;
+  overlayToasts: boolean;
+  overlayAcceptBind: VoicePttBind | null;
   autoWorldBackup: boolean;
   worldBackupKeep: number;
   instancesView: InstancesView;
@@ -269,6 +271,8 @@ export const DEFAULT_SETTINGS: TSettings = {
   voiceOverlay: true,
   voiceOverlayCorner: "top-left",
   voiceOverlayDisplay: 0,
+  overlayToasts: true,
+  overlayAcceptBind: { type: "key", code: 65, label: "F7" },
   autoWorldBackup: true,
   worldBackupKeep: DEFAULT_WORLD_BACKUP_KEEP,
   instancesView: "list",
@@ -487,6 +491,14 @@ export function normalizeSettings(
     voiceOverlayDisplay: Number.isSafeInteger(value?.voiceOverlayDisplay)
       ? Number(value?.voiceOverlayDisplay)
       : DEFAULT_SETTINGS.voiceOverlayDisplay,
+    overlayToasts:
+      typeof value?.overlayToasts === "boolean"
+        ? value.overlayToasts
+        : DEFAULT_SETTINGS.overlayToasts,
+    overlayAcceptBind:
+      value && "overlayAcceptBind" in value
+        ? normalizeVoicePttBind(value.overlayAcceptBind)
+        : DEFAULT_SETTINGS.overlayAcceptBind,
     autoWorldBackup:
       typeof value?.autoWorldBackup === "boolean"
         ? value.autoWorldBackup

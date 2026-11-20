@@ -1,6 +1,7 @@
 import type {
   IVoiceParticipantState,
   IVoiceSessionState,
+  OverlayToast,
   VoiceOverlayState,
   VoiceOverlayPlacement,
 } from "@/types/Voice";
@@ -40,12 +41,32 @@ export function buildOverlayState(
   };
 }
 
+export function withOverlayToasts(
+  voice: VoiceOverlayState,
+  toasts: OverlayToast[],
+  isGameRunning: boolean,
+  placement?: VoiceOverlayPlacement,
+): VoiceOverlayState {
+  if (!isGameRunning || toasts.length === 0) return voice;
+  return {
+    ...voice,
+    ...(placement ?? {}),
+    visible: true,
+    toasts,
+  };
+}
+
+function sameToasts(a: OverlayToast[] = [], b: OverlayToast[] = []): boolean {
+  return a.length === b.length && JSON.stringify(a) === JSON.stringify(b);
+}
+
 export function sameOverlayState(
   a: VoiceOverlayState,
   b: VoiceOverlayState,
 ): boolean {
   if (a.visible !== b.visible) return false;
   if (a.corner !== b.corner || a.displayId !== b.displayId) return false;
+  if (!sameToasts(a.toasts, b.toasts)) return false;
   if (a.speakers.length !== b.speakers.length) return false;
   return a.speakers.every((speaker, index) => {
     const other = b.speakers[index];

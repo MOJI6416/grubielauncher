@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, ExternalLink, FolderOpen, ImageUp, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Crop,
+  ExternalLink,
+  FolderOpen,
+  ImageUp,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { removeWithUndo } from "@renderer/utilities/removeWithUndo";
 import {
@@ -15,9 +23,17 @@ import { bumpInstanceDataRevision } from "./instanceRevision";
 import type { InstanceScreenshot } from "./useInstanceInsights";
 import { captureCopyAnchor, flashCopied } from "@renderer/utilities/copyFeedback";
 import { countFeature } from "@renderer/features/usage/usage";
+import {
+  type EditorMode,
+  ScreenshotEditor,
+} from "@renderer/features/screenshots/ScreenshotEditor";
 
 const api = window.api;
 
+export interface ViewerShot extends InstanceScreenshot {
+  folder?: string;
+  caption?: string;
+}
 
 function shotSource(file: string) {
   return resolveLocalImage(toFileUrl(file));
@@ -25,20 +41,41 @@ function shotSource(file: string) {
 
 export function ScreenshotViewer({
   folder,
+  shots: givenShots,
   initialPath,
   onClose,
   onUseAsCover,
 }: {
-  folder: string;
+  folder?: string;
+  shots?: ViewerShot[];
   initialPath: string;
   onClose: () => void;
   onUseAsCover?: (file: string) => void;
 }) {
   const { t } = useTranslation();
-  const [shots, setShots] = useState<InstanceScreenshot[] | null>(null);
+  const [shots, setShots] = useState<ViewerShot[] | null>(null);
   const [index, setIndex] = useState(0);
+  const [editing, setEditing] = useState<EditorMode | null>(null);
+
+  const shownPathRef = useRef(initialPath);
 
   useEffect(() => {
+    if (!givenShots) return;
+    if (givenShots.length === 0) {
+      onClose();
+      return;
+    }
+    setShots(givenShots);
+    const shown = givenShots.findIndex(
+      (shot) => shot.path === shownPathRef.current,
+    );
+    setIndex((value) =>
+      shown >= 0 ? shown : Math.min(value, givenShots.length - 1),
+    );
+  }, [givenShots, onClose]);
+
+  useEffect(() => {
+    if (givenShots || !folder) return;
     let cancelled = false;
 
     void (async () => {
@@ -57,7 +94,7 @@ export function ScreenshotViewer({
         })),
       );
       if (cancelled) return;
-      setShots(list);
+      setShots(list.map((shot) => ({ ...shot, folder })));
       setIndex(
         Math.max(
           0,
@@ -69,9 +106,10 @@ export function ScreenshotViewer({
     return () => {
       cancelled = true;
     };
-  }, [folder, initialPath, t]);
+  }, [folder, givenShots, initialPath, t]);
 
   const current = shots?.[index];
+  if (current) shownPathRef.current = current.path;
 
   const items = useMemo<MediaViewerItem[]>(
     () =>
@@ -80,7 +118,7 @@ export function ScreenshotViewer({
         src: shotSource(shot.path),
         alt: screenshotLabel(shot.name),
         title: screenshotLabel(shot.name),
-        subtitle: shot.name,
+        subtitle: shot.caption ?? shot.name,
       })),
     [shots],
   );
@@ -154,6 +192,20 @@ export function ScreenshotViewer({
 
   if (!shots) return null;
 
+  if (editing && current) {
+    return (
+      <ScreenshotEditor
+        shot={{
+          path: current.path,
+          name: current.name,
+          folder: current.folder ?? api.path.join(current.path, ".."),
+        }}
+        mode={editing}
+        onClose={() => setEditing(null)}
+      />
+    );
+  }
+
   return (
     <>
       <MediaViewer
@@ -166,6 +218,18 @@ export function ScreenshotViewer({
         actions={() =>
           current && (
             <>
+              <MediaViewerAction
+                label={t("screenshots.send.action")}
+                onClick={() => setEditing("send")}
+              >
+                <Send />
+              </MediaViewerAction>
+              <MediaViewerAction
+                label={t("screenshots.editor.action")}
+                onClick={() => setEditing("edit")}
+              >
+                <Crop />
+              </MediaViewerAction>
               <MediaViewerAction
                 label={t("versions.screenshots.copy")}
                 onClick={() => void copy()}

@@ -62,6 +62,7 @@ export type SettingsEntryId =
   | "voiceEchoCancellation"
   | "voiceGate"
   | "voiceOverlay"
+  | "overlayToasts"
   | "autoWorldBackup"
   | "worldBackupKeep"
   | "sharedGameSettings"
@@ -218,6 +219,11 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
     id: "voiceOverlay",
     section: "voice",
     keys: ["voiceOverlay", "voiceOverlayCorner", "voiceOverlayDisplay"],
+  },
+  {
+    id: "overlayToasts",
+    section: "voice",
+    keys: ["overlayToasts", "overlayAcceptBind"],
   },
   { id: "agentProviders", section: "assistant", keys: [] },
   { id: "agentChatSync", section: "assistant", keys: ["agentChatSync"] },

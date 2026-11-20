@@ -99,6 +99,7 @@ import {
   pickChatImages,
 } from "./chatAttachments";
 import { AttachmentTray, type PendingImage } from "./AttachmentTray";
+import { useChatHandoff } from "./chatHandoff";
 import { ExpressionPicker } from "./ExpressionPicker";
 import { ChatImageViewer, chatImageFileName } from "./ChatImageViewer";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
@@ -256,6 +257,7 @@ export interface ChatSurfaceProps {
   onRetryModpack?: (modpackId: string) => void;
   onRetry?: (localId: string) => void;
   onDiscard?: (localId: string) => void;
+  handoffKey?: string;
 }
 
 function ChatSurfaceComponent({
@@ -298,6 +300,7 @@ function ChatSurfaceComponent({
   onRetryModpack,
   onRetry,
   onDiscard,
+  handoffKey,
 }: ChatSurfaceProps) {
   const { t, i18n } = useTranslation();
   const redact = useRedact();
@@ -700,6 +703,8 @@ function ChatSurfaceComponent({
     },
     [canAttachImage, pendingImagesRef, t],
   );
+
+  useChatHandoff(handoffKey, addPendingImages);
 
   const removePendingImage = useCallback((id: string) => {
     setPendingImages((prev) => {

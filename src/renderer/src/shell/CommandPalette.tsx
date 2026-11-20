@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import {
   Bell,
   BookUser,
+  Camera,
   Boxes,
   ChartArea,
   CornerDownLeft,
@@ -266,6 +267,14 @@ export function CommandPalette({
         disabled: !account || account.type === "plain",
         run: () =>
           navigate({ name: "profile", userId: OWN_PROFILE_ID, tab: "profile" }),
+      },
+      {
+        id: "nav:screenshots",
+        section: "navigate",
+        title: t("versions.screenshots.title"),
+        keywords: words("screenshots"),
+        icon: <Camera className="size-4 text-faint" />,
+        run: () => navigate({ name: "screenshots" }),
       },
       {
         id: "nav:settings",

@@ -723,6 +723,13 @@
         "cannot_add_self": "Você não pode adicionar a si mesmo",
         "invalid": "A Microsoft não aceitou o pedido"
       }
+    },
+    "here": {
+      "label": "Amigos jogando aqui: {{names}}",
+      "title": "Amigos jogando aqui",
+      "inBuild": "Instância “{{name}}”",
+      "notPublished": "A instância não foi publicada: entre com a sua",
+      "gameRunning": "Feche o jogo para entrar com a instância dele"
     }
   },
   "modManager": {
@@ -2339,6 +2346,11 @@
         "title": "Provedores de IA e chaves de API",
         "description": "Qual modelo o assistente usa e suas próprias chaves",
         "keywords": "assistente ia provedor chave api token modelo openai anthropic openrouter endereço"
+      },
+      "overlayToasts": {
+        "title": "Notificações sobre o jogo",
+        "description": "Mensagens e convites no canto do overlay",
+        "keywords": "overlay notificação convite mensagem chamada tecla aceitar jogo"
       }
     },
     "voicePttCaptureTimeout": "Nenhuma tecla foi pressionada — o atalho não mudou.",
@@ -2418,7 +2430,10 @@
       "providersHint": "no assistente responde o selecionado",
       "keysNote": "As chaves ficam criptografadas neste computador e só vão para o endereço do provedor.",
       "dataTitle": "Conversas e análise de crashes"
-    }
+    },
+    "overlayToasts": "Notificações sobre o jogo",
+    "overlayToastsDescription": "Mensagens, convites e chamadas aparecem no canto do overlay durante o jogo; aceite um convite com uma tecla. Não funciona em tela cheia exclusiva",
+    "overlayAcceptKey": "Tecla “Aceitar”"
   },
   "skinView": {
     "title": "Prévia da skin",
@@ -5471,7 +5486,8 @@
           "arguments": "argumentos parâmetros",
           "statistics": "estatísticas tempo de jogo",
           "logs": "logs console registro"
-        }
+        },
+        "screenshots": "capturas imagens fotos f2 galeria screenshots"
       }
     },
     "tabs": {
@@ -6038,7 +6054,10 @@
     "publicProfileHidden": "Este jogador mantém o perfil privado",
     "publicModpacksHint1": "Um pacote é instalado inteiro: os mods, as configs e os servidores do autor.",
     "publicModpacksHint2": "Quando o autor atualiza o pacote, o launcher oferece a atualização.",
-    "publicModpacksHint3": "A tela de confirmação lista tudo antes de qualquer download."
+    "publicModpacksHint3": "A tela de confirmação lista tudo antes de qualquer download.",
+    "share": "Copiar link do perfil",
+    "shareHiddenOwn": "Seu perfil está oculto: ative “Perfil público” em privacidade",
+    "shareHidden": "O jogador ocultou o perfil"
   },
   "tagsInput": {
     "placeholder": "Adicionar uma tag…",
@@ -7380,5 +7399,59 @@
       "installsCount_many": "{{count}} instalações",
       "installsCount_other": "{{count}} instalações"
     }
+  },
+  "screenshots": {
+    "feed": {
+      "search": "Buscar por instância, data ou arquivo",
+      "allInstances": "Todas as instâncias",
+      "sort": {
+        "newest": "Mais recentes primeiro",
+        "oldest": "Mais antigas primeiro",
+        "instance": "Por instância"
+      },
+      "count_one": "{{formatted}} captura",
+      "count_many": "{{formatted}} capturas",
+      "count_other": "{{formatted}} capturas",
+      "emptyHint": "Pressione F2 no jogo: as capturas de todas as instâncias aparecem aqui.",
+      "toInstances": "Ir para as instâncias",
+      "showAll": "Todas"
+    },
+    "send": {
+      "action": "Enviar para um amigo",
+      "title": "Enviar captura",
+      "to": "Para",
+      "search": "Amigo ou grupo",
+      "groups": "Grupos",
+      "nobodyTitle": "Ainda não há para quem enviar",
+      "nobodyHint": "Adicione amigos ou entre em um grupo na tela “Pessoas”.",
+      "pickRecipient": "Escolha para quem enviar",
+      "submit": "Anexar no chat",
+      "failed": "Não foi possível preparar a captura"
+    },
+    "editor": {
+      "action": "Cortar ou desfocar",
+      "title": "Cópia editada da captura",
+      "tool": "Ferramenta",
+      "blur": "Desfocar",
+      "crop": "Cortar",
+      "hideDebug": "Ocultar F3",
+      "undo": "Desfazer a última",
+      "reset": "Redefinir edições",
+      "cropHint": "Arraste sobre a parte da imagem que deseja manter.",
+      "blurHint": "Arraste sobre um apelido, coordenadas ou o chat: essa área será desfocada.",
+      "saveCopy": "Salvar uma cópia",
+      "saved": "Cópia salva ao lado do original",
+      "saveFailed": "Não foi possível salvar a cópia"
+    }
+  },
+  "overlay": {
+    "acceptHint": "{{key}}: aceitar",
+    "messages_one": "{{count}} nova mensagem",
+    "messages_many": "{{count}} novas mensagens",
+    "messages_other": "{{count}} novas mensagens",
+    "groupMessages_one": "{{count}} nova mensagem no grupo",
+    "groupMessages_many": "{{count}} novas mensagens no grupo",
+    "groupMessages_other": "{{count}} novas mensagens no grupo",
+    "previewBody": "Convida você para jogar: assim ficarão os convites"
   }
 }

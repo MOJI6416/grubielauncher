@@ -72,6 +72,12 @@ import {
   useServerDiscovery,
 } from "./useServerDiscovery";
 import { countFeature } from "@renderer/features/usage/usage";
+import {
+  FriendHeads,
+  ServerFriendsSection,
+  useFriendsByServer,
+} from "@renderer/features/friends/ServerFriends";
+import { friendsOn } from "@renderer/features/friends/friendsOnServers";
 
 const api = window.api;
 
@@ -99,6 +105,7 @@ export function ServerDiscovery({
   const { t } = useTranslation();
   const settings = useAtomValue(settingsAtom);
   const language = settings.lang || "en";
+  const friendsByServer = useFriendsByServer();
 
   const [rawQuery, setRawQuery] = useState(initialServer?.name ?? "");
   const [query, setQuery] = useState(initialServer?.name ?? "");
@@ -472,6 +479,10 @@ export function ServerDiscovery({
                         </Hint>
                       </span>
 
+                      <FriendHeads
+                        friends={friendsOn(friendsByServer, server.address)}
+                      />
+
                       <span className="flex shrink-0 flex-col items-end gap-1">
                         <span className="flex items-center gap-1 font-mono text-xs tabular-nums text-foreground">
                           <Users className="size-3 text-faint" />
@@ -612,6 +623,13 @@ export function ServerDiscovery({
                 )}
 
                 <ServerContentCard server={active} raised={raised} />
+
+                <ServerFriendsSection
+                  groups={friendsByServer}
+                  address={active.address}
+                  raised={raised}
+                  className="px-2.5 pb-2.5"
+                />
 
                 {active.categories.length > 0 && (
                   <div className="flex flex-wrap gap-1 px-2.5 pb-2.5">

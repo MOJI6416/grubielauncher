@@ -30,6 +30,7 @@ export const SYNCED_SETTING_KEYS = [
   "voiceGate",
   "voiceOverlay",
   "voiceOverlayCorner",
+  "overlayToasts",
   "streamerModeAuto",
   "hideServerInRpc",
 ] as const satisfies readonly (keyof TSettings)[];

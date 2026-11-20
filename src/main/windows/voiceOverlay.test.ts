@@ -12,15 +12,15 @@ describe("overlayBounds", () => {
     expect(overlayBounds(area, "top-left")).toEqual({
       x: 1936,
       y: 16,
-      width: 260,
-      height: 300,
+      width: 300,
+      height: 420,
     });
   });
 
   it("hugs the chosen corner of the chosen screen", () => {
-    expect(overlayBounds(area, "top-right")).toMatchObject({ x: 4204, y: 16 });
-    expect(overlayBounds(area, "bottom-left")).toMatchObject({ x: 1936, y: 1076 });
-    expect(overlayBounds(area, "bottom-right")).toMatchObject({ x: 4204, y: 1076 });
+    expect(overlayBounds(area, "top-right")).toMatchObject({ x: 4164, y: 16 });
+    expect(overlayBounds(area, "bottom-left")).toMatchObject({ x: 1936, y: 956 });
+    expect(overlayBounds(area, "bottom-right")).toMatchObject({ x: 4164, y: 956 });
   });
 });
 

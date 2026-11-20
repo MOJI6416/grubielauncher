@@ -722,6 +722,13 @@
         "cannot_add_self": "You cannot add yourself",
         "invalid": "Microsoft did not accept the request"
       }
+    },
+    "here": {
+      "label": "Friends playing here: {{names}}",
+      "title": "Friends playing here",
+      "inBuild": "Instance “{{name}}”",
+      "notPublished": "Their instance is not published — join with your own",
+      "gameRunning": "Close the game to join with their instance"
     }
   },
   "modManager": {
@@ -2318,6 +2325,11 @@
         "title": "AI providers and API keys",
         "description": "Which model the assistant uses and your own keys",
         "keywords": "assistant ai provider api key token model openai anthropic openrouter base url"
+      },
+      "overlayToasts": {
+        "title": "Notifications over the game",
+        "description": "Messages and invites in the overlay corner",
+        "keywords": "overlay toast notification invite message call hotkey accept game"
       }
     },
     "voicePttCaptureTimeout": "No key was pressed — the shortcut is unchanged.",
@@ -2397,7 +2409,10 @@
       "providersHint": "the selected one answers in the assistant",
       "keysNote": "Keys stay on this computer, encrypted by the system, and go only to the provider’s address.",
       "dataTitle": "Chats and crash analysis"
-    }
+    },
+    "overlayToasts": "Notifications over the game",
+    "overlayToastsDescription": "Messages, invites and calls appear in the overlay corner while you play; accept an invite with a key. Does not work in exclusive fullscreen",
+    "overlayAcceptKey": "Accept key"
   },
   "skinView": {
     "title": "Skin preview",
@@ -5424,7 +5439,8 @@
           "arguments": "arguments jvm flags",
           "statistics": "statistics playtime stats",
           "logs": "logs console journal"
-        }
+        },
+        "screenshots": "screenshots shots pictures f2 gallery feed"
       }
     },
     "tabs": {
@@ -5985,7 +6001,10 @@
     "publicProfileHidden": "This player keeps their profile private",
     "publicModpacksHint1": "A pack installs whole: the author's mods, configs and servers.",
     "publicModpacksHint2": "When the author updates the pack, the launcher offers the update.",
-    "publicModpacksHint3": "The confirmation screen lists everything before anything is downloaded."
+    "publicModpacksHint3": "The confirmation screen lists everything before anything is downloaded.",
+    "share": "Copy profile link",
+    "shareHiddenOwn": "Your profile is hidden — turn on “Public profile” in privacy",
+    "shareHidden": "This player hid the profile"
   },
   "tagsInput": {
     "placeholder": "Add a tag…",
@@ -7302,5 +7321,56 @@
       "installsCount_one": "{{count}} install",
       "installsCount_other": "{{count}} installs"
     }
+  },
+  "screenshots": {
+    "feed": {
+      "search": "Search by instance, date or file",
+      "allInstances": "All instances",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "instance": "By instance"
+      },
+      "count_one": "{{formatted}} screenshot",
+      "count_other": "{{formatted}} screenshots",
+      "emptyHint": "Press F2 in the game — shots from every instance gather here.",
+      "toInstances": "To instances",
+      "showAll": "All"
+    },
+    "send": {
+      "action": "Send to a friend",
+      "title": "Send a screenshot",
+      "to": "To",
+      "search": "Friend or group",
+      "groups": "Groups",
+      "nobodyTitle": "Nobody to send to yet",
+      "nobodyHint": "Add friends or join a group on the People screen.",
+      "pickRecipient": "Choose who gets it",
+      "submit": "Attach in chat",
+      "failed": "Could not prepare the screenshot"
+    },
+    "editor": {
+      "action": "Crop or blur",
+      "title": "Edited copy of the screenshot",
+      "tool": "Tool",
+      "blur": "Blur",
+      "crop": "Crop",
+      "hideDebug": "Hide F3",
+      "undo": "Undo last",
+      "reset": "Reset edits",
+      "cropHint": "Drag over the part of the shot to keep.",
+      "blurHint": "Drag over a nickname, coordinates or chat — that area gets blurred.",
+      "saveCopy": "Save a copy",
+      "saved": "Copy saved next to the original",
+      "saveFailed": "Could not save the copy"
+    }
+  },
+  "overlay": {
+    "acceptHint": "{{key}} — accept",
+    "messages_one": "{{count}} new message",
+    "messages_other": "{{count}} new messages",
+    "groupMessages_one": "{{count}} new message in the group",
+    "groupMessages_other": "{{count}} new messages in the group",
+    "previewBody": "Invites you to play — this is how invites will look"
   }
 }

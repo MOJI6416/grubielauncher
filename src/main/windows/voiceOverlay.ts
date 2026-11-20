@@ -6,16 +6,20 @@ import {
   OVERLAY_CORNERS,
   type OverlayCorner,
   type OverlayDisplay,
+  type OverlayToast,
   type VoiceOverlaySpeaker,
   type VoiceOverlayState,
 } from "@/types/Voice";
 import { appPageUrl } from "./appPages";
 
-const OVERLAY_WIDTH = 260;
-const OVERLAY_HEIGHT = 300;
+const OVERLAY_WIDTH = 300;
+const OVERLAY_HEIGHT = 420;
 const OVERLAY_MARGIN = 16;
 const MAX_SPEAKERS = 8;
 const MAX_TEXT = 64;
+const MAX_TOASTS = 3;
+const MAX_BODY = 140;
+const TOAST_KINDS = new Set(["message", "invite", "call"]);
 const MAX_URL = 1024;
 
 let overlay: BrowserWindow | null = null;
@@ -59,6 +63,32 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.slice(0, MAX_TEXT) : "";
 }
 
+function longText(value: unknown): string {
+  return typeof value === "string" ? value.slice(0, MAX_BODY) : "";
+}
+
+function normalizeToasts(value: unknown): OverlayToast[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, MAX_TOASTS).flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const toast = entry as Record<string, unknown>;
+    const id = text(toast.id);
+    const title = text(toast.title);
+    if (!id || !title || !TOAST_KINDS.has(toast.kind as string)) return [];
+    return [
+      {
+        id,
+        kind: toast.kind as OverlayToast["kind"],
+        title,
+        body: longText(toast.body),
+        initials: text(toast.initials).slice(0, 2),
+        headUrl: headUrl(toast.headUrl),
+        action: text(toast.action) || null,
+      },
+    ];
+  });
+}
+
 function headUrl(value: unknown): string | null {
   if (typeof value !== "string" || value.length > MAX_URL) return null;
   return /^https?:\/\//i.test(value) ? value : null;
@@ -87,7 +117,11 @@ export function normalizeOverlayState(value: unknown): VoiceOverlayState {
       })
     : [];
 
-  const raw = value as { corner?: unknown; displayId?: unknown };
+  const raw = value as {
+    corner?: unknown;
+    displayId?: unknown;
+    toasts?: unknown;
+  };
   const corner = OVERLAY_CORNERS.includes(raw.corner as OverlayCorner)
     ? (raw.corner as OverlayCorner)
     : undefined;
@@ -95,7 +129,13 @@ export function normalizeOverlayState(value: unknown): VoiceOverlayState {
     ? Number(raw.displayId)
     : undefined;
 
-  return { visible: true, speakers, corner, displayId };
+  return {
+    visible: true,
+    speakers,
+    toasts: normalizeToasts(raw.toasts),
+    corner,
+    displayId,
+  };
 }
 
 function placementKey(state: VoiceOverlayState): string {

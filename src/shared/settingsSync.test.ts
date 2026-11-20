@@ -33,6 +33,7 @@ describe("synced settings", () => {
       "voicePttBind",
       "voiceGateThreshold",
       "voiceOverlayDisplay",
+      "overlayAcceptBind",
       "directConnect",
       "crashTelemetry",
       "usageStats",

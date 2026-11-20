@@ -35,6 +35,7 @@ export type Route =
   | { name: "profile"; userId: string; tab?: ProfileTab }
   | { name: "accounts" }
   | { name: "catalog" }
+  | { name: "screenshots"; instance?: string }
   | { name: "settings"; section?: string };
 
 export type RouteName = Route["name"];
