@@ -41,6 +41,7 @@ import {
   LazyPeopleScreen,
   LazyScreenshotsScreen,
   LazySettingsScreen,
+  LazyWardrobeScreen,
 } from "./lazyScreens";
 import { HomeScreen } from "./home/HomeScreen";
 import { ProfileScreen } from "./profile/ProfileScreen";
@@ -191,6 +192,17 @@ function RouteScreen({
 
   if (route.name === "profile") {
     return <ProfileScreen userId={route.userId} tab={route.tab} />;
+  }
+
+  if (
+    route.name === "wardrobe" &&
+    isRouteAllowed(route, { accountType: account?.type ?? null })
+  ) {
+    return (
+      <Suspense fallback={<ScreenFallback />}>
+        <LazyWardrobeScreen view={route.view} />
+      </Suspense>
+    );
   }
 
   if (route.name === "accounts") {

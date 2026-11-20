@@ -266,14 +266,7 @@ export function ProfileModpacks({ user }: { user: IUser }) {
             name: pending.conf.name,
           })}
           reversible={false}
-          content={[
-            {
-              text: t("ownModpacks.confirmation", {
-                name: pending.conf.name,
-              }),
-            },
-            { text: t("ownModpacks.deleteLoss") },
-          ]}
+          content={[{ text: t("ownModpacks.deleteLoss") }]}
           buttons={[
             {
               text: t("common.cancel"),
@@ -544,12 +537,12 @@ function ModpackRow({
                 <PackagePlus />
               </Button>
             </Hint>
-            <Hint content={isBusy ? undefined : t("common.delete")}>
+            <Hint content={isBusy ? undefined : t("ownModpacks.deleteAction")}>
               <Button
                 variant="destructive"
                 size="icon-sm"
                 disabled={isBusy}
-                aria-label={t("common.delete")}
+                aria-label={t("ownModpacks.deleteAction")}
                 onClick={onDelete}
               >
                 {isBusy ? <Loader2 className="animate-spin" /> : <Trash2 />}
@@ -574,7 +567,7 @@ function ModpackRow({
           onSelect={onDelete}
         >
           <Trash2 />
-          {t("common.delete")}
+          {t("ownModpacks.deleteAction")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

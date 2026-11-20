@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import ReactCountryFlag from "react-country-flag";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -24,8 +25,8 @@ import { Hint } from "@renderer/components/Hint";
 import type { SettingsEntryId } from "./catalog";
 import { SHORTCUT_GROUPS, shortcutKey } from "./shortcuts";
 import {
+  SEASONAL_EVENTS,
   eventDate,
-  eventRange,
   formatMonthDay,
 } from "@renderer/features/seasonal/calendar";
 import { previewSound } from "@renderer/utilities/sounds";
@@ -50,14 +51,15 @@ function useUiScaleOptions(): UiScaleOption[] {
   return options;
 }
 
-function halloweenRange(language: string): { start: string; end: string } {
-  const range = eventRange("halloween");
-  if (!range) return { start: "", end: "" };
+function seasonalCalendar(language: string, t: TFunction): string {
   const year = new Date().getFullYear();
-  return {
-    start: formatMonthDay(eventDate(range.start, year), language),
-    end: formatMonthDay(eventDate(range.end, year), language),
-  };
+  return SEASONAL_EVENTS.map(
+    (event) =>
+      `${t(`seasonal.${event.id}.name`)} — ${formatMonthDay(
+        eventDate(event.start, year),
+        language,
+      )} – ${formatMonthDay(eventDate(event.end, year), language)}`,
+  ).join("; ");
 }
 
 function Keys({ combos }: { combos: string[][] }) {
@@ -271,10 +273,9 @@ export function InterfaceSection({
             entry="seasonalDecor"
             htmlFor="settings-seasonal-decor"
             title={t("settings.interface.seasonalDecor")}
-            description={t(
-              "settings.interface.seasonalDecorDescription",
-              halloweenRange(i18n.language),
-            )}
+            description={t("settings.interface.seasonalDecorDescription", {
+              events: seasonalCalendar(i18n.language, t),
+            })}
             query={query}
             changed={isChanged("seasonalDecor")}
             onReset={() => reset("seasonalDecor")}

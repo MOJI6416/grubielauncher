@@ -275,13 +275,7 @@ export function AccountDetail({
                 <Button
                   variant="secondary"
                   disabled={!isActive}
-                  onClick={() =>
-                    navigate({
-                      name: "profile",
-                      userId: OWN_PROFILE_ID,
-                      tab: "skins",
-                    })
-                  }
+                  onClick={() => navigate({ name: "wardrobe" })}
                 >
                   <Shirt className="size-4" />
                   {t("manageSkins.title")}

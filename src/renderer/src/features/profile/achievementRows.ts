@@ -1,7 +1,8 @@
-import type {
-  AchievementCategory,
-  AchievementRarity,
-  MetricUnit,
+import {
+  difficultyOf,
+  type AchievementCategory,
+  type AchievementDifficulty,
+  type MetricUnit,
 } from "@renderer/utilities/achievements";
 
 export type AchievementStatus = "all" | "unlocked" | "locked";
@@ -39,7 +40,7 @@ export interface AchievementRow {
   goal: number;
   unit: MetricUnit | null;
   percent: number | null;
-  rarity: AchievementRarity;
+  difficulty: AchievementDifficulty;
 }
 
 export interface AchievementFilter {
@@ -62,20 +63,6 @@ export interface CategoryTally {
   total: number;
 }
 
-export function rarityFromPoints(points: number): AchievementRarity {
-  if (points >= 70) return "legendary";
-  if (points >= 45) return "epic";
-  if (points >= 25) return "rare";
-  return "common";
-}
-
-export function rarityFromPercent(percent: number): AchievementRarity {
-  if (percent <= 1) return "legendary";
-  if (percent <= 5) return "epic";
-  if (percent <= 20) return "rare";
-  return "common";
-}
-
 export function buildAchievementRows(
   progress: readonly AchievementProgressInput[],
   reach: ReadonlyMap<string, number> | null,
@@ -95,9 +82,7 @@ export function buildAchievementRows(
       goal: item.def.goal ?? 0,
       unit: item.def.unit ?? null,
       percent: hasPercent ? percent : null,
-      rarity: hasPercent
-        ? rarityFromPercent(percent)
-        : rarityFromPoints(item.def.points),
+      difficulty: difficultyOf(item.def.points),
     };
   });
 }

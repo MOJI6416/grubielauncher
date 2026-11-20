@@ -14,12 +14,13 @@ export type InstanceTab =
 
 export type ProfileTab =
   | "profile"
-  | "skins"
   | "achievements"
   | "leaderboard"
   | "modpacks";
 
 export type PeopleSection = "friends" | "groups" | "requests";
+
+export type WardrobeView = "catalog";
 
 export type Route =
   | { name: "home" }
@@ -35,6 +36,7 @@ export type Route =
   | { name: "news" }
   | { name: "agent"; chatId?: string }
   | { name: "profile"; userId: string; tab?: ProfileTab }
+  | { name: "wardrobe"; view?: WardrobeView }
   | { name: "accounts" }
   | { name: "catalog" }
   | { name: "screenshots"; instance?: string }
@@ -63,6 +65,8 @@ export function routeKey(route: Route): string {
         : `profile:${route.userId}`;
     case "settings":
       return ["settings", route.section, route.view].filter(Boolean).join(":");
+    case "wardrobe":
+      return route.view ? `wardrobe:${route.view}` : "wardrobe";
     case "agent":
       return route.chatId ? `agent:${route.chatId}` : "agent";
     default:

@@ -1,4 +1,4 @@
-import rpcLocaleData from './rpcLocales.json'
+import rpcLocaleData from '@/shared/rpcLocales.json'
 import { DISCORD_CLIENT_ID } from '@/shared/config'
 import { RpcAccountContext, RpcPackLink, RpcRendererContext } from '@/types/Rpc'
 import { buildRpcButtons } from '@/shared/siteLinks'
@@ -62,6 +62,7 @@ const rpcLocales: Record<SupportedRpcLanguage, RpcLocale> = {
 }
 
 const MAX_ACTIVITY_TEXT_LENGTH = 128
+const HIDDEN_PRESENCE = 'hidden'
 const MAX_PACK_LINKS = 16
 const MAX_RECONNECT_DELAY = 30000
 const MAX_RECONNECT_ATTEMPTS = 8
@@ -126,6 +127,8 @@ export class RPC {
   private lang: SupportedRpcLanguage = 'en'
   private account: RpcAccountContext | null = null
   private hideServer = false
+  private enabled = true
+  private hasContext = false
   private skinVersion: string | number | undefined = undefined
   private profileUrl: string | null = null
   private packLinks = new Map<string, string>()
@@ -176,6 +179,8 @@ export class RPC {
   async syncContext(context: RpcRendererContext) {
     this.lang = normalizeLanguage(context.lang)
     this.account = context.account
+    this.enabled = context.enabled !== false
+    this.hasContext = true
     this.hideServer = context.hideServer === true
     this.skinVersion = context.skinVersion
     this.profileUrl = typeof context.profileUrl === 'string' ? context.profileUrl : null
@@ -410,7 +415,19 @@ export class RPC {
   }
 
   private async applyPresence() {
-    if (this.isDisposed || !this.isReady || !this.client) return
+    if (this.isDisposed || !this.isReady || !this.client || !this.hasContext) return
+
+    if (!this.enabled) {
+      if (this.lastPresenceSignature === HIDDEN_PRESENCE) return
+      try {
+        await this.client.clearActivity()
+        this.lastPresenceSignature = HIDDEN_PRESENCE
+      } catch (error) {
+        this.lastPresenceSignature = ''
+        if (!this.isDisposed) console.warn('Failed to clear Discord RPC activity', error)
+      }
+      return
+    }
 
     const activity = this.buildActivity()
     const signature = toPresenceSignature(activity)

@@ -4,7 +4,7 @@ import { Download, Package } from "lucide-react";
 import type { IModpackCard } from "@/types/Backend";
 import { Hint } from "@renderer/components/Hint";
 import { LoaderLabel } from "@renderer/components/Loaders";
-import { PlayerHead } from "@renderer/features/accounts/AccountHead";
+import { AuthorLink } from "@renderer/features/profile/AuthorLink";
 import { formatCompactNumber } from "@renderer/utilities/numbers";
 import { formatDay, formatRelative } from "@renderer/utilities/date";
 import { packContentParts } from "./exploreQuery";
@@ -61,19 +61,15 @@ export function CommunityPackCard({
         </div>
 
         <div className="flex min-w-0 items-center gap-1.5 text-2xs text-muted-foreground">
-          <PlayerHead
-            user={{
+          <AuthorLink
+            author={{
+              id: pack.owner.id || null,
               nickname: pack.owner.nickname,
               headUrl: pack.owner.imageUrl,
             }}
-            size={14}
-            className="rounded-[3px]"
+            headClassName="rounded-[3px]"
+            className="max-w-40 shrink-0"
           />
-          <Hint content={pack.owner.nickname} variant="text" truncatedOnly>
-            <span className="max-w-40 shrink-0 truncate">
-              {pack.owner.nickname}
-            </span>
-          </Hint>
           <span aria-hidden className="shrink-0 text-faint">
             ·
           </span>

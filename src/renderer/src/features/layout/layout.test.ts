@@ -22,6 +22,7 @@ describe("orderedNav", () => {
     expect(orderedNav(layout())).toEqual([
       "play",
       "people",
+      "wardrobe",
       "screenshots",
       "news",
       "settings",
@@ -31,7 +32,7 @@ describe("orderedNav", () => {
   it("keeps a custom order and ignores unknown entries", () => {
     expect(
       orderedNav(layout({ navOrder: ["news", "skins", "play", "people", "settings"] })),
-    ).toEqual(["news", "play", "people", "screenshots", "settings"]);
+    ).toEqual(["news", "play", "people", "wardrobe", "screenshots", "settings"]);
   });
 
   it("puts entries missing from an old saved order next to their usual neighbour", () => {
@@ -39,12 +40,14 @@ describe("orderedNav", () => {
       "settings",
       "play",
       "people",
+      "wardrobe",
       "screenshots",
       "news",
     ]);
     expect(orderedNav(layout({ navOrder: ["news", "settings"] }))).toEqual([
       "play",
       "people",
+      "wardrobe",
       "screenshots",
       "news",
       "settings",
@@ -57,7 +60,13 @@ describe("visibleNav", () => {
     const hidden = layout({
       hidden: ["sidebar.people", "sidebar.play", "sidebar.settings"],
     });
-    expect(visibleNav(hidden)).toEqual(["play", "screenshots", "news", "settings"]);
+    expect(visibleNav(hidden)).toEqual([
+      "play",
+      "wardrobe",
+      "screenshots",
+      "news",
+      "settings",
+    ]);
   });
 });
 
@@ -67,6 +76,7 @@ describe("moveNav and placeNav", () => {
     expect(moved.navOrder).toEqual([
       "play",
       "people",
+      "wardrobe",
       "news",
       "screenshots",
       "settings",
@@ -84,11 +94,13 @@ describe("moveNav and placeNav", () => {
       "settings",
       "play",
       "people",
+      "wardrobe",
       "screenshots",
       "news",
     ]);
     expect(placeNav(layout(), "play", null).navOrder).toEqual([
       "people",
+      "wardrobe",
       "screenshots",
       "news",
       "settings",

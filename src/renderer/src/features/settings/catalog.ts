@@ -68,6 +68,7 @@ export type SettingsEntryId =
   | "sharedGameSettings"
   | "streamerMode"
   | "streamerModeAuto"
+  | "discordActivity"
   | "hideServerInRpc"
   | "directConnect"
   | "crashTelemetry"
@@ -231,6 +232,7 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "aiLogAnalysis", section: "assistant", keys: ["aiLogAnalysis"] },
   { id: "streamerMode", section: "privacy", keys: ["streamerMode"] },
   { id: "streamerModeAuto", section: "privacy", keys: ["streamerModeAuto"] },
+  { id: "discordActivity", section: "privacy", keys: ["discordActivity"] },
   { id: "hideServerInRpc", section: "privacy", keys: ["hideServerInRpc"] },
   { id: "directConnect", section: "privacy", keys: ["directConnect"] },
   { id: "crashTelemetry", section: "privacy", keys: ["crashTelemetry"] },

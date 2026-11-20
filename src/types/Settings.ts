@@ -177,6 +177,7 @@ export type TSettings = {
   agentChatSync: boolean;
   accountSync: boolean;
   sounds: boolean;
+  discordActivity: boolean;
   hideServerInRpc: boolean;
   directConnect: boolean;
   streamerMode: boolean;
@@ -257,6 +258,7 @@ export const DEFAULT_SETTINGS: TSettings = {
   agentChatSync: true,
   accountSync: true,
   sounds: true,
+  discordActivity: true,
   hideServerInRpc: true,
   directConnect: true,
   streamerMode: false,
@@ -441,6 +443,10 @@ export function normalizeSettings(
       typeof value?.sounds === "boolean"
         ? value.sounds
         : DEFAULT_SETTINGS.sounds,
+    discordActivity: booleanOr(
+      value?.discordActivity,
+      DEFAULT_SETTINGS.discordActivity,
+    ),
     hideServerInRpc:
       typeof value?.hideServerInRpc === "boolean"
         ? value.hideServerInRpc

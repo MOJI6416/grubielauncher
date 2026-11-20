@@ -1669,6 +1669,15 @@
     "soundsDescription": "Installation fertig, Spielabsturz und Einladungen von Freunden",
     "hideServerInRpc": "Server in Discord verbergen",
     "hideServerInRpcDescription": "Die Serveradresse nicht in Discord Rich Presence anzeigen",
+    "discordGroup": "Discord",
+    "discordActivity": "Aktivität in Discord anzeigen",
+    "discordActivityDescription": "Die Karte in Ihrem Discord-Profil: Launcher oder Instanz, Spielzeit und Buttons",
+    "discordPreview": {
+      "label": "So sieht Ihre Karte in Discord aus",
+      "hidden": "Discord zeigt Ihre Aktivität nicht an",
+      "inGame": "Im Spiel: Name der Instanz und Serveradresse",
+      "inGameNoServer": "Im Spiel: Name der Instanz, die Serveradresse bleibt verborgen"
+    },
     "streamer": {
       "title": "Streaming",
       "enabled": "Streamer-Modus",
@@ -1976,7 +1985,7 @@
         "graphite": "Graphit"
       },
       "seasonalDecor": "Festtagsdekoration",
-      "seasonalDecorDescription": "Thematische Akzente an Feiertagen. Halloween läuft vom {{start}} bis {{end}}."
+      "seasonalDecorDescription": "Thematische Akzente an Feiertagen: {{events}}."
     },
     "voice": {
       "devicesDescription": "Die Geräte werden mit dem Anrufbereich geteilt. Testen Sie das Mikrofon, bevor Sie beitreten."
@@ -2108,6 +2117,11 @@
         "description": "Wenn OBS oder eine andere Streaming-App läuft",
         "keywords": "streamer stream obs streamlabs xsplit automatisch"
       },
+      "discordActivity": {
+        "title": "Aktivität in Discord anzeigen",
+        "description": "Die Karte in Ihrem Discord-Profil: Launcher oder Instanz, Spielzeit und Buttons",
+        "keywords": "discord rpc rich presence aktivität status karte datenschutz"
+      },
       "autoWorldBackup": {
         "title": "Automatische Welt-Backups",
         "description": "Nach einer Sitzung wird eine Kopie gespeichert, wenn sich die Welt geändert hat",
@@ -2225,7 +2239,7 @@
       },
       "seasonalDecor": {
         "title": "Festtagsdekoration",
-        "description": "Fledermäuse, Kürbisse und Spinnweben zu Halloween",
+        "description": "Dekorationen im Launcher-Fenster zu Halloween und Neujahr",
         "keywords": "halloween feiertag saison event thema dekoration kürbis fledermäuse neujahr weihnachten"
       },
       "sidebarCollapsed": {
@@ -2579,7 +2593,7 @@
     "updateWorld": "Welt aktualisieren",
     "updateOtherFiles": "Weitere Dateien aktualisieren",
     "updateLogo": "Logo aktualisieren",
-    "versionShareDel": "Instanz vom Server löschen",
+    "versionShareDel": "Zurückziehen",
     "shareGone": "Veröffentlichung entfernt: {{name}}",
     "shareGoneHint": "Die Instanz ist nicht mehr auf dem Server, daher wurde der Link entfernt. Die Instanz selbst bleibt auf diesem Computer und kann erneut veröffentlicht werden.",
     "searchPlaceholder": "Instanzen suchen…",
@@ -3792,6 +3806,7 @@
     "metaFormatModern": "Modern",
     "metaFormatLegacy": "Alt",
     "metaId": "Kennung",
+    "details": "Details",
     "linkTitle": "Link zu einer Textur",
     "nickTitle": "Skin eines anderen Spielers übernehmen",
     "selectError": "Skin konnte nicht ausgewählt werden",
@@ -3861,6 +3876,7 @@
     "offlineDescription": "Die vollständige Änderungsliste erscheint, sobald Internet verfügbar ist oder das Release veröffentlicht wird.",
     "highlights": "Höhepunkte",
     "fixes": "Behoben",
+    "open": "Öffnen",
     "discordCta": "Weitere Neuigkeiten auf Discord",
     "skipped_one": "Seit dem letzten Start ist noch {{count}} weitere Version erschienen – Versionsverlauf",
     "skipped_other": "Seit dem letzten Start sind noch {{count}} weitere Versionen erschienen – Versionsverlauf"
@@ -4272,6 +4288,7 @@
     "empty": "Hier ist noch nichts",
     "level": "Stufe",
     "pointsOf": "{{points}} von {{total}} Punkten",
+    "pointsValue": "Punkte: {{points}}",
     "unlockedToast": "Erfolg freigeschaltet: {{name}}",
     "filter": {
       "all": "Alle",
@@ -4287,10 +4304,11 @@
       "playtime": "Spielzeit",
       "community": "Community"
     },
-    "rarity": {
-      "common": "Gewöhnlich",
-      "rare": "Selten",
-      "epic": "Episch",
+    "difficulty": {
+      "label": "Schwierigkeit",
+      "easy": "Leicht",
+      "medium": "Mittel",
+      "hard": "Schwer",
       "legendary": "Legendär"
     },
     "tiers": {
@@ -4606,9 +4624,11 @@
       }
     },
     "unlockedOf": "{{unlocked}} von {{total}} freigeschaltet",
-    "reachHint": "Seltenheit gemessen über {{players}} Spieler",
+    "reachHint": "Anteil unter {{players}} Spielern",
+    "difficultyOf": "Schwierigkeit: {{difficulty}}",
     "unlockedShare": "von {{percent}} % der Spieler freigeschaltet",
-    "rarityUnlocked": "Freigeschaltet, {{rarity}}",
+    "percentValue": "{{value}} %",
+    "difficultyUnlocked": "Freigeschaltet, Schwierigkeit: {{difficulty}}",
     "sort": {
       "progress": "Fast erreicht",
       "rarity": "Seltenste zuerst",
@@ -4739,9 +4759,8 @@
   ],
   "ownModpacks": {
     "noModpacks": "Sie haben noch keine Modpacks geteilt",
-    "deleted": "Modpack gelöscht",
-    "deleteError": "Fehler beim Löschen des Modpacks",
-    "confirmation": "Das Modpack „{{name}}“ wird vom Server entfernt.",
+    "deleted": "Modpack zurückgezogen",
+    "deleteError": "Modpack konnte nicht zurückgezogen werden",
     "addToLauncher": "Zum Launcher hinzufügen",
     "loadError": "Ihre Modpacks konnten nicht geladen werden",
     "published": "Veröffentlicht: {{value}}",
@@ -5472,6 +5491,7 @@
       "newInstance": "Neue Instanz",
       "instance": "Instanz",
       "people": "Leute",
+      "wardrobe": "Garderobe",
       "profile": "Profil",
       "peopleNews": "Ungelesen und Anfragen: {{value}}",
       "peoplePlaying": "Freunde im Spiel: {{value}}"
@@ -5508,6 +5528,7 @@
         "agent": "ki assistent helfer chat",
         "people": "personen freunde sprachchat gruppen chat",
         "profile": "profil skins erfolge umhang",
+        "wardrobe": "garderobe skins umhänge skin umhang katalog",
         "notifications": "benachrichtigungen telegram bot einladungen",
         "settings": "einstellungen optionen",
         "accounts": "konten anmelden",
@@ -6087,8 +6108,7 @@
       "overview": "Übersicht",
       "achievements": "Erfolge",
       "leaderboard": "Bestenliste",
-      "modpacks": "Modpacks",
-      "skins": "Skins"
+      "modpacks": "Modpacks"
     },
     "categories": "Nach Kategorie",
     "openAccounts": "Konten öffnen",
@@ -6101,6 +6121,12 @@
     "publicModpacksHint2": "Wenn der Autor das Paket aktualisiert, bietet der Launcher das Update an.",
     "publicModpacksHint3": "Der Bestätigungsbildschirm listet alles auf, bevor etwas heruntergeladen wird.",
     "share": "Profil-Link kopieren",
+    "actions": {
+      "skin": "Skin",
+      "share": "Teilen",
+      "privacy": "Privatsphäre"
+    },
+    "copyUuid": "UUID kopieren · {{uuid}}",
     "shareHiddenOwn": "Ihr Profil ist verborgen – aktivieren Sie „Öffentliches Profil“ in der Privatsphäre",
     "shareHidden": "Der Spieler hat das Profil verborgen"
   },
@@ -6800,9 +6826,16 @@
     "turnOff": "Dekoration ausschalten",
     "turnOffHint": "In den Oberflächeneinstellungen können Sie sie zurückholen",
     "halloween": {
+      "name": "Halloween",
       "title": "Halloween bei Grubie",
       "peakTitle": "Fröhliches Halloween!",
       "description": "Fledermäuse, Kürbisse und Spinnweben bis {{end}}. Klicken Sie auf den Kürbis, um weitere Fledermäuse aufzuscheuchen."
+    },
+    "winter": {
+      "name": "Neujahr",
+      "title": "Neujahr in Grubie",
+      "peakTitle": "Frohes neues Jahr!",
+      "description": "Schnee und ein Festbaum bis {{end}}. Frohe Feiertage!"
     }
   },
   "crashFix": {

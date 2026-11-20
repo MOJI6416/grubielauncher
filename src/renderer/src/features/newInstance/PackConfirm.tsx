@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { VirtualizedSelect } from "@/components/ui/virtualized-select";
 import { Hint } from "@renderer/components/Hint";
-import { PlayerHead } from "@renderer/features/accounts/AccountHead";
+import { AuthorLink } from "@renderer/features/profile/AuthorLink";
 import { formatBytes } from "@renderer/utilities/file";
 import { shortenPath } from "@renderer/features/instances/instanceOverview";
 import { getLoaderInfo, LoaderIcon } from "@renderer/components/Loaders";
@@ -247,18 +247,12 @@ export function PackConfirm({
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               {pack?.author && (
                 <>
-                  <Hint content={t("addVersion.preview.author")}>
-                    <span className="flex max-w-36 shrink-0 items-center gap-1.5">
-                      <PlayerHead
-                        user={pack.author}
-                        size={16}
-                        className="rounded"
-                      />
-                      <span className="min-w-0 truncate text-foreground">
-                        {pack.author.nickname}
-                      </span>
-                    </span>
-                  </Hint>
+                  <AuthorLink
+                    author={pack.author}
+                    size={16}
+                    headClassName="rounded"
+                    className="max-w-36 shrink-0 text-foreground"
+                  />
                   <span className="shrink-0 text-faint">·</span>
                 </>
               )}

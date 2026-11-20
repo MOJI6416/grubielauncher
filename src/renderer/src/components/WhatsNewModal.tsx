@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BadgePlus,
   ChevronRight,
@@ -24,6 +24,9 @@ import { cn } from "@/lib/utils";
 import { formatDay } from "@renderer/utilities/date";
 import { openSettingsEntry } from "@renderer/features/settings/settingsFocus";
 import { MilestoneBeam } from "./MilestoneBeam";
+import { featureLinksFor } from "@renderer/features/whatsNew/featureLinks";
+import { FeatureLinkButton } from "@renderer/features/whatsNew/FeatureLinkButton";
+import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
 
 const api = window.api;
 const DEFAULT_DISCORD_URL = "https://discord.gg/URrKha9hk7";
@@ -42,6 +45,10 @@ export function WhatsNewModal({
   const { t } = useTranslation();
   const highlights = release?.highlights ?? [];
   const fixes = release?.fixes ?? [];
+  const links = useMemo(
+    () => featureLinksFor(highlights, release?.links, OWN_PROFILE_ID),
+    [highlights, release?.links],
+  );
   const hasReleaseContent = highlights.length > 0 || fixes.length > 0;
   const hasRelease = Boolean(release);
   const discordUrl = release?.discordUrl || DEFAULT_DISCORD_URL;
@@ -147,7 +154,13 @@ export function WhatsNewModal({
                         className="flex gap-2.5 rounded-lg bg-surface-2 px-3 py-2 text-sm leading-5"
                       >
                         <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-info" />
-                        <span className="min-w-0 break-words">{item}</span>
+                        <span className="min-w-0 flex-1 break-words">
+                          {item}
+                        </span>
+                        <FeatureLinkButton
+                          link={links[index]}
+                          onBeforeOpen={onClose}
+                        />
                       </li>
                     ))}
                   </ul>

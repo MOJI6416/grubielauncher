@@ -78,7 +78,22 @@ function useHalloween(): boolean {
 }
 
 export function SeasonalBackdrop() {
-  if (!useHalloween()) return null;
+  const event = useAtomValue(seasonalEventAtom);
+
+  if (event?.id === "winter") {
+    return (
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      >
+        <div className="winter-glow absolute inset-0" />
+        <div className="winter-snow winter-snow-far" />
+        <div className="winter-snow winter-snow-near" />
+      </div>
+    );
+  }
+
+  if (event?.id !== "halloween") return null;
 
   return (
     <div

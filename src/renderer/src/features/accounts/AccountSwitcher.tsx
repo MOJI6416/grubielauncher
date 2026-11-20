@@ -76,7 +76,7 @@ export function AccountSwitcher({
     handledSkinDeepLinkRef.current = pendingSkinDeepLink;
 
     if (!selectedAccount || selectedAccount.type === "plain") return;
-    navigate({ name: "profile", userId: OWN_PROFILE_ID });
+    navigate({ name: "wardrobe", view: "catalog" });
   }, [pendingSkinDeepLink, selectedAccount]);
 
   const switchTo = useCallback(

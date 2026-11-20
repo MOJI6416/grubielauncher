@@ -9,6 +9,7 @@ export interface RpcAccountContext {
 export interface RpcRendererContext {
   account: RpcAccountContext | null
   lang: string
+  enabled?: boolean
   hideServer: boolean
   skinVersion?: string | number
   profileUrl?: string | null

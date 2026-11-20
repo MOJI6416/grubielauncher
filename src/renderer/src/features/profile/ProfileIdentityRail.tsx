@@ -434,14 +434,14 @@ export function ProfileIdentityRail({
               </Hint>
             )}
             {user.uuid && (
-              <Hint content={`UUID · ${user.uuid}`}>
+              <Hint content={t("profile.copyUuid", { uuid: user.uuid })}>
                 <button
                   type="button"
-                  aria-label={t("accounts.uuid")}
                   onClick={() => void copy(user.uuid)}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-1 text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
+                  className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-surface-1 px-2.5 text-xs text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
                 >
-                  <Fingerprint className="size-3.5" />
+                  <Fingerprint className="size-3.5 shrink-0" />
+                  {t("accounts.uuid")}
                 </button>
               </Hint>
             )}
@@ -454,36 +454,68 @@ export function ProfileIdentityRail({
           accessToken={accessToken}
         />
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="lg"
-            className="min-w-0 flex-1"
-            disabled={isSkinBusy || !canShowSkin}
-            onClick={onShowSkin}
-          >
-            {isSkinBusy ? <Loader2 className="animate-spin" /> : <Shirt />}
-            <Hint content={t("skinView.title")} variant="text" truncatedOnly>
-              <span className="truncate">{t("skinView.title")}</span>
-            </Hint>
-          </Button>
-          <Hint content={shareLabel}>
-            <span className="inline-flex shrink-0">
-              <Button
-                variant="secondary"
-                size="icon-lg"
-                aria-label={shareLabel}
-                disabled={!profileUrl || isShareHidden}
-                onClick={() => void shareProfile()}
-              >
-                <Link2 />
-              </Button>
-            </span>
-          </Hint>
-          {isOwner && <ProfilePrivacy user={user} />}
+        <div
+          className={`grid gap-1.5 ${isOwner ? "grid-cols-3" : "grid-cols-2"}`}
+        >
+          {isOwner ? (
+            <RailAction
+              icon={<Shirt />}
+              label={t("shell.nav.wardrobe")}
+              onClick={() => navigate({ name: "wardrobe" })}
+            />
+          ) : (
+            <RailAction
+              icon={isSkinBusy ? <Loader2 className="animate-spin" /> : <Shirt />}
+              label={t("profile.actions.skin")}
+              hint={t("skinView.title")}
+              disabled={isSkinBusy || !canShowSkin}
+              onClick={onShowSkin}
+            />
+          )}
+          <RailAction
+            icon={<Link2 />}
+            label={t("profile.actions.share")}
+            hint={shareLabel}
+            disabled={!profileUrl || isShareHidden}
+            onClick={() => void shareProfile()}
+          />
+          {isOwner && <ProfilePrivacy user={user} className={RAIL_TILE} />}
         </div>
       </div>
     </aside>
+  );
+}
+
+const RAIL_TILE =
+  "h-14 min-w-0 flex-col gap-1 px-1 text-2xs font-normal [&_svg:not([class*='size-'])]:size-4";
+
+function RailAction({
+  icon,
+  label,
+  hint,
+  disabled = false,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Hint content={hint ?? label}>
+      <span className="flex min-w-0">
+        <Button
+          variant="secondary"
+          className={`${RAIL_TILE} flex-1`}
+          disabled={disabled}
+          onClick={onClick}
+        >
+          {icon}
+          <span className="w-full truncate text-center">{label}</span>
+        </Button>
+      </span>
+    </Hint>
   );
 }
 

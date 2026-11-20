@@ -10,6 +10,9 @@ import { MilestoneBeam } from "@renderer/components/MilestoneBeam";
 import { useReleaseHistory } from "@renderer/features/whatsNew/useReleaseHistory";
 import { formatDay } from "@renderer/utilities/date";
 import { SettingsGroup } from "./SettingsPrimitives";
+import { parseFeatureLink } from "@renderer/features/whatsNew/featureLinks";
+import { FeatureLinkButton } from "@renderer/features/whatsNew/FeatureLinkButton";
+import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
 
 export function ReleaseHistory({ appVersion }: { appVersion: string }) {
   const { t } = useTranslation();
@@ -140,7 +143,13 @@ function ReleaseRow({
                     className="flex gap-2 text-xs leading-4"
                   >
                     <span className="mt-1.5 size-1 shrink-0 rounded-full bg-info" />
-                    <span className="min-w-0 break-words">{item}</span>
+                    <span className="min-w-0 flex-1 break-words">{item}</span>
+                    <FeatureLinkButton
+                      link={parseFeatureLink(
+                        release.links?.[index] ?? null,
+                        OWN_PROFILE_ID,
+                      )}
+                    />
                   </li>
                 ))}
               </ul>

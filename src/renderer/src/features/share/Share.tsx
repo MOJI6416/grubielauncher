@@ -1727,11 +1727,16 @@ export function Share({
             <div className="grid gap-2 border-t border-border bg-surface-2 px-4 py-3">
               {isConfirmingDelete ? (
                 <>
-                  <p className="text-xs leading-4 text-muted-foreground">
-                    {t("ownModpacks.confirmation", {
-                      name: selectedVersion?.version.name,
-                    })}
-                  </p>
+                  <div className="grid gap-0.5">
+                    <p className="text-sm font-medium">
+                      {t("ownModpacks.deleteQuestion", {
+                        name: selectedVersion?.version.name,
+                      })}
+                    </p>
+                    <p className="text-xs leading-4 text-muted-foreground">
+                      {t("ownModpacks.deleteLoss")}
+                    </p>
+                  </div>
                   <div className="flex items-center justify-end gap-2">
                     <Button
                       variant="ghost"
@@ -1753,7 +1758,7 @@ export function Share({
                       ) : (
                         <Trash />
                       )}
-                      {t("common.delete")}
+                      {t("ownModpacks.deleteAction")}
                     </Button>
                   </div>
                 </>
@@ -1786,7 +1791,7 @@ export function Share({
                         onClick={() => setIsConfirmingDelete(true)}
                       >
                         <Trash />
-                        {t("common.delete")}
+                        {t("ownModpacks.deleteAction")}
                       </Button>
                     )}
                     <Button

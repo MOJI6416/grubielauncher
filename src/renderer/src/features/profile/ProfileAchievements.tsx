@@ -29,9 +29,10 @@ import {
   IAchievementStats,
 } from "@/types/Achievements";
 import {
-  AchievementRarity,
+  AchievementDifficulty,
   CATEGORY_ICON,
   CATEGORY_ORDER,
+  DIFFICULTY_ORDER,
   evaluateAchievements,
 } from "@renderer/utilities/achievements";
 import {
@@ -48,21 +49,14 @@ import {
   tallyByCategory,
 } from "./achievementRows";
 import {
-  RARITY_TEXT,
-  RARITY_TILE,
+  DIFFICULTY_TEXT,
+  DIFFICULTY_TILE,
   achievementIcon,
 } from "./achievementVisuals";
 import { reachPercentParts } from "./profileMetrics";
 import { ensureFreshAccount } from "./loadProfileUser";
 
 const api = window.api;
-
-const RARITY_ORDER: AchievementRarity[] = [
-  "legendary",
-  "epic",
-  "rare",
-  "common",
-];
 
 export function useAchievementRows(
   user: IUser,
@@ -116,16 +110,16 @@ export function ProfileAchievements({
   const summary = useMemo(() => summarizeAchievements(rows), [rows]);
   const tally = useMemo(() => tallyByCategory(rows, CATEGORY_ORDER), [rows]);
 
-  const rarityCounts = useMemo(() => {
+  const difficultyCounts = useMemo(() => {
     const counts = new Map<
-      AchievementRarity,
+      AchievementDifficulty,
       { unlocked: number; total: number }
     >();
     for (const row of rows) {
-      const entry = counts.get(row.rarity) ?? { unlocked: 0, total: 0 };
+      const entry = counts.get(row.difficulty) ?? { unlocked: 0, total: 0 };
       entry.total += 1;
       if (row.unlocked) entry.unlocked += 1;
-      counts.set(row.rarity, entry);
+      counts.set(row.difficulty, entry);
     }
     return counts;
   }, [rows]);
@@ -144,9 +138,12 @@ export function ProfileAchievements({
     category !== "all" || status !== "all" || query.trim() !== "";
 
   const activeTally = tally.find((entry) => entry.category === category);
-  const activeCategoryLabel = activeTally
-    ? `${t(`achievements.categories.${activeTally.category}`)} · ${activeTally.unlocked}/${activeTally.total}`
-    : `${t("achievements.filter.all")} · ${summary.unlocked}/${summary.total}`;
+  const activeCategoryLabel = t("achievements.unlockedOf", {
+    unlocked: formatNumber(
+      activeTally ? activeTally.unlocked : summary.unlocked,
+    ),
+    total: formatNumber(activeTally ? activeTally.total : summary.total),
+  });
 
   const resetFilters = () => {
     setCategory("all");
@@ -191,28 +188,27 @@ export function ProfileAchievements({
           </Hint>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
-          {RARITY_ORDER.map((rarity) => {
-            const entry = rarityCounts.get(rarity) ?? { unlocked: 0, total: 0 };
+        <div
+          role="group"
+          aria-label={t("achievements.difficulty.label")}
+          className="flex shrink-0 items-center gap-1.5"
+        >
+          {DIFFICULTY_ORDER.map((difficulty) => {
+            const entry = difficultyCounts.get(difficulty) ?? {
+              unlocked: 0,
+              total: 0,
+            };
 
             return (
               <Hint
-                key={rarity}
-                content={
-                  totalPlayers
-                    ? `${t("achievements.rarityUnlocked", {
-                        rarity: t(`achievements.rarity.${rarity}`),
-                      })} · ${t("achievements.reachHint", {
-                        players: formatNumber(totalPlayers),
-                      })}`
-                    : t("achievements.rarityUnlocked", {
-                        rarity: t(`achievements.rarity.${rarity}`),
-                      })
-                }
+                key={difficulty}
+                content={t("achievements.difficultyUnlocked", {
+                  difficulty: t(`achievements.difficulty.${difficulty}`),
+                })}
               >
                 <div className="flex h-11 min-w-16 flex-col items-center justify-center rounded-lg bg-surface-1 px-2">
                   <span
-                    className={`font-mono text-sm tabular-nums ${RARITY_TEXT[rarity]}`}
+                    className={`font-mono text-sm tabular-nums ${DIFFICULTY_TEXT[difficulty]}`}
                   >
                     {formatNumber(entry.unlocked)}
                     <span className="text-faint">
@@ -220,7 +216,7 @@ export function ProfileAchievements({
                     </span>
                   </span>
                   <span className="text-3xs text-faint">
-                    {t(`achievements.rarity.${rarity}`)}
+                    {t(`achievements.difficulty.${difficulty}`)}
                   </span>
                 </div>
               </Hint>
@@ -266,7 +262,7 @@ export function ProfileAchievements({
         <div className="flex min-w-0 items-center gap-2.5">
           <SegmentedControl
             value={category}
-            iconOnly
+            iconOnly="inactive"
             ariaLabel={t("achievements.categoryFilter")}
             options={[
               {
@@ -360,6 +356,7 @@ export function ProfileAchievements({
                 isOwner={isOwner}
                 showProgress={isOwner}
                 formatNumber={formatNumber}
+                totalPlayers={totalPlayers}
               />
             ))}
           </div>
@@ -489,11 +486,13 @@ export function AchievementCard({
   isOwner = true,
   showProgress,
   formatNumber,
+  totalPlayers = null,
 }: {
   row: AchievementRow;
   isOwner?: boolean;
   showProgress: boolean;
   formatNumber: (value: number) => string;
+  totalPlayers?: number | null;
 }) {
   const { t } = useTranslation();
   const Icon = achievementIcon(row.id);
@@ -516,7 +515,7 @@ export function AchievementCard({
       <div
         className={`relative flex size-10 shrink-0 items-center justify-center rounded-lg border ${
           row.unlocked
-            ? RARITY_TILE[row.rarity]
+            ? DIFFICULTY_TILE[row.difficulty]
             : "border-border bg-surface-2 text-faint"
         }`}
       >
@@ -541,10 +540,8 @@ export function AchievementCard({
               {t(`achievements.items.${row.id}.name`)}
             </p>
           </Hint>
-          <RarityMark row={row} />
-          <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
-            +{row.points}
-          </span>
+          <ReachMark row={row} totalPlayers={totalPlayers} />
+          <DifficultyMark row={row} />
         </div>
 
         <div className="flex min-w-0 items-center gap-2">
@@ -573,29 +570,56 @@ export function AchievementCard({
   );
 }
 
-function RarityMark({ row }: { row: AchievementRow }) {
+function ReachMark({
+  row,
+  totalPlayers,
+}: {
+  row: AchievementRow;
+  totalPlayers: number | null;
+}) {
   const { t } = useTranslation();
 
-  const rarity = t(`achievements.rarity.${row.rarity}`);
-  const hasPercent = row.percent !== null && row.percent > 0;
-  const parts = hasPercent ? reachPercentParts(row.percent as number) : null;
-  const reach = parts
-    ? `${parts.belowFloor ? "<" : ""}${formatNumber(parts.value)}`
-    : "";
+  if (row.percent === null) return null;
+
+  const parts = reachPercentParts(row.percent);
+  const number = `${parts.belowFloor ? "<" : ""}${formatNumber(parts.value)}`;
+  const value = t("achievements.percentValue", { value: number });
+  const share = t("achievements.unlockedShare", { percent: number });
 
   return (
     <Hint
       content={
-        parts
-          ? `${rarity} · ${t("achievements.unlockedShare", { percent: reach })}`
-          : rarity
+        totalPlayers
+          ? `${share} · ${t("achievements.reachHint", {
+              players: formatNumber(totalPlayers),
+            })}`
+          : share
       }
     >
+      <span className="shrink-0 font-mono text-xs font-medium tabular-nums text-foreground">
+        {value}
+      </span>
+    </Hint>
+  );
+}
+
+function DifficultyMark({ row }: { row: AchievementRow }) {
+  const { t } = useTranslation();
+
+  const label = t("achievements.difficultyOf", {
+    difficulty: t(`achievements.difficulty.${row.difficulty}`),
+  });
+
+  return (
+    <Hint
+      content={`${label} · ${t("achievements.pointsValue", { points: row.points })}`}
+    >
       <span
-        className={`flex size-4 shrink-0 items-center justify-center ${RARITY_TEXT[row.rarity]}`}
-        aria-label={rarity}
+        aria-label={label}
+        className={`flex shrink-0 items-center gap-0.5 font-mono text-xs tabular-nums ${DIFFICULTY_TEXT[row.difficulty]}`}
       >
         <Trophy className="size-3" />
+        {row.points}
       </span>
     </Hint>
   );

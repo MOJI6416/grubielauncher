@@ -29,9 +29,18 @@ import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
-type Mode = "wardrobe" | "catalog";
+export type ManageSkinsMode = "wardrobe" | "catalog";
 
-export function ManageSkins() {
+export function ManageSkins({
+  mode,
+  onModeChange,
+}: {
+  mode: ManageSkinsMode;
+  onModeChange: (
+    mode: ManageSkinsMode,
+    options?: { replace?: boolean; byPlayer?: boolean },
+  ) => void;
+}) {
   const { t } = useTranslation();
   const isInternetOnline = useAtomValue(internetAtom);
   const isBackendOnline = useAtomValue(networkAtom);
@@ -42,7 +51,6 @@ export function ManageSkins() {
   const { data, setData, status, reload, account, authData, backendToken } =
     useSkinsData();
 
-  const [mode, setMode] = useState<Mode>("wardrobe");
   const [deepLinkSkinId, setDeepLinkSkinId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -64,9 +72,9 @@ export function ManageSkins() {
     if (!pendingSkinDeepLink) return;
 
     setDeepLinkSkinId(pendingSkinDeepLink);
-    setMode("catalog");
+    if (mode !== "catalog") onModeChange("catalog", { replace: true });
     setPendingSkinDeepLink(null);
-  }, [pendingSkinDeepLink, setPendingSkinDeepLink]);
+  }, [pendingSkinDeepLink, setPendingSkinDeepLink, mode, onModeChange]);
 
   const canUseSkinService = useMemo(
     () =>
@@ -143,7 +151,7 @@ export function ManageSkins() {
         }
 
         toast.success(t("manageSkins.catalogImported"));
-        setMode("wardrobe");
+        onModeChange("wardrobe");
       } catch (error) {
         showFailureToast(t("manageSkins.importError"), error, {
           channels: ["skins:"],
@@ -152,7 +160,7 @@ export function ManageSkins() {
         setIsImporting(false);
       }
     },
-    [account, authData, reload, t],
+    [account, authData, reload, t, onModeChange],
   );
 
   const modeSwitch = (
@@ -163,7 +171,7 @@ export function ManageSkins() {
         { value: "wardrobe", label: t("manageSkins.tabMine") },
         { value: "catalog", label: t("manageSkins.tabCatalog") },
       ]}
-      onChange={setMode}
+      onChange={(next) => onModeChange(next, { byPlayer: true })}
     />
   );
 

@@ -4,7 +4,13 @@ import {
 } from "@/types/Settings";
 import type { InstanceTab } from "@renderer/navigation/routes";
 
-export type NavSlot = "play" | "people" | "screenshots" | "news" | "settings";
+export type NavSlot =
+  | "play"
+  | "people"
+  | "wardrobe"
+  | "screenshots"
+  | "news"
+  | "settings";
 export type SidebarSection = "dock" | "now";
 export type HomeBlock = "hero" | "stats" | "continue";
 export type OverviewCard = "screenshots" | "notes" | "sessions";
@@ -12,6 +18,7 @@ export type OverviewCard = "screenshots" | "notes" | "sessions";
 export const NAV_SLOTS: NavSlot[] = [
   "play",
   "people",
+  "wardrobe",
   "screenshots",
   "news",
   "settings",

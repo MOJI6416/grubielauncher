@@ -50,14 +50,14 @@ describe("routeUsage", () => {
 
   it("never names an instance, a person or a chat", () => {
     const features = [
-      ...routeUsage(null, { name: "profile", userId: "u1", tab: "skins" }, "overview"),
+      ...routeUsage(null, { name: "profile", userId: "u1", tab: "leaderboard" }, "overview"),
       ...routeUsage(null, { name: "people", peerId: "p1" }, "overview"),
       ...routeUsage(null, { name: "agent", chatId: "c1" }, "overview"),
     ];
 
     expect(features).toEqual([
       "screen.profile",
-      "profile.skins",
+      "profile.leaderboard",
       "screen.people",
       "people.friends",
       "screen.agent",

@@ -34,9 +34,26 @@ describe("activeSeasonalEvent", () => {
   });
 });
 
+describe("the winter holidays", () => {
+  it("run from December 20 to January 7 inclusive", () => {
+    expect(activeSeasonalEvent(at(2026, 12, 19, 23))).toBeNull();
+    expect(activeSeasonalEvent(at(2026, 12, 20, 0))?.id).toBe("winter");
+    expect(activeSeasonalEvent(at(2027, 1, 7, 23))?.id).toBe("winter");
+    expect(activeSeasonalEvent(at(2027, 1, 8, 0))).toBeNull();
+  });
+
+  it("peak on New Year's Eve and end in January", () => {
+    expect(activeSeasonalEvent(at(2026, 12, 31))?.isPeak).toBe(true);
+    expect(activeSeasonalEvent(at(2027, 1, 1))?.isPeak).toBe(false);
+    expect(activeSeasonalEvent(at(2026, 12, 24))?.endsOn).toEqual(
+      new Date(2027, 0, 7),
+    );
+  });
+});
+
 describe("events across the new year", () => {
   const winter: SeasonalEvent = {
-    id: "halloween",
+    id: "winter",
     start: { month: 12, day: 20 },
     end: { month: 1, day: 7 },
     peak: { month: 12, day: 31 },

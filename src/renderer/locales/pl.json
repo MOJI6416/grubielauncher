@@ -1711,6 +1711,15 @@
     "soundsDescription": "Koniec instalacji, awaria gry i zaproszenia od znajomych",
     "hideServerInRpc": "Ukryj serwer w Discordzie",
     "hideServerInRpcDescription": "Nie pokazuj adresu serwera w Discord Rich Presence",
+    "discordGroup": "Discord",
+    "discordActivity": "Pokazuj aktywność w Discordzie",
+    "discordActivityDescription": "Karta w profilu Discord: launcher lub instancja, czas gry i przyciski",
+    "discordPreview": {
+      "label": "Tak wygląda Twoja karta w Discordzie",
+      "hidden": "Discord nie pokazuje Twojej aktywności",
+      "inGame": "W grze: nazwa instancji i adres serwera",
+      "inGameNoServer": "W grze: nazwa instancji, adres serwera jest ukryty"
+    },
     "streamer": {
       "title": "Streamowanie",
       "enabled": "Tryb streamera",
@@ -2021,7 +2030,7 @@
         "graphite": "Grafitowy"
       },
       "seasonalDecor": "Świąteczne dekoracje",
-      "seasonalDecorDescription": "Tematyczne akcenty w święta. Halloween trwa {{start}} – {{end}}."
+      "seasonalDecorDescription": "Tematyczne akcenty w święta: {{events}}."
     },
     "voice": {
       "devicesDescription": "Urządzenia są wspólne z panelem rozmowy. Przetestuj mikrofon przed dołączeniem."
@@ -2153,6 +2162,11 @@
         "description": "Gdy działa OBS lub inna aplikacja do streamowania",
         "keywords": "streamer stream obs streamlabs xsplit automatycznie"
       },
+      "discordActivity": {
+        "title": "Pokazuj aktywność w Discordzie",
+        "description": "Karta w profilu Discord: launcher lub instancja, czas gry i przyciski",
+        "keywords": "discord rpc rich presence aktywność status karta prywatność"
+      },
       "autoWorldBackup": {
         "title": "Automatyczne kopie zapasowe światów",
         "description": "Kopia jest zapisywana po sesji, jeśli świat się zmienił",
@@ -2270,7 +2284,7 @@
       },
       "seasonalDecor": {
         "title": "Świąteczne dekoracje",
-        "description": "Halloweenowe nietoperze, dynie i pajęczyny",
+        "description": "Dekoracje okna launchera na Halloween i Nowy Rok",
         "keywords": "halloween święto sezon wydarzenie motyw dekoracje dynia nietoperze nowy rok boże narodzenie"
       },
       "sidebarCollapsed": {
@@ -2626,7 +2640,7 @@
     "updateWorld": "Aktualizuj świat",
     "updateOtherFiles": "Aktualizuj inne pliki",
     "updateLogo": "Aktualizuj logo",
-    "versionShareDel": "Usuń instancję z serwera",
+    "versionShareDel": "Wycofaj publikację",
     "shareGone": "Usunięto publikację: {{name}}",
     "shareGoneHint": "Instancji nie ma już na serwerze, więc link został usunięty. Sama instancja zostaje na tym komputerze i można ją opublikować ponownie.",
     "searchPlaceholder": "Szukaj instancji…",
@@ -3857,6 +3871,7 @@
     "metaFormatModern": "Nowoczesny",
     "metaFormatLegacy": "Starszy",
     "metaId": "Identyfikator",
+    "details": "Szczegóły",
     "linkTitle": "Link do tekstury",
     "nickTitle": "Weź skin innego gracza",
     "selectError": "Nie udało się wybrać skina",
@@ -3926,6 +3941,7 @@
     "offlineDescription": "Pełna lista zmian pojawi się, gdy będzie dostępny internet lub wydanie zostanie opublikowane.",
     "highlights": "Najważniejsze",
     "fixes": "Poprawiono",
+    "open": "Otwórz",
     "discordCta": "Więcej nowości na Discordzie",
     "skipped_one": "Od ostatniego uruchomienia wyszło jeszcze {{count}} wydanie — historia wersji",
     "skipped_few": "Od ostatniego uruchomienia wyszły jeszcze {{count}} wydania — historia wersji",
@@ -4359,6 +4375,7 @@
     "empty": "Na razie nic tu nie ma",
     "level": "Poziom",
     "pointsOf": "{{points}} z {{total}} pkt",
+    "pointsValue": "Punkty: {{points}}",
     "unlockedToast": "Odblokowano osiągnięcie: {{name}}",
     "filter": {
       "all": "Wszystkie",
@@ -4374,11 +4391,12 @@
       "playtime": "Czas gry",
       "community": "Społeczność"
     },
-    "rarity": {
-      "common": "Pospolite",
-      "rare": "Rzadkie",
-      "epic": "Epickie",
-      "legendary": "Legendarne"
+    "difficulty": {
+      "label": "Trudność",
+      "easy": "Łatwa",
+      "medium": "Średnia",
+      "hard": "Trudna",
+      "legendary": "Legendarna"
     },
     "tiers": {
       "t0": "Nowicjusz",
@@ -4693,9 +4711,11 @@
       }
     },
     "unlockedOf": "Odblokowano {{unlocked}} z {{total}}",
-    "reachHint": "Rzadkość mierzona wśród {{players}} graczy",
+    "reachHint": "Udział wśród {{players}} graczy",
+    "difficultyOf": "Trudność: {{difficulty}}",
     "unlockedShare": "odblokowało {{percent}}% graczy",
-    "rarityUnlocked": "Odblokowane, {{rarity}}",
+    "percentValue": "{{value}}%",
+    "difficultyUnlocked": "Odblokowane, trudność: {{difficulty}}",
     "sort": {
       "progress": "Prawie gotowe",
       "rarity": "Najrzadsze najpierw",
@@ -4828,9 +4848,8 @@
   ],
   "ownModpacks": {
     "noModpacks": "Nie udostępniono jeszcze żadnych modpacków",
-    "deleted": "Usunięto modpack",
-    "deleteError": "Błąd usuwania modpacka",
-    "confirmation": "Modpack „{{name}}” zostanie usunięty z serwera.",
+    "deleted": "Wycofano publikację modpacka",
+    "deleteError": "Nie udało się wycofać publikacji modpacka",
     "addToLauncher": "Dodaj do launchera",
     "loadError": "Nie udało się wczytać modpacków",
     "published": "Opublikowano: {{value}}",
@@ -5571,6 +5590,7 @@
       "newInstance": "Nowa instancja",
       "instance": "Instancja",
       "people": "Ludzie",
+      "wardrobe": "Garderoba",
       "profile": "Profil",
       "peopleNews": "Nieprzeczytane i zaproszenia: {{value}}",
       "peoplePlaying": "Znajomi w grze: {{value}}"
@@ -5607,6 +5627,7 @@
         "agent": "ai asystent pomocnik czat",
         "people": "ludzie znajomi głos grupy czat",
         "profile": "profil skiny osiągnięcia peleryna",
+        "wardrobe": "garderoba skiny peleryny skin peleryna katalog",
         "notifications": "powiadomienia telegram bot zaproszenia",
         "settings": "ustawienia opcje",
         "accounts": "konta logowanie",
@@ -6208,8 +6229,7 @@
       "overview": "Przegląd",
       "achievements": "Osiągnięcia",
       "leaderboard": "Ranking",
-      "modpacks": "Modpacki",
-      "skins": "Skiny"
+      "modpacks": "Modpacki"
     },
     "categories": "Według kategorii",
     "openAccounts": "Otwórz konta",
@@ -6222,6 +6242,12 @@
     "publicModpacksHint2": "Gdy autor zaktualizuje paczkę, launcher zaproponuje aktualizację.",
     "publicModpacksHint3": "Ekran potwierdzenia pokazuje wszystko, zanim cokolwiek zostanie pobrane.",
     "share": "Kopiuj link do profilu",
+    "actions": {
+      "skin": "Skin",
+      "share": "Udostępnij",
+      "privacy": "Prywatność"
+    },
+    "copyUuid": "Kopiuj UUID · {{uuid}}",
     "shareHiddenOwn": "Profil jest ukryty – włącz „Profil publiczny” w prywatności",
     "shareHidden": "Gracz ukrył profil"
   },
@@ -6929,9 +6955,16 @@
     "turnOff": "Wyłącz dekoracje",
     "turnOffHint": "Można je przywrócić w ustawieniach interfejsu",
     "halloween": {
+      "name": "Halloween",
       "title": "Halloween w Grubie",
       "peakTitle": "Wesołego Halloween!",
       "description": "Nietoperze, dynie i pajęczyny do {{end}}. Kliknij dynię, aby wypłoszyć więcej nietoperzy."
+    },
+    "winter": {
+      "name": "Nowy Rok",
+      "title": "Nowy Rok w Grubie",
+      "peakTitle": "Szczęśliwego Nowego Roku!",
+      "description": "Śnieg i świąteczna choinka do {{end}}. Wesołych świąt!"
     }
   },
   "crashFix": {

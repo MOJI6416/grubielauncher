@@ -61,7 +61,14 @@ export type AchievementCategory =
   | "playtime"
   | "community";
 
-export type AchievementRarity = "common" | "rare" | "epic" | "legendary";
+export type AchievementDifficulty = "easy" | "medium" | "hard" | "legendary";
+
+export const DIFFICULTY_ORDER: AchievementDifficulty[] = [
+  "legendary",
+  "hard",
+  "medium",
+  "easy",
+];
 
 type MetricKey = keyof IAchievementStats | "playTimeSeconds";
 export type MetricUnit = "count" | "km" | "ticksHours" | "secondsHours";
@@ -82,7 +89,7 @@ export interface IAchievementProgress {
   value: number;
   unlocked: boolean;
   ratio: number;
-  rarity: AchievementRarity;
+  difficulty: AchievementDifficulty;
 }
 
 export const CATEGORY_ORDER: AchievementCategory[] = [
@@ -189,11 +196,11 @@ export function getAchievementDef(id: string): IAchievementDef | undefined {
   return ACHIEVEMENTS_BY_ID.get(id);
 }
 
-export function rarityOf(points: number): AchievementRarity {
+export function difficultyOf(points: number): AchievementDifficulty {
   if (points >= 70) return "legendary";
-  if (points >= 45) return "epic";
-  if (points >= 25) return "rare";
-  return "common";
+  if (points >= 45) return "hard";
+  if (points >= 25) return "medium";
+  return "easy";
 }
 
 function metricValue(
@@ -219,7 +226,7 @@ export function evaluateAchievements(
         value: 0,
         unlocked,
         ratio: unlocked ? 1 : 0,
-        rarity: rarityOf(def.points),
+        difficulty: difficultyOf(def.points),
       };
     }
     const value = metricValue(def.metric!, stats, playTimeSeconds);
@@ -234,7 +241,7 @@ export function evaluateAchievements(
       value,
       unlocked,
       ratio,
-      rarity: rarityOf(def.points),
+      difficulty: difficultyOf(def.points),
     };
   });
 }

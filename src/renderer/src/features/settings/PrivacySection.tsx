@@ -14,6 +14,7 @@ import {
   useStreamerState,
 } from "@renderer/features/streamer/streamerMode";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
+import { DiscordActivityPreview } from "./DiscordActivityPreview";
 import type { SettingsEntryId } from "./catalog";
 
 const api = window.api;
@@ -116,7 +117,33 @@ export function PrivacySection({
         )}
       </SettingsGroup>
 
-      <SettingsGroup title={t("settings.sections.privacy")}>
+      <SettingsGroup title={t("settings.discordGroup")}>
+        {visible("discordActivity") && (
+          <SettingRow
+            entry="discordActivity"
+            htmlFor="settings-discord-activity"
+            title={t("settings.discordActivity")}
+            description={t("settings.discordActivityDescription")}
+            query={query}
+            changed={isChanged("discordActivity")}
+            onReset={() => reset("discordActivity")}
+            control={
+              <Switch
+                id="settings-discord-activity"
+                checked={settings.discordActivity}
+                onCheckedChange={(value) =>
+                  commit({ discordActivity: value })
+                }
+              />
+            }
+          >
+            <DiscordActivityPreview
+              enabled={settings.discordActivity}
+              hideServer={settings.hideServerInRpc || streamer.active}
+            />
+          </SettingRow>
+        )}
+
         {visible("hideServerInRpc") && (
           <SettingRow
             entry="hideServerInRpc"
@@ -130,12 +157,17 @@ export function PrivacySection({
               <Switch
                 id="settings-hide-server"
                 checked={settings.hideServerInRpc}
-                onCheckedChange={(value) => commit({ hideServerInRpc: value })}
+                disabled={!settings.discordActivity}
+                onCheckedChange={(value) =>
+                  commit({ hideServerInRpc: value })
+                }
               />
             }
           />
         )}
+      </SettingsGroup>
 
+      <SettingsGroup title={t("settings.sections.privacy")}>
         {visible("directConnect") && (
           <SettingRow
             entry="directConnect"

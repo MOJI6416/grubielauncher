@@ -16,6 +16,7 @@ import {
   Newspaper,
   Play,
   Settings as LSettings,
+  Shirt,
 } from "lucide-react";
 import {
   ContextMenu,
@@ -295,6 +296,10 @@ export function Sidebar({
     { accountType: selectedAccount?.type ?? null },
   );
   const isFriendsDisabled = peopleBlocked !== null;
+  const wardrobeBlocked = routeBlockReason(
+    { name: "wardrobe" },
+    { accountType: selectedAccount?.type ?? null },
+  );
   const friendsHint = peopleBlocked
     ? t(routeBlockedKey(peopleBlocked))
     : !canUseBackend
@@ -382,6 +387,14 @@ export function Sidebar({
       badgeNote: peopleNotes.length > 0 ? peopleNotes.join(" · ") : undefined,
       badgeDot: peopleNews > 0 ? "info" : "success",
       onSelect: () => navigate({ name: "people" }),
+    },
+    wardrobe: {
+      icon: <Shirt className="size-4" />,
+      label: t("shell.nav.wardrobe"),
+      current: isRoute(route, "wardrobe"),
+      disabled: wardrobeBlocked !== null,
+      hint: wardrobeBlocked ? t(routeBlockedKey(wardrobeBlocked)) : undefined,
+      onSelect: () => navigate({ name: "wardrobe" }),
     },
     screenshots: {
       icon: <Camera className="size-4" />,

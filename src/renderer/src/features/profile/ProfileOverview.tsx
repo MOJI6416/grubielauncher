@@ -22,6 +22,7 @@ import { instanceKey } from "@renderer/features/instances/selectors";
 import {
   CATEGORY_ICON,
   CATEGORY_ORDER,
+  DIFFICULTY_ORDER,
 } from "@renderer/utilities/achievements";
 import {
   AchievementRow,
@@ -33,8 +34,8 @@ import {
   tallyByCategory,
 } from "./achievementRows";
 import {
-  RARITY_TEXT,
-  RARITY_TILE,
+  DIFFICULTY_TEXT,
+  DIFFICULTY_TILE,
   achievementIcon,
 } from "./achievementVisuals";
 import {
@@ -244,7 +245,7 @@ function ShowcaseTile({
     >
       <div className="flex min-w-0 flex-col items-center gap-1.5 rounded-lg bg-surface-1 p-2">
         <span
-          className={`flex size-11 items-center justify-center rounded-lg border ${RARITY_TILE[row.rarity]}`}
+          className={`flex size-11 items-center justify-center rounded-lg border ${DIFFICULTY_TILE[row.difficulty]}`}
         >
           <Icon className="size-5" />
         </span>
@@ -252,10 +253,12 @@ function ShowcaseTile({
           {t(`achievements.items.${row.id}.name`)}
         </span>
         <span
-          className={`truncate font-mono text-3xs tabular-nums ${RARITY_TEXT[row.rarity]}`}
+          className={`truncate font-mono text-3xs tabular-nums ${DIFFICULTY_TEXT[row.difficulty]}`}
         >
           {parts
-            ? `${parts.belowFloor ? "<" : ""}${formatNumber(parts.value)}%`
+            ? t("achievements.percentValue", {
+                value: `${parts.belowFloor ? "<" : ""}${formatNumber(parts.value)}`,
+              })
             : `+${row.points}`}
         </span>
       </div>
@@ -576,7 +579,7 @@ function CollectionPanel({
     const tally = new Map<string, number>();
     for (const row of rows) {
       if (!row.unlocked) continue;
-      tally.set(row.rarity, (tally.get(row.rarity) ?? 0) + 1);
+      tally.set(row.difficulty, (tally.get(row.difficulty) ?? 0) + 1);
     }
     return tally;
   }, [rows]);
@@ -584,26 +587,24 @@ function CollectionPanel({
   return (
     <Panel title={t("profile.collection")} icon={Trophy} className="shrink-0">
       <div className="grid grid-cols-4 gap-1.5">
-        {(["legendary", "epic", "rare", "common"] as const).map((rarity) => (
-          <div
-            key={rarity}
-            className="flex h-14 flex-col items-center justify-center rounded-lg bg-surface-1 px-1"
+        {DIFFICULTY_ORDER.map((difficulty) => (
+          <Hint
+            key={difficulty}
+            content={t("achievements.difficultyOf", {
+              difficulty: t(`achievements.difficulty.${difficulty}`),
+            })}
           >
-            <span
-              className={`font-mono text-base tabular-nums ${RARITY_TEXT[rarity]}`}
-            >
-              {formatNumber(counts.get(rarity) ?? 0)}
-            </span>
-            <Hint
-              content={t(`achievements.rarity.${rarity}`)}
-              variant="text"
-              truncatedOnly
-            >
-              <span className="w-full truncate text-center text-3xs text-faint">
-                {t(`achievements.rarity.${rarity}`)}
+            <div className="flex h-14 min-w-0 flex-col items-center justify-center rounded-lg bg-surface-1 px-1">
+              <span
+                className={`font-mono text-base tabular-nums ${DIFFICULTY_TEXT[difficulty]}`}
+              >
+                {formatNumber(counts.get(difficulty) ?? 0)}
               </span>
-            </Hint>
-          </div>
+              <span className="w-full truncate text-center text-3xs text-faint">
+                {t(`achievements.difficulty.${difficulty}`)}
+              </span>
+            </div>
+          </Hint>
         ))}
       </div>
     </Panel>

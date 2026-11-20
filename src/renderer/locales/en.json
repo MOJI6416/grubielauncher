@@ -1669,6 +1669,15 @@
     "soundsDescription": "Install finished, game crash and friend invites",
     "hideServerInRpc": "Hide server in Discord",
     "hideServerInRpcDescription": "Don't show the server address in Discord Rich Presence",
+    "discordGroup": "Discord",
+    "discordActivity": "Show activity in Discord",
+    "discordActivityDescription": "The card on your Discord profile: the launcher or instance, play time and buttons",
+    "discordPreview": {
+      "label": "How your card looks in Discord",
+      "hidden": "Discord does not show your activity",
+      "inGame": "In game: the instance name and the server address",
+      "inGameNoServer": "In game: the instance name, the server address stays hidden"
+    },
     "streamer": {
       "title": "Streaming",
       "enabled": "Streamer mode",
@@ -1976,7 +1985,7 @@
         "graphite": "Graphite"
       },
       "seasonalDecor": "Holiday decorations",
-      "seasonalDecorDescription": "Themed touches on holidays. Halloween runs {{start}} – {{end}}."
+      "seasonalDecorDescription": "Themed touches on holidays: {{events}}."
     },
     "voice": {
       "devicesDescription": "Devices are shared with the in-call panel. Test the microphone before joining."
@@ -2108,6 +2117,11 @@
         "description": "When OBS or another streaming app is running",
         "keywords": "streamer stream obs streamlabs xsplit automatic"
       },
+      "discordActivity": {
+        "title": "Show activity in Discord",
+        "description": "The card on your Discord profile: the launcher or instance, play time and buttons",
+        "keywords": "discord rpc rich presence activity status card privacy"
+      },
       "autoWorldBackup": {
         "title": "Automatic world backups",
         "description": "A copy is saved after a session if the world changed",
@@ -2225,7 +2239,7 @@
       },
       "seasonalDecor": {
         "title": "Holiday decorations",
-        "description": "Halloween bats, pumpkins and cobwebs",
+        "description": "Halloween and New Year decorations in the launcher window",
         "keywords": "halloween holiday season event theme decorations pumpkin bats new year christmas"
       },
       "sidebarCollapsed": {
@@ -2579,7 +2593,7 @@
     "updateWorld": "Update world",
     "updateOtherFiles": "Update other files",
     "updateLogo": "Update logo",
-    "versionShareDel": "Delete instance from server",
+    "versionShareDel": "Unpublish",
     "shareGone": "Publication removed: {{name}}",
     "shareGoneHint": "The instance is gone from the server, so the link was removed. The instance itself stays on this computer and can be published again.",
     "searchPlaceholder": "Search instances…",
@@ -3792,6 +3806,7 @@
     "metaFormatModern": "Modern",
     "metaFormatLegacy": "Legacy",
     "metaId": "Identifier",
+    "details": "Details",
     "linkTitle": "Link to a texture",
     "nickTitle": "Take another player's skin",
     "selectError": "Could not select the skin",
@@ -3861,6 +3876,7 @@
     "offlineDescription": "The full change list will appear when internet is available or the release is published.",
     "highlights": "Highlights",
     "fixes": "Fixed",
+    "open": "Open",
     "discordCta": "More news in Discord",
     "skipped_one": "{{count}} more release came out since your last launch — version history",
     "skipped_other": "{{count}} more releases came out since your last launch — version history"
@@ -4272,6 +4288,7 @@
     "empty": "Nothing here yet",
     "level": "Level",
     "pointsOf": "{{points}} of {{total}} points",
+    "pointsValue": "Points: {{points}}",
     "unlockedToast": "Achievement unlocked: {{name}}",
     "filter": {
       "all": "All",
@@ -4287,10 +4304,11 @@
       "playtime": "Playtime",
       "community": "Community"
     },
-    "rarity": {
-      "common": "Common",
-      "rare": "Rare",
-      "epic": "Epic",
+    "difficulty": {
+      "label": "Difficulty",
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
       "legendary": "Legendary"
     },
     "tiers": {
@@ -4606,9 +4624,11 @@
       }
     },
     "unlockedOf": "{{unlocked}} of {{total}} unlocked",
-    "reachHint": "Rarity measured across {{players}} players",
+    "reachHint": "Share of {{players}} players",
+    "difficultyOf": "Difficulty: {{difficulty}}",
     "unlockedShare": "unlocked by {{percent}}% of players",
-    "rarityUnlocked": "Unlocked, {{rarity}}",
+    "percentValue": "{{value}}%",
+    "difficultyUnlocked": "Unlocked, difficulty: {{difficulty}}",
     "sort": {
       "progress": "Closest first",
       "rarity": "Rarest first",
@@ -4739,9 +4759,8 @@
   ],
   "ownModpacks": {
     "noModpacks": "You haven't shared any modpacks",
-    "deleted": "Modpack deleted",
-    "deleteError": "Error deleting modpack",
-    "confirmation": "The modpack “{{name}}” is removed from the server.",
+    "deleted": "Modpack unpublished",
+    "deleteError": "Couldn’t unpublish the modpack",
     "addToLauncher": "Add to launcher",
     "loadError": "Couldn't load your modpacks",
     "published": "Published: {{value}}",
@@ -5472,6 +5491,7 @@
       "newInstance": "New instance",
       "instance": "Instance",
       "people": "People",
+      "wardrobe": "Wardrobe",
       "profile": "Profile",
       "peopleNews": "Unread and requests: {{value}}",
       "peoplePlaying": "Friends in game: {{value}}"
@@ -5508,6 +5528,7 @@
         "agent": "ai assistant chat helper",
         "people": "people friends voice groups chat",
         "profile": "profile skins achievements cape",
+        "wardrobe": "wardrobe skins capes skin cape catalog",
         "notifications": "notifications telegram alerts bot invites",
         "settings": "settings preferences options",
         "accounts": "accounts sign in login",
@@ -6087,8 +6108,7 @@
       "overview": "Overview",
       "achievements": "Achievements",
       "leaderboard": "Leaderboard",
-      "modpacks": "Modpacks",
-      "skins": "Skins"
+      "modpacks": "Modpacks"
     },
     "categories": "By category",
     "openAccounts": "Open accounts",
@@ -6101,6 +6121,12 @@
     "publicModpacksHint2": "When the author updates the pack, the launcher offers the update.",
     "publicModpacksHint3": "The confirmation screen lists everything before anything is downloaded.",
     "share": "Copy profile link",
+    "actions": {
+      "skin": "Skin",
+      "share": "Share",
+      "privacy": "Privacy"
+    },
+    "copyUuid": "Copy UUID · {{uuid}}",
     "shareHiddenOwn": "Your profile is hidden — turn on “Public profile” in privacy",
     "shareHidden": "This player hid the profile"
   },
@@ -6800,9 +6826,16 @@
     "turnOff": "Turn off decorations",
     "turnOffHint": "You can bring them back in interface settings",
     "halloween": {
+      "name": "Halloween",
       "title": "Halloween in Grubie",
       "peakTitle": "Happy Halloween!",
       "description": "Bats, pumpkins and cobwebs until {{end}}. Click the pumpkin to scare up more bats."
+    },
+    "winter": {
+      "name": "New Year",
+      "title": "New Year in Grubie",
+      "peakTitle": "Happy New Year!",
+      "description": "Snow and a holiday tree until {{end}}. Happy holidays!"
     }
   },
   "crashFix": {

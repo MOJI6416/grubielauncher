@@ -32,6 +32,7 @@ export const SYNCED_SETTING_KEYS = [
   "voiceOverlayCorner",
   "overlayToasts",
   "streamerModeAuto",
+  "discordActivity",
   "hideServerInRpc",
 ] as const satisfies readonly (keyof TSettings)[];
 

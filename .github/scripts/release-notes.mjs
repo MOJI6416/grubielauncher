@@ -122,6 +122,9 @@ class NotesError extends Error {}
 
 const IN_ACTIONS = process.env.GITHUB_ACTIONS === "true";
 
+const RELEASE_LINK =
+  /^(?:home|news|screenshots|catalog|accounts|agent|instance-new|wardrobe(?:\/catalog)?|profile(?:\/(?:achievements|leaderboard|modpacks))?|people(?:\/(?:friends|groups|requests))?|instance\/[a-z]+|settings(?:\/[a-z-]+){0,2}|setting:[A-Za-z]+)$/;
+
 function fail(message) {
   console.error(IN_ACTIONS ? `::error::${message.replace(/\n/g, "%0A")}` : `Ошибка:\n${message}`);
   process.exit(1);
@@ -256,7 +259,7 @@ function validate(notes, version) {
     return { errors: ["Файл должен быть JSON-объектом"], warnings };
   }
 
-  const known = new Set(["version", "isMilestone", ...LOCALES]);
+  const known = new Set(["version", "isMilestone", "links", ...LOCALES]);
   for (const key of Object.keys(notes)) {
     if (!known.has(key)) errors.push(`Неизвестное поле «${key}»`);
   }
@@ -264,6 +267,18 @@ function validate(notes, version) {
   if (!/^\d+\.\d+\.\d+$/.test(String(notes.version))) errors.push(`Версия «${notes.version}» не вида X.Y.Z`);
   if (notes.isMilestone !== undefined && typeof notes.isMilestone !== "boolean") {
     errors.push("isMilestone должен быть true или false");
+  }
+  if (notes.links !== undefined) {
+    if (!Array.isArray(notes.links)) {
+      errors.push("links: должен быть массивом — по ссылке на каждый пункт highlights, null там, где ссылки нет");
+    } else {
+      notes.links.forEach((link, index) => {
+        if (link === null) return;
+        if (typeof link !== "string" || !RELEASE_LINK.test(link)) {
+          errors.push(`links[${index}]: «${link}» — не место в лаунчере (пример: settings/privacy, setting:discordActivity, wardrobe/catalog)`);
+        }
+      });
+    }
   }
 
   for (const locale of LOCALES) {
@@ -316,6 +331,9 @@ function validate(notes, version) {
   if (errors.length) return { errors, warnings };
 
   const locales = notesLocales(notes);
+  if (Array.isArray(notes.links) && notes.links.length > notes.en.highlights.length) {
+    errors.push(`links: ${notes.links.length} ссылок на ${notes.en.highlights.length} пунктов highlights`);
+  }
   for (const field of ["highlights", "fixes"]) {
     const counts = locales.map((locale) => notes[locale][field].length);
     if (new Set(counts).size > 1) {
@@ -350,9 +368,10 @@ function load(version) {
 
 function apiPayload(notes, editOnly) {
   const content = {};
+  const links = Array.isArray(notes.links) ? notes.links : null;
   for (const locale of notesLocales(notes)) {
     const { title, subtitle, highlights, fixes } = notes[locale];
-    content[locale] = { ...(title ? { title } : {}), subtitle, highlights, fixes };
+    content[locale] = { ...(title ? { title } : {}), subtitle, highlights, ...(links ? { links } : {}), fixes };
   }
   const cover = readCover(notes.version);
   return {

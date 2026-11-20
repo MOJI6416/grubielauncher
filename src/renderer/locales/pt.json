@@ -1690,6 +1690,15 @@
     "soundsDescription": "Instalação concluída, crash do jogo e convites de amigos",
     "hideServerInRpc": "Ocultar servidor no Discord",
     "hideServerInRpcDescription": "Não mostrar o endereço do servidor no Rich Presence do Discord",
+    "discordGroup": "Discord",
+    "discordActivity": "Mostrar atividade no Discord",
+    "discordActivityDescription": "O cartão no seu perfil do Discord: o launcher ou a instância, o tempo de jogo e os botões",
+    "discordPreview": {
+      "label": "Assim o seu cartão aparece no Discord",
+      "hidden": "O Discord não mostra sua atividade",
+      "inGame": "No jogo: o nome da instância e o endereço do servidor",
+      "inGameNoServer": "No jogo: o nome da instância, o endereço do servidor fica oculto"
+    },
     "streamer": {
       "title": "Transmissão",
       "enabled": "Modo streamer",
@@ -2000,7 +2009,7 @@
         "graphite": "Grafite"
       },
       "seasonalDecor": "Decoração de feriados",
-      "seasonalDecorDescription": "Toques temáticos em datas especiais. O Halloween vai de {{start}} a {{end}}."
+      "seasonalDecorDescription": "Toques temáticos em datas especiais: {{events}}."
     },
     "voice": {
       "devicesDescription": "Os dispositivos são os mesmos do painel da chamada. Teste o microfone antes de entrar."
@@ -2132,6 +2141,11 @@
         "description": "Quando o OBS ou outro app de transmissão está rodando",
         "keywords": "streamer stream obs streamlabs xsplit automático"
       },
+      "discordActivity": {
+        "title": "Mostrar atividade no Discord",
+        "description": "O cartão no seu perfil do Discord: o launcher ou a instância, o tempo de jogo e os botões",
+        "keywords": "discord rpc rich presence atividade status cartão privacidade"
+      },
       "autoWorldBackup": {
         "title": "Backups automáticos de mundos",
         "description": "Uma cópia é salva depois de uma sessão, se o mundo mudou",
@@ -2249,7 +2263,7 @@
       },
       "seasonalDecor": {
         "title": "Decoração de feriados",
-        "description": "Morcegos, abóboras e teias de aranha no Halloween",
+        "description": "Decoração da janela do launcher no Halloween e no Ano-Novo",
         "keywords": "halloween feriado temporada evento tema decoração abóbora morcegos ano novo natal"
       },
       "sidebarCollapsed": {
@@ -2604,7 +2618,7 @@
     "updateWorld": "Atualizar mundo",
     "updateOtherFiles": "Atualizar outros arquivos",
     "updateLogo": "Atualizar logo",
-    "versionShareDel": "Excluir a instância do servidor",
+    "versionShareDel": "Despublicar",
     "shareGone": "Publicação removida: {{name}}",
     "shareGoneHint": "A instância não está mais no servidor, então o link foi removido. A própria instância continua neste computador e pode ser publicada de novo.",
     "searchPlaceholder": "Buscar instâncias…",
@@ -3826,6 +3840,7 @@
     "metaFormatModern": "Moderno",
     "metaFormatLegacy": "Antigo",
     "metaId": "Identificador",
+    "details": "Detalhes",
     "linkTitle": "Link para uma textura",
     "nickTitle": "Pegar a skin de outro jogador",
     "selectError": "Não foi possível selecionar a skin",
@@ -3895,6 +3910,7 @@
     "offlineDescription": "A lista completa de mudanças vai aparecer quando houver internet ou quando a versão for publicada.",
     "highlights": "Destaques",
     "fixes": "Correções",
+    "open": "Abrir",
     "discordCta": "Mais novidades no Discord",
     "skipped_one": "Desde a última abertura saiu mais {{count}} versão — histórico de versões",
     "skipped_many": "Desde a última abertura saíram mais {{count}} versões — histórico de versões",
@@ -4317,6 +4333,7 @@
     "empty": "Nada aqui ainda",
     "level": "Nível",
     "pointsOf": "{{points}} de {{total}} pontos",
+    "pointsValue": "Pontos: {{points}}",
     "unlockedToast": "Conquista desbloqueada: {{name}}",
     "filter": {
       "all": "Todas",
@@ -4332,10 +4349,11 @@
       "playtime": "Tempo de jogo",
       "community": "Comunidade"
     },
-    "rarity": {
-      "common": "Comum",
-      "rare": "Rara",
-      "epic": "Épica",
+    "difficulty": {
+      "label": "Dificuldade",
+      "easy": "Fácil",
+      "medium": "Média",
+      "hard": "Difícil",
       "legendary": "Lendária"
     },
     "tiers": {
@@ -4651,9 +4669,11 @@
       }
     },
     "unlockedOf": "{{unlocked}} de {{total}} desbloqueadas",
-    "reachHint": "Raridade medida entre {{players}} jogadores",
+    "reachHint": "Parcela entre {{players}} jogadores",
+    "difficultyOf": "Dificuldade: {{difficulty}}",
     "unlockedShare": "desbloqueada por {{percent}}% dos jogadores",
-    "rarityUnlocked": "Desbloqueada, {{rarity}}",
+    "percentValue": "{{value}}%",
+    "difficultyUnlocked": "Desbloqueadas, dificuldade: {{difficulty}}",
     "sort": {
       "progress": "Mais próximas",
       "rarity": "Mais raras primeiro",
@@ -4785,9 +4805,8 @@
   ],
   "ownModpacks": {
     "noModpacks": "Você não compartilhou nenhum modpack",
-    "deleted": "Modpack excluído",
-    "deleteError": "Erro ao excluir o modpack",
-    "confirmation": "O modpack “{{name}}” será removido do servidor.",
+    "deleted": "Modpack despublicado",
+    "deleteError": "Não foi possível despublicar o modpack",
     "addToLauncher": "Adicionar ao launcher",
     "loadError": "Não foi possível carregar seus modpacks",
     "published": "Publicado: {{value}}",
@@ -5523,6 +5542,7 @@
       "newInstance": "Nova instância",
       "instance": "Instância",
       "people": "Pessoas",
+      "wardrobe": "Guarda-roupa",
       "profile": "Perfil",
       "peopleNews": "Não lidas e pedidos: {{value}}",
       "peoplePlaying": "Amigos no jogo: {{value}}"
@@ -5559,6 +5579,7 @@
         "agent": "ia assistente ajudante chat",
         "people": "pessoas amigos voz grupos chat",
         "profile": "perfil skins conquistas capa",
+        "wardrobe": "guarda-roupa skins capas skin capa catálogo",
         "notifications": "notificações telegram alertas bot convites",
         "settings": "configurações opções",
         "accounts": "contas entrar login",
@@ -6145,8 +6166,7 @@
       "overview": "Visão geral",
       "achievements": "Conquistas",
       "leaderboard": "Ranking",
-      "modpacks": "Modpacks",
-      "skins": "Skins"
+      "modpacks": "Modpacks"
     },
     "categories": "Por categoria",
     "openAccounts": "Abrir contas",
@@ -6159,6 +6179,12 @@
     "publicModpacksHint2": "Quando o autor atualiza o pacote, o launcher oferece a atualização.",
     "publicModpacksHint3": "A tela de confirmação lista tudo antes de qualquer download.",
     "share": "Copiar link do perfil",
+    "actions": {
+      "skin": "Skin",
+      "share": "Compartilhar",
+      "privacy": "Privacidade"
+    },
+    "copyUuid": "Copiar UUID · {{uuid}}",
     "shareHiddenOwn": "Seu perfil está oculto: ative “Perfil público” em privacidade",
     "shareHidden": "O jogador ocultou o perfil"
   },
@@ -6862,9 +6888,16 @@
     "turnOff": "Desativar a decoração",
     "turnOffHint": "Você pode trazê-la de volta nas configurações da interface",
     "halloween": {
+      "name": "Halloween",
       "title": "Halloween no Grubie",
       "peakTitle": "Feliz Halloween!",
       "description": "Morcegos, abóboras e teias de aranha até {{end}}. Clique na abóbora para espantar mais morcegos."
+    },
+    "winter": {
+      "name": "Ano-Novo",
+      "title": "Ano-Novo no Grubie",
+      "peakTitle": "Feliz Ano-Novo!",
+      "description": "Neve e uma árvore festiva até {{end}}. Boas festas!"
     }
   },
   "crashFix": {

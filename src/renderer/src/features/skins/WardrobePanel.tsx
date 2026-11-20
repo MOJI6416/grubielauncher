@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   ArrowRight,
   Check,
+  ChevronDown,
   Download,
   Ellipsis,
   ExternalLink,
@@ -65,6 +66,7 @@ import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import { SortMenu } from "@renderer/components/SortMenu";
 import { FactRow, FactRows } from "@renderer/components/FactRows";
+import { Collapse } from "@/components/ui/collapse";
 import { pathsAtom, rpcSkinVersionAtom } from "@renderer/stores/atoms";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
 import { showFailureToast } from "@renderer/utilities/failures";
@@ -270,6 +272,7 @@ export function WardrobePanel({
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteCapeId, setDeleteCapeId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState<string | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const renameRef = useRef<HTMLInputElement>(null);
 
   const accountKey = `${account.type}_${account.nickname}`;
@@ -1002,47 +1005,64 @@ export function WardrobePanel({
             </div>
           </div>
 
-          <FactRows surface="card" framed className="shrink-0">
-            <FactRow
-              label={t("manageSkins.metaResolution")}
-              value={
-                <span className="font-mono tabular-nums">
-                  {texture.status === "ready"
-                    ? `${texture.texture.info.width}×${texture.texture.info.height}`
-                    : "—"}
-                </span>
-              }
+          <button
+            type="button"
+            aria-expanded={isDetailsOpen}
+            onClick={() => setIsDetailsOpen((open) => !open)}
+            className="flex h-6 shrink-0 items-center gap-1 self-start rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {t("manageSkins.details")}
+            <ChevronDown
+              className={cn(
+                "size-3.5 transition-transform",
+                isDetailsOpen && "rotate-180",
+              )}
             />
-            <FactRow
-              label={t("manageSkins.metaFormat")}
-              value={
-                texture.status === "ready"
-                  ? texture.texture.info.legacy
-                    ? t("manageSkins.metaFormatLegacy")
-                    : t("manageSkins.metaFormatModern")
-                  : "—"
-              }
-            />
-            <FactRow
-              label={t("manageSkins.metaId")}
-              value={
-                <Hint content={t("common.copy")}>
-                  <button
-                    type="button"
-                    disabled={!selected}
-                    aria-label={t("common.copy")}
-                    onClick={async () => {
-                      if (!selected) return;
-                      await copyWithFeedback(selected.hash);
-                    }}
-                    className="font-mono text-faint transition-colors hover:text-foreground"
-                  >
-                    {selected ? selected.hash.slice(0, 12) : "—"}
-                  </button>
-                </Hint>
-              }
-            />
-          </FactRows>
+          </button>
+
+          <Collapse show={isDetailsOpen}>
+            <FactRows surface="card" framed className="shrink-0">
+              <FactRow
+                label={t("manageSkins.metaResolution")}
+                value={
+                  <span className="font-mono tabular-nums">
+                    {texture.status === "ready"
+                      ? `${texture.texture.info.width}×${texture.texture.info.height}`
+                      : "—"}
+                  </span>
+                }
+              />
+              <FactRow
+                label={t("manageSkins.metaFormat")}
+                value={
+                  texture.status === "ready"
+                    ? texture.texture.info.legacy
+                      ? t("manageSkins.metaFormatLegacy")
+                      : t("manageSkins.metaFormatModern")
+                    : "—"
+                }
+              />
+              <FactRow
+                label={t("manageSkins.metaId")}
+                value={
+                  <Hint content={t("common.copy")}>
+                    <button
+                      type="button"
+                      disabled={!selected}
+                      aria-label={t("common.copy")}
+                      onClick={async () => {
+                        if (!selected) return;
+                        await copyWithFeedback(selected.hash);
+                      }}
+                      className="font-mono text-faint transition-colors hover:text-foreground"
+                    >
+                      {selected ? selected.hash.slice(0, 12) : "—"}
+                    </button>
+                  </Hint>
+                }
+              />
+            </FactRows>
+          </Collapse>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5">
             <div className="flex shrink-0 items-center justify-between gap-2">

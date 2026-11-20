@@ -7,7 +7,12 @@ export interface RouteAccessContext {
   accountType: AccountType | null;
 }
 
-const ONLINE_ACCOUNT_ROUTES: RouteName[] = ["agent", "people", "profile"];
+const ONLINE_ACCOUNT_ROUTES: RouteName[] = [
+  "agent",
+  "people",
+  "profile",
+  "wardrobe",
+];
 
 export function routeBlockReason(
   route: Route,

@@ -49,6 +49,32 @@ export const PUMPKIN: Sprite = {
   palette: { S: "#6b8f3a", O: "#ec7a1e", o: "#a04614", Y: "#ffe08a" },
 };
 
+export const FIR_TREE: Sprite = {
+  rows: [
+    "......S......",
+    ".....SSS.....",
+    "......g......",
+    ".....gGg.....",
+    "....gGGRg....",
+    "...gGGGGGg...",
+    ".....gGg.....",
+    "....gGBGGg...",
+    "...gGGGGGRg..",
+    "..gGGRGGGGGg.",
+    ".gGGGGGGBGGGg",
+    "......b......",
+    ".....bbb.....",
+  ],
+  palette: {
+    S: "#ffd75e",
+    G: "#3f9e5a",
+    g: "#2b6e3f",
+    R: "#e5484d",
+    B: "#5aa9ff",
+    b: "#7a4a2a",
+  },
+};
+
 interface Run {
   x: number;
   y: number;

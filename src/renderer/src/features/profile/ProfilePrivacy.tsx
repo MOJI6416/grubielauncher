@@ -29,7 +29,13 @@ const api = window.api;
 
 type PrivacyField = "publicLeaderboard" | "publicProfile";
 
-export function ProfilePrivacy({ user }: { user: IUser }) {
+export function ProfilePrivacy({
+  user,
+  className,
+}: {
+  user: IUser;
+  className?: string;
+}) {
   const { t } = useTranslation();
   const [account, setSelectedAccount] = useAtom(accountAtom);
   const [accounts, setAccounts] = useAtom(accountsAtom);
@@ -129,12 +135,11 @@ export function ProfilePrivacy({ user }: { user: IUser }) {
     <DropdownMenu>
       <Hint content={t("accountInfo.privacy")}>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="secondary"
-            size="icon-lg"
-            aria-label={t("accountInfo.privacy")}
-          >
+          <Button variant="secondary" className={className}>
             <ShieldCheck />
+            <span className="w-full truncate text-center">
+              {t("profile.actions.privacy")}
+            </span>
           </Button>
         </DropdownMenuTrigger>
       </Hint>

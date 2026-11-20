@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
@@ -61,6 +61,11 @@ export function ProfileScreen({
 
   const viewerId = authData?.sub ?? null;
   const profileKey = ["profile", userId, viewerId];
+  const isLegacySkinsTab = tab === "skins";
+
+  useEffect(() => {
+    if (isLegacySkinsTab) navigate({ name: "wardrobe" }, { replace: true });
+  }, [isLegacySkinsTab]);
 
   const profile = useQuery({
     queryKey: profileKey,

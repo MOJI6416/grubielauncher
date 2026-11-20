@@ -14,6 +14,7 @@ const SCREENS: Record<Route["name"], UsageFeature> = {
   news: "screen.news",
   agent: "screen.agent",
   profile: "screen.profile",
+  wardrobe: "screen.wardrobe",
   accounts: "screen.accounts",
   settings: "screen.settings",
   catalog: "screen.catalog",

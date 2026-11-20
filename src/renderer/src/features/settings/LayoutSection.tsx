@@ -11,6 +11,7 @@ import {
   Rows3,
   Rows4,
   Settings as LSettings,
+  Shirt,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,7 @@ const SORTS: InstancesSort[] = ["activity", "playtime", "name", "manual"];
 const NAV_ICONS: Record<NavSlot, ReactNode> = {
   play: <Play className="size-4" />,
   people: <BookUser className="size-4" />,
+  wardrobe: <Shirt className="size-4" />,
   screenshots: <Camera className="size-4" />,
   news: <Newspaper className="size-4" />,
   settings: <LSettings className="size-4" />,
@@ -74,6 +76,7 @@ const NAV_ICONS: Record<NavSlot, ReactNode> = {
 const NAV_LABELS: Record<NavSlot, string> = {
   play: "nav.play",
   people: "shell.nav.people",
+  wardrobe: "shell.nav.wardrobe",
   screenshots: "versions.screenshots.title",
   news: "news.title",
   settings: "settings.title",

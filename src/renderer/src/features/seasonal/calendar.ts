@@ -1,4 +1,4 @@
-export type SeasonalEventId = "halloween";
+export type SeasonalEventId = "halloween" | "winter";
 
 export interface MonthDay {
   month: number;
@@ -24,6 +24,12 @@ export const SEASONAL_EVENTS: readonly SeasonalEvent[] = [
     start: { month: 10, day: 20 },
     end: { month: 11, day: 3 },
     peak: { month: 10, day: 31 },
+  },
+  {
+    id: "winter",
+    start: { month: 12, day: 20 },
+    end: { month: 1, day: 7 },
+    peak: { month: 12, day: 31 },
   },
 ];
 
@@ -58,13 +64,6 @@ export function eventDate(
 
 export function formatMonthDay(date: Date, language: string): string {
   return date.toLocaleDateString(language, { day: "numeric", month: "long" });
-}
-
-export function eventRange(
-  id: SeasonalEventId,
-): { start: MonthDay; end: MonthDay } | null {
-  const event = SEASONAL_EVENTS.find((item) => item.id === id);
-  return event ? { start: event.start, end: event.end } : null;
 }
 
 export function activeSeasonalEvent(

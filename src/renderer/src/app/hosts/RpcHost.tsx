@@ -9,6 +9,7 @@ import {
   settingsAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
+import { DEFAULT_SETTINGS } from "@/types/Settings";
 import { streamerActiveAtom } from "@renderer/features/streamer/streamerMode";
 import { useOwnProfileVisibility } from "@renderer/features/profile/ownProfileVisibility";
 import { resolvePackManifest } from "@renderer/utilities/packShortCode";
@@ -83,6 +84,7 @@ export function RpcHost() {
   const rpcSkinVersion = useAtomValue(rpcSkinVersionAtom);
   const isStreaming = useAtomValue(streamerActiveAtom);
   const visibility = useOwnProfileVisibility();
+  const isSettingsLoaded = settings !== DEFAULT_SETTINGS;
   const hideServer = settings.hideServerInRpc || isStreaming;
   const packLinks = useRunningPackLinks(!isStreaming);
 
@@ -92,6 +94,7 @@ export function RpcHost() {
       : null;
 
   useEffect(() => {
+    if (!isSettingsLoaded) return;
     void api.rpc.syncContext({
       account: selectedAccount
         ? {
@@ -101,6 +104,7 @@ export function RpcHost() {
           }
         : null,
       lang: i18n.resolvedLanguage || i18n.language || "en",
+      enabled: settings.discordActivity,
       hideServer,
       skinVersion: rpcSkinVersion,
       profileUrl,
@@ -112,6 +116,8 @@ export function RpcHost() {
     selectedAccount?.nickname,
     selectedAccount?.type,
     authData?.uuid,
+    isSettingsLoaded,
+    settings.discordActivity,
     hideServer,
     rpcSkinVersion,
     profileUrl,

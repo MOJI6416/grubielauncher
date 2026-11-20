@@ -837,3 +837,123 @@ body {
 :root[data-motion="on"] .halloween-pumpkin-glow {
   animation: candle-flicker 2.8s linear infinite;
 }
+
+[data-season="winter"] {
+  --frost: #8fd3ff;
+  --frost-glow: color-mix(in oklab, var(--frost) 60%, transparent);
+  --snow: color-mix(in oklab, var(--frost) 45%, var(--foreground));
+  --brand-tongue: var(--frost);
+}
+
+[data-season="winter"] .brand-tongue {
+  filter: drop-shadow(0 0 1.5px var(--frost-glow));
+}
+
+.winter-glow {
+  background:
+    radial-gradient(
+      70% 38% at 50% -12%,
+      color-mix(in oklab, var(--frost) 10%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      34% 30% at 100% 100%,
+      color-mix(in oklab, var(--primary) 7%, transparent),
+      transparent 70%
+    );
+}
+
+.winter-snow {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  will-change: transform;
+}
+
+.winter-snow-far {
+  top: -240px;
+  height: calc(100% + 240px);
+  background-image:
+    radial-gradient(
+      circle at 22px 34px,
+      color-mix(in oklab, var(--snow) 60%, transparent) 1.5px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 131px 102px,
+      color-mix(in oklab, var(--snow) 50%, transparent) 1.5px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 76px 188px,
+      color-mix(in oklab, var(--snow) 55%, transparent) 1.5px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 201px 61px,
+      color-mix(in oklab, var(--snow) 45%, transparent) 1.5px,
+      transparent 2px
+    );
+  background-size: 240px 240px;
+}
+
+.winter-snow-near {
+  top: -320px;
+  height: calc(100% + 320px);
+  background-image:
+    radial-gradient(
+      circle at 48px 70px,
+      color-mix(in oklab, var(--snow) 75%, transparent) 2px,
+      transparent 2.5px
+    ),
+    radial-gradient(
+      circle at 236px 214px,
+      color-mix(in oklab, var(--snow) 65%, transparent) 2px,
+      transparent 2.5px
+    ),
+    radial-gradient(
+      circle at 151px 292px,
+      color-mix(in oklab, var(--snow) 70%, transparent) 2px,
+      transparent 2.5px
+    );
+  background-size: 320px 320px;
+}
+
+@keyframes snow-fall-far {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(240px);
+  }
+}
+
+@keyframes snow-fall-near {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(320px);
+  }
+}
+
+.winter-pill svg {
+  transition: filter var(--dur) var(--ease-swift);
+}
+
+.winter-pill:hover svg,
+.winter-pill[data-state="open"] svg {
+  filter: drop-shadow(0 0 4px var(--frost-glow));
+}
+
+.winter-tree-glow {
+  filter: drop-shadow(0 0 8px var(--frost-glow));
+}
+
+:root[data-motion="on"] .winter-snow-far {
+  animation: snow-fall-far 26s linear infinite;
+}
+
+:root[data-motion="on"] .winter-snow-near {
+  animation: snow-fall-near 17s linear infinite;
+}

@@ -53,3 +53,9 @@ export const LazySettingsScreen = lazyWithPreload(() =>
     default: module.SettingsScreen,
   })),
 );
+
+export const LazyWardrobeScreen = lazyWithPreload(() =>
+  import("./wardrobe/WardrobeScreen").then((module) => ({
+    default: module.WardrobeScreen,
+  })),
+);

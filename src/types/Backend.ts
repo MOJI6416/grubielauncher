@@ -35,7 +35,7 @@ export interface IModpackCard {
   lastUpdate: string
   minecraftVersion: string
   loader: { name: string; version: string }
-  owner: { nickname: string; imageUrl: string }
+  owner: { id?: string; nickname: string; imageUrl: string }
   summary: { mods: number; servers: number; otherFiles: number }
 }
 

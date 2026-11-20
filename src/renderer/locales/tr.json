@@ -1669,6 +1669,15 @@
     "soundsDescription": "Kurulum bitti, oyun çöktü ve arkadaş davetleri",
     "hideServerInRpc": "Sunucuyu Discord’da gizle",
     "hideServerInRpcDescription": "Sunucu adresini Discord Rich Presence’ta göstermez",
+    "discordGroup": "Discord",
+    "discordActivity": "Etkinliği Discord’da göster",
+    "discordActivityDescription": "Discord profilinizdeki kart: başlatıcı veya kurulum, oyun süresi ve düğmeler",
+    "discordPreview": {
+      "label": "Kartınız Discord’da böyle görünür",
+      "hidden": "Discord etkinliğinizi göstermiyor",
+      "inGame": "Oyunda: kurulumun adı ve sunucu adresi",
+      "inGameNoServer": "Oyunda: kurulumun adı, sunucu adresi gizli kalır"
+    },
     "streamer": {
       "title": "Yayın",
       "enabled": "Yayıncı modu",
@@ -1976,7 +1985,7 @@
         "graphite": "Grafit"
       },
       "seasonalDecor": "Bayram süslemeleri",
-      "seasonalDecorDescription": "Özel günlerde temalı dokunuşlar. Cadılar Bayramı {{start}} – {{end}} arasında."
+      "seasonalDecorDescription": "Özel günlerde temalı dokunuşlar: {{events}}."
     },
     "voice": {
       "devicesDescription": "Cihazlar görüşme paneliyle ortaktır. Katılmadan önce mikrofonu test edin."
@@ -2108,6 +2117,11 @@
         "description": "OBS veya başka bir yayın uygulaması çalışırken",
         "keywords": "yayıncı yayın obs streamlabs xsplit otomatik"
       },
+      "discordActivity": {
+        "title": "Etkinliği Discord’da göster",
+        "description": "Discord profilinizdeki kart: başlatıcı veya kurulum, oyun süresi ve düğmeler",
+        "keywords": "discord rpc rich presence etkinlik durum kart gizlilik"
+      },
       "autoWorldBackup": {
         "title": "Otomatik dünya yedekleri",
         "description": "Dünya değiştiyse oturumdan sonra bir kopya kaydedilir",
@@ -2225,7 +2239,7 @@
       },
       "seasonalDecor": {
         "title": "Bayram süslemeleri",
-        "description": "Cadılar Bayramı yarasaları, balkabakları ve örümcek ağları",
+        "description": "Cadılar Bayramı ve yılbaşında başlatıcı penceresi süslemeleri",
         "keywords": "cadılar bayramı halloween bayram sezon etkinlik tema süsleme balkabağı yarasa yılbaşı noel"
       },
       "sidebarCollapsed": {
@@ -2579,7 +2593,7 @@
     "updateWorld": "Dünyayı güncelle",
     "updateOtherFiles": "Diğer dosyaları güncelle",
     "updateLogo": "Logoyu güncelle",
-    "versionShareDel": "Kurulumu sunucudan sil",
+    "versionShareDel": "Yayından kaldır",
     "shareGone": "Yayın kaldırıldı: {{name}}",
     "shareGoneHint": "Kurulum sunucudan kaldırıldı, bu yüzden bağlantı silindi. Kurulumun kendisi bu bilgisayarda kalır ve yeniden yayımlanabilir.",
     "searchPlaceholder": "Kurulum ara…",
@@ -3792,6 +3806,7 @@
     "metaFormatModern": "Modern",
     "metaFormatLegacy": "Eski",
     "metaId": "Tanımlayıcı",
+    "details": "Ayrıntılar",
     "linkTitle": "Dokuya bağlantı",
     "nickTitle": "Başka bir oyuncunun skinini al",
     "selectError": "Skin seçilemedi",
@@ -3861,6 +3876,7 @@
     "offlineDescription": "Tam değişiklik listesi internet bağlantısı olunca veya sürüm yayımlanınca görünecek.",
     "highlights": "Öne çıkanlar",
     "fixes": "Düzeltildi",
+    "open": "Aç",
     "discordCta": "Daha fazla haber Discord’da",
     "skipped_one": "Son açılıştan bu yana {{count}} sürüm daha çıktı — sürüm geçmişi",
     "skipped_other": "Son açılıştan bu yana {{count}} sürüm daha çıktı — sürüm geçmişi"
@@ -4272,6 +4288,7 @@
     "empty": "Burada henüz bir şey yok",
     "level": "Seviye",
     "pointsOf": "{{points}} / {{total}} puan",
+    "pointsValue": "Puan: {{points}}",
     "unlockedToast": "Başarım açıldı: {{name}}",
     "filter": {
       "all": "Tümü",
@@ -4287,10 +4304,11 @@
       "playtime": "Oynama süresi",
       "community": "Topluluk"
     },
-    "rarity": {
-      "common": "Yaygın",
-      "rare": "Nadir",
-      "epic": "Destansı",
+    "difficulty": {
+      "label": "Zorluk",
+      "easy": "Kolay",
+      "medium": "Orta",
+      "hard": "Zor",
       "legendary": "Efsanevi"
     },
     "tiers": {
@@ -4606,9 +4624,11 @@
       }
     },
     "unlockedOf": "{{total}} başarımdan {{unlocked}} tanesi açıldı",
-    "reachHint": "Nadirlik {{players}} oyuncu üzerinden ölçülür",
+    "reachHint": "{{players}} oyuncu arasındaki pay",
+    "difficultyOf": "Zorluk: {{difficulty}}",
     "unlockedShare": "oyuncuların %{{percent}} kadarı açtı",
-    "rarityUnlocked": "Açıldı, {{rarity}}",
+    "percentValue": "%{{value}}",
+    "difficultyUnlocked": "Açılanlar, zorluk: {{difficulty}}",
     "sort": {
       "progress": "Önce en yakın",
       "rarity": "Önce en nadir",
@@ -4739,9 +4759,8 @@
   ],
   "ownModpacks": {
     "noModpacks": "Henüz hiç mod paketi paylaşmadınız",
-    "deleted": "Mod paketi silindi",
-    "deleteError": "Mod paketi silme hatası",
-    "confirmation": "“{{name}}” mod paketi sunucudan kaldırılır.",
+    "deleted": "Mod paketi yayından kaldırıldı",
+    "deleteError": "Mod paketi yayından kaldırılamadı",
     "addToLauncher": "Başlatıcıya ekle",
     "loadError": "Mod paketleriniz yüklenemedi",
     "published": "Yayımlanma: {{value}}",
@@ -5472,6 +5491,7 @@
       "newInstance": "Yeni kurulum",
       "instance": "Kurulum",
       "people": "Kişiler",
+      "wardrobe": "Gardırop",
       "profile": "Profil",
       "peopleNews": "Okunmamış ve istekler: {{value}}",
       "peoplePlaying": "Oyundaki arkadaşlar: {{value}}"
@@ -5508,6 +5528,7 @@
         "agent": "yapay zeka asistan yardımcı sohbet",
         "people": "kişiler arkadaşlar ses gruplar sohbet",
         "profile": "profil skinler başarımlar pelerin",
+        "wardrobe": "gardırop skinler pelerinler skin pelerin katalog",
         "notifications": "bildirimler telegram uyarılar bot davetler",
         "settings": "ayarlar seçenekler",
         "accounts": "hesaplar giriş oturum",
@@ -6087,8 +6108,7 @@
       "overview": "Genel bakış",
       "achievements": "Başarımlar",
       "leaderboard": "Sıralama",
-      "modpacks": "Mod paketleri",
-      "skins": "Skinler"
+      "modpacks": "Mod paketleri"
     },
     "categories": "Kategoriye göre",
     "openAccounts": "Hesapları aç",
@@ -6101,6 +6121,12 @@
     "publicModpacksHint2": "Yazar paketi güncellediğinde başlatıcı güncellemeyi önerir.",
     "publicModpacksHint3": "Onay ekranı, herhangi bir şey indirilmeden önce her şeyi listeler.",
     "share": "Profil bağlantısını kopyala",
+    "actions": {
+      "skin": "Skin",
+      "share": "Paylaş",
+      "privacy": "Gizlilik"
+    },
+    "copyUuid": "UUID’yi kopyala · {{uuid}}",
     "shareHiddenOwn": "Profiliniz gizli; gizlilik bölümünde “Herkese açık profil”i açın",
     "shareHidden": "Oyuncu profilini gizledi"
   },
@@ -6800,9 +6826,16 @@
     "turnOff": "Süslemeleri kapat",
     "turnOffHint": "Onları arayüz ayarlarından geri getirebilirsiniz",
     "halloween": {
+      "name": "Cadılar Bayramı",
       "title": "Grubie’de Cadılar Bayramı",
       "peakTitle": "Cadılar Bayramınız kutlu olsun!",
       "description": "{{end}} tarihine kadar yarasalar, balkabakları ve örümcek ağları. Daha fazla yarasa ürkütmek için balkabağına tıklayın."
+    },
+    "winter": {
+      "name": "Yılbaşı",
+      "title": "Grubie’de yılbaşı",
+      "peakTitle": "Mutlu yıllar!",
+      "description": "{{end}} tarihine kadar kar ve yılbaşı ağacı. İyi tatiller!"
     }
   },
   "crashFix": {

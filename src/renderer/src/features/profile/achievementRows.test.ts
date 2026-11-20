@@ -7,13 +7,12 @@ import {
   ownAchievementTotals,
   pickAlmostThere,
   pickShowcase,
-  rarityFromPercent,
-  rarityFromPoints,
   remainingToGoal,
   sortAchievements,
   summarizeAchievements,
   tallyByCategory,
 } from "./achievementRows";
+import { difficultyOf } from "@renderer/utilities/achievements";
 
 const nameOf = (id: string) => NAMES[id] ?? id;
 
@@ -44,33 +43,33 @@ function progress(
 }
 
 describe("buildAchievementRows", () => {
-  it("takes rarity from the global reach when it is known", () => {
+  it("keeps the share of players apart from the difficulty", () => {
     const rows = buildAchievementRows(
       [progress({ id: "dragon", points: 70 })],
       new Map([["dragon", 0.8]]),
     );
 
     expect(rows[0].percent).toBe(0.8);
-    expect(rows[0].rarity).toBe("legendary");
+    expect(rows[0].difficulty).toBe("legendary");
   });
 
-  it("falls back to points when the reach is unavailable", () => {
+  it("leaves the share empty when the reach is unavailable", () => {
     const rows = buildAchievementRows(
       [progress({ id: "mine_1k", points: 10 })],
       null,
     );
 
     expect(rows[0].percent).toBeNull();
-    expect(rows[0].rarity).toBe("common");
+    expect(rows[0].difficulty).toBe("easy");
   });
 
-  it("does not let a cheap achievement look rare just because it is cheap", () => {
+  it("takes the difficulty from points even when few players have it", () => {
     const rows = buildAchievementRows(
       [progress({ id: "mine_1k", points: 10 })],
-      new Map([["mine_1k", 62]]),
+      new Map([["mine_1k", 0.5]]),
     );
 
-    expect(rows[0].rarity).toBe("common");
+    expect(rows[0].difficulty).toBe("easy");
   });
 
   it("clamps a broken ratio into 0..1", () => {
@@ -98,20 +97,13 @@ describe("buildAchievementRows", () => {
   });
 });
 
-describe("rarity thresholds", () => {
-  it("buckets the global share", () => {
-    expect(rarityFromPercent(0.4)).toBe("legendary");
-    expect(rarityFromPercent(1)).toBe("legendary");
-    expect(rarityFromPercent(3.5)).toBe("epic");
-    expect(rarityFromPercent(12)).toBe("rare");
-    expect(rarityFromPercent(70)).toBe("common");
-  });
-
-  it("buckets the points fallback", () => {
-    expect(rarityFromPoints(90)).toBe("legendary");
-    expect(rarityFromPoints(45)).toBe("epic");
-    expect(rarityFromPoints(25)).toBe("rare");
-    expect(rarityFromPoints(24)).toBe("common");
+describe("difficulty thresholds", () => {
+  it("buckets the points", () => {
+    expect(difficultyOf(90)).toBe("legendary");
+    expect(difficultyOf(70)).toBe("legendary");
+    expect(difficultyOf(45)).toBe("hard");
+    expect(difficultyOf(25)).toBe("medium");
+    expect(difficultyOf(24)).toBe("easy");
   });
 });
 

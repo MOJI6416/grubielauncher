@@ -329,61 +329,65 @@ export function CommunityBrowser({
           )}
         </div>
 
-        <footer className="flex h-7 shrink-0 items-center gap-2 border-t border-border px-2.5 text-2xs text-faint">
-          {catalog.isLoadingMore ? (
-            <>
-              <Loader2 className="size-3 animate-spin" />
-              {t("common.searching")}
-            </>
-          ) : catalog.loadMoreError ? (
-            <>
-              <CircleAlert className="size-3 shrink-0 text-warning" />
-              <Hint
-                content={t("community.loadMoreFailed")}
-                variant="text"
-                truncatedOnly
-              >
-                <span className="min-w-0 truncate text-warning">
-                  {t("community.loadMoreFailed")}
-                </span>
-              </Hint>
-              <button
-                type="button"
-                onClick={catalog.retryLoadMore}
-                className="ml-auto shrink-0 rounded-md font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {t("common.retry")}
-              </button>
-            </>
-          ) : catalog.items.length === 0 ? null : (
-            <>
-              <Hint
-                content={t("community.shown", {
-                  shown: catalog.items.length,
-                  total: catalog.total,
-                })}
-                variant="text"
-                truncatedOnly
-              >
-                <span className="min-w-0 truncate">
-                  {t("community.shown", {
+        {(catalog.items.length > 0 ||
+          catalog.isLoadingMore ||
+          catalog.loadMoreError) && (
+          <footer className="flex h-7 shrink-0 items-center gap-2 border-t border-border px-2.5 text-2xs text-faint">
+            {catalog.isLoadingMore ? (
+              <>
+                <Loader2 className="size-3 animate-spin" />
+                {t("common.searching")}
+              </>
+            ) : catalog.loadMoreError ? (
+              <>
+                <CircleAlert className="size-3 shrink-0 text-warning" />
+                <Hint
+                  content={t("community.loadMoreFailed")}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="min-w-0 truncate text-warning">
+                    {t("community.loadMoreFailed")}
+                  </span>
+                </Hint>
+                <button
+                  type="button"
+                  onClick={catalog.retryLoadMore}
+                  className="ml-auto shrink-0 rounded-md font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {t("common.retry")}
+                </button>
+              </>
+            ) : (
+              <>
+                <Hint
+                  content={t("community.shown", {
                     shown: catalog.items.length,
                     total: catalog.total,
                   })}
-                </span>
-              </Hint>
-              {areFiltersActive && catalog.items.length > 0 && (
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="ml-auto shrink-0 rounded-md font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  variant="text"
+                  truncatedOnly
                 >
-                  {t("community.resetFilters")}
-                </button>
-              )}
-            </>
-          )}
-        </footer>
+                  <span className="min-w-0 truncate">
+                    {t("community.shown", {
+                      shown: catalog.items.length,
+                      total: catalog.total,
+                    })}
+                  </span>
+                </Hint>
+                {areFiltersActive && catalog.items.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="ml-auto shrink-0 rounded-md font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {t("community.resetFilters")}
+                  </button>
+                )}
+              </>
+            )}
+          </footer>
+        )}
       </section>
     </div>
   );

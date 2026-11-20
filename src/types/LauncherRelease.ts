@@ -8,6 +8,7 @@ export interface ILauncherReleaseNote {
   title: string;
   subtitle: string;
   highlights: string[];
+  links?: (string | null)[];
   fixes: string[];
   discordCta: string;
   discordUrl: string;

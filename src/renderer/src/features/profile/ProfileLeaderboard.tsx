@@ -5,7 +5,7 @@ import { Crown, Globe, Heart, RefreshCw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription } from "@/components/ui/empty";
 import { Hint } from "@renderer/components/Hint";
-import { ListSkeleton } from "@renderer/components/ListSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@renderer/utilities/numbers";
 import { PlayerHead } from "@renderer/features/accounts/AccountHead";
 import { IUser } from "@/types/IUser";
@@ -197,11 +197,7 @@ function BoardPanel({
 
       <div className="-mr-1 min-h-0 flex-1 overflow-y-auto pr-1">
         {isLoading ? (
-          <ListSkeleton
-            rows={8}
-            rowClassName="h-11"
-            iconClassName="size-7 rounded-md"
-          />
+          <BoardSkeleton />
         ) : unavailable ? (
           <PanelMessage text={unavailable} />
         ) : rows.length === 0 ? (
@@ -233,6 +229,31 @@ function BoardPanel({
         </Hint>
       )}
     </section>
+  );
+}
+
+const SKELETON_NAME_WIDTHS = ["w-24", "w-16", "w-20", "w-28", "w-14"];
+
+function BoardSkeleton() {
+  return (
+    <div aria-busy className="flex min-h-0 flex-col gap-1 overflow-hidden">
+      {Array.from({ length: 10 }, (_, index) => (
+        <div
+          key={index}
+          className="flex h-11 shrink-0 items-center gap-2 rounded-lg bg-surface-1 px-2"
+        >
+          <Skeleton className="size-6 shrink-0 rounded-full" />
+          <Skeleton className="size-7 shrink-0 rounded-md" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <Skeleton
+              className={`h-2.5 rounded ${SKELETON_NAME_WIDTHS[index % SKELETON_NAME_WIDTHS.length]}`}
+            />
+            <Skeleton className="h-2 w-20 rounded" />
+          </div>
+          <Skeleton className="h-3 w-8 shrink-0 rounded" />
+        </div>
+      ))}
+    </div>
   );
 }
 

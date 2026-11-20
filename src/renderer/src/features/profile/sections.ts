@@ -1,21 +1,14 @@
-export type ProfileSection =
-  | "achievements"
-  | "leaderboard"
-  | "modpacks"
-  | "skins"
-  | null;
+export type ProfileSection = "achievements" | "leaderboard" | "modpacks" | null;
 
 const SECTIONS: Exclude<ProfileSection, null>[] = [
   "achievements",
   "leaderboard",
   "modpacks",
-  "skins",
 ];
 
 const OWNER_ONLY: Exclude<ProfileSection, null>[] = [
   "achievements",
   "leaderboard",
-  "skins",
 ];
 
 export function parseProfileSection(value: string | undefined): ProfileSection {

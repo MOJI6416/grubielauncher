@@ -96,6 +96,10 @@ function useCrumbs(route: Route): { kind?: string; title: string } {
     }
     case "profile":
       return { title: t("shell.nav.profile") };
+    case "wardrobe":
+      return route.view === "catalog"
+        ? { kind: t("shell.nav.wardrobe"), title: t("manageSkins.tabCatalog") }
+        : { title: t("shell.nav.wardrobe") };
     case "accounts":
       return { title: t("accounts.accounts") };
     case "catalog":

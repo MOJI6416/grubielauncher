@@ -2,31 +2,16 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import { toast } from "sonner";
-import { CloudOff, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-} from "@/components/ui/empty";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ListSkeleton } from "@renderer/components/ListSkeleton";
 import { IUser } from "@/types/IUser";
-import { LITTLESKIN_CLOSET_URL } from "@/shared/config";
 import { ISkinData } from "@/types/Skin";
 import {
   accountAtom,
   authDataAtom,
   internetAtom,
   networkAtom,
-  pendingSkinDeepLinkAtom,
 } from "@renderer/stores/atoms";
-import {
-  canLoadSkinPreviewForProvider,
-  canOpenSkinManagerForAccount,
-} from "@renderer/utilities/connectivity";
+import { canLoadSkinPreviewForProvider } from "@renderer/utilities/connectivity";
 import { showFailureToast } from "@renderer/utilities/failures";
 import {
   lazyWithPreload,
@@ -64,18 +49,14 @@ const api = window.api;
 
 const loadSkinView = () =>
   import("../SkinView").then((module) => ({ default: module.SkinView }));
-const loadManageSkins = () =>
-  import("../ManageSkins").then((module) => ({ default: module.ManageSkins }));
 
 const LazySkinView = lazyWithPreload(loadSkinView);
-const LazyManageSkins = lazyWithPreload(loadManageSkins);
 
 const OWNER_TABS: ProfileSection[] = [
   null,
   "achievements",
   "leaderboard",
   "modpacks",
-  "skins",
 ];
 const GUEST_TABS: ProfileSection[] = [null, "modpacks"];
 
@@ -84,7 +65,6 @@ const TAB_LABEL: Record<string, string> = {
   achievements: "profile.tabs.achievements",
   leaderboard: "profile.tabs.leaderboard",
   modpacks: "profile.tabs.modpacks",
-  skins: "profile.tabs.skins",
 };
 
 export default function AccountInfo({
@@ -106,7 +86,6 @@ export default function AccountInfo({
   const authData = useAtomValue(authDataAtom);
   const isInternetOnline = useAtomValue(internetAtom);
   const isBackendOnline = useAtomValue(networkAtom);
-  const pendingSkinDeepLink = useAtomValue(pendingSkinDeepLinkAtom);
 
   const [localSection, setLocalSection] = useState<ProfileSection>(null);
   const activeSection = resolveProfileSection(
@@ -119,10 +98,7 @@ export default function AccountInfo({
   const [isSkinBusy, setSkinBusy] = useState(false);
 
   useEffect(() => {
-    return schedulePreload(
-      [LazySkinView.preload, LazyManageSkins.preload],
-      1000,
-    );
+    return schedulePreload([LazySkinView.preload], 1000);
   }, []);
 
   const openSection = useCallback(
@@ -144,15 +120,6 @@ export default function AccountInfo({
   const canUseSkinPreview = useMemo(
     () =>
       canLoadSkinPreviewForProvider(user.platform, {
-        isInternetOnline,
-        isBackendOnline,
-      }),
-    [isBackendOnline, isInternetOnline, user.platform],
-  );
-
-  const canManageSkins = useMemo(
-    () =>
-      canOpenSkinManagerForAccount(user.platform, {
         isInternetOnline,
         isBackendOnline,
       }),
@@ -200,12 +167,6 @@ export default function AccountInfo({
     isOwner && isBackendOnline && worldStats.isSuccess,
     onUserSynced,
   );
-
-  useEffect(() => {
-    if (!pendingSkinDeepLink || !isOwner || !canManageSkins) return;
-    if (user.platform !== "microsoft" && user.platform !== "discord") return;
-    openSection("skins");
-  }, [pendingSkinDeepLink, isOwner, canManageSkins, user.platform]);
 
   const handleShowSkin = useCallback(async () => {
     if (isSkinBusy) return;
@@ -258,34 +219,28 @@ export default function AccountInfo({
 
   const isPublicPacksPending =
     publicProfile.isPending && publicProfile.fetchStatus !== "idle";
-  const tabs = isOwner
-    ? OWNER_TABS
-    : publicPacks.length > 0 || publicProfile.isError
-      ? GUEST_TABS
-      : [null];
+  const tabs = isOwner ? OWNER_TABS : GUEST_TABS;
   const visibleSection = tabs.includes(activeSection) ? activeSection : null;
   const unlockedCount = rows.filter((row) => row.unlocked).length;
 
   return (
     <>
       <div className="flex h-full min-h-0 gap-4">
-        {visibleSection === "skins" ? null : (
-          <ProfileIdentityRail
-            user={user}
-            isOwner={isOwner}
-            unlockedCount={unlockedCount}
-            totalCount={rows.length}
-            points={isOwner ? ownTotals.points : undefined}
-            rank={rank}
-            onShowSkin={handleShowSkin}
-            isSkinBusy={isSkinBusy}
-            canShowSkin={canUseSkinPreview}
-            accessToken={localAccount?.accessToken}
-            isProfileHidden={
-              !isOwner && isPublicProfileHiddenError(publicProfile.error)
-            }
-          />
-        )}
+        <ProfileIdentityRail
+          user={user}
+          isOwner={isOwner}
+          unlockedCount={unlockedCount}
+          totalCount={rows.length}
+          points={isOwner ? ownTotals.points : undefined}
+          rank={rank}
+          onShowSkin={handleShowSkin}
+          isSkinBusy={isSkinBusy}
+          canShowSkin={canUseSkinPreview}
+          accessToken={localAccount?.accessToken}
+          isProfileHidden={
+            !isOwner && isPublicProfileHiddenError(publicProfile.error)
+          }
+        />
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           {tabs.length > 1 && (
@@ -316,40 +271,7 @@ export default function AccountInfo({
           )}
 
           <div className="min-h-0 flex-1">
-            {visibleSection === "skins" ? (
-              canManageSkins ? (
-                <Suspense fallback={<SectionLoader />}>
-                  <LazyManageSkins />
-                </Suspense>
-              ) : (
-                <SectionNotice
-                  text={
-                    user.platform === "elyby" || user.platform === "littleskin"
-                      ? t("app.internetUnavailable")
-                      : t("app.backendUnavailable")
-                  }
-                  action={
-                    user.platform === "elyby" ||
-                    user.platform === "littleskin" ? (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() =>
-                          void api.shell.openExternal(
-                            user.platform === "littleskin"
-                              ? LITTLESKIN_CLOSET_URL
-                              : "https://ely.by/skins",
-                          )
-                        }
-                      >
-                        <ExternalLink />
-                        {t("manageSkins.title")}
-                      </Button>
-                    ) : undefined
-                  }
-                />
-              )
-            ) : visibleSection === "achievements" ? (
+            {visibleSection === "achievements" ? (
               <ProfileAchievements
                 rows={rows}
                 isOwner={isOwner}
@@ -404,36 +326,5 @@ export default function AccountInfo({
         </Suspense>
       )}
     </>
-  );
-}
-
-function SectionLoader() {
-  return (
-    <ListSkeleton
-      rows={6}
-      rowClassName="h-16"
-      iconClassName="size-12 rounded-lg"
-      className="h-full"
-    />
-  );
-}
-
-function SectionNotice({
-  text,
-  action,
-}: {
-  text: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <Empty className="h-full rounded-xl border border-border px-8">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <CloudOff />
-        </EmptyMedia>
-        <EmptyDescription>{text}</EmptyDescription>
-      </EmptyHeader>
-      {action && <EmptyContent>{action}</EmptyContent>}
-    </Empty>
   );
 }
