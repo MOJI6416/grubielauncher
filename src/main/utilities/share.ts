@@ -56,24 +56,38 @@ export function shouldUploadLocalShareFile(file: ILocalFile, shareCode: string) 
   return remoteModpackId !== shareCode
 }
 
-async function resolveLocalFilePath(version: Version, mod: ILocalProject, file: ILocalFile) {
-  const candidates = [
-    file.localPath || '',
-    fileUrlToPath(file.url),
-    path.join(
-      version.versionPath,
-      mod.projectType === ProjectType.WORLD
-        ? path.join('storage', 'worlds')
-        : projetTypeToFolder(mod.projectType),
-      file.filename
-    )
-  ].filter(Boolean)
+const DISABLED_SUFFIX = '.disabled'
+
+async function resolveLocalFilePath(
+  version: Version,
+  mod: ILocalProject,
+  file: ILocalFile
+): Promise<{ path: string; disabled: boolean } | null> {
+  const instancePath = path.join(
+    version.versionPath,
+    mod.projectType === ProjectType.WORLD
+      ? path.join('storage', 'worlds')
+      : projetTypeToFolder(mod.projectType),
+    file.filename
+  )
+  const disabledPath =
+    mod.projectType === ProjectType.WORLD ? '' : `${instancePath}${DISABLED_SUFFIX}`
+  const disabled =
+    !!disabledPath &&
+    !(await fs.pathExists(instancePath)) &&
+    (await fs.pathExists(disabledPath))
+
+  const candidates = [file.localPath || '', fileUrlToPath(file.url), instancePath].filter(
+    Boolean
+  )
 
   for (const candidate of candidates) {
-    if (await fs.pathExists(candidate)) return candidate
+    if (await fs.pathExists(candidate)) return { path: candidate, disabled }
   }
 
-  return ''
+  if (disabled) return { path: disabledPath, disabled }
+
+  return null
 }
 
 export async function uploadMods(at: string, version: Version) {
@@ -105,8 +119,8 @@ export async function uploadMods(at: string, version: Version) {
       for (const file of mod.version.files) {
         if (!shouldUploadLocalShareFile(file, version.version.shareCode)) continue
 
-        const modPath = await resolveLocalFilePath(version, mod, file)
-        if (!modPath) {
+        const resolved = await resolveLocalFilePath(version, mod, file)
+        if (!resolved) {
           if (/^https?:\/\//i.test(file.url || '')) continue
 
           failed = true
@@ -115,7 +129,7 @@ export async function uploadMods(at: string, version: Version) {
         }
 
         const url = await backend.uploadFileFromPathDirect(
-          modPath,
+          resolved.path,
           file.filename,
           `modpacks/${version.version.shareCode}/${projetTypeToFolder(mod.projectType)}`
         )
@@ -127,6 +141,7 @@ export async function uploadMods(at: string, version: Version) {
 
         file.url = url
         delete file.localPath
+        if (resolved.disabled) file.disabled = true
         uploaded.push(`${mod.id}:${file.filename}:${file.sha1}`)
       }
     } catch (err) {

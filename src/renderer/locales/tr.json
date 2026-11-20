@@ -1098,7 +1098,9 @@
       "notInstalled": "yüklü değil",
       "none": "Bu kurulumda başka modlarla ilişki yok.",
       "declared": "{{version}} sürümü için belirtilen"
-    }
+    },
+    "modpackDownloadFailed": "Mod paketi indirilemedi",
+    "modpackDownloadFailedHint": "Mod paketi arşivi {{source}} sitesinden indirilmedi. Bağlantınızı kontrol edip tekrar deneyin."
   },
   "nav": {
     "play": "Oyna"
@@ -3171,7 +3173,10 @@
       "sizeUnknown": "Seçilen dosyalar okunamadı — hâlâ var olduklarını ve başka bir program tarafından kilitlenmediklerini kontrol edip yeniden yayımlayın.",
       "uploadFailed": "Arşiv yüklenemedi. Daha sonra tekrar deneyin.",
       "logoFailed": "Paket logosu yüklenemedi. Daha sonra tekrar deneyin veya logoyu kaldırıp onsuz yayımlayın.",
-      "generic": "Kurulum yayımlanamadı. Daha sonra tekrar deneyin."
+      "generic": "Kurulum yayımlanamadı. Daha sonra tekrar deneyin.",
+      "localMods": "Yerel modlar yüklenemedi. Yeniden yayımlamayı deneyin.",
+      "localModsMissing": "Bu dosyalar kurulum klasöründe yok: {{files}}. Onları geri koyun veya bu modları kurulumdan kaldırıp yeniden yayımlayın.",
+      "localModsRejected": "Grubie sunucusu bu dosyaları kabul etmedi: {{files}}. Bağlantınızı kontrol edip yeniden yayımlayın."
     },
     "title": "Birlikte oyna",
     "streamDiagnostic": {
@@ -3412,7 +3417,8 @@
       "directHint": "Arkadaşınla doğrudan bağlantı, Grubie sunucusunu atlayarak",
       "turnHint": "Grubie TURN sunucusu üzerinden: doğrudan bağlantı kurulamadı",
       "relayHint": "Grubie sunucusu üzerinden: doğrudan bağlantı kullanılamıyor veya kapalı"
-    }
+    },
+    "localModsFailed": "Yerel modlar yüklenemedi"
   },
   "manageSkins": {
     "reset": "Skini sıfırla",

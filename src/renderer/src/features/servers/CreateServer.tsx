@@ -29,7 +29,6 @@ import { useAtom, useSetAtom } from "jotai";
 import {
   ArrowLeft,
   Boxes,
-  Copy,
   FileCheck2,
   FolderPlus,
   HardDriveDownload,
@@ -59,9 +58,11 @@ import {
   type VersionInstallStage,
 } from "@/types/InstallationProgress";
 import { SERVER_FILE_STAGES, contentPlan } from "@/shared/installPlan";
-import { describeFailure } from "@renderer/utilities/failures";
+import {
+  describeFailure,
+  showFailureToast,
+} from "@renderer/utilities/failures";
 import { toast } from "sonner";
-import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
@@ -102,11 +103,6 @@ export function CreateServer({
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<"setup" | "confirm">("setup");
   const [eulaAccepted, setEulaAccepted] = useState(false);
-  const [error, setError] = useState<{
-    text: string;
-    technical: string;
-    cleaned: boolean;
-  } | null>(null);
   const [selectedVersion] = useAtom(selectedVersionAtom);
   const [account] = useAtom(accountAtom);
   const { t } = useTranslation();
@@ -209,7 +205,6 @@ export function CreateServer({
 
     const versionPath = selectedVersion.versionPath;
 
-    setError(null);
     setIsLoading(true);
 
     let success = false;
@@ -289,25 +284,18 @@ export function CreateServer({
         return;
       }
 
-      const info = classifyError(err, { channel: "server:install" });
-      const described = describeFailure(info);
-
-      const text =
-        info.cause === "unknown"
-          ? info.message || t("versions.serverInstallError")
-          : [described.reason, described.hint].filter(Boolean).join(" ");
-
+      const context = { channel: "server:install" };
       const cleaned = await discardIncompleteServer(versionPath);
 
-      if (isMountedRef.current) {
-        setError({
-          text: text || t("versions.serverInstallError"),
-          technical: [described.technical, `${t("errors.code")}: ${info.code}`]
-            .filter(Boolean)
-            .join("\n"),
-          cleaned,
-        });
-      }
+      showFailureToast(t("versions.serverInstallError"), err, {
+        context,
+        description: cleaned
+          ? [
+              describeFailure(classifyError(err, context)).text,
+              t("versions.serverSetup.cleanedUp"),
+            ].join("\n")
+          : undefined,
+      });
     } finally {
       if (isMountedRef.current) setIsLoading(false);
     }
@@ -577,45 +565,7 @@ export function CreateServer({
           </>
         )}
 
-        {error ? (
-          <div
-            role="alert"
-            className="grid gap-2 rounded-lg border border-destructive/40 bg-surface-2 p-2.5 text-xs"
-          >
-            <p className="flex items-start gap-2">
-              <TriangleAlert className="mt-px size-3.5 shrink-0 text-destructive" />
-              <span className="min-w-0 leading-snug break-words">
-                {error.text}
-              </span>
-            </p>
-            <div className="flex items-center justify-between gap-2 pl-6">
-              <Hint
-                content={
-                  error.cleaned ? t("versions.serverSetup.cleanedUp") : undefined
-                }
-                variant="text"
-                truncatedOnly
-              >
-                <span className="min-w-0 truncate text-2xs text-faint">
-                  {error.cleaned ? t("versions.serverSetup.cleanedUp") : ""}
-                </span>
-              </Hint>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 shrink-0 px-2 text-2xs"
-                onClick={async () => {
-                  await copyWithFeedback(
-                    [error.text, error.technical].filter(Boolean).join("\n"),
-                  );
-                }}
-              >
-                <Copy className="size-3" />
-                {t("common.copy")}
-              </Button>
-            </div>
-          </div>
-        ) : step === "confirm" ? (
+        {step === "confirm" ? (
           <p className="flex items-center gap-1.5 text-2xs text-faint">
             <RotateCcw className="size-3 shrink-0" />
             {t("versions.serverSetup.reversible")}

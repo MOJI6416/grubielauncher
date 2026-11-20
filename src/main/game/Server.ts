@@ -73,7 +73,10 @@ export function patchLauncherScript(
   return patched;
 }
 
-async function writeUserJvmArgs(file: string, managed: string): Promise<void> {
+export async function writeUserJvmArgs(
+  file: string,
+  managed: string,
+): Promise<void> {
   const managedLine = managed.trim();
   const preserved: string[] = [];
 
@@ -82,7 +85,7 @@ async function writeUserJvmArgs(file: string, managed: string): Promise<void> {
 
     for (const rawLine of existing.split(/\r?\n/)) {
       const line = rawLine.trim();
-      if (!line || line === managedLine) continue;
+      if (!line || line.startsWith("#") || line === managedLine) continue;
       if (/-Xm[sx]/i.test(line)) continue;
       if (line.includes("-javaagent:")) continue;
       if (line.includes(HTTP_AGENT_JVM_ARGUMENT)) continue;

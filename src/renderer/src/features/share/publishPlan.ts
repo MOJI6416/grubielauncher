@@ -132,16 +132,36 @@ function isFieldAvailable(
 export function pickNewPublishDefaults(
   fields: PublishField[],
   alreadyDefaulted: ReadonlySet<PublishFieldId>,
+  includeOther = false,
 ): PublishFieldId[] {
   return fields
     .filter(
       (field) =>
         field.available &&
-        field.id !== "other" &&
+        (field.id !== "other" || includeOther) &&
         field.id !== "world" &&
         !alreadyDefaulted.has(field.id),
     )
     .map((field) => field.id);
+}
+
+export const MODPACK_OTHER_PATHS = [
+  "config",
+  "defaultconfigs",
+  "kubejs",
+  "kubegroovy",
+  "scripts",
+];
+
+export async function findModpackOtherPaths(
+  exists: (relativePath: string) => Promise<boolean>,
+): Promise<string[]> {
+  const found = await Promise.all(
+    MODPACK_OTHER_PATHS.map(async (relativePath) =>
+      (await exists(relativePath)) ? relativePath : null,
+    ),
+  );
+  return found.filter((relativePath): relativePath is string => !!relativePath);
 }
 
 export function samePaths(left: string[], right: string[]): boolean {
@@ -305,10 +325,86 @@ export type PublishErrorCode =
   | "uploadFailed"
   | "logoFailed"
   | "nameTaken"
+  | "localMods"
   | "generic";
+
+const LOCAL_MODS_UPLOAD_FAILED = "local mods upload failed";
+const MISSING_LOCALLY = ": file not found locally";
+
+export class LocalModsUploadError extends Error {
+  readonly failures: string[];
+
+  constructor(failures: string[]) {
+    super(
+      failures.length > 0
+        ? `${LOCAL_MODS_UPLOAD_FAILED}: ${failures.join("; ")}`
+        : LOCAL_MODS_UPLOAD_FAILED,
+    );
+    this.name = "LocalModsUploadError";
+    this.failures = failures;
+  }
+}
+
+export interface LocalModsFailureFiles {
+  missing: string[];
+  failed: string[];
+}
+
+export function localModsFailureFiles(
+  error: unknown,
+): LocalModsFailureFiles | null {
+  if (!(error instanceof LocalModsUploadError)) return null;
+  if (error.failures.length === 0) return null;
+
+  const missing: string[] = [];
+  const failed: string[] = [];
+  for (const failure of error.failures) {
+    if (failure.endsWith(MISSING_LOCALLY)) {
+      missing.push(failure.slice(0, -MISSING_LOCALLY.length));
+      continue;
+    }
+    const cut = failure.indexOf(": ");
+    failed.push(cut > 0 ? failure.slice(0, cut) : failure);
+  }
+  return { missing, failed };
+}
+
+export function formatFileList(files: string[], limit = 5): string {
+  const shown = files.slice(0, limit).join(", ");
+  return files.length > limit ? `${shown} +${files.length - limit}` : shown;
+}
+
+export function publishFailureChannels(
+  errorCode: PublishErrorCode,
+  error?: unknown,
+): string[] | undefined {
+  switch (errorCode) {
+    case "generic":
+      return [
+        "backend:",
+        "version:save",
+        "share:uploadMods",
+        "share:uploadJarMods",
+      ];
+    case "uploadFailed":
+      return ["backend:uploadFileFromPath", "file:archiveForPublish"];
+    case "logoFailed":
+      return ["backend:uploadFileFromPath", "fs:copy", "file:download"];
+    case "localMods":
+      return localModsFailureFiles(error) ? undefined : ["share:uploadMods"];
+    default:
+      return undefined;
+  }
+}
 
 export function resolvePublishErrorCode(error: unknown): PublishErrorCode {
   const message = error instanceof Error ? error.message : String(error);
+  if (
+    error instanceof LocalModsUploadError ||
+    message.startsWith(LOCAL_MODS_UPLOAD_FAILED)
+  ) {
+    return "localMods";
+  }
   if (message === "payload_too_large") return "payloadTooLarge";
   if (message === "limit_exceeded") return "limitExceeded";
   if (message === "source_too_large") return "sourceTooLarge";

@@ -1098,7 +1098,9 @@
       "notInstalled": "not installed",
       "none": "No links with other mods in this instance.",
       "declared": "Declared for version {{version}}"
-    }
+    },
+    "modpackDownloadFailed": "Failed to download the modpack",
+    "modpackDownloadFailedHint": "The modpack archive did not download from {{source}}. Check your connection and try again."
   },
   "nav": {
     "play": "Play"
@@ -3171,7 +3173,10 @@
       "sizeUnknown": "Could not read the selected files — check that they still exist and are not locked by another program, then publish again.",
       "uploadFailed": "The archive could not be uploaded. Try again later.",
       "logoFailed": "The pack logo could not be uploaded. Try again later, or remove the logo and publish without it.",
-      "generic": "The instance could not be published. Try again later."
+      "generic": "The instance could not be published. Try again later.",
+      "localMods": "Local mods could not be uploaded. Try publishing again.",
+      "localModsMissing": "These files are missing from the instance folder: {{files}}. Put them back or remove these mods from the instance, then publish again.",
+      "localModsRejected": "The Grubie server did not accept these files: {{files}}. Check your connection and publish again."
     },
     "title": "Play together",
     "streamDiagnostic": {
@@ -3412,7 +3417,8 @@
       "directHint": "Direct connection to your friend, bypassing the Grubie server",
       "turnHint": "Through the Grubie TURN server: a direct connection could not be made",
       "relayHint": "Through the Grubie server: a direct connection is unavailable or turned off"
-    }
+    },
+    "localModsFailed": "Local mods could not be uploaded"
   },
   "manageSkins": {
     "reset": "Reset skin",

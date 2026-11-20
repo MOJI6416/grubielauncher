@@ -118,6 +118,7 @@ export function showFailureToast(
     toastId?: string | number;
     context?: FailureContext;
     withCopy?: boolean;
+    description?: string;
     fallbackDescription?:
       | string
       | ((info: FailureInfo | null) => string | undefined);
@@ -141,13 +142,18 @@ export function showFailureToast(
   if (info?.cause === "cancelled") return info;
 
   if (!info) {
-    showErrorToast(title, resolveFallback(null), copyLabel, options?.toastId);
+    showErrorToast(
+      title,
+      options?.description || resolveFallback(null),
+      copyLabel,
+      options?.toastId,
+    );
     return null;
   }
 
   const described = describeFailure(info);
   const fallback = info.cause === "unknown" ? resolveFallback(info) : undefined;
-  const text = fallback || described.text;
+  const text = options?.description || fallback || described.text;
 
   showErrorToast(title, text, copyLabel, options?.toastId, described.technical);
 

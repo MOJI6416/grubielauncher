@@ -1098,7 +1098,9 @@
       "notInstalled": "nicht installiert",
       "none": "Keine Beziehungen zu anderen Mods in dieser Instanz.",
       "declared": "Angegeben für Version {{version}}"
-    }
+    },
+    "modpackDownloadFailed": "Modpack konnte nicht heruntergeladen werden",
+    "modpackDownloadFailedHint": "Das Modpack-Archiv wurde nicht von {{source}} heruntergeladen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
   },
   "nav": {
     "play": "Spielen"
@@ -3171,7 +3173,10 @@
       "sizeUnknown": "Die ausgewählten Dateien konnten nicht gelesen werden – prüfen Sie, ob sie noch existieren und nicht von einem anderen Programm gesperrt sind, und veröffentlichen Sie erneut.",
       "uploadFailed": "Das Archiv konnte nicht hochgeladen werden. Versuchen Sie es später erneut.",
       "logoFailed": "Das Paketlogo konnte nicht hochgeladen werden. Versuchen Sie es später erneut oder entfernen Sie das Logo und veröffentlichen Sie ohne.",
-      "generic": "Die Instanz konnte nicht veröffentlicht werden. Versuchen Sie es später erneut."
+      "generic": "Die Instanz konnte nicht veröffentlicht werden. Versuchen Sie es später erneut.",
+      "localMods": "Lokale Mods konnten nicht hochgeladen werden. Versuchen Sie erneut zu veröffentlichen.",
+      "localModsMissing": "Diese Dateien fehlen im Ordner der Instanz: {{files}}. Legen Sie sie zurück oder entfernen Sie diese Mods aus der Instanz und veröffentlichen Sie erneut.",
+      "localModsRejected": "Der Grubie-Server hat diese Dateien nicht angenommen: {{files}}. Prüfen Sie Ihre Verbindung und veröffentlichen Sie erneut."
     },
     "title": "Zusammen spielen",
     "streamDiagnostic": {
@@ -3412,7 +3417,8 @@
       "directHint": "Direkte Verbindung zu deinem Freund, am Grubie-Server vorbei",
       "turnHint": "Über den Grubie-TURN-Server: Eine direkte Verbindung kam nicht zustande",
       "relayHint": "Über den Grubie-Server: Direkte Verbindung nicht verfügbar oder ausgeschaltet"
-    }
+    },
+    "localModsFailed": "Lokale Mods konnten nicht hochgeladen werden"
   },
   "manageSkins": {
     "reset": "Skin zurücksetzen",

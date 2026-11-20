@@ -9,6 +9,7 @@ import type { IBlockedMod } from "@renderer/utilities/blockedMods";
 import { withExtractProgress } from "@renderer/utilities/archiveProgress";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { ensureDiskRoom } from "@renderer/utilities/diskRoom";
+import { hostFromUrl } from "@/shared/errors";
 
 const api = window.api;
 
@@ -19,7 +20,7 @@ export type ModpackDownloadStage = "download" | "extract" | null;
 export type ModpackDownloadResult =
   | { status: "ok"; modpack: IImportedModpack }
   | { status: "blocked"; blocked: IBlockedMod }
-  | { status: "failed"; error?: unknown };
+  | { status: "failed"; error?: unknown; downloadSource?: string };
 
 async function readModpackFolder(
   archivePath: string,
@@ -78,7 +79,7 @@ export async function downloadModpack(
     await ensureDiskRoom(temp, (file.size || 0) * ARCHIVE_ROOM_FACTOR);
 
     onStage("download");
-    await api.file.download(
+    const downloaded = await api.file.download(
       [
         {
           destination: archivePath,
@@ -90,6 +91,12 @@ export async function downloadModpack(
       ],
       settings.downloadLimit,
     );
+    if (!downloaded) {
+      return {
+        status: "failed",
+        downloadSource: hostFromUrl(file.url) ?? file.url,
+      };
+    }
 
     const modpack = await readModpackFolder(
       archivePath,

@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   emptyPublishSelection,
+  findModpackOtherPaths,
+  formatFileList,
   getPublishFields,
   isOtherOverLimit,
+  localModsFailureFiles,
+  LocalModsUploadError,
   MAX_OTHER_BYTES,
   orphanedPublishUploads,
   pickNewPublishDefaults,
+  publishFailureChannels,
   publishReadiness,
   publishStagePercent,
   resolvePublishErrorCode,
@@ -362,6 +367,98 @@ describe("pickNewPublishDefaults", () => {
         new Set(),
       ),
     ).toEqual([]);
+  });
+
+  it("ticks the extra files for a build installed from a modpack", () => {
+    expect(pickNewPublishDefaults(fields, new Set(), true)).toEqual([
+      "mods",
+      "options",
+      "other",
+    ]);
+  });
+
+  it("does not tick the extra files again after the player unticked them", () => {
+    expect(
+      pickNewPublishDefaults(
+        fields,
+        new Set(["mods", "options", "other"] as const),
+        true,
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("findModpackOtherPaths", () => {
+  it("keeps only the script and config folders that exist", async () => {
+    const present = new Set(["config", "kubejs", "kubegroovy"]);
+
+    expect(
+      await findModpackOtherPaths(async (path) => present.has(path)),
+    ).toEqual(["config", "kubejs", "kubegroovy"]);
+  });
+
+  it("finds nothing in a build without those folders", async () => {
+    expect(await findModpackOtherPaths(async () => false)).toEqual([]);
+  });
+});
+
+describe("local mods publish failures", () => {
+  const error = new LocalModsUploadError([
+    "off.jar: file not found locally",
+    "big.jar: upload rejected",
+    "Create: Steam 'n' Rails: read ECONNRESET",
+  ]);
+
+  it("gets its own error code", () => {
+    expect(resolvePublishErrorCode(error)).toBe("localMods");
+    expect(
+      resolvePublishErrorCode(new Error("local mods upload failed: a.jar")),
+    ).toBe("localMods");
+  });
+
+  it("keeps the failure list in the technical message", () => {
+    expect(error.message).toContain("off.jar: file not found locally");
+    expect(error.message).toContain("big.jar: upload rejected");
+  });
+
+  it("splits missing files from files the server did not take", () => {
+    expect(localModsFailureFiles(error)).toEqual({
+      missing: ["off.jar"],
+      failed: ["big.jar", "Create"],
+    });
+    expect(localModsFailureFiles(new LocalModsUploadError([]))).toBeNull();
+    expect(localModsFailureFiles(new Error("boom"))).toBeNull();
+  });
+
+  it("shortens a long file list", () => {
+    expect(formatFileList(["a", "b"])).toBe("a, b");
+    expect(formatFileList(["a", "b", "c", "d"], 2)).toBe("a, b +2");
+  });
+});
+
+describe("publishFailureChannels", () => {
+  it("never borrows an unrelated buffered failure for a known cause", () => {
+    expect(publishFailureChannels("nameTaken")).toBeUndefined();
+    expect(publishFailureChannels("limitExceeded")).toBeUndefined();
+    expect(
+      publishFailureChannels(
+        "localMods",
+        new LocalModsUploadError(["a.jar: file not found locally"]),
+      ),
+    ).toBeUndefined();
+  });
+
+  it("looks only at the publish steps for the rest", () => {
+    const generic = publishFailureChannels("generic") ?? [];
+    expect(generic).toContain("backend:");
+    expect(generic.some((channel) => channel.startsWith("fs:"))).toBe(false);
+    expect(publishFailureChannels("uploadFailed")).toEqual([
+      "backend:uploadFileFromPath",
+      "file:archiveForPublish",
+    ]);
+    expect(
+      publishFailureChannels("localMods", new LocalModsUploadError([])),
+    ).toEqual(["share:uploadMods"]);
   });
 });
 

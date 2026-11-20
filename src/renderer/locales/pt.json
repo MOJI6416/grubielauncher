@@ -1112,7 +1112,9 @@
       "notInstalled": "não instalado",
       "none": "Sem relações com outros mods nesta instância.",
       "declared": "Declarado para a versão {{version}}"
-    }
+    },
+    "modpackDownloadFailed": "Não foi possível baixar o modpack",
+    "modpackDownloadFailedHint": "O arquivo do modpack não foi baixado de {{source}}. Verifique a conexão e tente de novo."
   },
   "nav": {
     "play": "Jogar"
@@ -3197,7 +3199,10 @@
       "sizeUnknown": "Não foi possível ler os arquivos selecionados — confira se eles ainda existem e não estão bloqueados por outro programa e publique de novo.",
       "uploadFailed": "Não foi possível enviar o arquivo compactado. Tente de novo mais tarde.",
       "logoFailed": "Não foi possível enviar o logo do pacote. Tente de novo mais tarde, ou remova o logo e publique sem ele.",
-      "generic": "Não foi possível publicar a instância. Tente de novo mais tarde."
+      "generic": "Não foi possível publicar a instância. Tente de novo mais tarde.",
+      "localMods": "Não foi possível enviar os mods locais. Tente publicar de novo.",
+      "localModsMissing": "Estes arquivos não estão na pasta da instância: {{files}}. Coloque-os de volta ou remova esses mods da instância e publique de novo.",
+      "localModsRejected": "O servidor do Grubie não aceitou estes arquivos: {{files}}. Verifique a conexão e publique de novo."
     },
     "title": "Jogar junto",
     "streamDiagnostic": {
@@ -3439,7 +3444,8 @@
       "directHint": "Conexão direta com seu amigo, sem passar pelo servidor do Grubie",
       "turnHint": "Pelo servidor TURN do Grubie: não foi possível conectar diretamente",
       "relayHint": "Pelo servidor do Grubie: a conexão direta está indisponível ou desativada"
-    }
+    },
+    "localModsFailed": "Não foi possível enviar os mods locais"
   },
   "manageSkins": {
     "reset": "Redefinir skin",

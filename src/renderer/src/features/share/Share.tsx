@@ -54,12 +54,17 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   emptyPublishSelection,
+  findModpackOtherPaths,
+  formatFileList,
   getPublishFields,
   isOtherOverLimit,
+  localModsFailureFiles,
+  LocalModsUploadError,
   orphanedPublishUploads,
   pickNewPublishDefaults,
   MAX_OTHER_ARCHIVE_BYTES,
   MAX_OTHER_BYTES,
+  publishFailureChannels,
   publishReadiness,
   publishStagePercent,
   resolvePublishErrorCode,
@@ -102,6 +107,7 @@ interface SharePublishProgress {
   loaded?: number;
   total?: number;
   errorCode?: PublishErrorCode;
+  errorDetail?: string;
   statusCode?: number;
   failedStage?: PublishStage;
 }
@@ -144,6 +150,7 @@ export function Share({
   const [totalSize, setTotalSize] = useState(0);
   const [isExistsOptionsFile, setIsExistsOptionsFile] = useState(false);
   const [worldCount, setWorldCount] = useState<number | null>(null);
+  const [modpackOtherPaths, setModpackOtherPaths] = useState<string[]>([]);
 
   const [isNetwork] = useAtom(networkAtom);
   const [servers, setServers] = useAtom(versionServersAtom);
@@ -158,6 +165,7 @@ export function Share({
   const uploadProgressIdRef = useRef<string | null>(null);
   const uploadProgressRef = useRef<UploadFileProgress | null>(null);
   const publishErrorRef = useRef<PublishErrorCode | null>(null);
+  const publishFailureRef = useRef<unknown>(null);
   const publishCommittedRef = useRef(false);
   const progressRef = useRef<HTMLDivElement | null>(null);
   const publishStageRef = useRef<PublishStage | null>(null);
@@ -378,18 +386,42 @@ export function Share({
   );
 
   useEffect(() => {
+    if (shareType !== "new" || !selectedVersion?.version.modpack) return;
+
+    let cancelled = false;
+    const versionPath = selectedVersion.versionPath;
+    findModpackOtherPaths(async (relativePath) =>
+      api.fs.pathExists(await api.path.join(versionPath, relativePath)),
+    )
+      .then((found) => {
+        if (!cancelled) setModpackOtherPaths(found);
+      })
+      .catch(ignoreFailure);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedVersion, shareType]);
+
+  useEffect(() => {
     if (shareType !== "new") return;
 
-    const fresh = pickNewPublishDefaults(fields, defaultedFieldsRef.current);
+    const fresh = pickNewPublishDefaults(
+      fields,
+      defaultedFieldsRef.current,
+      modpackOtherPaths.length > 0,
+    );
     if (fresh.length === 0) return;
 
     for (const id of fresh) defaultedFieldsRef.current.add(id);
+    if (fresh.includes("other")) {
+      setPaths((prev) => (prev.length > 0 ? prev : modpackOtherPaths));
+    }
     setSelection((prev) => {
       const next = { ...prev };
       for (const id of fresh) next[id] = true;
       return next;
     });
-  }, [fields, shareType]);
+  }, [fields, modpackOtherPaths, shareType]);
 
   const isOverLimit = isOtherOverLimit(totalSize);
 
@@ -621,7 +653,42 @@ export function Share({
     if (errorCode === "logoFailed") return t("share.logoFailed");
     if (errorCode === "nameTaken")
       return t("share.nameTaken", { name: selectedVersion?.version.name });
+    if (errorCode === "localMods") return t("share.localModsFailed");
     return t("versions.publishError");
+  }
+
+  function localModsErrorText(error: unknown): string | undefined {
+    const files = localModsFailureFiles(error);
+    if (!files) return undefined;
+
+    return [
+      files.missing.length > 0
+        ? t("share.publishErrors.localModsMissing", {
+            files: formatFileList(files.missing),
+          })
+        : "",
+      files.failed.length > 0
+        ? t("share.publishErrors.localModsRejected", {
+            files: formatFileList(files.failed),
+          })
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  function showPublishFailure(errorCode: PublishErrorCode, error: unknown) {
+    showFailureToast(getPublishErrorToast(errorCode), error, {
+      channels: publishFailureChannels(errorCode, error),
+      description:
+        errorCode === "localMods" ? localModsErrorText(error) : undefined,
+      fallbackDescription:
+        errorCode === "nameTaken"
+          ? t("share.nameTakenHint")
+          : errorCode === "generic"
+            ? undefined
+            : publishErrorText(errorCode),
+    });
   }
 
   function publishErrorText(errorCode: PublishErrorCode) {
@@ -638,6 +705,8 @@ export function Share({
         return t("share.publishErrors.uploadFailed");
       case "logoFailed":
         return t("share.publishErrors.logoFailed");
+      case "localMods":
+        return t("share.publishErrors.localMods");
       default:
         return t("share.publishErrors.generic");
     }
@@ -689,6 +758,7 @@ export function Share({
 
     try {
       publishErrorRef.current = null;
+      publishFailureRef.current = null;
       publishCommittedRef.current = false;
       let options = "";
       if (selection.options) {
@@ -716,13 +786,7 @@ export function Share({
           },
         );
         if (!result.success) {
-          throw new Error(
-            `local mods upload failed${
-              result.failures?.length
-                ? `: ${result.failures.slice(0, 3).join("; ")}`
-                : ""
-            }`,
-          );
+          throw new LocalModsUploadError(result.failures ?? []);
         }
         mods = result.mods;
 
@@ -999,10 +1063,13 @@ export function Share({
     } catch (error) {
       const errorCode = resolvePublishErrorCode(error);
       publishErrorRef.current = errorCode;
+      publishFailureRef.current = error;
       updatePublishProgress({
         stage: "error",
         percent: 100,
         errorCode,
+        errorDetail:
+          errorCode === "localMods" ? localModsErrorText(error) : undefined,
         statusCode: uploadProgressRef.current?.statusCode,
         failedStage: publishStageRef.current ?? undefined,
       });
@@ -1015,11 +1082,7 @@ export function Share({
           .deleteFile(account.accessToken!, uploaded)
           .catch(ignoreFailure);
       }
-      if (!silentMode) {
-        showFailureToast(getPublishErrorToast(errorCode), error, {
-          channels: ["backend:"],
-        });
-      }
+      if (!silentMode) showPublishFailure(errorCode, error);
       return false;
     } finally {
       setIsLoading(false);
@@ -1110,6 +1173,7 @@ export function Share({
       setLoadingType("share");
       setIsLoading(true);
       publishErrorRef.current = null;
+      publishFailureRef.current = null;
       publishCommittedRef.current = false;
       updatePublishProgress({
         stage: "creatingShare",
@@ -1196,13 +1260,10 @@ export function Share({
           .deleteModpack(account.accessToken!, createdShareCode)
           .catch(ignoreFailure);
       }
+      const cause = publishFailureRef.current ?? error;
       const errorCode =
-        publishErrorRef.current || resolvePublishErrorCode(error);
-      showFailureToast(getPublishErrorToast(errorCode), error, {
-        channels: ["backend:", "version:save", "fs:"],
-        fallbackDescription:
-          errorCode === "nameTaken" ? t("share.nameTakenHint") : undefined,
-      });
+        publishErrorRef.current || resolvePublishErrorCode(cause);
+      showPublishFailure(errorCode, cause);
     } finally {
       setIsLoading(false);
       setLoadingType(undefined);
@@ -1538,10 +1599,11 @@ export function Share({
                         }
                       />
                       {publishProgress?.stage === "error" && (
-                        <p className="text-xs leading-4 text-destructive">
-                          {publishErrorText(
-                            publishProgress.errorCode || "generic",
-                          )}
+                        <p className="whitespace-pre-line text-xs leading-4 text-destructive">
+                          {publishProgress.errorDetail ||
+                            publishErrorText(
+                              publishProgress.errorCode || "generic",
+                            )}
                           {publishProgress.failedStage
                             ? ` (${stageText(publishProgress.failedStage)})`
                             : ""}

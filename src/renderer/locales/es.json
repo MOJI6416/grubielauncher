@@ -1112,7 +1112,9 @@
       "notInstalled": "no instalado",
       "none": "Sin relaciones con otros mods en esta instancia.",
       "declared": "Declarado para la versión {{version}}"
-    }
+    },
+    "modpackDownloadFailed": "No se pudo descargar el modpack",
+    "modpackDownloadFailedHint": "El archivo del modpack no se descargó desde {{source}}. Revise su conexión y vuelva a intentarlo."
   },
   "nav": {
     "play": "Jugar"
@@ -3197,7 +3199,10 @@
       "sizeUnknown": "No se pudieron leer los archivos elegidos: compruebe que sigan existiendo y que otro programa no los bloquee, y vuelva a publicar.",
       "uploadFailed": "No se pudo subir el archivo comprimido. Inténtelo más tarde.",
       "logoFailed": "No se pudo subir el logo del paquete. Inténtelo más tarde, o quite el logo y publique sin él.",
-      "generic": "No se pudo publicar la instancia. Inténtelo más tarde."
+      "generic": "No se pudo publicar la instancia. Inténtelo más tarde.",
+      "localMods": "No se pudieron subir los mods locales. Vuelva a intentar publicar.",
+      "localModsMissing": "Faltan estos archivos en la carpeta de la instancia: {{files}}. Devuélvalos o quite estos mods de la instancia y vuelva a publicar.",
+      "localModsRejected": "El servidor de Grubie no aceptó estos archivos: {{files}}. Revise su conexión y vuelva a publicar."
     },
     "title": "Jugar en compañía",
     "streamDiagnostic": {
@@ -3439,7 +3444,8 @@
       "directHint": "Conexión directa con tu amigo, sin pasar por el servidor de Grubie",
       "turnHint": "A través del servidor TURN de Grubie: no se pudo conectar directamente",
       "relayHint": "A través del servidor de Grubie: la conexión directa no está disponible o está desactivada"
-    }
+    },
+    "localModsFailed": "No se pudieron subir los mods locales"
   },
   "manageSkins": {
     "reset": "Restablecer skin",

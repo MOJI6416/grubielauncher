@@ -1126,7 +1126,9 @@
       "notInstalled": "nie zainstalowano",
       "none": "Brak powiązań z innymi modami w tej instancji.",
       "declared": "Zadeklarowano dla wersji {{version}}"
-    }
+    },
+    "modpackDownloadFailed": "Nie udało się pobrać modpacka",
+    "modpackDownloadFailedHint": "Archiwum modpacka nie pobrało się z {{source}}. Sprawdź połączenie i spróbuj ponownie."
   },
   "nav": {
     "play": "Graj"
@@ -3223,7 +3225,10 @@
       "sizeUnknown": "Nie udało się odczytać wybranych plików — sprawdź, czy nadal istnieją i nie są zablokowane przez inny program, a potem opublikuj ponownie.",
       "uploadFailed": "Nie udało się przesłać archiwum. Spróbuj ponownie później.",
       "logoFailed": "Nie udało się przesłać logo paczki. Spróbuj ponownie później albo usuń logo i opublikuj bez niego.",
-      "generic": "Nie udało się opublikować instancji. Spróbuj ponownie później."
+      "generic": "Nie udało się opublikować instancji. Spróbuj ponownie później.",
+      "localMods": "Nie udało się przesłać lokalnych modów. Spróbuj opublikować ponownie.",
+      "localModsMissing": "Tych plików brakuje w folderze instancji: {{files}}. Przywróć je albo usuń te mody z instancji, a potem opublikuj ponownie.",
+      "localModsRejected": "Serwer Grubie nie przyjął tych plików: {{files}}. Sprawdź połączenie i opublikuj ponownie."
     },
     "title": "Grajcie razem",
     "streamDiagnostic": {
@@ -3466,7 +3471,8 @@
       "directHint": "Bezpośrednie połączenie ze znajomym, z pominięciem serwera Grubie",
       "turnHint": "Przez serwer TURN Grubie: nie udało się połączyć bezpośrednio",
       "relayHint": "Przez serwer Grubie: połączenie bezpośrednie jest niedostępne lub wyłączone"
-    }
+    },
+    "localModsFailed": "Nie udało się przesłać lokalnych modów"
   },
   "manageSkins": {
     "reset": "Resetuj skin",

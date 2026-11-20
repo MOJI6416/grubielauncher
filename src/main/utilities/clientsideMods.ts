@@ -13,7 +13,13 @@ import { SERVER_PROTECTED_ENTRIES } from "./serverManager";
 // server even if they match the clientside list. `mustInclude` are the
 // top-level directories a server needs (config, datapacks, structures, …).
 
-const DEFAULT_SYNC_DIRS = ["config", "defaultconfigs", "kubejs", "scripts"];
+const DEFAULT_SYNC_DIRS = [
+  "config",
+  "defaultconfigs",
+  "kubejs",
+  "kubegroovy",
+  "scripts",
+];
 
 // Never mirror these as extra dirs: mods are synced separately (side-aware) and
 // resource/shader packs are client-only.
@@ -114,5 +120,5 @@ export async function getClientsideModMatcher(): Promise<
 
 export async function getServerSyncDirs(): Promise<string[]> {
   const { mustInclude } = await fetchLists();
-  return mustInclude.length > 0 ? mustInclude : DEFAULT_SYNC_DIRS;
+  return [...new Set([...mustInclude, ...DEFAULT_SYNC_DIRS])];
 }

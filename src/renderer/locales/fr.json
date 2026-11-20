@@ -1112,7 +1112,9 @@
       "notInstalled": "non installé",
       "none": "Aucun lien avec d’autres mods dans cette instance.",
       "declared": "Déclaré pour la version {{version}}"
-    }
+    },
+    "modpackDownloadFailed": "Impossible de télécharger le modpack",
+    "modpackDownloadFailedHint": "L’archive du modpack n’a pas été téléchargée depuis {{source}}. Vérifiez votre connexion et réessayez."
   },
   "nav": {
     "play": "Jouer"
@@ -3197,7 +3199,10 @@
       "sizeUnknown": "Impossible de lire les fichiers choisis — vérifiez qu’ils existent toujours et ne sont pas verrouillés par un autre programme, puis publiez à nouveau.",
       "uploadFailed": "Impossible d’envoyer l’archive. Réessayez plus tard.",
       "logoFailed": "Impossible d’envoyer le logo du pack. Réessayez plus tard, ou retirez le logo et publiez sans.",
-      "generic": "Impossible de publier l’instance. Réessayez plus tard."
+      "generic": "Impossible de publier l’instance. Réessayez plus tard.",
+      "localMods": "Impossible d’envoyer les mods locaux. Essayez de publier à nouveau.",
+      "localModsMissing": "Ces fichiers manquent dans le dossier de l’instance : {{files}}. Remettez-les ou retirez ces mods de l’instance, puis publiez à nouveau.",
+      "localModsRejected": "Le serveur Grubie n’a pas accepté ces fichiers : {{files}}. Vérifiez votre connexion et publiez à nouveau."
     },
     "title": "Jouer ensemble",
     "streamDiagnostic": {
@@ -3439,7 +3444,8 @@
       "directHint": "Connexion directe avec votre ami, sans passer par le serveur Grubie",
       "turnHint": "Via le serveur TURN de Grubie : la connexion directe n'a pas abouti",
       "relayHint": "Via le serveur Grubie : la connexion directe est indisponible ou désactivée"
-    }
+    },
+    "localModsFailed": "Impossible d’envoyer les mods locaux"
   },
   "manageSkins": {
     "reset": "Réinitialiser le skin",

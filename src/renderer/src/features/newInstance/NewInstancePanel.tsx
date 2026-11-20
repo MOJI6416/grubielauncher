@@ -556,6 +556,15 @@ export function NewInstancePanel({
         if (showNotEnoughSpaceToast(t("versions.installError"), result.error)) {
           return;
         }
+        if (result.downloadSource) {
+          showFailureToast(t("modManager.modpackDownloadFailed"), result.error, {
+            channels: ["file:download"],
+            fallbackDescription: t("modManager.modpackDownloadFailedHint", {
+              source: result.downloadSource,
+            }),
+          });
+          return;
+        }
         showFailureToast(t("modManager.notModpack"), result.error, {
           channels: ["modManager:checkModpack", "file:download"],
           fallbackDescription: t("modManager.notModpackHint"),
