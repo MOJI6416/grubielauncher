@@ -40,7 +40,7 @@ export async function buildAtlas(textures: BlockTexture[]): Promise<Atlas> {
   const widest = images.reduce((size, image) => Math.max(size, image?.width ?? 16), 16);
   const count = Math.max(1, textures.length);
   const columns = Math.ceil(Math.sqrt(count));
-  let tile = Math.min(64, widest);
+  let tile = Math.min(128, widest);
   while (tile > 8 && columns * (tile + PADDING * 2) > MAX_ATLAS) tile = Math.floor(tile / 2);
   const slot = tile + PADDING * 2;
   const rows = Math.ceil(count / columns);

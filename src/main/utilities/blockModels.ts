@@ -13,7 +13,7 @@ import {
   parseLenientJson,
   withAssetSession,
 } from "./blockAssets";
-import { bakeEntityModel, entityModelFor } from "./entityModels";
+import { DYE_TINTS, bakeEntityModel, entityModelFor, entityTextures } from "./entityModels";
 
 type Vec3 = [number, number, number];
 
@@ -524,6 +524,8 @@ export function bakeElements(
 export function tintOf(name: string): number | null {
   const id = name.slice(name.indexOf(":") + 1);
   if (/^(cherry|azalea|flowering_azalea)_leaves$/.test(id)) return null;
+  const banner = /^(.+?)_(?:wall_)?banner$/.exec(id);
+  if (banner && DYE_TINTS[banner[1]] !== undefined) return DYE_TINTS[banner[1]];
   if (/water|bubble_column/.test(id)) return 0x3f76e4;
   if (id === "pale_oak_leaves") return 0x878d76;
   if (id === "mangrove_leaves") return 0x8db127;
@@ -603,8 +605,26 @@ export async function bakeState(library: ModelLibrary, state: string): Promise<B
 
   if (!quads.length) {
     const entity = entityModelFor(name, props);
-    if (entity && (await library.texture(entity.texture))) {
-      return { quads: bakeEntityModel(entity), cube: false, liquid: false, color: null };
+    if (entity) {
+      let texture: string | null = null;
+      for (const candidate of [entity.texture, ...(entity.fallbacks ?? [])]) {
+        if (await library.texture(candidate)) {
+          texture = candidate;
+          break;
+        }
+      }
+      if (texture) {
+        const missing = new Set<string>();
+        for (const extra of entityTextures(entity)) {
+          if (!(await library.texture(extra))) missing.add(extra);
+        }
+        const model = {
+          ...entity,
+          texture,
+          parts: entity.parts.filter((part) => !part.texture || !missing.has(part.texture)),
+        };
+        return { quads: bakeEntityModel(model), cube: false, liquid: false, color: null };
+      }
     }
   }
 

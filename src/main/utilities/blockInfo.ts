@@ -37,7 +37,7 @@ import {
 import { getLauncherPaths } from "./other";
 
 const ICON_FOLDER = "block-icons";
-const ICON_VERSION = 2;
+const ICON_VERSION = 3;
 const ICON_SIZE = 64;
 const CUBE_SCALE = 0.84;
 const MAX_LANG_TABLES = 24;
@@ -206,6 +206,13 @@ function modelParts(name: string): { state: string; offset: [number, number, num
     ];
   }
   if (path.endsWith("chest")) return [{ state: `${name}[facing=south,type=single]`, offset: [0, 0, 0] }];
+  if (path.endsWith("shulker_box")) return [{ state: `${name}[facing=up]`, offset: [0, 0, 0] }];
+  if (/_banner$/.test(path) && !path.includes("_wall_")) {
+    return [{ state: `${name}[rotation=14]`, offset: [0, 0, 0] }];
+  }
+  if (/(_skull|_head)$/.test(path) && !path.includes("_wall_")) {
+    return [{ state: `${name}[rotation=8]`, offset: [0, 0, 0] }];
+  }
   return null;
 }
 

@@ -13,10 +13,11 @@ interface Box {
   dx: number;
   dy: number;
   dz: number;
+  grow?: number;
+  mirror?: boolean;
 }
 
-interface Part {
-  boxes: Box[];
+interface Pose {
   x?: number;
   y?: number;
   z?: number;
@@ -25,8 +26,16 @@ interface Part {
   zRot?: number;
 }
 
+interface Part extends Pose {
+  boxes: Box[];
+  parent?: Pose;
+  texture?: string;
+  tinted?: boolean;
+}
+
 export interface EntityModel {
   texture: string;
+  fallbacks?: string[];
   width: number;
   height: number;
   parts: Part[];
@@ -117,10 +126,15 @@ function minus(a: Vec3, b: Vec3): Vec3 {
 }
 
 function boxPolygons(box: Box) {
-  const { u, v, x, y, z, dx, dy, dz } = box;
-  const x1 = x + dx;
-  const y1 = y + dy;
-  const z1 = z + dz;
+  const { u, v, dx, dy, dz } = box;
+  const grow = box.grow ?? 0;
+  const y = box.y - grow;
+  const z = box.z - grow;
+  const y1 = box.y + dy + grow;
+  const z1 = box.z + dz + grow;
+  let x = box.x - grow;
+  let x1 = box.x + dx + grow;
+  if (box.mirror) [x, x1] = [x1, x];
   const v7: Vec3 = [x, y, z];
   const v0: Vec3 = [x1, y, z];
   const v1: Vec3 = [x1, y1, z];
@@ -138,7 +152,8 @@ function boxPolygons(box: Box) {
   const f10 = v;
   const f11 = v + dz;
   const f12 = v + dz + dy;
-  const center: Vec3 = [x + dx / 2, y + dy / 2, z + dz / 2];
+  const center: Vec3 = [(x + x1) / 2, (y + y1) / 2, (z + z1) / 2];
+  const flip = box.mirror ? -1 : 1;
   return [
     { points: [v4, v3, v7, v0], uv: [f5, f10, f6, f11], area: dx * dz, direction: 0 },
     { points: [v1, v2, v6, v5], uv: [f6, f11, f7, f10], area: dx * dz, direction: 1 },
@@ -146,17 +161,33 @@ function boxPolygons(box: Box) {
     { points: [v0, v7, v2, v1], uv: [f5, f11, f6, f12], area: dx * dy, direction: 2 },
     { points: [v4, v0, v1, v5], uv: [f6, f11, f8, f12], area: dz * dy, direction: 5 },
     { points: [v3, v4, v5, v6], uv: [f8, f11, f9, f12], area: dx * dy, direction: 3 },
-  ].map((polygon) => ({ ...polygon, center }));
+  ].map((polygon) => {
+    const [vx, vy, vz] = DIRECTION_VECTORS[polygon.direction];
+    return { ...polygon, center, vector: [vx * flip, vy, vz] as Vec3 };
+  });
+}
+
+function poseMatrix(pose: Pose): Mat {
+  return chain(
+    translate((pose.x ?? 0) / 16, (pose.y ?? 0) / 16, (pose.z ?? 0) / 16),
+    rotate("z", pose.zRot ?? 0),
+    rotate("y", pose.yRot ?? 0),
+    rotate("x", pose.xRot ?? 0),
+  );
 }
 
 function partMatrix(part: Part): Mat {
   return chain(
-    translate((part.x ?? 0) / 16, (part.y ?? 0) / 16, (part.z ?? 0) / 16),
-    rotate("z", part.zRot ?? 0),
-    rotate("y", part.yRot ?? 0),
-    rotate("x", part.xRot ?? 0),
+    part.parent ? poseMatrix(part.parent) : identity(),
+    poseMatrix(part),
     scale(1 / 16, 1 / 16, 1 / 16),
   );
+}
+
+export function entityTextures(model: EntityModel): string[] {
+  return [
+    ...new Set(model.parts.map((part) => part.texture).filter((texture): texture is string => !!texture)),
+  ];
 }
 
 export function bakeEntityModel(model: EntityModel): RawQuad[] {
@@ -175,7 +206,7 @@ export function bakeEntityModel(model: EntityModel): RawQuad[] {
         ].map(([pu, pv]) => [pu / model.width, pv / model.height]);
         let points = polygon.points.map((point) => apply(matrix, point));
         let corners = uvs;
-        const vector = DIRECTION_VECTORS[polygon.direction];
+        const vector = polygon.vector;
         const outward = minus(
           apply(matrix, [
             polygon.center[0] + vector[0],
@@ -192,10 +223,10 @@ export function bakeEntityModel(model: EntityModel): RawQuad[] {
         quads.push({
           positions: points.flat(),
           uvs: corners.flat(),
-          texture: model.texture,
+          texture: part.texture ?? model.texture,
           cull: -1,
           shade: directionOf(outward),
-          tinted: false,
+          tinted: part.tinted ?? false,
         });
       }
     }
@@ -340,6 +371,170 @@ function signModel(namespace: string, path: string, props: BlockProps): EntityMo
   };
 }
 
+const DIRECTION_ROTATIONS: Record<string, Mat> = {
+  down: rotate("x", Math.PI),
+  up: identity(),
+  north: chain(rotate("x", Math.PI / 2), rotate("z", Math.PI)),
+  south: rotate("x", Math.PI / 2),
+  west: chain(rotate("x", Math.PI / 2), rotate("z", Math.PI / 2)),
+  east: chain(rotate("x", Math.PI / 2), rotate("z", -Math.PI / 2)),
+};
+
+function shulkerModel(namespace: string, path: string, props: BlockProps): EntityModel | null {
+  const color = /^(?:(.+)_)?shulker_box$/.exec(path);
+  if (!color) return null;
+  return {
+    texture: `${namespace}:entity/shulker/shulker${color[1] ? `_${color[1]}` : ""}`,
+    width: 64,
+    height: 64,
+    parts: [
+      { y: 24, boxes: [box(0, 0, -8, -16, -8, 16, 12, 16)] },
+      { y: 24, boxes: [box(0, 28, -8, -8, -8, 16, 8, 16)] },
+    ],
+    transform: chain(
+      translate(0.5, 0.5, 0.5),
+      scale(0.9995, 0.9995, 0.9995),
+      DIRECTION_ROTATIONS[props.facing ?? "up"] ?? identity(),
+      scale(1, -1, -1),
+      translate(0, -1, 0),
+    ),
+  };
+}
+
+export const DYE_TINTS: Record<string, number> = {
+  white: 0xf9fffe,
+  orange: 0xf9801d,
+  magenta: 0xc74ebd,
+  light_blue: 0x3ab3da,
+  yellow: 0xfed83d,
+  lime: 0x80c71f,
+  pink: 0xf38baa,
+  gray: 0x474f52,
+  light_gray: 0x9d9d97,
+  cyan: 0x169c9c,
+  purple: 0x8932b8,
+  blue: 0x3c44aa,
+  brown: 0x835432,
+  green: 0x5e7c16,
+  red: 0xb02e26,
+  black: 0x1d1d21,
+};
+
+function bannerModel(namespace: string, path: string, props: BlockProps): EntityModel | null {
+  const banner = /^(.+?)_(wall_)?banner$/.exec(path);
+  if (!banner || DYE_TINTS[banner[1]] === undefined) return null;
+  const wall = !!banner[2];
+  const parts: Part[] = [
+    { boxes: [box(0, 42, -10, -32, -1, 20, 2, 2)] },
+    {
+      y: -32,
+      texture: `${namespace}:entity/banner/base`,
+      tinted: true,
+      boxes: [box(0, 0, -10, 0, -2, 20, 40, 1)],
+    },
+  ];
+  if (!wall) parts.push({ boxes: [box(44, 0, -1, -30, -1, 2, 42, 2)] });
+  const transform = wall
+    ? chain(
+        translate(0.5, -1 / 6, 0.5),
+        rotate("y", degrees(-(FACING_DEGREES[props.facing ?? "south"] ?? 0))),
+        translate(0, -0.3125, -0.4375),
+      )
+    : chain(translate(0.5, 0.5, 0.5), rotate("y", degrees(-Number(props.rotation ?? 0) * 22.5)));
+  return {
+    texture: `${namespace}:entity/banner_base`,
+    fallbacks: [`${namespace}:entity/banner/banner_base`],
+    width: 64,
+    height: 64,
+    parts,
+    transform: multiply(transform, scale(2 / 3, -2 / 3, -2 / 3)),
+  };
+}
+
+const HEADS: Record<string, { textures: string[]; kind: "mob" | "humanoid" | "piglin" | "dragon" }> = {
+  skeleton: { textures: ["entity/skeleton/skeleton"], kind: "mob" },
+  wither_skeleton: { textures: ["entity/skeleton/wither_skeleton"], kind: "mob" },
+  creeper: { textures: ["entity/creeper/creeper"], kind: "mob" },
+  zombie: { textures: ["entity/zombie/zombie"], kind: "humanoid" },
+  player: { textures: ["entity/player/wide/steve", "entity/steve"], kind: "humanoid" },
+  piglin: { textures: ["entity/piglin/piglin"], kind: "piglin" },
+  dragon: { textures: ["entity/enderdragon/dragon"], kind: "dragon" },
+};
+
+function headParts(kind: "mob" | "humanoid" | "piglin" | "dragon", yRot: number): Part[] {
+  const head: Pose = { yRot };
+  if (kind === "dragon") {
+    return [
+      {
+        ...head,
+        boxes: [
+          box(176, 44, -6, -1, -24, 12, 5, 16),
+          box(112, 30, -8, -8, -10, 16, 16, 16),
+          { ...box(0, 0, -5, -12, -4, 2, 4, 6), mirror: true },
+          { ...box(112, 0, -5, -3, -22, 2, 2, 4), mirror: true },
+          box(0, 0, 3, -12, -4, 2, 4, 6),
+          box(112, 0, 3, -3, -22, 2, 2, 4),
+        ],
+      },
+      { parent: head, y: 4, z: -8, xRot: 0.2, boxes: [box(176, 65, -6, 0, -16, 12, 4, 16)] },
+    ];
+  }
+  if (kind === "piglin") {
+    return [
+      {
+        ...head,
+        boxes: [
+          box(0, 0, -5, -8, -4, 10, 8, 8),
+          box(31, 1, -2, -4, -5, 4, 4, 1),
+          box(2, 4, 2, -2, -5, 1, 2, 1),
+          box(2, 0, -3, -2, -5, 1, 2, 1),
+        ],
+      },
+      { parent: head, x: 4.5, y: -6, zRot: -Math.PI / 6, boxes: [box(51, 6, 0, 0, -2, 1, 5, 4)] },
+      { parent: head, x: -4.5, y: -6, zRot: Math.PI / 6, boxes: [box(39, 6, -1, 0, -2, 1, 5, 4)] },
+    ];
+  }
+  const parts: Part[] = [{ ...head, boxes: [box(0, 0, -4, -8, -4, 8, 8, 8)] }];
+  if (kind === "humanoid") {
+    parts.push({ ...head, boxes: [{ ...box(32, 0, -4, -8, -4, 8, 8, 8), grow: 0.25 }] });
+  }
+  return parts;
+}
+
+const SEGMENT_OF_FACING: Record<string, number> = { south: 0, west: 4, north: 8, east: 12 };
+const OPPOSITE: Record<string, string> = { north: "south", south: "north", east: "west", west: "east" };
+const STEP: Record<string, [number, number]> = {
+  north: [0, -1],
+  south: [0, 1],
+  west: [-1, 0],
+  east: [1, 0],
+};
+
+function headModel(namespace: string, path: string, props: BlockProps): EntityModel | null {
+  const match = /^(.+?)_(wall_)?(skull|head)$/.exec(path);
+  const head = match ? HEADS[match[1]] : undefined;
+  if (!match || !head) return null;
+  const wall = !!match[2];
+  const facing = props.facing ?? "north";
+  const segment = wall
+    ? SEGMENT_OF_FACING[OPPOSITE[facing] ?? "south"] ?? 0
+    : Number(props.rotation ?? 0);
+  const [stepX, stepZ] = STEP[facing] ?? [0, 0];
+  const place = wall ? translate(0.5 - stepX * 0.25, 0.25, 0.5 - stepZ * 0.25) : translate(0.5, 0, 0.5);
+  const dragon = head.kind === "dragon"
+    ? chain(translate(0, -0.374375, 0), scale(0.75, 0.75, 0.75))
+    : identity();
+  const [texture, ...fallbacks] = head.textures.map((name) => `${namespace}:${name}`);
+  return {
+    texture,
+    fallbacks,
+    width: head.kind === "dragon" ? 256 : 64,
+    height: head.kind === "mob" ? 32 : head.kind === "dragon" ? 256 : 64,
+    parts: headParts(head.kind, degrees(segment * 22.5)),
+    transform: chain(place, scale(-1, -1, 1), dragon),
+  };
+}
+
 export function entityModelFor(name: string, props: BlockProps): EntityModel | null {
   const at = name.indexOf(":");
   const namespace = name.slice(0, at);
@@ -348,5 +543,8 @@ export function entityModelFor(name: string, props: BlockProps): EntityModel | n
   if (path.endsWith("chest")) return chestModel(namespace, path, props);
   if (path.endsWith("_bed")) return bedModel(namespace, path, props);
   if (path.endsWith("sign")) return signModel(namespace, path, props);
+  if (path.endsWith("shulker_box")) return shulkerModel(namespace, path, props);
+  if (path.endsWith("banner")) return bannerModel(namespace, path, props);
+  if (path.endsWith("skull") || path.endsWith("head")) return headModel(namespace, path, props);
   return null;
 }

@@ -90,9 +90,60 @@ describe("block entity models", () => {
     expect(bounds(wall.quads)).toMatchObject({ low: [0, 0, 6], high: [16, 16, 10] });
   });
 
+  it("fills the block with a shulker box turned to its facing", () => {
+    for (const facing of ["up", "down", "north", "east"]) {
+      expect(bounds(bake("minecraft:red_shulker_box", { facing }).quads)).toEqual({
+        low: [0, 0, 0],
+        high: [16, 16, 16],
+      });
+    }
+    expect(bake("minecraft:shulker_box", {}).model.texture).toBe("minecraft:entity/shulker/shulker");
+    expect(bake("minecraft:red_shulker_box", {}).model.texture).toBe(
+      "minecraft:entity/shulker/shulker_red",
+    );
+  });
+
+  it("raises a banner on its pole and hangs a wall banner below the wall", () => {
+    const standing = bake("minecraft:red_banner", { rotation: "0" });
+    expect(standing.model.fallbacks).toEqual(["minecraft:entity/banner/banner_base"]);
+    expect(bounds(standing.quads)).toEqual({ low: [1.33, 0, 7.33], high: [14.67, 29.33, 9.33] });
+    const flag = standing.quads.filter((quad) => quad.tinted);
+    expect(flag).toHaveLength(6);
+    expect(flag.every((quad) => quad.texture === "minecraft:entity/banner/base")).toBe(true);
+    expect(bounds(bake("minecraft:green_wall_banner", { facing: "south" }).quads)).toEqual({
+      low: [1.33, -13, 0.33],
+      high: [14.67, 13.67, 2.33],
+    });
+    expect(entityModelFor("minecraft:ominous_banner", {})).toBeNull();
+  });
+
+  it("places heads on the floor and on walls, with hats, ears and the dragon snout", () => {
+    expect(bounds(bake("minecraft:skeleton_skull", { rotation: "0" }).quads)).toEqual({
+      low: [4, 0, 4],
+      high: [12, 8, 12],
+    });
+    expect(bake("minecraft:skeleton_skull", {}).model.height).toBe(32);
+    const player = bake("minecraft:player_head", { rotation: "8" });
+    expect(player.quads).toHaveLength(12);
+    expect(player.model.fallbacks).toEqual(["minecraft:entity/steve"]);
+    expect(bounds(player.quads)).toEqual({ low: [3.75, -0.25, 3.75], high: [12.25, 8.25, 12.25] });
+    expect(bounds(bake("minecraft:creeper_wall_head", { facing: "south" }).quads)).toEqual({
+      low: [4, 4, 0],
+      high: [12, 12, 8],
+    });
+    expect(bounds(bake("minecraft:piglin_head", { rotation: "8" }).quads)).toMatchObject({
+      low: [0.13, 0, 4],
+      high: [15.87, 8, 13],
+    });
+    const dragon = bake("minecraft:dragon_head", { rotation: "8" });
+    expect(dragon.model.width).toBe(256);
+    expect(bounds(dragon.quads).high[2]).toBe(26);
+    expect(entityModelFor("minecraft:piston_head", {})).toBeNull();
+  });
+
   it("leaves other blocks and mods alone", () => {
     expect(entityModelFor("minecraft:stone", {})).toBeNull();
     expect(entityModelFor("mymod:fancy_chest", {})).toBeNull();
-    expect(entityModelFor("minecraft:shulker_box", {})).toBeNull();
+    expect(entityModelFor("mymod:magic_shulker_box", {})).toBeNull();
   });
 });
