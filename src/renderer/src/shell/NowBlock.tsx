@@ -18,7 +18,9 @@ import {
   consolesMetaAtom,
   errorLogAtom,
   errorLogSeenAtom,
+  internetAtom,
   isShareModalOpenAtom,
+  networkAtom,
   shareOwnerAccountKeyAtom,
   shareStateAtom,
   versionsAtom,
@@ -46,11 +48,25 @@ import {
   installProgressAtom,
   openTaskCenter,
 } from "@renderer/features/install/installUi";
+import {
+  getShareTone,
+  resolveShareStage,
+  shareEntryStage,
+} from "@renderer/features/share/shareModel";
+import { countFeature } from "@renderer/features/usage/usage";
+
+const SHARE_TONE_CLASS = {
+  success: "text-success",
+  warning: "text-warning",
+  danger: "text-destructive",
+  muted: "text-faint",
+} as const;
 
 function NowRow({
   icon,
   label,
   detail,
+  caption,
   tone = "text-faint",
   progress,
   onClick,
@@ -58,15 +74,17 @@ function NowRow({
   icon: ReactNode;
   label: string;
   detail?: string;
+  caption?: string;
   tone?: string;
   progress?: number | null;
   onClick: () => void;
 }) {
   const collapsed = useSidebarCollapsed();
+  const note = caption ?? detail;
 
   if (collapsed) {
     return (
-      <Hint content={detail ? `${label} · ${detail}` : label} side="right">
+      <Hint content={note ? `${label} · ${note}` : label} side="right">
         <button
           type="button"
           onClick={onClick}
@@ -109,6 +127,14 @@ function NowRow({
         )}
       </span>
 
+      {caption && (
+        <Hint content={caption} variant="text" side="right" truncatedOnly>
+          <span className="block w-full truncate pl-6.5 text-2xs leading-4 text-faint">
+            {caption}
+          </span>
+        </Hint>
+      )}
+
       {progress !== undefined && (
         <span className="block h-0.5 w-full overflow-hidden rounded-full bg-surface-3">
           <span
@@ -149,9 +175,21 @@ export function NowBlock() {
     (entry) => entry.time > errorLogSeen,
   ).length;
 
+  const isInternetOnline = useAtomValue(internetAtom);
+  const isBackendOnline = useAtomValue(networkAtom);
+  const isShareActive = !["idle", "lan_not_found"].includes(shareState.phase);
+  const isAccountEligible = !!account && account.type !== "plain";
   const showShare =
-    !["idle", "lan_not_found"].includes(shareState.phase) &&
+    isAccountEligible &&
+    (isShareActive || running.length > 0) &&
     canCurrentAccountManageShare(shareOwnerAccountKey, account);
+  const shareStage = shareEntryStage(
+    resolveShareStage(shareState, {
+      isAccountEligible,
+      isOnline: isInternetOnline && isBackendOnline,
+    }),
+    running.length > 0,
+  );
 
   const rows: ReactNode[] = [];
 
@@ -251,10 +289,14 @@ export function NowBlock() {
     rows.push(
       <NowRow
         key="share"
-        tone={shareState.phase === "online" ? "text-success" : "text-warning"}
+        tone={SHARE_TONE_CLASS[getShareTone(shareStage)]}
         icon={<Radio className="size-4" />}
         label={t("share.title")}
-        onClick={() => setIsShareOpen(true)}
+        caption={t(`share.stageShort.${shareStage}`)}
+        onClick={() => {
+          if (!isShareActive) countFeature("share.entry");
+          setIsShareOpen(true);
+        }}
       />,
     );
   }

@@ -466,7 +466,6 @@
     "send": "Send",
     "notFound": "User not found",
     "friendCodeDescription": "Share this code with a friend so they can send you a request.",
-    "friendCodeDisabledHint": "Requests by code are turned off — turn them back on in Requests.",
     "friendCode": "Your code",
     "friendCodeUnavailable": "Friend code is not available yet.",
     "friendCodeReset": "Friend code reset",
@@ -474,7 +473,6 @@
     "resetFriendCode": "Reset code",
     "resetFriendCodeConfirm": "The old code stops working: anyone you already gave it to will not be able to add you until you send them the new one.",
     "friendRequestsEnabledTitle": "Allow friend requests",
-    "friendRequestsEnabledDescription": "When enabled, other users can add you by your friend code.",
     "operationErrors": {
       "invalid_user": "Check the friend code.",
       "already_friends": "This user is already your friend.",
@@ -621,12 +619,7 @@
     "nothingFoundHint": "Try another name or clear the filter.",
     "noFriendsHint": "Add a friend by code — you will see who is online and what they play.",
     "listLoadError": "Could not load your friends list",
-    "chatsLoadError": "Could not load your conversations.",
-    "noChatsTitle": "No conversations yet",
-    "noChatsHint": "Pick a friend on the left — the chat, the call and the game invite are all there.",
     "noRequestsHint": "Incoming and sent requests, as well as group invites, will show up here.",
-    "nowPlayingTitle": "Playing now",
-    "nobodyPlayingHint": "Once a friend starts an instance, a Play button appears here and takes you straight to them.",
     "wantsToBeFriend": "Wants to add you as a friend",
     "copyNickname": "Copy nickname",
     "lookupErrors": {
@@ -650,11 +643,6 @@
     "chatRead": "Read",
     "chatTyping": "Typing…",
     "chatDeleteConfirm": "The message disappears for both of you.",
-    "recentTitle": "Recent chats",
-    "howItWorksTitle": "How it works",
-    "howItWorksStep1": "Swap codes — you can reset yours at any time.",
-    "howItWorksStep2": "Send the request, your friend confirms it on their side.",
-    "howItWorksStep3": "You will see what your friend plays and join them with one button.",
     "pickGroup": "Pick a group",
     "pickGroupHint": "Every group has its own chat and voice room — open one on the left.",
     "deleteLoss": "Joining each other's worlds, calls and invites stop working until one of you sends a new friend request.",
@@ -708,7 +696,6 @@
       "requestSent": "Minecraft request sent",
       "incoming": "Microsoft requests",
       "outgoing": "Sent to Microsoft",
-      "addTitle": "Minecraft friend",
       "addHint": "The request goes through Microsoft: your friend sees it in Minecraft 26.2 or later, or in their own launcher.",
       "namePlaceholder": "Minecraft name",
       "sent": "Request sent to {{name}}",
@@ -729,6 +716,41 @@
       "inBuild": "Instance “{{name}}”",
       "notPublished": "Their instance is not published — join with your own",
       "gameRunning": "Close the game to join with their instance"
+    },
+    "openProfile": "Open profile",
+    "openChat": "Open chat",
+    "openRequests": "Open",
+    "friendActions": "Friend actions",
+    "joinReason": {
+      "singleplayer": "Singleplayer world — you can join once your friend opens it with Play together",
+      "notPublished": "Your friend's instance is not published, so the launcher cannot prepare the same files",
+      "gameRunning": "Close your game to join your friend"
+    },
+    "joinReasonShort": {
+      "singleplayer": "singleplayer world",
+      "notPublished": "instance not published",
+      "gameRunning": "close your game"
+    },
+    "code": {
+      "off": "Requests by code are off",
+      "actions": "Code actions"
+    },
+    "add": {
+      "byCode": "By code",
+      "byMicrosoft": "Microsoft"
+    },
+    "hub": {
+      "places": "Where friends play",
+      "voice": "Voice rooms",
+      "requests": "New requests",
+      "allRequests": "All requests ({{value}})",
+      "openRequests": "All requests",
+      "quietTitle": "All quiet",
+      "quietHint": "Servers your friends play on, group voice rooms and new requests will show up here.",
+      "ready": "“{{name}}” is already installed",
+      "download": "“{{name}}” will be downloaded",
+      "worldOf": "{{nickname}}'s world",
+      "theirBuild": "Friend's instance"
     }
   },
   "modManager": {
@@ -1407,7 +1429,6 @@
     "inVoiceCount_other": "{{count}} in voice",
     "inVoiceNow": "In voice",
     "nobodyInVoice": "Voice room is empty",
-    "leaveShort": "Leave",
     "aloneTitle": "You are alone in the voice room",
     "aloneHint": "Call friends in or share the link.",
     "aloneDirectHint": "Waiting for the other side to connect.",
@@ -1441,7 +1462,8 @@
     "speakingCount_other": "{{count}} speaking",
     "deviceSwitchFailed": "Could not switch the device",
     "pttPermission": "Allow Grubie Launcher to use Accessibility",
-    "pttPermissionHint": "macOS lets apps read hotkeys outside their window only with this permission. Turn on Grubie Launcher in Privacy & Security → Accessibility, then assign the key again."
+    "pttPermissionHint": "macOS lets apps read hotkeys outside their window only with this permission. Turn on Grubie Launcher in Privacy & Security → Accessibility, then assign the key again.",
+    "allSettings": "All voice settings"
   },
   "groups": {
     "tab": "Groups",
@@ -1500,7 +1522,6 @@
     "joinByCodeShort": "By code",
     "createShort": "Create",
     "inviteFriend": "Invite a friend",
-    "joinShort": "Join",
     "searchPlaceholder": "Search groups…",
     "noGroupsTitle": "No groups yet",
     "noGroupsHint": "A group is a shared chat and a voice room for your friends.",
@@ -1557,6 +1578,10 @@
       "choose": "Choose the group modpack",
       "noChoices": "Publish a modpack to link it to the group",
       "clear": "Remove the modpack"
+    },
+    "overview": {
+      "quietTitle": "Nobody in voice yet",
+      "noGroupsHint": "A group has its own chat and voice room. Create one or join by code on the left."
     }
   },
   "voiceCall": {
@@ -3129,7 +3154,6 @@
     "playTime": "Playtime",
     "registered": "Registered",
     "friends": "Friends",
-    "viewAccount": "View account",
     "updated": "Account updated",
     "privacy": "Public visibility",
     "publicLeaderboard": "Global leaderboard",
@@ -3576,7 +3600,24 @@
     "localModsFailed": "Local mods could not be uploaded",
     "publishInfected": "The instance was not published: known malware found",
     "publishRefused": "The instance was not published",
-    "publishScanUnavailable": "The instance files could not be checked"
+    "publishScanUnavailable": "The instance files could not be checked",
+    "stageShort": {
+      "accountUnsupported": "Needs a signed-in account",
+      "offline": "No connection to the server",
+      "noGame": "Start the game",
+      "needsWorld": "Open your world to LAN",
+      "ready": "World found — ready to open",
+      "starting": "Opening access…",
+      "open": "Friends can join",
+      "recovering": "Reconnecting…",
+      "conflict": "Already open elsewhere",
+      "failed": "Could not open"
+    },
+    "detected": {
+      "title": "World opened to LAN",
+      "body": "Open Play together to invite friends.",
+      "open": "Open"
+    }
   },
   "manageSkins": {
     "reset": "Reset skin",
@@ -5431,7 +5472,9 @@
       "newInstance": "New instance",
       "instance": "Instance",
       "people": "People",
-      "profile": "Profile"
+      "profile": "Profile",
+      "peopleNews": "Unread and requests: {{value}}",
+      "peoplePlaying": "Friends in game: {{value}}"
     },
     "palette": {
       "label": "Search and commands",

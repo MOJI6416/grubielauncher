@@ -135,6 +135,13 @@ export function resolveVisibilityView(
   };
 }
 
+export function shareEntryStage(
+  stage: ShareStage,
+  isGameRunning: boolean,
+): ShareStage {
+  return stage === "noGame" && isGameRunning ? "needsWorld" : stage;
+}
+
 export function getShareTone(stage: ShareStage): ShareTone {
   switch (stage) {
     case "open":

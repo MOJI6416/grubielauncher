@@ -1,10 +1,7 @@
-import { useState } from "react";
 import type { TFunction } from "i18next";
 import { Check, Loader2, X } from "lucide-react";
 import type { MsFriend } from "@/shared/msFriends";
-import { isProfileName } from "@/shared/msFriends";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Hint } from "@renderer/components/Hint";
 import { PlayerHead } from "@renderer/features/accounts/AccountHead";
 import { PlatformIcon } from "./PlatformIcon";
@@ -94,59 +91,6 @@ export function MsRequestRow({
             )}
           </Button>
         </Hint>
-      </div>
-    </div>
-  );
-}
-
-export function MsAddFriendCard({
-  isSending,
-  onSend,
-  t,
-}: {
-  isSending: boolean;
-  onSend: (name: string) => Promise<boolean>;
-  t: TFunction;
-}) {
-  const [name, setName] = useState("");
-  const trimmed = name.trim();
-  const isValid = isProfileName(trimmed);
-
-  const send = async () => {
-    if (!isValid || isSending) return;
-    if (await onSend(trimmed)) setName("");
-  };
-
-  return (
-    <div className="flex shrink-0 flex-col gap-2 rounded-xl border border-border bg-card p-3">
-      <p className="flex items-center gap-1.5 text-sm font-medium">
-        <PlatformIcon platform="microsoft" />
-        {t("friends.microsoft.addTitle")}
-      </p>
-      <p className="text-xs leading-5 text-muted-foreground">
-        {t("friends.microsoft.addHint")}
-      </p>
-      <div className="flex items-center gap-1.5">
-        <Input
-          value={name}
-          maxLength={16}
-          placeholder={t("friends.microsoft.namePlaceholder")}
-          aria-label={t("friends.microsoft.namePlaceholder")}
-          className="h-8 text-xs"
-          onChange={(event) => setName(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") void send();
-          }}
-        />
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled={!isValid || isSending}
-          onClick={() => void send()}
-        >
-          {isSending && <Loader2 className="size-4 animate-spin" />}
-          {t("friends.sendRequest")}
-        </Button>
       </div>
     </div>
   );

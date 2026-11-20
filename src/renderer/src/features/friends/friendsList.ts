@@ -202,28 +202,6 @@ export function steadyRows(
   return visible;
 }
 
-function previewTime(preview: ChatPreview | undefined): number {
-  if (!preview?.time) return 0;
-  const time = Date.parse(preview.time);
-  return Number.isFinite(time) ? time : 0;
-}
-
-export function recentChats(
-  entries: readonly FriendEntry[],
-  limit: number,
-): FriendEntry[] {
-  return entries
-    .map((entry, index) => ({ entry, index, time: previewTime(entry.preview) }))
-    .filter(
-      (item) =>
-        item.entry.presence.kind !== "playing" &&
-        (item.entry.unread > 0 || Boolean(item.entry.preview)),
-    )
-    .sort((a, b) => b.time - a.time || a.index - b.index)
-    .slice(0, Math.max(0, limit))
-    .map((item) => item.entry);
-}
-
 export function nextFriendIndex(
   rows: FriendRow[],
   currentId: string | undefined,

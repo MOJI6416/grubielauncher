@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { Socket } from "socket.io-client";
@@ -36,11 +36,10 @@ import {
   dropUnknownFriends,
   keepLocalUnread,
   loadUnread,
-  saveUnread,
   totalUnread,
-  type UnreadCounts,
 } from "./unread";
 import { countFeature } from "@renderer/features/usage/usage";
+import { friendUnreadAtom, isPeopleLiveAtom } from "./unreadStore";
 
 const LIST_SETTLE_MS = 8000;
 const TYPING_SWEEP_MS = 1500;
@@ -74,7 +73,8 @@ export function useFriendsRealtime({
   const [listError, setListError] = useState<string | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [isSummaryPending, setIsSummaryPending] = useState(false);
-  const [unread, setUnread] = useState<UnreadCounts>({});
+  const [unread, setUnread] = useAtom(friendUnreadAtom);
+  const setPeopleLive = useSetAtom(isPeopleLiveAtom);
   const [previews, setPreviews] = useState<ChatPreviews>({});
   const [typing, setTyping] = useState<TypingMap>({});
   const [pendingRequestIds, setPendingRequestIds] = useState<string[]>([]);
@@ -84,7 +84,6 @@ export function useFriendsRealtime({
 
   const openFriendIdRef = useLatestRef(openFriendId);
   const ownUserIdRef = useLatestRef(ownUserId);
-  const accountKeyRef = useLatestRef(accountKey);
   const removingRef = useLatestRef(removingFriendId);
   const friendsRef = useLatestRef(friends);
   const previewsRef = useRef<ChatPreviews>(previews);
@@ -120,8 +119,9 @@ export function useFriendsRealtime({
   }, [accountKey]);
 
   useEffect(() => {
-    saveUnread(accountKeyRef.current, unread);
-  }, [unread]);
+    setPeopleLive(true);
+    return () => setPeopleLive(false);
+  }, [setPeopleLive]);
 
   useEffect(() => {
     if (!hasFriendsList) return;

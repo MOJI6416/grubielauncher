@@ -466,7 +466,6 @@
     "send": "Wyślij",
     "notFound": "Nie znaleziono użytkownika",
     "friendCodeDescription": "Przekaż ten kod znajomemu, aby mógł wysłać zaproszenie.",
-    "friendCodeDisabledHint": "Zaproszenia przez kod są wyłączone — włącz je ponownie w zakładce „Zaproszenia”.",
     "friendCode": "Twój kod",
     "friendCodeUnavailable": "Kod znajomego nie jest jeszcze dostępny.",
     "friendCodeReset": "Zresetowano kod znajomego",
@@ -474,7 +473,6 @@
     "resetFriendCode": "Resetuj kod",
     "resetFriendCodeConfirm": "Stary kod przestanie działać: osoby, którym go już przekazano, nie będą mogły Cię dodać, dopóki nie otrzymają nowego.",
     "friendRequestsEnabledTitle": "Zezwalaj na zaproszenia do znajomych",
-    "friendRequestsEnabledDescription": "Po włączeniu inni użytkownicy mogą Cię dodać po kodzie znajomego.",
     "operationErrors": {
       "invalid_user": "Sprawdź kod znajomego.",
       "already_friends": "Ten użytkownik jest już Twoim znajomym.",
@@ -623,12 +621,7 @@
     "nothingFoundHint": "Spróbuj innej nazwy lub wyczyść filtr.",
     "noFriendsHint": "Dodaj znajomego po kodzie — zobaczysz, kto jest online i w co gra.",
     "listLoadError": "Nie udało się wczytać listy znajomych",
-    "chatsLoadError": "Nie udało się wczytać rozmów.",
-    "noChatsTitle": "Brak rozmów",
-    "noChatsHint": "Wybierz znajomego po lewej — tam jest czat, połączenie i zaproszenie do gry.",
     "noRequestsHint": "Tutaj pojawią się zaproszenia przychodzące i wysłane, a także zaproszenia do grup.",
-    "nowPlayingTitle": "Teraz grają",
-    "nobodyPlayingHint": "Gdy znajomy uruchomi instancję, pojawi się tu przycisk „Graj”, który zabierze prosto do niego.",
     "wantsToBeFriend": "Chce dodać Cię do znajomych",
     "copyNickname": "Kopiuj nick",
     "lookupErrors": {
@@ -652,11 +645,6 @@
     "chatRead": "Przeczytano",
     "chatTyping": "Pisze…",
     "chatDeleteConfirm": "Wiadomość zniknie u obu stron.",
-    "recentTitle": "Ostatnie czaty",
-    "howItWorksTitle": "Jak to działa",
-    "howItWorksStep1": "Wymieńcie się kodami — swój można zresetować w dowolnej chwili.",
-    "howItWorksStep2": "Wyślij zaproszenie, a znajomy potwierdzi je u siebie.",
-    "howItWorksStep3": "Zobaczysz, w co gra znajomy, i dołączysz do niego jednym przyciskiem.",
     "pickGroup": "Wybierz grupę",
     "pickGroupHint": "Każda grupa ma własny czat i pokój głosowy — otwórz jedną po lewej.",
     "deleteLoss": "Dołączanie do swoich światów, połączenia i zaproszenia przestaną działać, dopóki któraś ze stron nie wyśle nowego zaproszenia do znajomych.",
@@ -710,7 +698,6 @@
       "requestSent": "Zaproszenie Minecraft wysłane",
       "incoming": "Zaproszenia Microsoft",
       "outgoing": "Wysłane do Microsoft",
-      "addTitle": "Znajomy w Minecraft",
       "addHint": "Zaproszenie pójdzie przez Microsoft: znajomy zobaczy je w Minecraft 26.2 lub nowszym albo w swoim launcherze.",
       "namePlaceholder": "Nick w Minecraft",
       "sent": "Wysłano zaproszenie do {{name}}",
@@ -731,6 +718,41 @@
       "inBuild": "Instancja „{{name}}”",
       "notPublished": "Instancja znajomego nie jest opublikowana – dołącz własną",
       "gameRunning": "Zamknij grę, aby dołączyć instancją znajomego"
+    },
+    "openProfile": "Otwórz profil",
+    "openChat": "Otwórz czat",
+    "openRequests": "Otwórz",
+    "friendActions": "Działania dla znajomego",
+    "joinReason": {
+      "singleplayer": "Świat jednoosobowy — dołączysz, gdy znajomy otworzy go przez „Grajcie razem”",
+      "notPublished": "Instancja znajomego nie jest opublikowana, więc launcher nie może przygotować tych samych plików",
+      "gameRunning": "Zamknij swoją grę, aby dołączyć do znajomego"
+    },
+    "joinReasonShort": {
+      "singleplayer": "świat jednoosobowy",
+      "notPublished": "instancja nieopublikowana",
+      "gameRunning": "zamknij grę"
+    },
+    "code": {
+      "off": "Zaproszenia przez kod są wyłączone",
+      "actions": "Działania dla kodu"
+    },
+    "add": {
+      "byCode": "Przez kod",
+      "byMicrosoft": "Microsoft"
+    },
+    "hub": {
+      "places": "Gdzie grają znajomi",
+      "voice": "Pokoje głosowe",
+      "requests": "Nowe zaproszenia",
+      "allRequests": "Wszystkie zaproszenia ({{value}})",
+      "openRequests": "Wszystkie zaproszenia",
+      "quietTitle": "Na razie cisza",
+      "quietHint": "Tu pojawią się serwery, na których grają znajomi, pokoje głosowe grup i nowe zaproszenia.",
+      "ready": "„{{name}}” jest już zainstalowana",
+      "download": "„{{name}}” zostanie pobrana",
+      "worldOf": "Świat gracza {{nickname}}",
+      "theirBuild": "Instancja znajomego"
     }
   },
   "modManager": {
@@ -1445,7 +1467,6 @@
     "inVoiceCount_other": "{{count}} osoby w rozmowie",
     "inVoiceNow": "W rozmowie",
     "nobodyInVoice": "Pokój głosowy jest pusty",
-    "leaveShort": "Wyjdź",
     "aloneTitle": "W pokoju głosowym jesteś tylko Ty",
     "aloneHint": "Zawołaj znajomych albo udostępnij link.",
     "aloneDirectHint": "Oczekiwanie na połączenie drugiej strony.",
@@ -1481,7 +1502,8 @@
     "speakingCount_other": "Mówi {{count}} osoby",
     "deviceSwitchFailed": "Nie udało się przełączyć urządzenia",
     "pttPermission": "Zezwól Grubie Launcher na dostęp w Dostępności",
-    "pttPermissionHint": "macOS pozwala aplikacjom odczytywać skróty poza ich oknem tylko z tym uprawnieniem. Włącz Grubie Launcher w Prywatność i ochrona → Dostępność i przypisz klawisz ponownie."
+    "pttPermissionHint": "macOS pozwala aplikacjom odczytywać skróty poza ich oknem tylko z tym uprawnieniem. Włącz Grubie Launcher w Prywatność i ochrona → Dostępność i przypisz klawisz ponownie.",
+    "allSettings": "Wszystkie ustawienia głosu"
   },
   "groups": {
     "tab": "Grupy",
@@ -1540,7 +1562,6 @@
     "joinByCodeShort": "Po kodzie",
     "createShort": "Utwórz",
     "inviteFriend": "Zaproś znajomego",
-    "joinShort": "Dołącz",
     "searchPlaceholder": "Szukaj grup…",
     "noGroupsTitle": "Brak grup",
     "noGroupsHint": "Grupa to wspólny czat i pokój głosowy dla znajomych.",
@@ -1599,6 +1620,10 @@
       "choose": "Wybierz modpack grupy",
       "noChoices": "Opublikuj modpack, aby powiązać go z grupą",
       "clear": "Usuń modpack"
+    },
+    "overview": {
+      "quietTitle": "Na razie nikogo w rozmowie",
+      "noGroupsHint": "Grupa ma własny czat i pokój głosowy. Utwórz grupę lub dołącz kodem po lewej."
     }
   },
   "voiceCall": {
@@ -3188,7 +3213,6 @@
     "playTime": "Czas gry",
     "registered": "Rejestracja",
     "friends": "Znajomi",
-    "viewAccount": "Pokaż konto",
     "updated": "Zaktualizowano konto",
     "privacy": "Widoczność publiczna",
     "publicLeaderboard": "Ranking globalny",
@@ -3641,7 +3665,24 @@
     "localModsFailed": "Nie udało się przesłać lokalnych modów",
     "publishInfected": "Instancja nie została opublikowana: wykryto znane złośliwe oprogramowanie",
     "publishRefused": "Instancja nie została opublikowana",
-    "publishScanUnavailable": "Nie udało się sprawdzić plików instancji"
+    "publishScanUnavailable": "Nie udało się sprawdzić plików instancji",
+    "stageShort": {
+      "accountUnsupported": "Potrzebne zalogowane konto",
+      "offline": "Brak połączenia z serwerem",
+      "noGame": "Uruchom grę",
+      "needsWorld": "Udostępnij świat w LAN",
+      "ready": "Świat znaleziony — można otworzyć",
+      "starting": "Otwieranie dostępu…",
+      "open": "Znajomi mogą dołączyć",
+      "recovering": "Przywracanie połączenia…",
+      "conflict": "Już otwarty gdzie indziej",
+      "failed": "Nie udało się otworzyć"
+    },
+    "detected": {
+      "title": "Świat udostępniony w LAN",
+      "body": "Otwórz „Grajcie razem”, aby zaprosić znajomych.",
+      "open": "Otwórz"
+    }
   },
   "manageSkins": {
     "reset": "Resetuj skin",
@@ -5530,7 +5571,9 @@
       "newInstance": "Nowa instancja",
       "instance": "Instancja",
       "people": "Ludzie",
-      "profile": "Profil"
+      "profile": "Profil",
+      "peopleNews": "Nieprzeczytane i zaproszenia: {{value}}",
+      "peoplePlaying": "Znajomi w grze: {{value}}"
     },
     "palette": {
       "label": "Wyszukiwanie i polecenia",

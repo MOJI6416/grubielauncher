@@ -466,7 +466,6 @@
     "send": "Enviar",
     "notFound": "Usuário não encontrado",
     "friendCodeDescription": "Compartilhe este código com um amigo para que ele possa enviar um pedido a você.",
-    "friendCodeDisabledHint": "Os pedidos por código estão desativados — ative-os de novo em Pedidos.",
     "friendCode": "Seu código",
     "friendCodeUnavailable": "O código de amigo ainda não está disponível.",
     "friendCodeReset": "Código de amigo redefinido",
@@ -474,7 +473,6 @@
     "resetFriendCode": "Redefinir código",
     "resetFriendCodeConfirm": "O código antigo deixa de funcionar: quem já o recebeu não poderá adicionar você até você enviar o novo.",
     "friendRequestsEnabledTitle": "Permitir pedidos de amizade",
-    "friendRequestsEnabledDescription": "Quando ativado, outros usuários podem adicionar você pelo seu código de amigo.",
     "operationErrors": {
       "invalid_user": "Confira o código de amigo.",
       "already_friends": "Este usuário já é seu amigo.",
@@ -622,12 +620,7 @@
     "nothingFoundHint": "Tente outro nome ou limpe o filtro.",
     "noFriendsHint": "Adicione um amigo por código — você vai ver quem está on-line e o que está jogando.",
     "listLoadError": "Não foi possível carregar sua lista de amigos",
-    "chatsLoadError": "Não foi possível carregar suas conversas.",
-    "noChatsTitle": "Ainda não há conversas",
-    "noChatsHint": "Escolha um amigo à esquerda — o chat, a chamada e o convite para jogar estão todos lá.",
     "noRequestsHint": "Os pedidos recebidos e enviados, além dos convites para grupos, aparecem aqui.",
-    "nowPlayingTitle": "Jogando agora",
-    "nobodyPlayingHint": "Quando um amigo iniciar uma instância, um botão Jogar aparece aqui e leva você direto até ele.",
     "wantsToBeFriend": "Quer adicionar você como amigo",
     "copyNickname": "Copiar apelido",
     "lookupErrors": {
@@ -651,11 +644,6 @@
     "chatRead": "Lida",
     "chatTyping": "Digitando…",
     "chatDeleteConfirm": "A mensagem some para vocês dois.",
-    "recentTitle": "Chats recentes",
-    "howItWorksTitle": "Como funciona",
-    "howItWorksStep1": "Troquem os códigos — você pode redefinir o seu a qualquer momento.",
-    "howItWorksStep2": "Envie o pedido, e seu amigo o confirma do lado dele.",
-    "howItWorksStep3": "Você vai ver o que seu amigo está jogando e entrar com um botão.",
     "pickGroup": "Escolha um grupo",
     "pickGroupHint": "Cada grupo tem seu próprio chat e sala de voz — abra um à esquerda.",
     "deleteLoss": "Entrar no mundo um do outro, chamadas e convites deixam de funcionar até que um de vocês envie um novo pedido de amizade.",
@@ -709,7 +697,6 @@
       "requestSent": "Pedido do Minecraft enviado",
       "incoming": "Pedidos da Microsoft",
       "outgoing": "Enviados à Microsoft",
-      "addTitle": "Amigo no Minecraft",
       "addHint": "O pedido vai pela Microsoft: seu amigo o verá no Minecraft 26.2 ou mais recente, ou no launcher dele.",
       "namePlaceholder": "Nome no Minecraft",
       "sent": "Pedido enviado a {{name}}",
@@ -730,6 +717,41 @@
       "inBuild": "Instância “{{name}}”",
       "notPublished": "A instância não foi publicada: entre com a sua",
       "gameRunning": "Feche o jogo para entrar com a instância dele"
+    },
+    "openProfile": "Abrir perfil",
+    "openChat": "Abrir chat",
+    "openRequests": "Abrir",
+    "friendActions": "Ações com o amigo",
+    "joinReason": {
+      "singleplayer": "Mundo um jogador — você poderá entrar quando seu amigo abrir com “Jogar junto”",
+      "notPublished": "A instância do seu amigo não está publicada, então o launcher não consegue preparar os mesmos arquivos",
+      "gameRunning": "Feche seu jogo para entrar com seu amigo"
+    },
+    "joinReasonShort": {
+      "singleplayer": "mundo um jogador",
+      "notPublished": "instância não publicada",
+      "gameRunning": "feche o jogo"
+    },
+    "code": {
+      "off": "Pedidos por código desativados",
+      "actions": "Ações com o código"
+    },
+    "add": {
+      "byCode": "Por código",
+      "byMicrosoft": "Microsoft"
+    },
+    "hub": {
+      "places": "Onde seus amigos jogam",
+      "voice": "Salas de voz",
+      "requests": "Pedidos novos",
+      "allRequests": "Todos os pedidos ({{value}})",
+      "openRequests": "Todos os pedidos",
+      "quietTitle": "Tudo tranquilo",
+      "quietHint": "Aqui aparecem os servidores onde seus amigos jogam, as salas de voz dos grupos e os pedidos novos.",
+      "ready": "“{{name}}” já está instalada",
+      "download": "“{{name}}” será baixada",
+      "worldOf": "Mundo de {{nickname}}",
+      "theirBuild": "Instância do amigo"
     }
   },
   "modManager": {
@@ -1426,7 +1448,6 @@
     "inVoiceCount_other": "{{count}} na voz",
     "inVoiceNow": "Na voz",
     "nobodyInVoice": "A sala de voz está vazia",
-    "leaveShort": "Sair",
     "aloneTitle": "Você está sozinho na sala de voz",
     "aloneHint": "Chame os amigos ou compartilhe o link.",
     "aloneDirectHint": "Esperando o outro lado se conectar.",
@@ -1461,7 +1482,8 @@
     "speakingCount_other": "{{count}} falando",
     "deviceSwitchFailed": "Não foi possível trocar o dispositivo",
     "pttPermission": "Permita que o Grubie Launcher use a Acessibilidade",
-    "pttPermissionHint": "O macOS só deixa apps lerem atalhos fora da janela com esta permissão. Ative o Grubie Launcher em Privacidade e Segurança → Acessibilidade e atribua a tecla de novo."
+    "pttPermissionHint": "O macOS só deixa apps lerem atalhos fora da janela com esta permissão. Ative o Grubie Launcher em Privacidade e Segurança → Acessibilidade e atribua a tecla de novo.",
+    "allSettings": "Todas as configurações de voz"
   },
   "groups": {
     "tab": "Grupos",
@@ -1520,7 +1542,6 @@
     "joinByCodeShort": "Por código",
     "createShort": "Criar",
     "inviteFriend": "Convidar um amigo",
-    "joinShort": "Entrar",
     "searchPlaceholder": "Buscar grupos…",
     "noGroupsTitle": "Ainda não há grupos",
     "noGroupsHint": "Um grupo é um chat compartilhado e uma sala de voz para seus amigos.",
@@ -1578,6 +1599,10 @@
       "choose": "Escolher o modpack do grupo",
       "noChoices": "Publique um modpack para vinculá-lo ao grupo",
       "clear": "Remover o modpack"
+    },
+    "overview": {
+      "quietTitle": "Ninguém na voz ainda",
+      "noGroupsHint": "Um grupo tem seu próprio chat e sala de voz. Crie um ou entre com um código à esquerda."
     }
   },
   "voiceCall": {
@@ -3160,7 +3185,6 @@
     "playTime": "Tempo de jogo",
     "registered": "Cadastro",
     "friends": "Amigos",
-    "viewAccount": "Ver conta",
     "updated": "Conta atualizada",
     "privacy": "Visibilidade pública",
     "publicLeaderboard": "Ranking global",
@@ -3610,7 +3634,24 @@
     "localModsFailed": "Não foi possível enviar os mods locais",
     "publishInfected": "A instância não foi publicada: malware conhecido encontrado",
     "publishRefused": "A instância não foi publicada",
-    "publishScanUnavailable": "Não foi possível verificar os arquivos da instância"
+    "publishScanUnavailable": "Não foi possível verificar os arquivos da instância",
+    "stageShort": {
+      "accountUnsupported": "Precisa de uma conta conectada",
+      "offline": "Sem conexão com o servidor",
+      "noGame": "Inicie o jogo",
+      "needsWorld": "Abra o mundo em LAN",
+      "ready": "Mundo encontrado — pronto para abrir",
+      "starting": "Abrindo o acesso…",
+      "open": "Seus amigos podem entrar",
+      "recovering": "Reconectando…",
+      "conflict": "Já aberto em outro lugar",
+      "failed": "Não foi possível abrir"
+    },
+    "detected": {
+      "title": "Mundo aberto em LAN",
+      "body": "Abra “Jogar junto” para convidar seus amigos.",
+      "open": "Abrir"
+    }
   },
   "manageSkins": {
     "reset": "Redefinir skin",
@@ -5482,7 +5523,9 @@
       "newInstance": "Nova instância",
       "instance": "Instância",
       "people": "Pessoas",
-      "profile": "Perfil"
+      "profile": "Perfil",
+      "peopleNews": "Não lidas e pedidos: {{value}}",
+      "peoplePlaying": "Amigos no jogo: {{value}}"
     },
     "palette": {
       "label": "Busca e comandos",

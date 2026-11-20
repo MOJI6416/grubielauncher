@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { navigate } from "@renderer/navigation/navigate";
 import {
+  isShareModalOpenAtom,
   pendingFriendChatAtom,
   selectedFriendAtom,
   settingsAtom,
@@ -37,6 +38,7 @@ export function SystemEventsHost() {
   const devMode = useAtomValue(settingsAtom).devMode;
   const setSelectedFriend = useSetAtom(selectedFriendAtom);
   const setPendingFriendChat = useSetAtom(pendingFriendChatAtom);
+  const setShareModalOpen = useSetAtom(isShareModalOpenAtom);
 
   useEffect(() => {
     if (!devMode) return;
@@ -65,6 +67,11 @@ export function SystemEventsHost() {
         return;
       }
 
+      if (action.type === "share_open") {
+        setShareModalOpen(true);
+        return;
+      }
+
       if (action.type !== "friend_message") return;
 
       navigate({ name: "people" });
@@ -72,7 +79,7 @@ export function SystemEventsHost() {
       setPendingFriendChat(action.friendId);
       void api.other.restoreWindow();
     });
-  }, [setPendingFriendChat, setSelectedFriend]);
+  }, [setPendingFriendChat, setSelectedFriend, setShareModalOpen]);
 
   useEffect(() => {
     const unsubscribeUpdateFailed = api.events.onUpdateFailed((payload) => {

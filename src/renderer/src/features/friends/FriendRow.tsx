@@ -1,50 +1,27 @@
 import { memo } from "react";
 import type { TFunction } from "i18next";
-import {
-  CalendarClock,
-  Copy,
-  Headphones,
-  PhoneCall,
-  Play,
-  Send,
-  Shirt,
-  User,
-  UserMinus,
-  Volume,
-  VolumeX,
-} from "lucide-react";
+import { Play, Send, VolumeX } from "lucide-react";
 import { HeadDot, PlayerHead } from "@renderer/features/accounts/AccountHead";
 import { Hint } from "@renderer/components/Hint";
 import {
   ContextMenu,
   ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
-import { formatDate, formatRelative } from "@renderer/utilities/date";
+import { formatRelative } from "@renderer/utilities/date";
 import { describePreview } from "./chatSummary";
 import { friendRowDetail, type FriendEntry } from "./friendsList";
-import { canJoinFriend, presenceDotColor } from "./presence";
-import { isDmRoomWith } from "./voiceRoom";
+import { canJoinFriend, joinBlockReason, presenceDotColor } from "./presence";
+import { FriendMenuItems, type FriendMenuActions } from "./FriendMenuItems";
 import { PlatformIcon } from "./PlatformIcon";
 import { maskValue } from "@renderer/features/streamer/redact";
 import type { ShareGuestLink } from "@/types/Share";
 import { TransportBadge } from "@renderer/features/share/TransportBadge";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
-export interface FriendRowActions {
+export interface FriendRowActions extends FriendMenuActions {
   onOpenChat: (friendId: string) => void;
-  onJoin: (friendId: string) => void;
-  onInvite: (friendId: string) => void;
-  onStartCall: (friendId: string) => void;
-  onInviteToVoice?: (friendId: string) => void;
-  onViewProfile: (friendId: string) => void;
-  onViewSkin: (friendId: string) => void;
-  onToggleMute: (friendId: string) => void;
-  onCopyNickname: (friendId: string) => void;
-  onRemove: (friendId: string) => void;
 }
 
 interface FriendRowProps extends FriendRowActions {
@@ -87,6 +64,21 @@ export function describePresence(
   return parts.length > 0 ? parts.join(" · ") : t("friends.online");
 }
 
+export function describeJoinBlock(
+  entry: FriendEntry,
+  isGameRunning: boolean,
+  t: TFunction,
+  length: "short" | "long",
+): string {
+  const reason = joinBlockReason(entry.presence, isGameRunning);
+  if (!reason) return "";
+  return t(
+    length === "short"
+      ? `friends.joinReasonShort.${reason}`
+      : `friends.joinReason.${reason}`,
+  );
+}
+
 export function describeRowDetail(
   entry: FriendEntry,
   ownUserId: string | undefined,
@@ -119,15 +111,7 @@ function FriendRowComponent({
   guestLink,
   t,
   onOpenChat,
-  onJoin,
-  onInvite,
-  onStartCall,
-  onInviteToVoice,
-  onViewProfile,
-  onViewSkin,
-  onToggleMute,
-  onCopyNickname,
-  onRemove,
+  ...actions
 }: FriendRowProps) {
   const { friend, presence, unread, isMuted } = entry;
   const id = friend.user._id;
@@ -135,14 +119,13 @@ function FriendRowComponent({
   const canInvite = friend.isOnline && isGameRunning;
   const detailKind = friendRowDetail(entry);
   const streamer = useRedact().active;
-  const detail = describeRowDetail(entry, ownUserId, t, streamer);
-  const canViewSkin = !(
-    friend.user.platform === "microsoft" && !friend.user.uuid
-  );
-  const isCallDisabled = isCallBusy || isDmRoomWith(voiceRoomId, ownUserId, id);
-  const lastSeen = presence.lastActiveAt
-    ? formatDate(new Date(presence.lastActiveAt))
-    : "";
+  const blocked =
+    detailKind === "presence"
+      ? describeJoinBlock(entry, false, t, "short")
+      : "";
+  const detail = [describeRowDetail(entry, ownUserId, t, streamer), blocked]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <ContextMenu>
@@ -236,7 +219,7 @@ function FriendRowComponent({
                   type="button"
                   aria-label={t("friends.join")}
                   className="flex size-7 items-center justify-center rounded-md border border-border bg-surface-3 text-foreground transition-colors outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
-                  onClick={() => onJoin(id)}
+                  onClick={() => actions.onJoin(id)}
                 >
                   <Play size={13} />
                 </button>
@@ -248,7 +231,7 @@ function FriendRowComponent({
                   type="button"
                   aria-label={t("friends.invite")}
                   className="flex size-7 items-center justify-center rounded-md border border-border bg-surface-3 text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  onClick={() => onInvite(id)}
+                  onClick={() => actions.onInvite(id)}
                 >
                   <Send size={13} />
                 </button>
@@ -267,82 +250,16 @@ function FriendRowComponent({
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-60">
-        {presence.kind === "offline" && lastSeen && (
-          <>
-            <ContextMenuItem disabled>
-              <CalendarClock size={18} />
-              {t("friends.lastSeen", { value: lastSeen })}
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-          </>
-        )}
-
-        {presence.hasJoinTarget && (
-          <ContextMenuItem disabled={!canJoin} onSelect={() => onJoin(id)}>
-            <Play size={18} />
-            {t("friends.join")}
-          </ContextMenuItem>
-        )}
-
-        <ContextMenuItem
-          disabled={!friend.isOnline}
-          onSelect={() => onInvite(id)}
-        >
-          <Send size={18} />
-          {t("friends.invite")}
-        </ContextMenuItem>
-
-        <ContextMenuItem
-          disabled={!friend.isOnline || isCallDisabled}
-          onSelect={() => onStartCall(id)}
-        >
-          <PhoneCall size={18} />
-          {t("voiceCall.start")}
-        </ContextMenuItem>
-
-        {onInviteToVoice && (
-          <ContextMenuItem
-            disabled={!friend.isOnline}
-            onSelect={() => onInviteToVoice(id)}
-          >
-            <Headphones size={18} />
-            {t("groups.inviteToVoice")}
-          </ContextMenuItem>
-        )}
-
-        <ContextMenuSeparator />
-
-        <ContextMenuItem onSelect={() => onViewProfile(id)}>
-          <User size={18} />
-          {t("accountInfo.viewAccount")}
-        </ContextMenuItem>
-
-        <ContextMenuItem
-          disabled={!canViewSkin}
-          onSelect={() => onViewSkin(id)}
-        >
-          <Shirt size={18} />
-          {t("skinView.title")}
-        </ContextMenuItem>
-
-        <ContextMenuItem onSelect={() => onCopyNickname(id)}>
-          <Copy size={18} />
-          {t("friends.copyNickname")}
-        </ContextMenuItem>
-
-        <ContextMenuItem onSelect={() => onToggleMute(id)}>
-          {isMuted ? <Volume size={18} /> : <VolumeX size={18} />}
-          {isMuted
-            ? t("friends.enableNotifications")
-            : t("friends.disableNotifications")}
-        </ContextMenuItem>
-
-        <ContextMenuSeparator />
-
-        <ContextMenuItem variant="destructive" onSelect={() => onRemove(id)}>
-          <UserMinus size={18} />
-          {t("common.delete")}
-        </ContextMenuItem>
+        <FriendMenuItems
+          menu="context"
+          entry={entry}
+          isGameRunning={isGameRunning}
+          isCallBusy={isCallBusy}
+          ownUserId={ownUserId}
+          voiceRoomId={voiceRoomId}
+          actions={actions}
+          t={t}
+        />
       </ContextMenuContent>
     </ContextMenu>
   );

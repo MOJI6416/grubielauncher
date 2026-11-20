@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { getDefaultStore, useAtomValue, useSetAtom } from "jotai";
 import { io } from "socket.io-client";
-import { IFriend } from "@/types/IFriend";
+import { IFriend, IFriendRequest } from "@/types/IFriend";
 import { accountIdentity } from "@renderer/features/accounts/identity";
 import { bindConnectionState } from "@renderer/features/friends/connectionState";
 import {
@@ -18,6 +18,7 @@ import {
   accountAtom,
   accountsAtom,
   authDataAtom,
+  friendRequestsAtom,
   friendSocketAtom,
   friendsAtom,
   isFriendsConnectedAtom,
@@ -40,6 +41,7 @@ export function FriendsSocketHost() {
   const selectedAccount = useAtomValue(accountAtom);
   const setFriendSocket = useSetAtom(friendSocketAtom);
   const setFriends = useSetAtom(friendsAtom);
+  const setFriendRequests = useSetAtom(friendRequestsAtom);
   const setLocalFriends = useSetAtom(localFriendsAtom);
   const setIsFriendsConnected = useSetAtom(isFriendsConnectedAtom);
   const setOwnPresence = useSetAtom(ownPresenceAtom);
@@ -111,6 +113,8 @@ export function FriendsSocketHost() {
     };
     const handleFriendsList = (data: { friends: IFriend[] }) =>
       setFriends(Array.isArray(data?.friends) ? data.friends : []);
+    const handleFriendRequests = (data: { requests: IFriendRequest[] }) =>
+      setFriendRequests(Array.isArray(data?.requests) ? data.requests : []);
     const sendQueuedMessages = () =>
       flushChatDrafts(socketIo, ad.sub, store.get(selectedFriendAtom));
 
@@ -119,6 +123,7 @@ export function FriendsSocketHost() {
     socketIo.on("connect", requestGroups);
     socketIo.on("connect", sendQueuedMessages);
     socketIo.on("friends", handleFriendsList);
+    socketIo.on("friendRequests", handleFriendRequests);
     socketIo.on("friendUpdate", handleSharePresence);
     const shareWatchInterval = setInterval(() => {
       void checkFriendShares();
@@ -134,6 +139,7 @@ export function FriendsSocketHost() {
       socketIo.off("connect", requestGroups);
       socketIo.off("connect", sendQueuedMessages);
       socketIo.off("friends", handleFriendsList);
+      socketIo.off("friendRequests", handleFriendRequests);
       socketIo.off("friendUpdate", handleSharePresence);
       socketIo.disconnect();
       setIsFriendsConnected(false);
@@ -146,6 +152,7 @@ export function FriendsSocketHost() {
     selectedAccount?.accessToken,
     setFriendSocket,
     setFriends,
+    setFriendRequests,
     setLocalFriends,
     setIsFriendsConnected,
     setOwnPresence,

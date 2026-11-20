@@ -466,7 +466,6 @@
     "send": "Envoyer",
     "notFound": "Utilisateur introuvable",
     "friendCodeDescription": "Donnez ce code à un ami pour qu’il puisse vous envoyer une demande.",
-    "friendCodeDisabledHint": "Les demandes par code sont désactivées — réactivez-les dans Demandes.",
     "friendCode": "Votre code",
     "friendCodeUnavailable": "Le code ami n’est pas encore disponible.",
     "friendCodeReset": "Code ami réinitialisé",
@@ -474,7 +473,6 @@
     "resetFriendCode": "Réinitialiser le code",
     "resetFriendCodeConfirm": "L’ancien code cessera de fonctionner : les personnes à qui vous l’avez déjà donné ne pourront plus vous ajouter tant que vous ne leur aurez pas envoyé le nouveau.",
     "friendRequestsEnabledTitle": "Autoriser les demandes d’ami",
-    "friendRequestsEnabledDescription": "Si cette option est activée, les autres utilisateurs peuvent vous ajouter avec votre code ami.",
     "operationErrors": {
       "invalid_user": "Vérifiez le code ami.",
       "already_friends": "Cet utilisateur est déjà votre ami.",
@@ -622,12 +620,7 @@
     "nothingFoundHint": "Essayez un autre nom ou effacez le filtre.",
     "noFriendsHint": "Ajoutez un ami par code — vous verrez qui est en ligne et à quoi il joue.",
     "listLoadError": "Impossible de charger votre liste d’amis",
-    "chatsLoadError": "Impossible de charger vos conversations.",
-    "noChatsTitle": "Aucune conversation pour l’instant",
-    "noChatsHint": "Choisissez un ami à gauche — le chat, l’appel et l’invitation à jouer sont tous là.",
     "noRequestsHint": "Les demandes reçues et envoyées, ainsi que les invitations de groupe, s’afficheront ici.",
-    "nowPlayingTitle": "En jeu maintenant",
-    "nobodyPlayingHint": "Dès qu’un ami lance une instance, un bouton Jouer apparaît ici et vous mène directement à lui.",
     "wantsToBeFriend": "Veut vous ajouter en ami",
     "copyNickname": "Copier le pseudo",
     "lookupErrors": {
@@ -651,11 +644,6 @@
     "chatRead": "Lu",
     "chatTyping": "En train d’écrire…",
     "chatDeleteConfirm": "Le message disparaîtra pour vous deux.",
-    "recentTitle": "Chats récents",
-    "howItWorksTitle": "Comment ça marche",
-    "howItWorksStep1": "Échangez vos codes — vous pouvez réinitialiser le vôtre à tout moment.",
-    "howItWorksStep2": "Envoyez la demande, votre ami la confirme de son côté.",
-    "howItWorksStep3": "Vous verrez à quoi joue votre ami et le rejoindrez d’un seul bouton.",
     "pickGroup": "Choisissez un groupe",
     "pickGroupHint": "Chaque groupe a son propre chat et son salon vocal — ouvrez-en un à gauche.",
     "deleteLoss": "Rejoindre le monde de l’autre, les appels et les invitations ne fonctionneront plus tant que l’un de vous n’aura pas envoyé une nouvelle demande d’ami.",
@@ -709,7 +697,6 @@
       "requestSent": "Demande Minecraft envoyée",
       "incoming": "Demandes Microsoft",
       "outgoing": "Envoyées à Microsoft",
-      "addTitle": "Ami dans Minecraft",
       "addHint": "La demande passe par Microsoft : votre ami la verra dans Minecraft 26.2 ou plus récent, ou dans son launcher.",
       "namePlaceholder": "Pseudo Minecraft",
       "sent": "Demande envoyée à {{name}}",
@@ -730,6 +717,41 @@
       "inBuild": "Instance « {{name}} »",
       "notPublished": "Son instance n’est pas publiée : rejoignez avec la vôtre",
       "gameRunning": "Fermez le jeu pour rejoindre avec son instance"
+    },
+    "openProfile": "Ouvrir le profil",
+    "openChat": "Ouvrir le chat",
+    "openRequests": "Ouvrir",
+    "friendActions": "Actions pour l’ami",
+    "joinReason": {
+      "singleplayer": "Monde solo — vous pourrez rejoindre quand votre ami l’ouvrira avec « Jouer ensemble »",
+      "notPublished": "L’instance de votre ami n’est pas publiée, le launcher ne peut donc pas préparer les mêmes fichiers",
+      "gameRunning": "Fermez votre jeu pour rejoindre votre ami"
+    },
+    "joinReasonShort": {
+      "singleplayer": "monde solo",
+      "notPublished": "instance non publiée",
+      "gameRunning": "fermez le jeu"
+    },
+    "code": {
+      "off": "Les demandes par code sont désactivées",
+      "actions": "Actions pour le code"
+    },
+    "add": {
+      "byCode": "Par code",
+      "byMicrosoft": "Microsoft"
+    },
+    "hub": {
+      "places": "Où jouent vos amis",
+      "voice": "Salons vocaux",
+      "requests": "Nouvelles demandes",
+      "allRequests": "Toutes les demandes ({{value}})",
+      "openRequests": "Toutes les demandes",
+      "quietTitle": "C’est calme",
+      "quietHint": "Les serveurs où jouent vos amis, les salons vocaux des groupes et les nouvelles demandes apparaîtront ici.",
+      "ready": "« {{name}} » est déjà installée",
+      "download": "« {{name}} » sera téléchargée",
+      "worldOf": "Monde de {{nickname}}",
+      "theirBuild": "Instance de l’ami"
     }
   },
   "modManager": {
@@ -1426,7 +1448,6 @@
     "inVoiceCount_other": "{{count}} en vocal",
     "inVoiceNow": "En vocal",
     "nobodyInVoice": "Le salon vocal est vide",
-    "leaveShort": "Quitter",
     "aloneTitle": "Vous êtes seul dans le salon vocal",
     "aloneHint": "Appelez vos amis ou partagez le lien.",
     "aloneDirectHint": "En attente de la connexion de l’autre personne.",
@@ -1461,7 +1482,8 @@
     "speakingCount_other": "{{count}} parlent",
     "deviceSwitchFailed": "Impossible de changer de périphérique",
     "pttPermission": "Autorisez Grubie Launcher dans Accessibilité",
-    "pttPermissionHint": "macOS n’autorise les apps à lire les raccourcis hors de leur fenêtre qu’avec cette autorisation. Activez Grubie Launcher dans Confidentialité et sécurité → Accessibilité, puis attribuez de nouveau la touche."
+    "pttPermissionHint": "macOS n’autorise les apps à lire les raccourcis hors de leur fenêtre qu’avec cette autorisation. Activez Grubie Launcher dans Confidentialité et sécurité → Accessibilité, puis attribuez de nouveau la touche.",
+    "allSettings": "Tous les réglages vocaux"
   },
   "groups": {
     "tab": "Groupes",
@@ -1520,7 +1542,6 @@
     "joinByCodeShort": "Par code",
     "createShort": "Créer",
     "inviteFriend": "Inviter un ami",
-    "joinShort": "Rejoindre",
     "searchPlaceholder": "Rechercher des groupes…",
     "noGroupsTitle": "Aucun groupe pour l’instant",
     "noGroupsHint": "Un groupe, c’est un chat commun et un salon vocal pour vos amis.",
@@ -1578,6 +1599,10 @@
       "choose": "Choisir le modpack du groupe",
       "noChoices": "Publiez un modpack pour le lier au groupe",
       "clear": "Retirer le modpack"
+    },
+    "overview": {
+      "quietTitle": "Personne en vocal pour l’instant",
+      "noGroupsHint": "Un groupe a son propre chat et son salon vocal. Créez-en un ou rejoignez-en un par code à gauche."
     }
   },
   "voiceCall": {
@@ -3160,7 +3185,6 @@
     "playTime": "Temps de jeu",
     "registered": "Inscrit le",
     "friends": "Amis",
-    "viewAccount": "Voir le compte",
     "updated": "Compte mis à jour",
     "privacy": "Visibilité publique",
     "publicLeaderboard": "Classement mondial",
@@ -3610,7 +3634,24 @@
     "localModsFailed": "Impossible d’envoyer les mods locaux",
     "publishInfected": "L’instance n’a pas été publiée : un logiciel malveillant connu a été trouvé",
     "publishRefused": "L’instance n’a pas été publiée",
-    "publishScanUnavailable": "Impossible de vérifier les fichiers de l’instance"
+    "publishScanUnavailable": "Impossible de vérifier les fichiers de l’instance",
+    "stageShort": {
+      "accountUnsupported": "Compte connecté requis",
+      "offline": "Pas de connexion au serveur",
+      "noGame": "Lancez le jeu",
+      "needsWorld": "Ouvrez le monde au LAN",
+      "ready": "Monde trouvé — prêt à ouvrir",
+      "starting": "Ouverture de l’accès…",
+      "open": "Vos amis peuvent rejoindre",
+      "recovering": "Reconnexion…",
+      "conflict": "Déjà ouvert ailleurs",
+      "failed": "Impossible d’ouvrir"
+    },
+    "detected": {
+      "title": "Monde ouvert au LAN",
+      "body": "Ouvrez « Jouer ensemble » pour inviter vos amis.",
+      "open": "Ouvrir"
+    }
   },
   "manageSkins": {
     "reset": "Réinitialiser le skin",
@@ -5482,7 +5523,9 @@
       "newInstance": "Nouvelle instance",
       "instance": "Instance",
       "people": "Personnes",
-      "profile": "Profil"
+      "profile": "Profil",
+      "peopleNews": "Non lus et demandes : {{value}}",
+      "peoplePlaying": "Amis en jeu : {{value}}"
     },
     "palette": {
       "label": "Recherche et commandes",

@@ -6,4 +6,7 @@ export type NotificationClickAction =
   | {
       type: "game_invite";
       inviteId: string;
+    }
+  | {
+      type: "share_open";
     };

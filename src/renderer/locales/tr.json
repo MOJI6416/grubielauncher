@@ -466,7 +466,6 @@
     "send": "Gönder",
     "notFound": "Kullanıcı bulunamadı",
     "friendCodeDescription": "Size istek gönderebilmesi için bu kodu arkadaşınızla paylaşın.",
-    "friendCodeDisabledHint": "Kodla istekler kapalı — İstekler bölümünden yeniden açın.",
     "friendCode": "Kodunuz",
     "friendCodeUnavailable": "Arkadaş kodu henüz kullanılamıyor.",
     "friendCodeReset": "Arkadaş kodu sıfırlandı",
@@ -474,7 +473,6 @@
     "resetFriendCode": "Kodu sıfırla",
     "resetFriendCodeConfirm": "Eski kod çalışmayı bırakır: onu verdiğiniz herkes, yenisini gönderene kadar sizi ekleyemez.",
     "friendRequestsEnabledTitle": "Arkadaşlık isteklerine izin ver",
-    "friendRequestsEnabledDescription": "Açıkken diğer kullanıcılar sizi arkadaş kodunuzla ekleyebilir.",
     "operationErrors": {
       "invalid_user": "Arkadaş kodunu kontrol edin.",
       "already_friends": "Bu kullanıcı zaten arkadaşınız.",
@@ -621,12 +619,7 @@
     "nothingFoundHint": "Başka bir ad deneyin veya filtreyi temizleyin.",
     "noFriendsHint": "Kodla bir arkadaş ekleyin — kimin çevrim içi olduğunu ve ne oynadığını göreceksiniz.",
     "listLoadError": "Arkadaş listeniz yüklenemedi",
-    "chatsLoadError": "Sohbetleriniz yüklenemedi.",
-    "noChatsTitle": "Henüz sohbet yok",
-    "noChatsHint": "Soldan bir arkadaş seçin — sohbet, arama ve oyun daveti hepsi orada.",
     "noRequestsHint": "Gelen ve gönderilen istekler ile grup davetleri burada görünecek.",
-    "nowPlayingTitle": "Şu anda oynuyor",
-    "nobodyPlayingHint": "Bir arkadaşınız kurulum başlattığında burada bir Oyna düğmesi belirir ve sizi doğrudan ona götürür.",
     "wantsToBeFriend": "Sizi arkadaş olarak eklemek istiyor",
     "copyNickname": "Kullanıcı adını kopyala",
     "lookupErrors": {
@@ -650,11 +643,6 @@
     "chatRead": "Okundu",
     "chatTyping": "Yazıyor…",
     "chatDeleteConfirm": "Mesaj ikiniz için de silinir.",
-    "recentTitle": "Son sohbetler",
-    "howItWorksTitle": "Nasıl çalışır",
-    "howItWorksStep1": "Kodlarınızı değişin — kendi kodunuzu istediğiniz zaman sıfırlayabilirsiniz.",
-    "howItWorksStep2": "İsteği gönderin, arkadaşınız kendi tarafında onaylasın.",
-    "howItWorksStep3": "Arkadaşınızın ne oynadığını görür ve tek düğmeyle ona katılırsınız.",
     "pickGroup": "Bir grup seçin",
     "pickGroupHint": "Her grubun kendi sohbeti ve ses odası vardır — soldan birini açın.",
     "deleteLoss": "Birinizden biri yeni bir arkadaşlık isteği gönderene kadar birbirinizin dünyalarına katılma, aramalar ve davetler çalışmaz.",
@@ -708,7 +696,6 @@
       "requestSent": "Minecraft isteği gönderildi",
       "incoming": "Microsoft istekleri",
       "outgoing": "Microsoft'a gönderilenler",
-      "addTitle": "Minecraft'ta arkadaş",
       "addHint": "İstek Microsoft üzerinden gider: arkadaşın onu Minecraft 26.2 veya üstünde ya da kendi başlatıcısında görür.",
       "namePlaceholder": "Minecraft adı",
       "sent": "{{name}} kişisine istek gönderildi",
@@ -729,6 +716,41 @@
       "inBuild": "“{{name}}” kurulumu",
       "notPublished": "Arkadaşınızın kurulumu yayımlanmamış, kendi kurulumunuzla girin",
       "gameRunning": "Arkadaşınızın kurulumuyla girmek için oyunu kapatın"
+    },
+    "openProfile": "Profili aç",
+    "openChat": "Sohbeti aç",
+    "openRequests": "Aç",
+    "friendActions": "Arkadaş işlemleri",
+    "joinReason": {
+      "singleplayer": "Tek oyunculu dünya — arkadaşınız “Birlikte oyna” ile açınca katılabilirsiniz",
+      "notPublished": "Arkadaşınızın kurulumu yayımlanmamış, bu yüzden başlatıcı aynı dosyaları hazırlayamıyor",
+      "gameRunning": "Arkadaşınıza katılmak için oyununuzu kapatın"
+    },
+    "joinReasonShort": {
+      "singleplayer": "tek oyunculu dünya",
+      "notPublished": "kurulum yayımlanmamış",
+      "gameRunning": "oyunu kapatın"
+    },
+    "code": {
+      "off": "Kodla istekler kapalı",
+      "actions": "Kod işlemleri"
+    },
+    "add": {
+      "byCode": "Kodla",
+      "byMicrosoft": "Microsoft"
+    },
+    "hub": {
+      "places": "Arkadaşların oynadığı yerler",
+      "voice": "Ses odaları",
+      "requests": "Yeni istekler",
+      "allRequests": "Tüm istekler ({{value}})",
+      "openRequests": "Tüm istekler",
+      "quietTitle": "Şimdilik sessiz",
+      "quietHint": "Arkadaşlarınızın oynadığı sunucular, grupların ses odaları ve yeni istekler burada görünecek.",
+      "ready": "“{{name}}” zaten kurulu",
+      "download": "“{{name}}” indirilecek",
+      "worldOf": "{{nickname}} dünyası",
+      "theirBuild": "Arkadaşın kurulumu"
     }
   },
   "modManager": {
@@ -1407,7 +1429,6 @@
     "inVoiceCount_other": "Seste {{count}} kişi",
     "inVoiceNow": "Seste",
     "nobodyInVoice": "Ses odası boş",
-    "leaveShort": "Ayrıl",
     "aloneTitle": "Ses odasında yalnızsınız",
     "aloneHint": "Arkadaşlarınızı çağırın veya bağlantıyı paylaşın.",
     "aloneDirectHint": "Karşı tarafın bağlanması bekleniyor.",
@@ -1441,7 +1462,8 @@
     "speakingCount_other": "{{count}} kişi konuşuyor",
     "deviceSwitchFailed": "Cihaz değiştirilemedi",
     "pttPermission": "Grubie Launcher'a Erişilebilirlik izni verin",
-    "pttPermissionHint": "macOS, uygulamaların pencereleri dışındaki kısayolları yalnızca bu izinle okumasına izin verir. Gizlilik ve Güvenlik → Erişilebilirlik bölümünde Grubie Launcher'ı açın ve tuşu yeniden atayın."
+    "pttPermissionHint": "macOS, uygulamaların pencereleri dışındaki kısayolları yalnızca bu izinle okumasına izin verir. Gizlilik ve Güvenlik → Erişilebilirlik bölümünde Grubie Launcher'ı açın ve tuşu yeniden atayın.",
+    "allSettings": "Tüm ses ayarları"
   },
   "groups": {
     "tab": "Gruplar",
@@ -1500,7 +1522,6 @@
     "joinByCodeShort": "Kodla",
     "createShort": "Oluştur",
     "inviteFriend": "Arkadaş davet et",
-    "joinShort": "Katıl",
     "searchPlaceholder": "Grup ara…",
     "noGroupsTitle": "Henüz grup yok",
     "noGroupsHint": "Grup, arkadaşlarınız için ortak bir sohbet ve ses odasıdır.",
@@ -1557,6 +1578,10 @@
       "choose": "Grubun mod paketini seç",
       "noChoices": "Gruba bağlamak için bir mod paketi yayımlayın",
       "clear": "Mod paketini kaldır"
+    },
+    "overview": {
+      "quietTitle": "Seste henüz kimse yok",
+      "noGroupsHint": "Grubun kendi sohbeti ve ses odası var. Soldan bir grup oluşturun veya kodla katılın."
     }
   },
   "voiceCall": {
@@ -3129,7 +3154,6 @@
     "playTime": "Oynama süresi",
     "registered": "Kayıt tarihi",
     "friends": "Arkadaşlar",
-    "viewAccount": "Hesabı görüntüle",
     "updated": "Hesap güncellendi",
     "privacy": "Herkese açık görünürlük",
     "publicLeaderboard": "Genel sıralama",
@@ -3576,7 +3600,24 @@
     "localModsFailed": "Yerel modlar yüklenemedi",
     "publishInfected": "Kurulum yayımlanmadı: bilinen bir zararlı yazılım bulundu",
     "publishRefused": "Kurulum yayımlanmadı",
-    "publishScanUnavailable": "Kurulum dosyaları kontrol edilemedi"
+    "publishScanUnavailable": "Kurulum dosyaları kontrol edilemedi",
+    "stageShort": {
+      "accountUnsupported": "Giriş yapılmış hesap gerekli",
+      "offline": "Sunucuyla bağlantı yok",
+      "noGame": "Oyunu başlatın",
+      "needsWorld": "Dünyayı yerel ağda paylaşın",
+      "ready": "Dünya bulundu — açmaya hazır",
+      "starting": "Erişim açılıyor…",
+      "open": "Arkadaşlar katılabilir",
+      "recovering": "Yeniden bağlanılıyor…",
+      "conflict": "Zaten başka yerde açık",
+      "failed": "Açılamadı"
+    },
+    "detected": {
+      "title": "Dünya yerel ağda paylaşıldı",
+      "body": "Arkadaşlarınızı çağırmak için “Birlikte oyna”yı açın.",
+      "open": "Aç"
+    }
   },
   "manageSkins": {
     "reset": "Skini sıfırla",
@@ -5431,7 +5472,9 @@
       "newInstance": "Yeni kurulum",
       "instance": "Kurulum",
       "people": "Kişiler",
-      "profile": "Profil"
+      "profile": "Profil",
+      "peopleNews": "Okunmamış ve istekler: {{value}}",
+      "peoplePlaying": "Oyundaki arkadaşlar: {{value}}"
     },
     "palette": {
       "label": "Arama ve komutlar",

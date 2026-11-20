@@ -466,7 +466,6 @@
     "send": "Senden",
     "notFound": "Benutzer nicht gefunden",
     "friendCodeDescription": "Teilen Sie diesen Code mit einem Freund, damit er Ihnen eine Anfrage senden kann.",
-    "friendCodeDisabledHint": "Anfragen per Code sind deaktiviert – aktivieren Sie sie unter „Anfragen“ wieder.",
     "friendCode": "Ihr Code",
     "friendCodeUnavailable": "Der Freundescode ist noch nicht verfügbar.",
     "friendCodeReset": "Freundescode zurückgesetzt",
@@ -474,7 +473,6 @@
     "resetFriendCode": "Code zurücksetzen",
     "resetFriendCodeConfirm": "Der alte Code funktioniert nicht mehr: Wer ihn bereits hat, kann Sie erst hinzufügen, wenn Sie ihm den neuen senden.",
     "friendRequestsEnabledTitle": "Freundschaftsanfragen erlauben",
-    "friendRequestsEnabledDescription": "Wenn aktiviert, können andere Benutzer Sie über Ihren Freundescode hinzufügen.",
     "operationErrors": {
       "invalid_user": "Prüfen Sie den Freundescode.",
       "already_friends": "Dieser Benutzer ist bereits Ihr Freund.",
@@ -621,12 +619,7 @@
     "nothingFoundHint": "Versuchen Sie einen anderen Namen oder setzen Sie den Filter zurück.",
     "noFriendsHint": "Fügen Sie einen Freund per Code hinzu – Sie sehen dann, wer online ist und was gespielt wird.",
     "listLoadError": "Freundesliste konnte nicht geladen werden",
-    "chatsLoadError": "Unterhaltungen konnten nicht geladen werden.",
-    "noChatsTitle": "Noch keine Unterhaltungen",
-    "noChatsHint": "Wählen Sie links einen Freund – Chat, Anruf und Spieleinladung finden Sie dort.",
     "noRequestsHint": "Hier erscheinen eingehende und gesendete Anfragen sowie Gruppeneinladungen.",
-    "nowPlayingTitle": "Spielt gerade",
-    "nobodyPlayingHint": "Sobald ein Freund eine Instanz startet, erscheint hier eine Schaltfläche „Spielen“, die Sie direkt zu ihm bringt.",
     "wantsToBeFriend": "Möchte Sie als Freund hinzufügen",
     "copyNickname": "Spielernamen kopieren",
     "lookupErrors": {
@@ -650,11 +643,6 @@
     "chatRead": "Gelesen",
     "chatTyping": "Schreibt…",
     "chatDeleteConfirm": "Die Nachricht verschwindet für Sie beide.",
-    "recentTitle": "Letzte Chats",
-    "howItWorksTitle": "So funktioniert es",
-    "howItWorksStep1": "Tauschen Sie Codes aus – Ihren können Sie jederzeit zurücksetzen.",
-    "howItWorksStep2": "Senden Sie die Anfrage, Ihr Freund bestätigt sie auf seiner Seite.",
-    "howItWorksStep3": "Sie sehen, was Ihr Freund spielt, und treten ihm mit einem Klick bei.",
     "pickGroup": "Gruppe auswählen",
     "pickGroupHint": "Jede Gruppe hat einen eigenen Chat und Sprachraum – öffnen Sie links eine.",
     "deleteLoss": "Gegenseitiges Beitreten zu Welten, Anrufe und Einladungen funktionieren nicht mehr, bis einer von Ihnen eine neue Freundschaftsanfrage sendet.",
@@ -708,7 +696,6 @@
       "requestSent": "Minecraft-Anfrage gesendet",
       "incoming": "Microsoft-Anfragen",
       "outgoing": "An Microsoft gesendet",
-      "addTitle": "Freund in Minecraft",
       "addHint": "Die Anfrage geht über Microsoft: Dein Freund sieht sie in Minecraft 26.2 oder neuer oder in seinem Launcher.",
       "namePlaceholder": "Minecraft-Name",
       "sent": "Anfrage an {{name}} gesendet",
@@ -729,6 +716,41 @@
       "inBuild": "Instanz „{{name}}“",
       "notPublished": "Die Instanz ist nicht veröffentlicht – mit eigener beitreten",
       "gameRunning": "Schließen Sie das Spiel, um mit dieser Instanz beizutreten"
+    },
+    "openProfile": "Profil öffnen",
+    "openChat": "Chat öffnen",
+    "openRequests": "Öffnen",
+    "friendActions": "Aktionen für den Freund",
+    "joinReason": {
+      "singleplayer": "Einzelspielerwelt – Beitritt möglich, sobald er sie über „Zusammen spielen“ öffnet",
+      "notPublished": "Die Instanz Ihres Freundes ist nicht veröffentlicht, daher kann der Launcher nicht dieselben Dateien vorbereiten",
+      "gameRunning": "Schließen Sie Ihr Spiel, um Ihrem Freund beizutreten"
+    },
+    "joinReasonShort": {
+      "singleplayer": "Einzelspielerwelt",
+      "notPublished": "Instanz nicht veröffentlicht",
+      "gameRunning": "Spiel schließen"
+    },
+    "code": {
+      "off": "Anfragen per Code sind deaktiviert",
+      "actions": "Aktionen für den Code"
+    },
+    "add": {
+      "byCode": "Per Code",
+      "byMicrosoft": "Microsoft"
+    },
+    "hub": {
+      "places": "Wo Freunde spielen",
+      "voice": "Sprachräume",
+      "requests": "Neue Anfragen",
+      "allRequests": "Alle Anfragen ({{value}})",
+      "openRequests": "Alle Anfragen",
+      "quietTitle": "Gerade ist es ruhig",
+      "quietHint": "Hier erscheinen Server, auf denen Ihre Freunde spielen, Sprachräume von Gruppen und neue Anfragen.",
+      "ready": "„{{name}}“ ist bereits installiert",
+      "download": "„{{name}}“ wird heruntergeladen",
+      "worldOf": "Welt von {{nickname}}",
+      "theirBuild": "Instanz des Freundes"
     }
   },
   "modManager": {
@@ -1407,7 +1429,6 @@
     "inVoiceCount_other": "{{count}} im Sprachchat",
     "inVoiceNow": "Im Sprachchat",
     "nobodyInVoice": "Sprachraum ist leer",
-    "leaveShort": "Verlassen",
     "aloneTitle": "Sie sind allein im Sprachraum",
     "aloneHint": "Rufen Sie Freunde hinzu oder teilen Sie den Link.",
     "aloneDirectHint": "Warten, bis sich die Gegenseite verbindet.",
@@ -1441,7 +1462,8 @@
     "speakingCount_other": "{{count}} sprechen",
     "deviceSwitchFailed": "Gerät konnte nicht gewechselt werden",
     "pttPermission": "Erlauben Sie Grubie Launcher die Bedienungshilfen",
-    "pttPermissionHint": "macOS erlaubt Apps nur mit dieser Berechtigung, Tastenkürzel außerhalb ihres Fensters zu lesen. Aktivieren Sie Grubie Launcher unter „Datenschutz & Sicherheit“ → „Bedienungshilfen“ und weisen Sie die Taste erneut zu."
+    "pttPermissionHint": "macOS erlaubt Apps nur mit dieser Berechtigung, Tastenkürzel außerhalb ihres Fensters zu lesen. Aktivieren Sie Grubie Launcher unter „Datenschutz & Sicherheit“ → „Bedienungshilfen“ und weisen Sie die Taste erneut zu.",
+    "allSettings": "Alle Spracheinstellungen"
   },
   "groups": {
     "tab": "Gruppen",
@@ -1500,7 +1522,6 @@
     "joinByCodeShort": "Per Code",
     "createShort": "Erstellen",
     "inviteFriend": "Freund einladen",
-    "joinShort": "Beitreten",
     "searchPlaceholder": "Gruppen suchen…",
     "noGroupsTitle": "Noch keine Gruppen",
     "noGroupsHint": "Eine Gruppe ist ein gemeinsamer Chat und Sprachraum für Ihre Freunde.",
@@ -1557,6 +1578,10 @@
       "choose": "Modpack der Gruppe wählen",
       "noChoices": "Veröffentlichen Sie ein Modpack, um es mit der Gruppe zu verknüpfen",
       "clear": "Modpack entfernen"
+    },
+    "overview": {
+      "quietTitle": "Noch niemand im Sprachchat",
+      "noGroupsHint": "Eine Gruppe hat einen eigenen Chat und Sprachraum. Erstellen Sie eine oder treten Sie links per Code bei."
     }
   },
   "voiceCall": {
@@ -3129,7 +3154,6 @@
     "playTime": "Spielzeit",
     "registered": "Registriert",
     "friends": "Freunde",
-    "viewAccount": "Konto ansehen",
     "updated": "Konto aktualisiert",
     "privacy": "Öffentliche Sichtbarkeit",
     "publicLeaderboard": "Globale Bestenliste",
@@ -3576,7 +3600,24 @@
     "localModsFailed": "Lokale Mods konnten nicht hochgeladen werden",
     "publishInfected": "Die Instanz wurde nicht veröffentlicht: bekannte Schadsoftware gefunden",
     "publishRefused": "Die Instanz wurde nicht veröffentlicht",
-    "publishScanUnavailable": "Die Dateien der Instanz konnten nicht geprüft werden"
+    "publishScanUnavailable": "Die Dateien der Instanz konnten nicht geprüft werden",
+    "stageShort": {
+      "accountUnsupported": "Angemeldetes Konto nötig",
+      "offline": "Keine Verbindung zum Server",
+      "noGame": "Starten Sie das Spiel",
+      "needsWorld": "Öffnen Sie die Welt im LAN",
+      "ready": "Welt gefunden – bereit zum Öffnen",
+      "starting": "Zugang wird geöffnet …",
+      "open": "Freunde können beitreten",
+      "recovering": "Verbindung wird wiederhergestellt …",
+      "conflict": "Bereits woanders geöffnet",
+      "failed": "Öffnen fehlgeschlagen"
+    },
+    "detected": {
+      "title": "Welt im LAN geöffnet",
+      "body": "Öffnen Sie „Zusammen spielen“, um Freunde einzuladen.",
+      "open": "Öffnen"
+    }
   },
   "manageSkins": {
     "reset": "Skin zurücksetzen",
@@ -5431,7 +5472,9 @@
       "newInstance": "Neue Instanz",
       "instance": "Instanz",
       "people": "Leute",
-      "profile": "Profil"
+      "profile": "Profil",
+      "peopleNews": "Ungelesen und Anfragen: {{value}}",
+      "peoplePlaying": "Freunde im Spiel: {{value}}"
     },
     "palette": {
       "label": "Suche und Befehle",

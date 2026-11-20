@@ -53,6 +53,7 @@ import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { buildProfileUrl } from "@/shared/siteLinks";
 import { countFeature } from "@renderer/features/usage/usage";
 import { ownProfileVisibilityAtom } from "./ownProfileVisibility";
+import { openAddFriend } from "@renderer/features/friends/AddFriend";
 
 interface PeopleEntry {
   id: string;
@@ -638,7 +639,7 @@ function RelationAction({
         variant="secondary"
         size="lg"
         className="min-w-0"
-        onClick={() => navigate({ name: "people", section: "requests" })}
+        onClick={openAddFriend}
       >
         <UserRoundCheck />
         <Hint content={t("friends.requestSent")} variant="text" truncatedOnly>

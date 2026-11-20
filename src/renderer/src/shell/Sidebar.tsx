@@ -9,6 +9,7 @@ import { useAtom, useAtomValue } from "jotai";
 import {
   BookUser,
   EyeOff,
+  Gamepad2,
   LayoutTemplate,
   Lock,
   Camera,
@@ -24,16 +25,25 @@ import {
 } from "@/components/ui/context-menu";
 import {
   accountAtom,
+  friendRequestsAtom,
   friendsAtom,
+  groupInvitesAtom,
+  groupUnreadsAtom,
   internetAtom,
   isFriendsConnectedAtom,
   isShareModalOpenAtom,
+  mutedGroupsAtom,
   networkAtom,
   shareOwnerAccountKeyAtom,
   shareStateAtom,
   versionsLoadedAtom,
 } from "@renderer/stores/atoms";
 import { AccountSwitcher } from "@renderer/features/accounts/AccountSwitcher";
+import { friendUnreadAtom } from "@renderer/features/friends/unreadStore";
+import {
+  formatBadge,
+  peopleBadgeCount,
+} from "@renderer/features/friends/peopleHub";
 import { Hint } from "@renderer/components/Hint";
 import { LazyDialogFallback } from "@renderer/components/LazyDialogFallback";
 import {
@@ -100,6 +110,8 @@ type NavConfig = {
   disabled?: boolean;
   hint?: string;
   badge?: ReactNode;
+  badgeNote?: string;
+  badgeDot?: "info" | "success";
   onSelect: () => void;
   onPreload?: () => void;
 };
@@ -123,12 +135,24 @@ function NavRow({
   const layout = useLayout();
   const fixed = isNavFixed(slot);
   const hidden = !fixed && isSlotHidden(layout, slotId.nav(slot));
-  const { icon, label, current, disabled, hint, badge, onSelect, onPreload } =
-    config;
+  const {
+    icon,
+    label,
+    current,
+    disabled,
+    hint,
+    badge,
+    badgeNote,
+    badgeDot,
+    onSelect,
+    onPreload,
+  } = config;
   const tooltip = collapsed
     ? disabled && hint
       ? `${label} — ${hint}`
-      : label
+      : badgeNote
+        ? `${label} · ${badgeNote}`
+        : label
     : disabled
       ? hint
       : undefined;
@@ -185,7 +209,12 @@ function NavRow({
       <span className="relative shrink-0 text-faint">
         {icon}
         {collapsed && badge && (
-          <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-success" />
+          <span
+            className={cn(
+              "absolute -top-0.5 -right-0.5 size-1.5 rounded-full",
+              badgeDot === "info" ? "bg-info" : "bg-success",
+            )}
+          />
         )}
       </span>
       {!collapsed && (
@@ -234,6 +263,11 @@ export function Sidebar({
   const isInternetOnline = useAtomValue(internetAtom);
   const isBackendOnline = useAtomValue(networkAtom);
   const friends = useAtomValue(friendsAtom);
+  const friendUnread = useAtomValue(friendUnreadAtom);
+  const friendRequests = useAtomValue(friendRequestsAtom);
+  const groupInvites = useAtomValue(groupInvitesAtom);
+  const groupUnreads = useAtomValue(groupUnreadsAtom);
+  const mutedGroups = useAtomValue(mutedGroupsAtom);
   const [isShareOpen, setIsShareOpen] = useAtom(isShareModalOpenAtom);
   const isFriendsConnected = useAtomValue(isFriendsConnectedAtom);
   const shareState = useAtomValue(shareStateAtom);
@@ -276,16 +310,33 @@ export function Sidebar({
     [friends],
   );
 
+  const peopleNews = useMemo(
+    () =>
+      peopleBadgeCount({
+        unread: friendUnread,
+        groupUnreads,
+        mutedGroups,
+        incomingRequests: friendRequests.filter(
+          (request) => request.type === "recipient",
+        ).length,
+        groupInvites: groupInvites.length,
+      }),
+    [friendRequests, friendUnread, groupInvites, groupUnreads, mutedGroups],
+  );
+
+  const peopleNotes = [
+    peopleNews > 0 ? t("shell.nav.peopleNews", { value: formatBadge(peopleNews) }) : "",
+    playingFriends > 0
+      ? t("shell.nav.peoplePlaying", { value: playingFriends })
+      : "",
+  ].filter(Boolean);
+
   const shouldShowShareButton = useMemo(() => {
     return (
       !["idle", "lan_not_found"].includes(shareState.phase) &&
       canCurrentAccountManageShare(shareOwnerAccountKey, selectedAccount)
     );
   }, [selectedAccount, shareOwnerAccountKey, shareState.phase]);
-
-  useEffect(() => {
-    if (!shouldShowShareButton) setIsShareOpen(false);
-  }, [shouldShowShareButton]);
 
   const navConfigs: Record<NavSlot, NavConfig> = {
     play: {
@@ -301,11 +352,35 @@ export function Sidebar({
       disabled: isFriendsDisabled,
       hint: friendsHint,
       badge:
-        playingFriends > 0 ? (
-          <span className="shrink-0 rounded-md bg-success/15 px-1.5 font-mono text-3xs tabular-nums text-success">
-            {playingFriends}
+        peopleNews > 0 || playingFriends > 0 ? (
+          <span className="flex shrink-0 items-center gap-1">
+            {playingFriends > 0 && (
+              <Hint
+                content={t("shell.nav.peoplePlaying", { value: playingFriends })}
+                side="right"
+              >
+                <span className="flex items-center gap-0.5 font-mono text-3xs tabular-nums text-success">
+                  <Gamepad2 className="size-3" />
+                  {playingFriends}
+                </span>
+              </Hint>
+            )}
+            {peopleNews > 0 && (
+              <Hint
+                content={t("shell.nav.peopleNews", {
+                  value: formatBadge(peopleNews),
+                })}
+                side="right"
+              >
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-info/15 px-1 font-mono text-3xs leading-none tabular-nums text-info">
+                  {formatBadge(peopleNews)}
+                </span>
+              </Hint>
+            )}
           </span>
         ) : undefined,
+      badgeNote: peopleNotes.length > 0 ? peopleNotes.join(" · ") : undefined,
+      badgeDot: peopleNews > 0 ? "info" : "success",
       onSelect: () => navigate({ name: "people" }),
     },
     screenshots: {

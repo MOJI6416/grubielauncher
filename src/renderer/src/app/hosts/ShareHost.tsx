@@ -20,6 +20,7 @@ import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { shareGuestLinksAtom } from "@renderer/features/share/guestLinks";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { showOverlayToast } from "@renderer/features/overlay/overlayToasts";
 
 const api = window.api;
 
@@ -146,14 +147,47 @@ export function ShareHost() {
     if (!selectedAccount || selectedAccount.type === "plain") return;
 
     setShareOwnerAccountKey(getShareAccountKey(selectedAccount));
-    setIsShareModalOpen(true);
-    void api.other.restoreWindow();
+
+    if (document.hasFocus()) {
+      setIsShareModalOpen(true);
+      return;
+    }
+
+    const title = tRef.current("share.detected.title");
+    const body = tRef.current("share.detected.body");
+    toast(title, {
+      id: "share:lan",
+      description: body,
+      duration: 15000,
+      action: {
+        label: tRef.current("share.detected.open"),
+        onClick: () => setIsShareModalOpen(true),
+      },
+    });
+
+    void showOverlayToast({
+      id: "share:lan",
+      kind: "invite",
+      title,
+      body: () => body,
+      face: null,
+      accept: () => {
+        setIsShareModalOpen(true);
+        void api.other.restoreWindow();
+      },
+    })
+      .then((shown) => {
+        if (shown) return;
+        return api.other.notify({ title, body }, { type: "share_open" });
+      })
+      .catch(ignoreFailure);
   }, [
     selectedAccount,
     setIsShareModalOpen,
     setShareOwnerAccountKey,
     shareState.candidate?.key,
     shareState.phase,
+    tRef,
   ]);
 
   return null;

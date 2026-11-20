@@ -9,15 +9,8 @@ import {
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Inbox, MessagesSquare, Users } from "lucide-react";
+import { Inbox, MessagesSquare, Radio, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -43,11 +36,13 @@ import {
   authDataAtom,
   friendSocketAtom,
   groupInvitesAtom,
+  groupUnreadsAtom,
   groupsAtom,
   isFriendsConnectedAtom,
   isRunningAtom,
   isShareModalOpenAtom,
   localFriendsAtom,
+  mutedGroupsAtom,
   openGroupChatIdAtom,
   ownPresenceAtom,
   pendingFriendChatAtom,
@@ -86,14 +81,19 @@ import { ConversationPanel } from "@renderer/features/friends/ConversationPanel"
 import { FriendsListPanel } from "@renderer/features/friends/FriendsListPanel";
 import { PeopleStartPanel } from "@renderer/features/friends/PeopleStartPanel";
 import { RequestsPanel } from "@renderer/features/friends/RequestsPanel";
+import { describePresence } from "@renderer/features/friends/FriendRow";
+import type { FriendMenuActions } from "@renderer/features/friends/FriendMenuItems";
 import {
-  describePresence,
-  describeRowDetail,
-} from "@renderer/features/friends/FriendRow";
+  AddFriendPopover,
+  addFriendOpenAtom,
+  FriendCodeLine,
+  type AddFriendFormProps,
+} from "@renderer/features/friends/AddFriend";
+import { GroupsOverview } from "@renderer/features/voice/GroupsOverview";
+import { buildGroupList } from "@renderer/features/voice/groupList";
 import { peopleLinkState } from "@renderer/features/friends/connectionState";
 import {
   buildFriendList,
-  recentChats,
   type FriendFilter,
   type FriendSort,
 } from "@renderer/features/friends/friendsList";
@@ -160,6 +160,8 @@ export function PeopleScreen({
   const shareOwnerAccountKey = useAtomValue(shareOwnerAccountKeyAtom);
   const groups = useAtomValue(groupsAtom);
   const groupInvites = useAtomValue(groupInvitesAtom);
+  const groupUnreads = useAtomValue(groupUnreadsAtom);
+  const mutedGroups = useAtomValue(mutedGroupsAtom);
   const voiceCall = useAtomValue(voiceCallAtom);
   const voiceSession = useAtomValue(voiceSessionMetaAtom);
 
@@ -174,6 +176,7 @@ export function PeopleScreen({
   const setSelectedFriend = useSetAtom(selectedFriendAtom);
   const setSelectedVersion = useSetAtom(selectedVersionAtom);
   const setIsShareModalOpen = useSetAtom(isShareModalOpenAtom);
+  const setAddFriendOpen = useSetAtom(addFriendOpenAtom);
 
   const section: PeopleSection =
     route.name === "people" ? (route.section ?? "friends") : "friends";
@@ -195,7 +198,6 @@ export function PeopleScreen({
     data: ISkinData;
   } | null>(null);
 
-  const lookupInputRef = useRef<HTMLInputElement>(null);
   const queuedRequestRef = useRef<string[]>([]);
   const unreadAtOpenRef = useRef<{ id?: string; count: number }>({ count: 0 });
 
@@ -222,11 +224,16 @@ export function PeopleScreen({
 
   const friendCode = useFriendCode(account?.accessToken, authData ?? undefined);
 
+  const canManageShare = canCurrentAccountManageShare(
+    shareOwnerAccountKey,
+    account,
+  );
+
   const gameInvite = useGameInvite({
     socket,
     ownPresence,
     shareState,
-    canManageShare: canCurrentAccountManageShare(shareOwnerAccountKey, account),
+    canManageShare,
   });
 
   useEffect(() => {
@@ -301,14 +308,17 @@ export function PeopleScreen({
 
   const activeEntry = routePeerId ? entryById.get(routePeerId) : undefined;
 
-  const playingEntries = useMemo(
-    () => fullList.entries.filter((entry) => entry.presence.kind === "playing"),
-    [fullList.entries],
-  );
-
-  const chatEntries = useMemo(
-    () => recentChats(fullList.entries, 8),
-    [fullList.entries],
+  const voiceRooms = useMemo(
+    () =>
+      buildGroupList(groups, {
+        activeRoomId:
+          voiceSession.state === "disconnected"
+            ? undefined
+            : voiceSession.roomId,
+        unreads: groupUnreads,
+        mutedIds: mutedGroups,
+      }).filter((entry) => entry.voiceCount > 0),
+    [groups, groupUnreads, mutedGroups, voiceSession.roomId, voiceSession.state],
   );
 
   const { incoming, outgoing } = useMemo(
@@ -375,7 +385,7 @@ export function PeopleScreen({
         ...queuedRequestRef.current,
         pendingFriendRequest,
       ];
-      goToSection("requests");
+      goToSection("friends");
       toast.warning(t("friends.requestQueued"));
       return;
     }
@@ -389,12 +399,14 @@ export function PeopleScreen({
     for (const id of queued) sendFriendRequest(id);
 
     setPendingFriendRequest(null);
-    goToSection("requests");
+    goToSection("friends");
+    setAddFriendOpen(true);
   }, [
     goToSection,
     isConnected,
     pendingFriendRequest,
     sendFriendRequest,
+    setAddFriendOpen,
     setPendingFriendRequest,
     socket,
     t,
@@ -593,10 +605,10 @@ export function PeopleScreen({
     setLookupValue("");
   }, [realtime.sentRequests]);
 
-  const handleAddFriend = useCallback(() => {
-    goToSection("requests");
-    window.setTimeout(() => lookupInputRef.current?.focus(), 120);
-  }, [goToSection]);
+  const openSharePanel = useCallback(() => {
+    countFeature("share.entry");
+    setIsShareModalOpen(true);
+  }, [setIsShareModalOpen]);
 
   const handlePlayModpack = useCallback(
     async (modpack: IModpack, version?: Version) => {
@@ -686,6 +698,54 @@ export function PeopleScreen({
     { id: "requests", label: t("friends.requests"), badge: requestsBadge },
   ];
 
+  const addFriendProps: AddFriendFormProps = {
+    lookupValue,
+    lookupProblem,
+    isSending: realtime.isSendingRequest,
+    isSignedOut: linkState === "signedOut",
+    onLookupChange: setLookupValue,
+    onSend: handleSendRequest,
+    outgoing,
+    pendingRequestIds: realtime.pendingRequestIds,
+    onCancelRequest: realtime.rejectRequest,
+    onViewProfile: handleViewProfile,
+    ms: msFriends.isAvailable
+      ? {
+          outgoing: msFriends.snapshot?.outgoing ?? [],
+          pending: msFriends.pending,
+          onRemove: (profileId) =>
+            void msFriends.act("remove", { profileId }).then(reportMsFailure),
+          onSend: async (name) => {
+            const ok = reportMsFailure(await msFriends.act("add", { name }));
+            if (ok) toast.success(t("friends.microsoft.sent", { name }));
+            return ok;
+          },
+        }
+      : undefined,
+    code: friendCode,
+    t,
+  };
+
+  const addFriendButton = (
+    <AddFriendPopover {...addFriendProps} trigger="button" align="center" />
+  );
+
+  const isListVisible =
+    friends.length > 0 || realtime.isInitialLoading || msVisible.length > 0;
+
+  const menuActions: FriendMenuActions = {
+    onJoin: handleJoin,
+    onInvite: handleInvite,
+    onStartCall: handleStartCall,
+    onInviteToVoice:
+      voiceSession.state === "connected" ? handleInviteToVoice : undefined,
+    onViewProfile: handleViewProfile,
+    onViewSkin: openSkinView,
+    onToggleMute: (id) => void handleToggleMute(id),
+    onCopyNickname: handleCopyNickname,
+    onRemove: setRemoveTargetId,
+  };
+
   return (
     <>
       <div className="flex h-full min-h-0 flex-col gap-3">
@@ -721,23 +781,36 @@ export function PeopleScreen({
             </TabsList>
           </Tabs>
 
-          <div className="ml-auto flex items-center gap-2 text-xs">
-            <span
-              className={cn(
-                "size-1.5 rounded-full",
-                linkState === "online"
-                  ? "bg-success"
+          <div className="ml-auto flex min-w-0 items-center gap-3 text-xs">
+            {canManageShare && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={openSharePanel}
+              >
+                <Radio className="size-3.5" />
+                {t("share.title")}
+              </Button>
+            )}
+            <span className="flex shrink-0 items-center gap-2">
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  linkState === "online"
+                    ? "bg-success"
+                    : linkState === "connecting"
+                      ? "bg-warning"
+                      : "bg-destructive",
+                )}
+              />
+              <span className="text-muted-foreground">
+                {linkState === "online"
+                  ? t("friends.online")
                   : linkState === "connecting"
-                    ? "bg-warning"
-                    : "bg-destructive",
-              )}
-            />
-            <span className="text-muted-foreground">
-              {linkState === "online"
-                ? t("friends.online")
-                : linkState === "connecting"
-                  ? t("friends.connecting")
-                  : t("friends.sessionLost")}
+                    ? t("friends.connecting")
+                    : t("friends.sessionLost")}
+              </span>
             </span>
           </div>
         </div>
@@ -747,32 +820,24 @@ export function PeopleScreen({
             <RequestsPanel
               groupInvites={groupInvites}
               incoming={incoming}
-              outgoing={outgoing}
               pendingRequestIds={realtime.pendingRequestIds}
-              isSignedOut={linkState === "signedOut"}
-              lookupValue={lookupValue}
-              lookupProblem={lookupProblem}
-              isSendingRequest={realtime.isSendingRequest}
-              ownFriendCode={friendCode.code}
-              friendRequestsEnabled={friendCode.isEnabled}
-              isLoadingCode={friendCode.isLoading}
-              isResettingCode={friendCode.isResetting}
-              inputRef={lookupInputRef}
-              onLookupChange={setLookupValue}
-              onSendRequest={handleSendRequest}
+              addFriend={addFriendButton}
+              footer={
+                <FriendCodeLine
+                  code={friendCode}
+                  isSignedOut={linkState === "signedOut"}
+                  t={t}
+                />
+              }
               onAccept={realtime.acceptRequest}
               onReject={realtime.rejectRequest}
               onAcceptGroupInvite={realtime.acceptGroupInvite}
               onDeclineGroupInvite={realtime.declineGroupInvite}
-              onCopyCode={friendCode.copy}
-              onResetCode={friendCode.reset}
-              onToggleRequests={friendCode.setRequestsEnabled}
               onViewProfile={handleViewProfile}
               ms={
                 msFriends.isAvailable
                   ? {
                       incoming: msFriends.snapshot?.incoming ?? [],
-                      outgoing: msFriends.snapshot?.outgoing ?? [],
                       pending: msFriends.pending,
                       onAccept: (profileId) =>
                         void msFriends
@@ -782,13 +847,6 @@ export function PeopleScreen({
                         void msFriends
                           .act("remove", { profileId })
                           .then(reportMsFailure),
-                      onSend: async (name) => {
-                        const ok = reportMsFailure(
-                          await msFriends.act("add", { name }),
-                        );
-                        if (ok) toast.success(t("friends.microsoft.sent", { name }));
-                        return ok;
-                      },
                     }
                   : undefined
               }
@@ -819,24 +877,19 @@ export function PeopleScreen({
                   />
                 </Suspense>
               ) : (
-                <Empty className="min-h-0 rounded-xl border border-solid border-border bg-card px-8">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <Users />
-                    </EmptyMedia>
-                    <EmptyTitle>{t("friends.pickGroup")}</EmptyTitle>
-                    <EmptyDescription className="text-xs leading-5">
-                      {t("friends.pickGroupHint")}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
+                <GroupsOverview
+                  voiceRooms={voiceRooms}
+                  groupInvites={groupInvites}
+                  hasGroups={groups.length > 0}
+                  onAcceptGroupInvite={realtime.acceptGroupInvite}
+                  onDeclineGroupInvite={realtime.declineGroupInvite}
+                  t={t}
+                />
               )}
             </>
           ) : (
             <>
-              {(friends.length > 0 ||
-                realtime.isInitialLoading ||
-                msVisible.length > 0) && (
+              {isListVisible && (
                 <FriendsListPanel
                   list={list}
                   query={query}
@@ -855,21 +908,11 @@ export function PeopleScreen({
                   onQueryChange={setQuery}
                   onFilterChange={setFilter}
                   onSortChange={setSort}
-                  onAddFriend={handleAddFriend}
-                  onOpenChat={openConversation}
-                  onJoin={handleJoin}
-                  onInvite={handleInvite}
-                  onStartCall={handleStartCall}
-                  onInviteToVoice={
-                    voiceSession.state === "connected"
-                      ? handleInviteToVoice
-                      : undefined
+                  addFriend={
+                    <AddFriendPopover {...addFriendProps} trigger="icon" />
                   }
-                  onViewProfile={handleViewProfile}
-                  onViewSkin={openSkinView}
-                  onToggleMute={(id) => void handleToggleMute(id)}
-                  onCopyNickname={handleCopyNickname}
-                  onRemove={setRemoveTargetId}
+                  onOpenChat={openConversation}
+                  {...menuActions}
                   msFriends={msVisible}
                   guestLinks={guestLinks}
                   onCopyMsNickname={(name) => void copyWithFeedback(name)}
@@ -910,9 +953,7 @@ export function PeopleScreen({
                   onStartCall={() =>
                     handleStartCall(activeEntry.friend.user._id)
                   }
-                  onViewProfile={() =>
-                    handleViewProfile(activeEntry.friend.user._id)
-                  }
+                  menuActions={menuActions}
                   onClose={() =>
                     navigate(
                       { name: "people", section: "friends" },
@@ -925,30 +966,28 @@ export function PeopleScreen({
                 />
               ) : (
                 <PeopleStartPanel
-                  playing={playingEntries}
-                  chats={chatEntries}
+                  entries={fullList.entries}
                   hasFriends={friends.length > 0}
                   isSignedOut={linkState === "signedOut"}
                   isLoading={realtime.isInitialLoading && friends.length === 0}
                   listError={realtime.listError}
-                  summaryError={realtime.summaryError}
-                  isSummaryPending={realtime.isSummaryPending}
                   onReloadFriends={realtime.reloadFriends}
                   onSignIn={() => navigate({ name: "accounts" })}
                   isGameRunning={isRunning}
-                  ownFriendCode={friendCode.code}
-                  friendRequestsEnabled={friendCode.isEnabled}
-                  describePresence={(entry) =>
-                    describePresence(entry, t, redact.active)
-                  }
-                  describeChat={(entry) =>
-                    describeRowDetail(entry, authData?.sub, t, redact.active)
-                  }
+                  versionsByShareCode={versionsByShareCode}
+                  voiceRooms={voiceRooms}
+                  incoming={incoming}
+                  groupInvites={groupInvites}
+                  pendingRequestIds={realtime.pendingRequestIds}
+                  onAcceptRequest={realtime.acceptRequest}
+                  onRejectRequest={realtime.rejectRequest}
+                  onAcceptGroupInvite={realtime.acceptGroupInvite}
+                  onDeclineGroupInvite={realtime.declineGroupInvite}
+                  onViewProfile={handleViewProfile}
                   onJoin={handleJoin}
-                  onInvite={handleInvite}
-                  onOpenChat={openConversation}
-                  onAddFriend={handleAddFriend}
-                  onCopyCode={friendCode.copy}
+                  onOpenRequests={() => goToSection("requests")}
+                  addFriend={isListVisible ? null : addFriendButton}
+                  code={friendCode}
                   t={t}
                 />
               )}

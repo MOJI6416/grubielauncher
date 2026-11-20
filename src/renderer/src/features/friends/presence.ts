@@ -70,6 +70,19 @@ export function canJoinFriend(
   return presence.kind === "playing" && presence.hasJoinTarget && !isGameRunning;
 }
 
+export type JoinBlock = "singleplayer" | "notPublished" | "gameRunning";
+
+export function joinBlockReason(
+  presence: FriendPresence,
+  isGameRunning: boolean,
+): JoinBlock | null {
+  if (presence.kind !== "playing") return null;
+  if (!presence.place) return "singleplayer";
+  if (!presence.joinVersionCode) return "notPublished";
+  if (isGameRunning) return "gameRunning";
+  return null;
+}
+
 export function presenceDotColor(kind: PresenceKind): string {
   if (kind === "playing") return "bg-loader-vanilla";
   if (kind === "online") return "bg-success";

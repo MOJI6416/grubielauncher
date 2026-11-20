@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { IFriend } from "@/types/IFriend";
 import type { ActiveFriendShare } from "@/types/Share";
-import { canJoinFriend, friendPresence } from "./presence";
+import { canJoinFriend, friendPresence, joinBlockReason } from "./presence";
 
 function makeFriend(patch: Partial<IFriend> = {}): IFriend {
   return {
@@ -133,5 +133,46 @@ describe("canJoinFriend", () => {
 
   it("blocks joining an idle friend", () => {
     expect(canJoinFriend(friendPresence(makeFriend()), false)).toBe(false);
+  });
+});
+
+describe("joinBlockReason", () => {
+  it("names a singleplayer world when the friend plays with no address", () => {
+    const presence = friendPresence(makeFriend({ versionName: "Pack" }));
+    expect(joinBlockReason(presence, false)).toBe("singleplayer");
+  });
+
+  it("names an unpublished build when a server has no share code", () => {
+    const presence = friendPresence(
+      makeFriend({ versionName: "Pack", serverAddress: "mc.example.org" }),
+    );
+    expect(joinBlockReason(presence, false)).toBe("notPublished");
+  });
+
+  it("asks to close the own game before joining", () => {
+    const presence = friendPresence(
+      makeFriend({
+        versionName: "Pack",
+        versionCode: "ABCD-EFGH",
+        serverAddress: "mc.example.org",
+      }),
+    );
+    expect(joinBlockReason(presence, true)).toBe("gameRunning");
+    expect(joinBlockReason(presence, false)).toBeNull();
+  });
+
+  it("has nothing to say about friends who are not playing", () => {
+    expect(joinBlockReason(friendPresence(makeFriend()), false)).toBeNull();
+    expect(
+      joinBlockReason(friendPresence(makeFriend({ isOnline: false })), false),
+    ).toBeNull();
+  });
+
+  it("lets a shared world through once the build is published", () => {
+    const presence = friendPresence(
+      makeFriend({ versionName: "Pack" }),
+      makeShare({ versionShareCode: "ABCD-EFGH" }),
+    );
+    expect(joinBlockReason(presence, false)).toBeNull();
   });
 });

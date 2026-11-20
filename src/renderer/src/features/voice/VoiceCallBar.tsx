@@ -591,7 +591,7 @@ export function VoiceCallBar({ inline = false }: { inline?: boolean } = {}) {
           onClick={() => void voiceDisconnect()}
         >
           <PhoneOff className="size-3.5" />
-          {t("voice.leaveShort")}
+          {t("voice.disconnect")}
         </Button>
       </div>
 

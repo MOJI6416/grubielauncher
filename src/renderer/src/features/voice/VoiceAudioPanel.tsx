@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   Activity,
   AudioLines,
+  ChevronRight,
   Gauge,
   Keyboard,
   Loader2,
@@ -26,6 +27,7 @@ import {
   SpeakerTest,
 } from "./VoiceDeviceControls";
 import { Hint } from "@renderer/components/Hint";
+import { navigate } from "@renderer/navigation/navigate";
 
 const api = window.api;
 
@@ -112,6 +114,16 @@ export function VoiceAudioPanel() {
 
   return (
     <div className="min-w-0 space-y-3">
+      <Button
+        size="xs"
+        variant="ghost"
+        className="-mt-1 w-full justify-between text-muted-foreground hover:text-foreground"
+        onClick={() => navigate({ name: "settings", section: "voice" })}
+      >
+        {t("voice.allSettings")}
+        <ChevronRight className="size-3.5" />
+      </Button>
+
       <div className="space-y-1.5">
         <p className="flex items-center gap-2 text-2xs font-medium tracking-wide text-faint uppercase">
           <Mic className="size-3" />

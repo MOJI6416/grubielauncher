@@ -13,6 +13,7 @@ import {
   isSharePhaseBusy,
   resolveShareStage,
   resolveVisibilityView,
+  shareEntryStage,
   shouldShowStreamDiagnostic,
 } from "./shareModel";
 
@@ -403,5 +404,20 @@ describe("resolveVisibilityView", () => {
       effective: "friends",
       isApplying: false,
     });
+  });
+});
+
+describe("shareEntryStage", () => {
+  const context = { isAccountEligible: true, isOnline: true };
+
+  it("asks to open the world while the game runs without LAN", () => {
+    const stage = resolveShareStage(makeState({ phase: "idle" }), context);
+    expect(shareEntryStage(stage, true)).toBe("needsWorld");
+    expect(shareEntryStage(stage, false)).toBe("noGame");
+  });
+
+  it("keeps a live stage as it is", () => {
+    const stage = resolveShareStage(makeState({ phase: "online" }), context);
+    expect(shareEntryStage(stage, true)).toBe("open");
   });
 });

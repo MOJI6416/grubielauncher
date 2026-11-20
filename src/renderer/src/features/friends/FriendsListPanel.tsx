@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { TFunction } from "i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { SearchX, Search, UserPlus, X } from "lucide-react";
+import { SearchX, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,7 +66,7 @@ interface FriendsListPanelProps extends FriendRowActions {
   onQueryChange: (value: string) => void;
   onFilterChange: (value: FriendFilter) => void;
   onSortChange: (value: FriendSort) => void;
-  onAddFriend: () => void;
+  addFriend: ReactNode;
   msFriends: MsFriend[];
   guestLinks: ShareGuestLink[];
   onCopyMsNickname: (name: string) => void;
@@ -104,7 +111,7 @@ export function FriendsListPanel({
   onQueryChange,
   onFilterChange,
   onSortChange,
-  onAddFriend,
+  addFriend,
   msFriends,
   guestLinks,
   onCopyMsNickname,
@@ -210,17 +217,7 @@ export function FriendsListPanel({
           )}
         </div>
 
-        <Hint content={t("friends.addFriend")}>
-          <Button
-            size="icon-sm"
-            variant="secondary"
-            className="size-8 shrink-0"
-            aria-label={t("friends.addFriend")}
-            onClick={onAddFriend}
-          >
-            <UserPlus className="size-4" />
-          </Button>
-        </Hint>
+        {addFriend}
       </div>
 
       <div className="flex shrink-0 items-center justify-between gap-1">

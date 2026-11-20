@@ -45,6 +45,7 @@ import type {
 import type { GameInviteResult } from "@/types/GameInvite";
 import {
   accountAtom,
+  consolesMetaAtom,
   friendSocketAtom,
   friendsAtom,
   internetAtom,
@@ -80,6 +81,7 @@ import {
   isShareLive,
   isSharePhaseBusy,
   resolveShareStage,
+  shareEntryStage,
   resolveVisibilityView,
   shouldShowStreamDiagnostic,
   type ShareHint,
@@ -159,6 +161,9 @@ export function LanShareModal({
   const ownPresence = useAtomValue(ownPresenceAtom);
   const isInternetOnline = useAtomValue(internetAtom);
   const isBackendOnline = useAtomValue(networkAtom);
+  const isGameRunning = useAtomValue(consolesMetaAtom).some(
+    (meta) => meta.status === "running",
+  );
   const { t } = useTranslation();
   const redact = useRedact();
 
@@ -185,7 +190,10 @@ export function LanShareModal({
     [isAccountEligible, isOnline],
   );
 
-  const stage = resolveShareStage(shareState, context);
+  const stage = shareEntryStage(
+    resolveShareStage(shareState, context),
+    isGameRunning,
+  );
   const tone = getShareTone(stage);
   const steps = useMemo(() => getShareSteps(shareState), [shareState]);
   const primaryKind = getSharePrimaryKind(shareState, context);

@@ -6,7 +6,6 @@ import {
   buildFriendList,
   friendRowDetail,
   nextFriendIndex,
-  recentChats,
   steadyRows,
   type FriendRow,
 } from "./friendsList";
@@ -263,77 +262,6 @@ describe("nextFriendIndex", () => {
 
   it("has nothing to move to in an empty list", () => {
     expect(nextFriendIndex([], "x", 1)).toBeUndefined();
-  });
-});
-
-describe("recentChats", () => {
-  const preview = (senderId: string, time: string | null): ChatPreview => ({
-    id: `m-${senderId}-${time}`,
-    seq: 1,
-    senderId,
-    type: "text",
-    value: "hi",
-    time,
-  });
-
-  const chatFriends = [
-    makeFriend("silent", "silent"),
-    makeFriend("older", "older"),
-    makeFriend("newer", "newer"),
-    makeFriend("unreadOnly", "unreadOnly"),
-    makeFriend("busy", "busy", {
-      isOnline: true,
-      versionName: "Fabric 26.2",
-      versionCode: "code",
-    }),
-  ];
-
-  const build = (patch: Partial<typeof base> = {}) =>
-    buildFriendList({
-      ...base,
-      ...patch,
-      friends: chatFriends,
-      previews: {
-        older: preview("older", "2026-08-01T10:00:00.000Z"),
-        newer: preview("newer", "2026-08-19T10:00:00.000Z"),
-        busy: preview("busy", "2026-08-20T10:00:00.000Z"),
-      },
-      unread: { unreadOnly: 2 },
-    }).entries;
-
-  const ids = (entries: ReturnType<typeof build>) =>
-    entries.map((entry) => entry.friend.user._id);
-
-  it("keeps only friends with a conversation", () => {
-    expect(ids(recentChats(build(), 8))).not.toContain("silent");
-  });
-
-  it("counts an unread friend even without a preview", () => {
-    expect(ids(recentChats(build(), 8))).toContain("unreadOnly");
-  });
-
-  it("puts the newest message first", () => {
-    const result = ids(recentChats(build(), 8));
-    expect(result.indexOf("newer")).toBeLessThan(result.indexOf("older"));
-  });
-
-  it("leaves friends who are in game to the playing block", () => {
-    expect(ids(recentChats(build(), 8))).not.toContain("busy");
-  });
-
-  it("honours the limit", () => {
-    expect(recentChats(build(), 1)).toHaveLength(1);
-    expect(recentChats(build(), 0)).toHaveLength(0);
-  });
-
-  it("survives a preview without a usable time", () => {
-    const entries = buildFriendList({
-      ...base,
-      friends: [makeFriend("a", "aaa")],
-      previews: { a: preview("a", null) },
-    }).entries;
-
-    expect(ids(recentChats(entries, 8))).toEqual(["a"]);
   });
 });
 

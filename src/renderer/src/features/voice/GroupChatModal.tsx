@@ -2,15 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import {
-  Boxes,
-  Headphones,
-  Loader2,
-  PhoneOff,
-  Settings2,
-  Users,
-  X,
-} from "lucide-react";
+import { Boxes, Settings2, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -44,7 +36,6 @@ import {
   type SenderView,
 } from "@renderer/features/friends/ChatSurface";
 import { groupInitials } from "@renderer/features/voice/groupList";
-import { voiceJoinErrorKey } from "@renderer/features/voice/errors";
 import { groupPanelIdAtom } from "@renderer/features/voice/state";
 import { useGroupChat } from "@renderer/features/voice/useGroupChat";
 import {
@@ -53,8 +44,10 @@ import {
   parsePackShareCode,
 } from "@renderer/utilities/packShare";
 import { reportGroupJoinFailure } from "@renderer/utilities/groupJoin";
-import { voiceConnect, voiceDisconnect } from "@renderer/utilities/voiceClient";
-import { showFailureToast } from "@renderer/utilities/failures";
+import {
+  joinGroupVoice,
+  VoiceJoinButton,
+} from "@renderer/features/voice/VoiceRooms";
 
 const api = window.api;
 const PACK_CODE_PATTERN = /^[a-fA-F0-9]{24}$/;
@@ -155,25 +148,7 @@ export function GroupChatModal({
   const handleJoinVoice = async () => {
     setJoiningVoice(true);
     try {
-      const grant = await api.backend.groupJoinVoice(
-        account?.accessToken || "",
-        group._id,
-      );
-      if (!grant) {
-        showFailureToast(t("groups.joinError"), undefined, {
-          channels: ["backend:groupJoinVoice"],
-        });
-        return;
-      }
-      await voiceConnect(grant, {
-        roomId: group._id,
-        roomName: group.name,
-        isRoomOwner: group.isOwner,
-      });
-    } catch (error) {
-      showFailureToast(t(voiceJoinErrorKey(error)), error, {
-        context: { side: "grubie" },
-      });
+      await joinGroupVoice(group, t);
     } finally {
       setJoiningVoice(false);
     }
@@ -261,32 +236,13 @@ export function GroupChatModal({
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
-        {isActiveRoom ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-destructive"
-            onClick={() => void voiceDisconnect()}
-          >
-            <PhoneOff className="size-3.5" />
-            {t("voice.leaveShort")}
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-8"
-            disabled={isJoiningVoice}
-            onClick={() => void handleJoinVoice()}
-          >
-            {isJoiningVoice ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Headphones className="size-3.5" />
-            )}
-            {t("groups.join")}
-          </Button>
-        )}
+        <VoiceJoinButton
+          isActiveRoom={isActiveRoom}
+          isBusy={isJoiningVoice}
+          onJoin={() => void handleJoinVoice()}
+          className="h-8"
+          t={t}
+        />
 
         <Hint content={t("groups.manage")}>
           <Button

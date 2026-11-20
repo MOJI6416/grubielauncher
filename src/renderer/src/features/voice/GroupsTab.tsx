@@ -1,19 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { toast } from "sonner";
 import {
   BellOff,
-  BellRing,
-  Headphones,
   KeyRound,
   Loader2,
   MessageSquare,
-  PhoneOff,
   Plus,
   Search,
   SearchX,
-  Send,
   Settings2,
   TriangleAlert,
   Users,
@@ -26,8 +23,6 @@ import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
@@ -80,15 +75,20 @@ import {
 } from "@renderer/features/friends/groups";
 import { accountIdentity } from "@renderer/features/accounts/identity";
 import { splitOverflow } from "@renderer/features/voice/participants";
-import { voiceJoinErrorKey } from "@renderer/features/voice/errors";
 import { groupPanelIdAtom } from "@renderer/features/voice/state";
 import { useGroupGameInvite } from "@renderer/features/voice/useGroupGameInvite";
-import { voiceConnect, voiceDisconnect } from "@renderer/utilities/voiceClient";
+import { voiceDisconnect } from "@renderer/utilities/voiceClient";
 import { reportGroupJoinFailure } from "@renderer/utilities/groupJoin";
 import { parseGroupJoinCode } from "@renderer/utilities/packShare";
 import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { GroupPanel } from "./GroupPanel";
+import {
+  GroupMenuItems,
+  type GroupMenuActions,
+  type GroupMenuIntent,
+} from "./GroupMenuItems";
+import { joinGroupVoice, VoiceJoinButton } from "./VoiceRooms";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { countFeature } from "@renderer/features/usage/usage";
 
@@ -100,24 +100,17 @@ function GroupRow({
   entry,
   isBusy,
   canInviteToGame,
-  onOpenChat,
-  onOpenPanel,
-  onJoinVoice,
-  onLeaveVoice,
-  onToggleMute,
-  onInviteToGame,
+  actions,
   t,
 }: {
   entry: GroupListEntry;
   isBusy: boolean;
   canInviteToGame: boolean;
-  onOpenChat: () => void;
-  onOpenPanel: () => void;
-  onJoinVoice: () => void;
-  onLeaveVoice: () => void;
-  onToggleMute: () => void;
-  onInviteToGame: () => void;
-  t: (key: string, options?: Record<string, unknown>) => string;
+  actions: GroupMenuActions & {
+    onOpenChat: () => void;
+    onOpenSettings: () => void;
+  };
+  t: TFunction;
 }) {
   const { group, voiceCount, voiceIdentities, isActiveRoom, isMuted, unread } =
     entry;
@@ -145,7 +138,7 @@ function GroupRow({
           <div className="flex h-13 min-w-0 items-center gap-2 pr-1.5 pl-2">
             <button
               type="button"
-              onClick={onOpenChat}
+              onClick={actions.onOpenChat}
               className="flex h-full min-w-0 flex-1 items-center gap-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="relative shrink-0">
@@ -225,41 +218,20 @@ function GroupRow({
                 </span>
               )}
 
-              <Hint
-                content={
-                  isBusy
-                    ? undefined
-                    : isActiveRoom
-                      ? t("voice.disconnect")
-                      : t("groups.join")
-                }
-              >
-                <Button
-                  size="icon-sm"
-                  variant={isActiveRoom ? "ghost" : "secondary"}
-                  className={cn("size-7", isActiveRoom && "text-destructive")}
-                  disabled={isBusy}
-                  onClick={isActiveRoom ? onLeaveVoice : onJoinVoice}
-                  aria-label={
-                    isActiveRoom ? t("voice.disconnect") : t("groups.join")
-                  }
-                >
-                  {isBusy ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : isActiveRoom ? (
-                    <PhoneOff className="size-3.5" />
-                  ) : (
-                    <Headphones className="size-3.5" />
-                  )}
-                </Button>
-              </Hint>
+              <VoiceJoinButton
+                compact
+                isActiveRoom={isActiveRoom}
+                isBusy={isBusy}
+                onJoin={actions.onJoinVoice}
+                t={t}
+              />
 
               <Hint content={t("groups.manage")}>
                 <Button
                   size="icon-sm"
                   variant="ghost"
                   className="size-7 text-faint transition-colors hover:text-foreground"
-                  onClick={onOpenPanel}
+                  onClick={actions.onOpenSettings}
                   aria-label={t("groups.manage")}
                 >
                   <Settings2 className="size-3.5" />
@@ -270,36 +242,16 @@ function GroupRow({
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-56">
-        <ContextMenuItem onSelect={onOpenChat}>
-          <MessageSquare />
-          {t("groups.chat")}
-        </ContextMenuItem>
-        {isActiveRoom ? (
-          <ContextMenuItem onSelect={onLeaveVoice}>
-            <PhoneOff />
-            {t("voice.disconnect")}
-          </ContextMenuItem>
-        ) : (
-          <ContextMenuItem disabled={isBusy} onSelect={onJoinVoice}>
-            <Headphones />
-            {t("groups.join")}
-          </ContextMenuItem>
-        )}
-        <ContextMenuItem onSelect={onToggleMute}>
-          {isMuted ? <BellRing /> : <BellOff />}
-          {isMuted
-            ? t("groups.unmuteNotifications")
-            : t("groups.muteNotifications")}
-        </ContextMenuItem>
-        <ContextMenuItem disabled={!canInviteToGame} onSelect={onInviteToGame}>
-          <Send />
-          {t("groups.inviteToGame")}
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onSelect={onOpenPanel}>
-          <Settings2 />
-          {t("groups.manage")}
-        </ContextMenuItem>
+        <GroupMenuItems
+          menu="context"
+          group={group}
+          isActiveRoom={isActiveRoom}
+          isBusy={isBusy}
+          isMuted={isMuted}
+          canInviteToGame={canInviteToGame}
+          actions={actions}
+          t={t}
+        />
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -339,6 +291,10 @@ export function GroupsTab({
   const [joinCode, setJoinCode] = useState("");
   const [query, setQuery] = useState("");
   const [busyGroupId, setBusyGroupId] = useState("");
+  const [panelIntent, setPanelIntent] = useState<{
+    groupId: string;
+    intent: GroupMenuIntent;
+  } | null>(null);
   const [isReloading, setReloading] = useState(false);
   const inviteGroupToGame = useGroupGameInvite(friendSocket);
   const [isSubmitting, setSubmitting] = useState(false);
@@ -424,29 +380,20 @@ export function GroupsTab({
   };
 
   const openGroup = (groupId: string) => {
+    setPanelIntent(null);
     setPanelGroupId(groupId);
     setChatGroupId(groupId);
+  };
+
+  const openGroupIntent = (groupId: string, intent: GroupMenuIntent) => {
+    setPanelIntent({ groupId, intent });
+    setPanelGroupId(groupId);
   };
 
   const handleJoinVoice = async (group: IGroup) => {
     setBusyGroupId(group._id);
     try {
-      const grant = await api.backend.groupJoinVoice(accessToken, group._id);
-      if (!grant) {
-        showFailureToast(t("groups.joinError"), undefined, {
-          channels: ["backend:groupJoinVoice"],
-        });
-        return;
-      }
-      await voiceConnect(grant, {
-        roomId: group._id,
-        roomName: group.name,
-        isRoomOwner: group.isOwner,
-      });
-    } catch (error) {
-      showFailureToast(t(voiceJoinErrorKey(error)), error, {
-        context: { side: "grubie" },
-      });
+      await joinGroupVoice(group, t);
     } finally {
       setBusyGroupId("");
     }
@@ -650,7 +597,15 @@ export function GroupsTab({
           voiceIdentities={panelEntry.voiceIdentities}
           isMuted={panelEntry.isMuted}
           canInviteToGame={Boolean(gameInviteTarget && friendSocket)}
-          onBack={() => setPanelGroupId(null)}
+          initialIntent={
+            panelIntent?.groupId === panelEntry.group._id
+              ? panelIntent.intent
+              : undefined
+          }
+          onBack={() => {
+            setPanelIntent(null);
+            setPanelGroupId(null);
+          }}
           onJoinVoice={() => void handleJoinVoice(panelEntry.group)}
           onLeaveVoice={() => void voiceDisconnect()}
           onToggleMute={() => toggleMute(panelEntry.group)}
@@ -810,12 +765,16 @@ export function GroupsTab({
                         canInviteToGame={Boolean(
                           gameInviteTarget && friendSocket,
                         )}
-                        onOpenChat={() => setChatGroupId(entry.group._id)}
-                        onOpenPanel={() => openGroup(entry.group._id)}
-                        onJoinVoice={() => void handleJoinVoice(entry.group)}
-                        onLeaveVoice={() => void voiceDisconnect()}
-                        onToggleMute={() => toggleMute(entry.group)}
-                        onInviteToGame={() => inviteToGame(entry.group)}
+                        actions={{
+                          onOpenChat: () => setChatGroupId(entry.group._id),
+                          onOpenSettings: () => openGroup(entry.group._id),
+                          onJoinVoice: () => void handleJoinVoice(entry.group),
+                          onLeaveVoice: () => void voiceDisconnect(),
+                          onToggleMute: () => toggleMute(entry.group),
+                          onInviteToGame: () => inviteToGame(entry.group),
+                          onIntent: (intent) =>
+                            openGroupIntent(entry.group._id, intent),
+                        }}
                         t={t}
                       />
                     </RemovalItem>

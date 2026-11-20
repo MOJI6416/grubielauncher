@@ -1,7 +1,15 @@
 import { useCallback, useMemo, useState } from "react";
 import type { TFunction } from "i18next";
 import type { Socket } from "socket.io-client";
-import { Boxes, PhoneCall, Play, Send, User, Users, X } from "lucide-react";
+import {
+  Boxes,
+  EllipsisVertical,
+  PhoneCall,
+  Play,
+  Send,
+  Users,
+  X,
+} from "lucide-react";
 import {
   HeadDot,
   PlayerHead,
@@ -17,6 +25,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { ILocalAccount } from "@/types/Account";
 import type { IModpack } from "@/types/Backend";
@@ -34,6 +47,8 @@ import { LoaderLabel } from "@renderer/components/Loaders";
 import { ChatSurface, type SenderView } from "./ChatSurface";
 import { useDirectChat } from "./useDirectChat";
 import { canJoinFriend, presenceDotColor } from "./presence";
+import { FriendMenuItems, type FriendMenuActions } from "./FriendMenuItems";
+import { describeJoinBlock } from "./FriendRow";
 import { isDmRoomWith } from "./voiceRoom";
 import { PlatformIcon } from "./PlatformIcon";
 import type { FriendEntry } from "./friendsList";
@@ -59,7 +74,7 @@ interface ConversationPanelProps {
   onJoin: () => void;
   onInvite: () => void;
   onStartCall: () => void;
-  onViewProfile: () => void;
+  menuActions: FriendMenuActions;
   onClose: () => void;
   onPlayModpack: (modpack: IModpack, version?: Version) => void;
   onAcceptGroupInvite: (code: string) => void;
@@ -86,7 +101,7 @@ export function ConversationPanel({
   onJoin,
   onInvite,
   onStartCall,
-  onViewProfile,
+  menuActions,
   onClose,
   onPlayModpack,
   onAcceptGroupInvite,
@@ -145,6 +160,8 @@ export function ConversationPanel({
   const canInvite = friend.isOnline && isGameRunning && !canJoin;
   const isCallDisabled =
     isCallBusy || isDmRoomWith(voiceRoomId, ownUserId, friend.user._id);
+  const joinBlock =
+    canJoin || canInvite ? "" : describeJoinBlock(entry, isGameRunning, t, "long");
 
   const header = useMemo(
     () => (
@@ -200,6 +217,13 @@ export function ConversationPanel({
               {t("friends.invite")}
             </Button>
           )}
+          {joinBlock && (
+            <Hint content={joinBlock} variant="text" truncatedOnly>
+              <p className="line-clamp-2 max-w-72 text-right text-2xs leading-4 text-faint">
+                {joinBlock}
+              </p>
+            </Hint>
+          )}
 
           <Hint content={t("voiceCall.start")}>
             <Button
@@ -213,16 +237,31 @@ export function ConversationPanel({
             </Button>
           </Hint>
 
-          <Hint content={t("accountInfo.viewAccount")}>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              aria-label={t("accountInfo.viewAccount")}
-              onClick={onViewProfile}
-            >
-              <User className="size-4" />
-            </Button>
-          </Hint>
+          <DropdownMenu>
+            <Hint content={t("friends.friendActions")}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label={t("friends.friendActions")}
+                >
+                  <EllipsisVertical className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </Hint>
+            <DropdownMenuContent align="end" className="w-60">
+              <FriendMenuItems
+                menu="dropdown"
+                entry={entry}
+                isGameRunning={isGameRunning}
+                isCallBusy={isCallBusy}
+                ownUserId={ownUserId}
+                voiceRoomId={voiceRoomId}
+                actions={menuActions}
+                t={t}
+              />
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Hint content={t("common.close")}>
             <Button
@@ -240,18 +279,24 @@ export function ConversationPanel({
     [
       canInvite,
       canJoin,
+      entry,
       friend.isOnline,
       friend.user,
+      isCallBusy,
       isCallDisabled,
+      isGameRunning,
       isPeerTyping,
+      joinBlock,
+      menuActions,
       onClose,
       onInvite,
       onJoin,
       onStartCall,
-      onViewProfile,
+      ownUserId,
       presence.kind,
       presenceText,
       t,
+      voiceRoomId,
     ],
   );
 

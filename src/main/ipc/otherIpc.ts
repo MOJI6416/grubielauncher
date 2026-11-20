@@ -229,6 +229,12 @@ function restoreMainWindow(): void {
   mainWindow.focus()
 }
 
+function isMainWindowInFront(): boolean {
+  if (!mainWindow || mainWindow.isDestroyed()) return false
+
+  return mainWindow.isVisible() && !mainWindow.isMinimized() && mainWindow.isFocused()
+}
+
 function sendNotificationClick(action?: NotificationClickAction): void {
   if (!action || !mainWindow || mainWindow.isDestroyed()) return
   if (mainWindow.webContents.isDestroyed()) return
@@ -426,6 +432,7 @@ export function registerOtherIpc() {
     undefined,
     async (_, options, clickAction) => {
       if (!options || typeof options !== 'object') return
+      if (isMainWindowInFront()) return
 
       const image = await loadNotificationIcon(options.icon)
 

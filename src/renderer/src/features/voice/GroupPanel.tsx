@@ -6,20 +6,15 @@ import {
   ArrowLeft,
   Ban,
   BellOff,
-  BellRing,
   Copy,
   Crown,
-  DoorOpen,
   EllipsisVertical,
   Headphones,
   Link2,
   Loader2,
   MessageSquare,
   Pencil,
-  PhoneOff,
   RotateCcw,
-  Send,
-  Trash2,
   UserPlus,
   UserX,
 } from "lucide-react";
@@ -56,7 +51,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -89,6 +83,8 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { buildGroupInviteUrl } from "@renderer/utilities/packShare";
 import { GroupPack } from "./GroupPack";
+import { GroupMenuItems, type GroupMenuIntent } from "./GroupMenuItems";
+import { VoiceJoinButton } from "./VoiceRooms";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 
 const api = window.api;
@@ -245,6 +241,7 @@ export function GroupPanel({
   onLeaveVoice,
   onToggleMute,
   onInviteToGame,
+  initialIntent,
 }: {
   group: IGroup;
   isActiveRoom: boolean;
@@ -257,6 +254,7 @@ export function GroupPanel({
   onLeaveVoice: () => void;
   onToggleMute: () => void;
   onInviteToGame: () => void;
+  initialIntent?: GroupMenuIntent;
 }) {
   const account = useAtomValue(accountAtom);
   const authData = useAtomValue(authDataAtom);
@@ -266,12 +264,18 @@ export function GroupPanel({
   const { t } = useTranslation();
   const redact = useRedact();
 
-  const [renameValue, setRenameValue] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState<string | null>(
+    initialIntent === "rename" ? group.name : null,
+  );
   const [isRenaming, setRenaming] = useState(false);
   const [confirm, setConfirm] = useState<{
     kind: GroupConfirmKind;
     member?: IGroupUser;
-  } | null>(null);
+  } | null>(
+    initialIntent === "leave" || initialIntent === "delete"
+      ? { kind: initialIntent }
+      : null,
+  );
   const [isInviteOpen, setInviteOpen] = useState(false);
   const [inviteStates, setInviteStates] = useState<
     Record<string, "sending" | "sent">
@@ -590,44 +594,27 @@ export function GroupPanel({
               </Button>
             </DropdownMenuTrigger>
           </Hint>
-          <DropdownMenuContent align="end" className="w-52">
-            {permissions.canRename && (
-              <DropdownMenuItem onSelect={() => setRenameValue(group.name)}>
-                <Pencil />
-                {t("groups.rename")}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onSelect={onToggleMute}>
-              {isMuted ? <BellRing /> : <BellOff />}
-              {isMuted
-                ? t("groups.unmuteNotifications")
-                : t("groups.muteNotifications")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={!canInviteToGame}
-              onSelect={onInviteToGame}
-            >
-              <Send />
-              {t("groups.inviteToGame")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {permissions.canDelete ? (
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => setConfirm({ kind: "delete" })}
-              >
-                <Trash2 />
-                {t("groups.delete")}
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => setConfirm({ kind: "leave" })}
-              >
-                <DoorOpen />
-                {t("groups.leave")}
-              </DropdownMenuItem>
-            )}
+          <DropdownMenuContent align="end" className="w-56">
+            <GroupMenuItems
+              menu="dropdown"
+              group={group}
+              isActiveRoom={isActiveRoom}
+              isBusy={isBusy}
+              isMuted={isMuted}
+              canInviteToGame={canInviteToGame}
+              actions={{
+                onOpenChat: () => setChatGroupId(group._id),
+                onJoinVoice,
+                onLeaveVoice,
+                onToggleMute,
+                onInviteToGame,
+                onIntent: (intent) => {
+                  if (intent === "rename") setRenameValue(group.name);
+                  else setConfirm({ kind: intent });
+                },
+              }}
+              t={t}
+            />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -662,33 +649,6 @@ export function GroupPanel({
                 : t("voice.nobodyInVoice")}
             </span>
           </Hint>
-
-          {isActiveRoom ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 shrink-0 text-destructive"
-              onClick={onLeaveVoice}
-            >
-              <PhoneOff className="size-3.5" />
-              {t("voice.leaveShort")}
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-7 shrink-0"
-              disabled={isBusy}
-              onClick={onJoinVoice}
-            >
-              {isBusy ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Headphones className="size-3.5" />
-              )}
-              {t("groups.joinShort")}
-            </Button>
-          )}
         </div>
 
         {voiceCount > 0 && (
@@ -713,6 +673,14 @@ export function GroupPanel({
             )}
           </div>
         )}
+
+        <VoiceJoinButton
+          isActiveRoom={isActiveRoom}
+          isBusy={isBusy}
+          onJoin={onJoinVoice}
+          className="w-full"
+          t={t}
+        />
       </div>
 
       <div className="shrink-0">

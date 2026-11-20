@@ -26,6 +26,11 @@ import { playSound } from "@renderer/utilities/sounds";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { voiceConnect } from "@renderer/utilities/voiceClient";
 import { showOverlayToast } from "@renderer/features/overlay/overlayToasts";
+import { openFriendChat } from "@renderer/features/friends/ServerFriends";
+import { useFriendUnreadTracker } from "@renderer/features/friends/unreadStore";
+import { accountIdentity } from "@renderer/features/accounts/identity";
+import { navigate } from "@renderer/navigation/navigate";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -43,6 +48,14 @@ export function FriendsEventsHost() {
   const openGroupChatIdRef = useLatestRef(openGroupChatId);
   const mutedGroups = useAtomValue(mutedGroupsAtom);
   const mutedGroupsRef = useLatestRef(mutedGroups);
+  const account = useAtomValue(accountAtom);
+  const authData = useAtomValue(authDataAtom);
+
+  useFriendUnreadTracker({
+    socket: friendSocket,
+    accountKey: account ? accountIdentity(account) : "",
+    ownUserId: authData?.sub,
+  });
 
   useEffect(() => {
     if (!friendSocket) return;
@@ -57,6 +70,15 @@ export function FriendsEventsHost() {
       );
 
       if (data.type == "recipient") {
+        toast(tRef.current("friends.newRequest"), {
+          description: tRef.current("friends.sentRequest", {
+            nickname: data.user.nickname,
+          }),
+          action: {
+            label: tRef.current("friends.openRequests"),
+            onClick: () => navigate({ name: "people", section: "requests" }),
+          },
+        });
         await api.other.notify({
           title: tRef.current("friends.newRequest"),
           body: tRef.current("friends.sentRequest", {
@@ -81,6 +103,20 @@ export function FriendsEventsHost() {
       setFriendRequests((prev) => prev.filter((r) => r.requestId != requestId));
 
       if (user._id != store.get(authDataAtom)?.sub) {
+        const description = tRef.current(
+          type == "accept"
+            ? "friends.acceptedRequest"
+            : "friends.declinedRequest",
+          { nickname: user.nickname },
+        );
+        toast(
+          tRef.current(
+            type == "accept"
+              ? "friends.requestAccepted"
+              : "friends.requestDeclined",
+          ),
+          { description },
+        );
         await api.other.notify({
           title: tRef.current(
             type == "accept"
@@ -134,9 +170,17 @@ export function FriendsEventsHost() {
         );
       }
       toast(tRef.current("friends.newMessage"), {
+        id: `message:${user._id}`,
         description: tRef.current("friends.sentMessage", {
           nickname: user.nickname,
         }),
+        action: {
+          label: tRef.current("friends.openChat"),
+          onClick: () => {
+            countFeature("friends.toastChat");
+            openFriendChat(user._id);
+          },
+        },
       });
     };
 
