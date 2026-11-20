@@ -4882,12 +4882,6 @@
     "stepDataChange": "Zmień",
     "optional": "opcjonalnie"
   },
-  "privacyNotice": {
-    "title": "Co launcher do nas wysyła",
-    "description": "Diagnozy awarii i liczniki funkcji są anonimowe: bez nicku, konta i Twoich plików. Statystyki dla autorów modpacków są powiązane z kontem Grubie, ale autorzy widzą tylko łączne liczby. Każdą opcję wyłączysz jednym kliknięciem.",
-    "settings": "Ustawienia prywatności",
-    "done": "Rozumiem"
-  },
   "closeChoice": {
     "title": "Zminimalizować do zasobnika czy zakończyć?",
     "description": "W zasobniku launcher działa dalej: rozmowy trwają, znajomi widzą Cię online, pobierania toczą się dalej. Zakończyć możesz w każdej chwili z ikony w zasobniku.",

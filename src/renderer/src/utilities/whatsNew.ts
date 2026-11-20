@@ -6,8 +6,6 @@ export interface LauncherWhatsNewState {
     updatedAt?: string;
   };
   onboardingDone?: boolean;
-  privacyNoticeSeen?: boolean;
-  privacyNoticeVersion?: number;
   launcherImportOffered?: boolean;
   launcherImported?: string[];
   instanceConfCleanup?: boolean;

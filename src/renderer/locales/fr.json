@@ -4840,12 +4840,6 @@
     "stepDataChange": "Modifier",
     "optional": "facultatif"
   },
-  "privacyNotice": {
-    "title": "Ce que le launcher nous envoie",
-    "description": "Les diagnostics de plantage et les compteurs de fonctions sont anonymes : sans pseudo, compte ni fichiers personnels. Les statistiques pour les auteurs de modpacks sont liées à votre compte Grubie, mais les auteurs ne voient que des totaux. Un clic suffit pour désactiver chacun.",
-    "settings": "Paramètres de confidentialité",
-    "done": "Compris"
-  },
   "closeChoice": {
     "title": "Réduire dans la zone de notification ou quitter ?",
     "description": "Dans la zone de notification, le launcher continue de tourner : les appels restent connectés, vos amis vous voient en ligne, les téléchargements se poursuivent. Vous pouvez quitter à tout moment depuis l’icône.",

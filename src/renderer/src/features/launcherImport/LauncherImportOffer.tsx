@@ -24,7 +24,6 @@ const api = window.api;
 const VISIBLE_LAUNCHERS = 4;
 
 function isScreenBusy(): boolean {
-  if (document.getElementById("privacy-notice-title")) return true;
   return (
     document.body.hasAttribute("data-scroll-locked") &&
     document.querySelector('[role="dialog"], [role="alertdialog"]') !== null

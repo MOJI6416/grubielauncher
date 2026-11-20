@@ -4795,12 +4795,6 @@
     "stepDataChange": "Değiştir",
     "optional": "isteğe bağlı"
   },
-  "privacyNotice": {
-    "title": "Başlatıcının bize gönderdikleri",
-    "description": "Çökme teşhisleri ve özellik sayaçları anonimdir: kullanıcı adınız, hesabınız ve dosyalarınız olmadan. Mod paketi yazarları için istatistik Grubie hesabınıza bağlıdır, ancak yazarlar yalnızca toplamları görür. Her biri tek tıkla kapatılır.",
-    "settings": "Gizlilik ayarları",
-    "done": "Anladım"
-  },
   "closeChoice": {
     "title": "Tepsiye küçültülsün mü, çıkılsın mı?",
     "description": "Tepside başlatıcı çalışmaya devam eder: aramalar bağlı kalır, arkadaşlarınız sizi çevrim içi görür, indirmeler sürer. İstediğiniz zaman tepsi simgesinden çıkabilirsiniz.",

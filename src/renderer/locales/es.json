@@ -4840,12 +4840,6 @@
     "stepDataChange": "Cambiar",
     "optional": "opcional"
   },
-  "privacyNotice": {
-    "title": "Lo que el launcher nos envía",
-    "description": "Los diagnósticos de fallos y los contadores de funciones son anónimos: sin su nombre de usuario, su cuenta ni sus archivos. Las estadísticas para autores de modpacks están ligadas a su cuenta de Grubie, pero los autores solo ven totales. Cada opción se desactiva con un clic.",
-    "settings": "Configuración de privacidad",
-    "done": "Entendido"
-  },
   "closeChoice": {
     "title": "¿Minimizar a la bandeja o salir?",
     "description": "En la bandeja el launcher sigue funcionando: las llamadas siguen conectadas, sus amigos lo ven en línea y las descargas continúan. Puede salir en cualquier momento desde el ícono de la bandeja.",

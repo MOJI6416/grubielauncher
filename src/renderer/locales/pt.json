@@ -4840,12 +4840,6 @@
     "stepDataChange": "Alterar",
     "optional": "opcional"
   },
-  "privacyNotice": {
-    "title": "O que o launcher nos envia",
-    "description": "Os diagnósticos de crash e os contadores de recursos são anônimos: sem nick, conta ou arquivos seus. As estatísticas para autores de modpacks estão ligadas à sua conta do Grubie, mas os autores só veem totais. Dá para desativar cada item com um clique.",
-    "settings": "Configurações de privacidade",
-    "done": "Entendi"
-  },
   "closeChoice": {
     "title": "Minimizar para a bandeja ou sair?",
     "description": "Na bandeja o launcher continua rodando: as chamadas continuam, os amigos veem você on-line e os downloads seguem. Você pode sair a qualquer momento pelo ícone da bandeja.",

@@ -4795,12 +4795,6 @@
     "stepDataChange": "Change",
     "optional": "optional"
   },
-  "privacyNotice": {
-    "title": "What the launcher sends us",
-    "description": "Crash diagnoses and feature counters are anonymous: no nickname, account or files of yours. Statistics for modpack authors is tied to your Grubie account, but authors only see totals. Each one turns off in one click.",
-    "settings": "Privacy settings",
-    "done": "Got it"
-  },
   "closeChoice": {
     "title": "Minimize to tray or quit?",
     "description": "In the tray the launcher keeps running: calls stay connected, friends see you online, downloads carry on. Quit any time from the tray icon.",

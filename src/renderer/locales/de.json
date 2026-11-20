@@ -4795,12 +4795,6 @@
     "stepDataChange": "Ändern",
     "optional": "optional"
   },
-  "privacyNotice": {
-    "title": "Was der Launcher an uns sendet",
-    "description": "Absturzdiagnosen und Funktionszähler sind anonym: ohne Nickname, Konto und Ihre Dateien. Die Statistik für Modpack-Autoren hängt an Ihrem Grubie-Konto, Autoren sehen aber nur Gesamtzahlen. Jeder Punkt ist mit einem Klick abschaltbar.",
-    "settings": "Datenschutz-Einstellungen",
-    "done": "Verstanden"
-  },
   "closeChoice": {
     "title": "In den Infobereich minimieren oder beenden?",
     "description": "Im Infobereich läuft der Launcher weiter: Anrufe bleiben verbunden, Freunde sehen Sie online, Downloads laufen weiter. Beenden können Sie jederzeit über das Symbol im Infobereich.",
