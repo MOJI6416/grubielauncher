@@ -1,3 +1,5 @@
+import type { IWorldSource } from '@/shared/worldSource'
+
 export type WorldGameMode = 'survival' | 'creative' | 'adventure' | 'spectator'
 
 export type WorldDifficulty = 'peaceful' | 'easy' | 'normal' | 'hard'
@@ -24,6 +26,7 @@ export interface IWorld extends IWorldMeta {
   icon?: string
   statistics?: IWorldStatistics
   isDownloaded: boolean
+  source?: IWorldSource
   datapacks: string[]
 }
 

@@ -11,6 +11,8 @@ import { Version } from "@renderer/classes/Version";
 import { instanceFetchers } from "@renderer/features/catalogInstall/installToInstance";
 import { channelVersions } from "@renderer/features/mods/updates";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { worldSourceOf } from "@/shared/worldSource";
+import { writeWorldSource } from "./catalogWorlds";
 
 const api = window.api;
 
@@ -113,6 +115,8 @@ export async function installCatalogWorld(
     if (!result?.ok) {
       return { status: "failed", reason: result?.error ?? "failed" };
     }
+    const source = worldSourceOf(project, version?.id, file);
+    if (source) await writeWorldSource(result.path, source);
     return { status: "installed", path: result.path, name: result.name };
   } finally {
     await api.fs.rimraf(archive).catch(ignoreFailure);

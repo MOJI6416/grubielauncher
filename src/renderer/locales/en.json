@@ -3520,7 +3520,8 @@
         "loader": "loader version"
       },
       "worldPrivacyHint": "The world is published without your progress: player data, statistics, advancements and the player position from level.dat stay on your computer.",
-      "worldWillBeRemoved": "The world is not ticked, so it will be removed from the published pack."
+      "worldWillBeRemoved": "The world is not ticked, so it will be removed from the published pack.",
+      "worldLinksHint": "CurseForge maps ({{value}}) go out as a link to the original: players get the original map without your changes. If the file is no longer on CurseForge, the map goes into the archive instead."
     },
     "refused": {
       "full": "{{name}} could not join: all seats are taken.",
@@ -3845,7 +3846,7 @@
     "cheats": "Cheats",
     "fromCatalog": "From the catalog",
     "versionMismatch": "Saved in {{world}}, the instance runs {{instance}} — some chunks will be regenerated.",
-    "downloadedHint": "From the catalog: you can play and delete it, not change it",
+    "downloadedHint": "A catalog map that comes with the pack: it can’t be changed here",
     "notOwnerHint": "Read-only: the instance belongs to another player",
     "quickPlayUnsupported": "This game version cannot open a world directly",
     "disabledWhileRunning": "Close the game to change this world",
@@ -3917,8 +3918,7 @@
     "datapackRemoved": "Datapack removed",
     "seedMap": "Seed map",
     "seedMapHint": "Open the seed map on Chunkbase",
-    "viewLabel": "Worlds or schematics",
-    "catalogEntryMissing": "The instance content has no record of this world. Delete its folder by hand."
+    "viewLabel": "Worlds or schematics"
   },
   "worldChunks": {
     "title": "Chunk editor",

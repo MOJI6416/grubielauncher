@@ -820,7 +820,6 @@ export function InstanceScreen({
                 }}
                 runGame={runGame}
                 mods={content.mods}
-                commitMods={content.commitMods}
               />
             </Suspense>
           ) : activeTab === "content" && version ? (

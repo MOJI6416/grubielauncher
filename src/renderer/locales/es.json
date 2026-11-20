@@ -3551,7 +3551,8 @@
         "loader": "versión del cargador"
       },
       "worldPrivacyHint": "El mundo se publica sin su progreso: los datos del jugador, las estadísticas, los progresos y la posición del jugador en level.dat se quedan en su computadora.",
-      "worldWillBeRemoved": "El mundo no está marcado, así que se quitará del paquete publicado."
+      "worldWillBeRemoved": "El mundo no está marcado, así que se quitará del paquete publicado.",
+      "worldLinksHint": "Los mapas de CurseForge ({{value}}) se publican como enlace al original: los jugadores reciben el mapa original sin sus cambios. Si el archivo ya no está en CurseForge, el mapa va dentro del archivo comprimido."
     },
     "refused": {
       "full": "{{name}} no pudo entrar: no quedan plazas.",
@@ -3876,7 +3877,7 @@
     "cheats": "Comandos",
     "fromCatalog": "Del catálogo",
     "versionMismatch": "Guardado en {{world}}; la instancia usa {{instance}}: algunos chunks se volverán a generar.",
-    "downloadedHint": "Del catálogo: puede jugarlo y eliminarlo, pero no cambiarlo",
+    "downloadedHint": "Un mapa del catálogo que viene con el paquete: aquí no se puede cambiar",
     "notOwnerHint": "Solo lectura: la instancia es de otro jugador",
     "quickPlayUnsupported": "Esta versión del juego no puede abrir un mundo directamente",
     "disabledWhileRunning": "Cierre el juego para cambiar este mundo",
@@ -3948,8 +3949,7 @@
     "datapackRemoved": "Paquete de datos eliminado",
     "seedMap": "Mapa de la semilla",
     "seedMapHint": "Abrir el mapa de la semilla en Chunkbase",
-    "viewLabel": "Mundos o esquemas",
-    "catalogEntryMissing": "El contenido de la instancia no tiene registro de este mundo. Elimine su carpeta a mano."
+    "viewLabel": "Mundos o esquemas"
   },
   "worldChunks": {
     "title": "Editor de chunks",

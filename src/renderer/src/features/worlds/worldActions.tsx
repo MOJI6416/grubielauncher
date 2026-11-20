@@ -36,7 +36,6 @@ export type WorldBusy = "duplicate" | "export" | null;
 export interface WorldActions {
   busy: WorldBusy;
   isLocked: (world: IWorld) => boolean;
-  canRemove: (world: IWorld) => boolean;
   duplicate: (world: IWorld) => Promise<void>;
   exportWorld: (world: IWorld) => Promise<void>;
   resetIcon: (world: IWorld) => Promise<void>;
@@ -52,13 +51,11 @@ export function useWorldActions({
   onRestored,
   onDuplicated,
   onPatched,
-  removeCatalog,
 }: {
   version: Version | undefined;
   isOwner: boolean;
   isVersionRunning: boolean;
   takenNames: string[];
-  removeCatalog?: (world: IWorld) => Promise<void>;
   onRemoved: (world: IWorld) => void;
   onRestored: (world: IWorld) => void;
   onDuplicated: (folderName: string) => void;
@@ -69,11 +66,6 @@ export function useWorldActions({
 
   const isLocked = (world: IWorld) =>
     !isOwner || Boolean(world.isDownloaded) || isVersionRunning;
-
-  const canRemove = (world: IWorld) =>
-    isOwner &&
-    !isVersionRunning &&
-    (!world.isDownloaded || Boolean(removeCatalog));
 
   const duplicate = async (world: IWorld) => {
     countFeature("worlds.duplicate");
@@ -161,11 +153,7 @@ export function useWorldActions({
   };
 
   const remove = async (world: IWorld) => {
-    if (!version || !canRemove(world)) return;
-    if (world.isDownloaded) {
-      await removeCatalog?.(world);
-      return;
-    }
+    if (!version || isLocked(world)) return;
 
     await removeWithUndo({
       target: world.path,
@@ -179,15 +167,7 @@ export function useWorldActions({
     });
   };
 
-  return {
-    busy,
-    isLocked,
-    canRemove,
-    duplicate,
-    exportWorld,
-    resetIcon,
-    remove,
-  };
+  return { busy, isLocked, duplicate, exportWorld, resetIcon, remove };
 }
 
 export function WorldMenuItems({
@@ -275,7 +255,7 @@ export function WorldMenuItems({
 
       <Item
         variant="destructive"
-        disabled={!actions.canRemove(world)}
+        disabled={locked}
         onSelect={() => void actions.remove(world)}
       >
         <Trash />

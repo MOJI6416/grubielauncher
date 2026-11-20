@@ -3551,7 +3551,8 @@
         "loader": "version du chargeur"
       },
       "worldPrivacyHint": "Le monde est publié sans votre progression : les données du joueur, les statistiques, les progrès et la position du joueur dans level.dat restent sur votre ordinateur.",
-      "worldWillBeRemoved": "Le monde n’est pas coché, il sera donc retiré du pack publié."
+      "worldWillBeRemoved": "Le monde n’est pas coché, il sera donc retiré du pack publié.",
+      "worldLinksHint": "Les cartes CurseForge ({{value}}) partent sous forme de lien vers l’original : les joueurs reçoivent la carte d’origine sans vos modifications. Si le fichier n’est plus sur CurseForge, la carte part dans l’archive."
     },
     "refused": {
       "full": "{{name}} n’a pas pu entrer : toutes les places sont prises.",
@@ -3876,7 +3877,7 @@
     "cheats": "Commandes",
     "fromCatalog": "Depuis le catalogue",
     "versionMismatch": "Enregistré en {{world}}, l’instance tourne en {{instance}} — certains chunks seront régénérés.",
-    "downloadedHint": "Depuis le catalogue : vous pouvez y jouer et le supprimer, pas le modifier",
+    "downloadedHint": "Une carte du catalogue fournie avec le pack : elle ne peut pas être modifiée ici",
     "notOwnerHint": "Lecture seule : l’instance appartient à un autre joueur",
     "quickPlayUnsupported": "Cette version du jeu ne peut pas ouvrir un monde directement",
     "disabledWhileRunning": "Fermez le jeu pour modifier ce monde",
@@ -3948,8 +3949,7 @@
     "datapackRemoved": "Pack de données supprimé",
     "seedMap": "Carte de la graine",
     "seedMapHint": "Ouvrir la carte de la graine sur Chunkbase",
-    "viewLabel": "Mondes ou schémas",
-    "catalogEntryMissing": "Le contenu de l’instance n’a aucune trace de ce monde. Supprimez son dossier à la main."
+    "viewLabel": "Mondes ou schémas"
   },
   "worldChunks": {
     "title": "Éditeur de chunks",

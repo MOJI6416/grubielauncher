@@ -3520,7 +3520,8 @@
         "loader": "yükleyici sürümü"
       },
       "worldPrivacyHint": "Dünya ilerlemeniz olmadan yayımlanır: oyuncu verileri, istatistikler, gelişimler ve level.dat’taki oyuncu konumu bilgisayarınızda kalır.",
-      "worldWillBeRemoved": "Dünya işaretli değil, bu yüzden yayımlanan paketten kaldırılacak."
+      "worldWillBeRemoved": "Dünya işaretli değil, bu yüzden yayımlanan paketten kaldırılacak.",
+      "worldLinksHint": "CurseForge haritaları ({{value}}) orijinale bağlantı olarak gider: oyuncular değişiklikleriniz olmadan orijinal haritayı alır. Dosya artık CurseForge’da yoksa harita arşivle gider."
     },
     "refused": {
       "full": "{{name}} katılamadı: tüm yerler dolu.",
@@ -3845,7 +3846,7 @@
     "cheats": "Hileler",
     "fromCatalog": "Katalogdan",
     "versionMismatch": "{{world}} sürümünde kaydedildi, kurulum {{instance}} kullanıyor — bazı yığınlar yeniden oluşturulacak.",
-    "downloadedHint": "Katalogdan: oynayabilir ve silebilirsiniz, ama değiştiremezsiniz",
+    "downloadedHint": "Paketle gelen bir katalog haritası: burada değiştirilemez",
     "notOwnerHint": "Salt okunur: kurulum başka bir oyuncuya ait",
     "quickPlayUnsupported": "Bu oyun sürümü bir dünyayı doğrudan açamıyor",
     "disabledWhileRunning": "Bu dünyayı değiştirmek için oyunu kapatın",
@@ -3917,8 +3918,7 @@
     "datapackRemoved": "Veri paketi kaldırıldı",
     "seedMap": "Chunkbase haritası",
     "seedMapHint": "Dünyayı Chunkbase haritasında açın",
-    "viewLabel": "Dünyalar veya şemalar",
-    "catalogEntryMissing": "Kurulum içeriğinde bu dünyanın kaydı yok. Klasörünü elle silin."
+    "viewLabel": "Dünyalar veya şemalar"
   },
   "worldChunks": {
     "title": "Yığın düzenleyici",

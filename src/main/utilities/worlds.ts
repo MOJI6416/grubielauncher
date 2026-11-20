@@ -22,6 +22,7 @@ import { IAuth, ILocalAccount } from "@/types/Account";
 import { jwtDecode } from "jwt-decode";
 import { deserialize } from "@xmcl/nbt";
 import { patchNbtString, readNbtString } from "./nbtPatch";
+import { WORLD_SOURCE_FILE, parseWorldSource } from "@/shared/worldSource";
 import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs-extra";
@@ -230,6 +231,10 @@ export async function readWorld(
       datapacks = [];
     }
 
+    const source = parseWorldSource(
+      await fs.readJSON(path.join(worldPath, WORLD_SOURCE_FILE)).catch(() => null),
+    );
+
     return {
       name,
       seed,
@@ -237,6 +242,7 @@ export async function readWorld(
       datapacks,
       statistics: (await loadStatistics(worldPath, account)) || undefined,
       isDownloaded: await fs.pathExists(path.join(worldPath, ".downloaded")),
+      ...(source ? { source } : {}),
       path: worldPath,
       folderName: path.basename(worldPath),
       ...meta,
@@ -712,6 +718,7 @@ const VOLATILE_WORLD_FILES = new Set([
   "session.lock",
   ".downloaded",
   WORLD_ID_MARKER,
+  WORLD_SOURCE_FILE,
 ]);
 
 async function directorySize(target: string): Promise<number> {

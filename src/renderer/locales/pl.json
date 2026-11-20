@@ -3579,7 +3579,8 @@
         "loader": "wersja loadera"
       },
       "worldPrivacyHint": "Świat jest publikowany bez Twojego postępu: dane gracza, statystyki, postępy i pozycja gracza z level.dat zostają na Twoim komputerze.",
-      "worldWillBeRemoved": "Świat nie jest zaznaczony, więc zostanie usunięty z opublikowanej paczki."
+      "worldWillBeRemoved": "Świat nie jest zaznaczony, więc zostanie usunięty z opublikowanej paczki.",
+      "worldLinksHint": "Mapy z CurseForge ({{value}}) trafią jako link do oryginału: gracze dostaną oryginalną mapę bez Twoich zmian. Jeśli pliku nie ma już na CurseForge, mapa trafi do archiwum."
     },
     "refused": {
       "full": "{{name}} nie mógł wejść: wszystkie miejsca są zajęte.",
@@ -3904,7 +3905,7 @@
     "cheats": "Kody",
     "fromCatalog": "Z katalogu",
     "versionMismatch": "Zapisany w {{world}}, instancja działa na {{instance}} — część chunków zostanie wygenerowana ponownie.",
-    "downloadedHint": "Z katalogu: możesz w nim grać i go usunąć, ale nie zmieniać",
+    "downloadedHint": "Mapa z katalogu instalowana razem z paczką — nie można jej tu zmieniać",
     "notOwnerHint": "Tylko odczyt: instancja należy do innego gracza",
     "quickPlayUnsupported": "Ta wersja gry nie może otworzyć świata bezpośrednio",
     "disabledWhileRunning": "Zamknij grę, aby zmienić ten świat",
@@ -3976,8 +3977,7 @@
     "datapackRemoved": "Usunięto paczkę danych",
     "seedMap": "Mapa ziarna",
     "seedMapHint": "Otwórz mapę ziarna w Chunkbase",
-    "viewLabel": "Światy lub schematy",
-    "catalogEntryMissing": "Zawartość instancji nie ma wpisu o tym świecie. Usuń jego folder ręcznie."
+    "viewLabel": "Światy lub schematy"
   },
   "worldChunks": {
     "title": "Edytor chunków",

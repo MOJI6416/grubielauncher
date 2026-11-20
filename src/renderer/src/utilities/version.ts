@@ -8,7 +8,7 @@ import { Mods } from "@renderer/classes/Mods";
 import { TSettings } from "@/types/Settings";
 import { Version } from "@renderer/classes/Version";
 import { IArguments } from "@/types/IArguments";
-import { ILocalProject } from "@/types/ModManager";
+import { ILocalProject, ProjectType } from "@/types/ModManager";
 import i18n from "@renderer/i18n";
 import { getDefaultStore } from "jotai";
 import {
@@ -120,20 +120,23 @@ export async function syncShare(
     isOther = true;
   }
 
+  const publishedMods = version.version.downloadedVersion
+    ? modpack.conf.loader.mods
+    : modpack.conf.loader.mods.filter(
+        (mod) => mod.projectType !== ProjectType.WORLD,
+      );
+
   if (
     !(await api.modManager.compareMods(
       version.version.loader.mods,
-      modpack.conf.loader.mods,
+      publishedMods,
     )) ||
     isOther
   ) {
     const previousMods = version.version.loader.mods;
 
-    preserveLocalBlockedPaths(
-      version.version.loader.mods,
-      modpack.conf.loader.mods,
-    );
-    version.version.loader.mods = modpack.conf.loader.mods;
+    preserveLocalBlockedPaths(version.version.loader.mods, publishedMods);
+    version.version.loader.mods = publishedMods;
 
     let serverConf: IServerConf | undefined;
     try {
@@ -280,8 +283,15 @@ export async function checkDiffenceUpdateData(
     mods,
     version.shareCode,
   );
+  const comparable = (list: ILocalProject[]) =>
+    isOwner
+      ? list.filter((mod) => mod.projectType !== ProjectType.WORLD)
+      : list;
   const modsEqual =
-    (await api.modManager.compareMods(modpack.conf.loader.mods, mods)) &&
+    (await api.modManager.compareMods(
+      comparable(modpack.conf.loader.mods),
+      comparable(mods),
+    )) &&
     !hasStaleLocalShareFiles &&
     jarModsSignature(modpack.conf) === jarModsSignature(version);
   const serversEqual = await api.servers.compare(modpack.conf.servers, servers);

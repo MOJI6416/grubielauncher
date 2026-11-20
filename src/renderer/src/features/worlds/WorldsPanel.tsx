@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -21,7 +22,6 @@ import {
 import { IWorld } from "@/types/World";
 import { ILocalProject, IProject, ProjectType } from "@/types/ModManager";
 import { ISchematicFile } from "@/types/Schematic";
-import type { CommitMods } from "@renderer/features/mods/contentCommit";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { PanelFallback } from "@renderer/components/PanelFallback";
@@ -76,31 +76,9 @@ import { countFeature } from "@renderer/features/usage/usage";
 import { WorldCatalog } from "./WorldCatalog";
 import { installCatalogWorld } from "./worldCatalogInstall";
 import { SchematicsView, useSchematics } from "./SchematicsView";
+import { adoptCatalogWorlds } from "./catalogWorlds";
 
 type PanelView = "worlds" | "schematics";
-
-async function findCatalogEntry(
-  versionPath: string,
-  mods: ILocalProject[],
-  folderName: string,
-): Promise<ILocalProject | null> {
-  for (const mod of mods) {
-    if (mod.projectType !== ProjectType.WORLD) continue;
-    for (const file of mod.version?.files ?? []) {
-      const archives = [
-        api.path.join(versionPath, "storage", "worlds", file.filename),
-        file.localPath,
-      ].filter((entry): entry is string => Boolean(entry));
-
-      for (const archive of archives) {
-        if (!(await api.fs.pathExists(archive).catch(ignoreFailure))) continue;
-        const name = await api.worlds.archiveName(archive).catch(ignoreFailure);
-        if (name === folderName) return mod;
-      }
-    }
-  }
-  return null;
-}
 
 const api = window.api;
 
@@ -108,12 +86,10 @@ export function Worlds({
   onClose,
   runGame,
   mods,
-  commitMods,
 }: {
   onClose: (isFull?: boolean) => void;
   runGame: (params: RunGameParams) => Promise<void>;
   mods?: ILocalProject[];
-  commitMods?: CommitMods;
 }) {
   const version = useAtomValue(selectedVersionAtom);
   const isOwner = useAtomValue(isOwnerVersionAtom);
@@ -134,6 +110,7 @@ export function Worlds({
 
   const listRef = useRef<HTMLDivElement>(null);
   const keepFocusRef = useRef(false);
+  const adoptedRef = useRef<string | null>(null);
 
   const {
     worlds,
@@ -218,40 +195,21 @@ export function Worlds({
     [reloadCounters, setWorlds],
   );
 
-  const removeCatalog = useCallback(
-    async (world: IWorld) => {
-      if (!version || !commitMods || !mods) return;
-
-      const entry = await findCatalogEntry(
-        version.versionPath,
-        mods,
-        world.folderName,
-      );
-      if (!entry) {
-        showFailureToast(t("worlds.deletedError"), undefined, {
-          channels: ["worlds:archiveName"],
-          fallbackDescription: t("worlds.catalogEntryMissing"),
-        });
-        return;
-      }
-
-      await commitMods(
-        mods.filter((mod) => mod !== entry),
-        {
-          title: t("worlds.deleted"),
-          description: world.name,
-          failTitle: t("worlds.deletedError"),
-        },
-      );
-    },
-    [commitMods, mods, t, version],
-  );
+  useEffect(() => {
+    if (!version || !isOwner || isVersionRunning || status !== "ready") return;
+    if (adoptedRef.current === version.versionPath) return;
+    const hasEntries = (version.version.loader.mods ?? []).some(
+      (mod) => mod.projectType === ProjectType.WORLD,
+    );
+    if (!hasEntries && !worlds.some((world) => world.isDownloaded)) return;
+    adoptedRef.current = version.versionPath;
+    void adoptCatalogWorlds(version).catch(ignoreFailure);
+  }, [isOwner, isVersionRunning, status, version, worlds]);
 
   const actions = useWorldActions({
     version,
     isOwner,
     isVersionRunning,
-    removeCatalog: commitMods && mods ? removeCatalog : undefined,
     takenNames: worlds.map((entry) => entry.name),
     onRemoved: onWorldRemoved,
     onRestored: (world) => {
@@ -376,7 +334,7 @@ export function Worlds({
   const handleKeyNav = useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key === "Delete") {
-        if (!selectedWorld || !actions.canRemove(selectedWorld)) return;
+        if (!selectedWorld || actions.isLocked(selectedWorld)) return;
         event.preventDefault();
         void actions.remove(selectedWorld);
         return;

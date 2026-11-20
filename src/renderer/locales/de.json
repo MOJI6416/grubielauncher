@@ -3520,7 +3520,8 @@
         "loader": "Loader-Version"
       },
       "worldPrivacyHint": "Die Welt wird ohne Ihren Fortschritt veröffentlicht: Spielerdaten, Statistiken, Fortschritte und die Spielerposition aus level.dat bleiben auf Ihrem Computer.",
-      "worldWillBeRemoved": "Die Welt ist nicht angehakt und wird daher aus dem veröffentlichten Paket entfernt."
+      "worldWillBeRemoved": "Die Welt ist nicht angehakt und wird daher aus dem veröffentlichten Paket entfernt.",
+      "worldLinksHint": "CurseForge-Karten ({{value}}) gehen als Link auf das Original hinaus: Spieler erhalten die Originalkarte ohne Ihre Änderungen. Ist die Datei nicht mehr auf CurseForge, kommt die Karte ins Archiv."
     },
     "refused": {
       "full": "{{name}} konnte nicht beitreten: alle Plätze sind belegt.",
@@ -3845,7 +3846,7 @@
     "cheats": "Cheats",
     "fromCatalog": "Aus dem Katalog",
     "versionMismatch": "Gespeichert in {{world}}, die Instanz läuft mit {{instance}} – einige Chunks werden neu generiert.",
-    "downloadedHint": "Aus dem Katalog: Sie können sie spielen und löschen, aber nicht ändern",
+    "downloadedHint": "Eine Katalogkarte, die mit dem Paket kommt: Sie lässt sich hier nicht ändern",
     "notOwnerHint": "Schreibgeschützt: Die Instanz gehört einem anderen Spieler",
     "quickPlayUnsupported": "Diese Spielversion kann eine Welt nicht direkt öffnen",
     "disabledWhileRunning": "Schließen Sie das Spiel, um diese Welt zu ändern",
@@ -3917,8 +3918,7 @@
     "datapackRemoved": "Datenpaket entfernt",
     "seedMap": "Startwert-Karte",
     "seedMapHint": "Startwert-Karte auf Chunkbase öffnen",
-    "viewLabel": "Welten oder Schematics",
-    "catalogEntryMissing": "Der Inhalt der Instanz kennt diese Welt nicht. Löschen Sie ihren Ordner von Hand."
+    "viewLabel": "Welten oder Schematics"
   },
   "worldChunks": {
     "title": "Chunk-Editor",

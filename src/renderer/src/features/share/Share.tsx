@@ -94,6 +94,13 @@ import { announceShareCode } from "./publishPresence";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { withoutOverrides } from "@/shared/instanceSettings";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { ILocalProject, ProjectType } from "@/types/ModManager";
+import type { PublishedWorld, WorldPublishPlan } from "@/shared/worldSource";
+import {
+  adoptCatalogWorlds,
+  listWorldSources,
+  planPublishedWorlds,
+} from "@renderer/features/worlds/catalogWorlds";
 import { sharedRefOf } from "@renderer/features/sharedSettings/SharedSettingsCard";
 import { readInstanceServers } from "@renderer/features/instances/instanceServers";
 import {
@@ -152,6 +159,7 @@ export function Share({
   const [totalSize, setTotalSize] = useState(0);
   const [isExistsOptionsFile, setIsExistsOptionsFile] = useState(false);
   const [worldCount, setWorldCount] = useState<number | null>(null);
+  const [worldSources, setWorldSources] = useState<PublishedWorld[]>([]);
   const [modpackOtherPaths, setModpackOtherPaths] = useState<string[]>([]);
 
   const [isNetwork] = useAtom(networkAtom);
@@ -269,13 +277,17 @@ export function Share({
     const countWorlds = async () => {
       if (!selectedVersion) {
         setWorldCount(null);
+        setWorldSources([]);
         return;
       }
 
-      const count = await api.worlds
-        .count(selectedVersion.versionPath)
-        .catch(ignoreFailure);
-      if (!cancelled) setWorldCount(count ?? null);
+      const [count, sources] = await Promise.all([
+        api.worlds.count(selectedVersion.versionPath).catch(ignoreFailure),
+        listWorldSources(selectedVersion.versionPath).catch(ignoreFailure),
+      ]);
+      if (cancelled) return;
+      setWorldCount(count ?? null);
+      setWorldSources(sources ?? []);
     };
 
     countWorlds();
@@ -296,10 +308,20 @@ export function Share({
 
   const nextOtherPaths = paths;
 
-  const archiveSourcePaths = useMemo(
-    () => (selection.world ? [...paths, WORLDS_ROOT] : paths),
-    [paths, selection.world],
-  );
+  const linkedWorldCount = worldSources.filter((world) => world.source).length;
+
+  const archiveSourcePaths = useMemo(() => {
+    if (!selection.world) return paths;
+    if (!worldSources.some((world) => world.source)) {
+      return [...paths, WORLDS_ROOT];
+    }
+    return [
+      ...paths,
+      ...worldSources
+        .filter((world) => !world.source)
+        .map((world) => `${WORLDS_ROOT}/${world.folder}`),
+    ];
+  }, [paths, selection.world, worldSources]);
 
   const isArchiveSelected = selection.other || selection.world;
 
@@ -782,6 +804,10 @@ export function Share({
       setLoadingType("share");
     }
 
+    if (selection.world) {
+      await adoptCatalogWorlds(selectedVersion).catch(ignoreFailure);
+    }
+
     let mods = [...selectedVersion.version.loader.mods];
     let jar: IJarModSet | null = null;
     let shouldUpdateLocalMods = false;
@@ -840,6 +866,24 @@ export function Share({
         (v) => v.version.name === selectedVersion.version.name,
       );
 
+      const worldPlan: WorldPublishPlan | null = selection.world
+        ? await planPublishedWorlds(versionPath)
+        : null;
+      const archivePaths =
+        worldPlan && worldPlan.links.length > 0
+          ? [
+              ...paths,
+              ...worldPlan.archiveFolders.map(
+                (folder) => `${WORLDS_ROOT}/${folder}`,
+              ),
+            ]
+          : archiveSourcePaths;
+      const archiveHasWorld =
+        selection.world &&
+        (!worldPlan ||
+          worldPlan.links.length === 0 ||
+          worldPlan.archiveFolders.length > 0);
+
       if (isArchiveSelected) {
         other = { paths: [], url: "", size: 0 };
 
@@ -850,13 +894,13 @@ export function Share({
         );
         const hasServerOverrides = await api.fs.pathExists(serverOverridesPath);
 
-        if (archiveSourcePaths.length > 0 || hasServerOverrides) {
+        if (archivePaths.length > 0 || hasServerOverrides) {
           updatePublishProgress({
             stage: "preparingArchive",
             percent: publishStagePercent("preparingArchive"),
           });
           const validPaths = await Promise.all(
-            archiveSourcePaths.map((p) => api.path.join(versionPath, p)),
+            archivePaths.map((p) => api.path.join(versionPath, p)),
           );
           if (hasServerOverrides) validPaths.push(serverOverridesPath);
 
@@ -935,7 +979,7 @@ export function Share({
             paths: nextOtherPaths,
             url,
             size: computedTotalSize ?? archiveSize ?? 0,
-            ...(selection.world ? { world: true } : {}),
+            ...(archiveHasWorld ? { world: true } : {}),
           };
         }
 
@@ -1008,12 +1052,27 @@ export function Share({
         throw new Error("servers_not_filtered");
       }
 
+      const publishedMods = modpack?.conf.loader.mods ?? [];
+      const isWorldEntry = (mod: ILocalProject) =>
+        mod.projectType === ProjectType.WORLD;
+      const sentMods =
+        selection.mods || worldPlan
+          ? [
+              ...(selection.mods ? mods : publishedMods).filter(
+                (mod) => !isWorldEntry(mod),
+              ),
+              ...(worldPlan
+                ? worldPlan.links.map((link) => link.entry)
+                : publishedMods.filter(isWorldEntry)),
+            ]
+          : null;
+
       const update: IModpackUpdate = {
         build: nextBuild,
         name: selection.name ? selectedVersion.version.name : null,
         description:
           isDescriptionChanged || silentMode ? nextDescription : null,
-        mods: selection.mods ? mods : null,
+        mods: sentMods,
         servers: sentServers,
         options: selection.options ? options : null,
         runArguments:
@@ -1485,6 +1544,14 @@ export function Share({
                 {selection.world && (
                   <p className="text-xs leading-4 text-muted-foreground">
                     {t("share.publish.worldPrivacyHint")}
+                  </p>
+                )}
+
+                {selection.world && linkedWorldCount > 0 && (
+                  <p className="text-xs leading-4 text-muted-foreground">
+                    {t("share.publish.worldLinksHint", {
+                      value: linkedWorldCount,
+                    })}
                   </p>
                 )}
 
