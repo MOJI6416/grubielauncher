@@ -9,6 +9,7 @@ import {
   ExploreSort,
   IExploreQuery,
   IModpack,
+  IModpackRefusal,
   IModpackUpdate,
 } from "@/types/Backend";
 import { IUpdateCheckRequest, UPDATE_CHECK_MAX_ITEMS } from "@/types/Updates";
@@ -103,14 +104,13 @@ export function registerBackendIpc() {
     },
   );
 
-  handleSafe(
+  handleSafe<boolean | { refused: IModpackRefusal }>(
     "backend:updateModpack",
     false,
     [isToken, isCode, isPayload],
     async (_, at: string, shareCode: string, update: IModpackUpdate) => {
       const backend = new Backend(at);
-      await backend.updateModpack(shareCode, update);
-      return true;
+      return await backend.updateModpack(shareCode, update);
     },
   );
 

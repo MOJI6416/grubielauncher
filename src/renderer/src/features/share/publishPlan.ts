@@ -1,3 +1,5 @@
+import type { IModpackRefusal, ModpackRefusalCode } from "@/types/Backend";
+
 export type PublishFieldId =
   | "name"
   | "logo"
@@ -326,7 +328,38 @@ export type PublishErrorCode =
   | "logoFailed"
   | "nameTaken"
   | "localMods"
+  | "infected"
+  | "filesMissing"
+  | "scanTooLarge"
+  | "scanUnavailable"
   | "generic";
+
+export class PublishRefusedError extends Error {
+  readonly refusal: IModpackRefusal;
+
+  constructor(refusal: IModpackRefusal) {
+    super(`publish refused: ${refusal.code}`);
+    this.name = "PublishRefusedError";
+    this.refusal = refusal;
+  }
+}
+
+const REFUSAL_ERRORS: Record<ModpackRefusalCode, PublishErrorCode> = {
+  infected: "infected",
+  filesMissing: "filesMissing",
+  tooLarge: "scanTooLarge",
+  scanUnavailable: "scanUnavailable",
+};
+
+export function refusedFileList(error: unknown): string | undefined {
+  if (!(error instanceof PublishRefusedError)) return undefined;
+  const files = error.refusal.files.map((entry) =>
+    entry.threats?.length
+      ? `${entry.file} (${entry.threats.join(", ")})`
+      : entry.file,
+  );
+  return files.length > 0 ? formatFileList(files) : undefined;
+}
 
 const LOCAL_MODS_UPLOAD_FAILED = "local mods upload failed";
 const MISSING_LOCALLY = ": file not found locally";
@@ -398,6 +431,9 @@ export function publishFailureChannels(
 }
 
 export function resolvePublishErrorCode(error: unknown): PublishErrorCode {
+  if (error instanceof PublishRefusedError) {
+    return REFUSAL_ERRORS[error.refusal.code] ?? "generic";
+  }
   const message = error instanceof Error ? error.message : String(error);
   if (
     error instanceof LocalModsUploadError ||

@@ -28,5 +28,6 @@ export interface ILoader {
     url: string
     size: number
     world?: boolean
+    sha1?: string
   }
 }

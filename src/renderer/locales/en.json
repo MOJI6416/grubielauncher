@@ -871,6 +871,7 @@
     "uncheckedUpdates_one": "{{count}} mod could not be checked",
     "uncheckedUpdates_other": "{{count}} mods could not be checked",
     "notChecked": "Update check failed for this mod",
+    "notInCatalog": "Not found on CurseForge or Modrinth: where this file comes from is unknown",
     "retryCheck": "Check again",
     "sides": {
       "client": "Client",
@@ -2882,6 +2883,8 @@
     "updateFailed": "Launcher update failed — you are on an old version",
     "updateLoopTitle": "An older version started after the update",
     "updateLoopHint": "After attempting to update to {{version}}, this file still starts the older version: {{path}}. Open the installed launcher from its shortcut or reinstall it. Auto-update is temporarily paused to avoid repeated installation.",
+    "updateSignatureTitle": "The update was not installed",
+    "updateSignatureHint": "Version {{version}} is not signed by the Grubie Launcher team, so the downloaded file was deleted. You can keep playing on the current version. If this happens again, download the launcher from grubielauncher.com.",
     "startupNoVersion": "No instance selected to launch",
     "startupNoVersionHint": "Pick an instance in the list on the left or install a new one.",
     "startupNoAccount": "No active account",
@@ -3283,7 +3286,14 @@
       "generic": "The instance could not be published. Try again later.",
       "localMods": "Local mods could not be uploaded. Try publishing again.",
       "localModsMissing": "These files are missing from the instance folder: {{files}}. Put them back or remove these mods from the instance, then publish again.",
-      "localModsRejected": "The Grubie server did not accept these files: {{files}}. Check your connection and publish again."
+      "localModsRejected": "The Grubie server did not accept these files: {{files}}. Check your connection and publish again.",
+      "infected": "Some uploaded files match known malware. The instance was not published and these files were deleted from the server.",
+      "infectedFiles": "These files match known malware: {{files}}. The instance was not published and the files were deleted from the server. Remove them from the instance and scan your computer with an antivirus.",
+      "filesMissing": "Some uploaded files are not on the server. Remove them from the instance, add them again and publish again.",
+      "filesMissingFiles": "These files are not on the server: {{files}}. Remove them from the instance, add them again and publish again.",
+      "scanTooLarge": "Some files are too large to check, so the instance was not published.",
+      "scanTooLargeFiles": "These files are too large to check: {{files}}. Remove them from the instance and publish again.",
+      "scanUnavailable": "The server could not check the uploaded files right now. Try publishing again in a few minutes."
     },
     "title": "Play together",
     "streamDiagnostic": {
@@ -3525,7 +3535,10 @@
       "turnHint": "Through the Grubie TURN server: a direct connection could not be made",
       "relayHint": "Through the Grubie server: a direct connection is unavailable or turned off"
     },
-    "localModsFailed": "Local mods could not be uploaded"
+    "localModsFailed": "Local mods could not be uploaded",
+    "publishInfected": "The instance was not published: known malware found",
+    "publishRefused": "The instance was not published",
+    "publishScanUnavailable": "The instance files could not be checked"
   },
   "manageSkins": {
     "reset": "Reset skin",
@@ -6049,10 +6062,12 @@
       "name": "Give the instance a valid name.",
       "minecraftVersion": "Pick a Minecraft version.",
       "loaderVersion": "Pick a loader version.",
-      "loaderVersionUnresolved": "Pick a loader version for this pack."
+      "loaderVersionUnresolved": "Pick a loader version for this pack.",
+      "jarCheck": "Checking the pack’s jar files on CurseForge and Modrinth…"
     },
     "warnings": {
       "localMods": "The pack carries hand-added files. Install it only if you trust the author.",
+      "unknownJars": "Some jar files of the pack are not on CurseForge or Modrinth. They are not installed unless you tick them in the contents.",
       "snapshot": "A snapshot is a test version of the game: mods and worlds may break.",
       "oldVersion": "A very old version — most modern mods will not run on it.",
       "legacyJava": "This version runs on Java 8, it will be downloaded as well.",
@@ -7011,8 +7026,15 @@
     "optionalShort": "optional",
     "optionalHint": "The author marked these files as optional. Unchecked files are downloaded turned off — you can turn them on later in the instance's content.",
     "optionalFooter": "Unchecked files are downloaded turned off — you can turn them on later in Content",
+    "unknown": "Not found",
+    "unknownHint": "These jar files are not on CurseForge or Modrinth, so nobody has checked them. Only ticked files are installed — tick a file only if you trust the pack’s author.",
+    "unknownRow": "Not found on CurseForge or Modrinth",
+    "uncheckedRow": "Could not be checked on CurseForge and Modrinth",
+    "unknownFooter": "Unticked files that are not on CurseForge or Modrinth will not be installed",
+    "checkingJars": "Checking jar files on CurseForge and Modrinth…",
     "filter": "Search the contents",
     "toggle": "Turn on “{{title}}”",
+    "install": "Install “{{title}}”",
     "notFound": "Nothing found",
     "enabledOf": "{{enabled}} of {{total}}",
     "empty": "This modpack has no mods or packs",

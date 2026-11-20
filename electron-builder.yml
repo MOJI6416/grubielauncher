@@ -50,6 +50,13 @@ files:
 asarUnpack:
   - resources/**
 
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+
 publish:
   provider: github
   owner: MOJI6416

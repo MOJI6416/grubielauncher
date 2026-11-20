@@ -5,6 +5,7 @@ import { scheduleUpdateInstall } from "./updateInstall";
 import { gameRuntime } from "./runtime";
 import { loadAutoUpdater } from "./autoUpdater";
 import { countUsage } from "./usageStats";
+import { verifyDownloadedUpdate } from "./updateSignature";
 
 export const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 export const FIRST_UPDATE_CHECK_DELAY_MS = 20 * 60 * 1000;
@@ -15,6 +16,7 @@ let started = false;
 let checking = false;
 let stopping = false;
 let onInstall: ((pending: boolean) => void) | null = null;
+let rejectedVersion: string | null = null;
 
 function publish(next: AppUpdateState): void {
   state = next;
@@ -24,12 +26,16 @@ function publish(next: AppUpdateState): void {
   contents.send("app:updateState", state);
 }
 
+export function rememberRejectedUpdate(version: string): void {
+  rejectedVersion = version;
+}
+
 export function getAppUpdateState(): AppUpdateState {
   return state;
 }
 
 async function check(): Promise<void> {
-  if (checking || state.status === "ready") return;
+  if (checking || rejectedVersion || state.status === "ready") return;
   checking = true;
 
   try {
@@ -59,7 +65,23 @@ export function startBackgroundUpdateChecks(options: {
       publish({ status: "downloading", version: info.version });
     });
 
-    autoUpdater.on("update-downloaded", (info) => {
+    autoUpdater.on("update-downloaded", async (info) => {
+      const verdict = await verifyDownloadedUpdate(info);
+      if (!verdict.ok) {
+        const message = `Update ${info.version} was rejected: ${verdict.reason}`;
+        console.warn(`[Updater] ${message}`);
+        rejectedVersion = info.version;
+        publish({ status: "idle" });
+        const contents = mainWindow?.webContents;
+        if (contents && !contents.isDestroyed()) {
+          contents.send("app:updateFailed", {
+            message,
+            reason: "signature",
+            version: info.version,
+          });
+        }
+        return;
+      }
       publish({ status: "ready", version: info.version });
     });
 

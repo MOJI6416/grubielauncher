@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "id": "primary",
+      "spki": "MCowBQYDK2VwAyEAdDudkxKgCX/Sb1gw51j5cSoZpewdG+IxAZWb4HuNHps="
+    },
+    {
+      "id": "reserve",
+      "spki": "MCowBQYDK2VwAyEAoYo1Ye36Iik3JYO+6VstcML+TMsruYZDvaLMnZBEM/g="
+    }
+  ]
+}

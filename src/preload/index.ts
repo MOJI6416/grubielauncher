@@ -43,6 +43,7 @@ import {
   IModpackAnnouncement,
   IModpackChannel,
   IModpackChannelUpdate,
+  IModpackRefusal,
   IModpackSessionReport,
   IModpackUpdate,
   ModpackChannelResult,
@@ -122,6 +123,8 @@ import {
 } from "@/types/Downloader";
 import { Loader } from "@/types/Loader";
 import {
+  ICatalogPresenceItem,
+  ICatalogPresenceResult,
   IFilterGroup,
   ILocalFileInfo,
   ILocalIdentifyRequest,
@@ -361,7 +364,7 @@ ipcRenderer.on(
 
 interface UpdateFailedPayload {
   message: string;
-  reason?: "loop";
+  reason?: "loop" | "signature";
   version?: string;
   path?: string;
 }
@@ -688,7 +691,7 @@ export interface IElectronAPI {
       at: string,
       shareCode: string,
       update: IModpackUpdate,
-    ) => Promise<boolean>;
+    ) => Promise<boolean | { refused: IModpackRefusal }>;
     deleteModpack: (at: string, shareCode: string) => Promise<boolean>;
     updateUser: (
       at: string,
@@ -1339,6 +1342,9 @@ export interface IElectronAPI {
     identifyLocal: (
       requests: ILocalIdentifyRequest[],
     ) => Promise<ILocalIdentifyResult>;
+    catalogPresence: (
+      items: ICatalogPresenceItem[],
+    ) => Promise<ICatalogPresenceResult>;
     modrinthClientSides: (
       ids: string[],
     ) => Promise<Record<string, boolean> | null>;
@@ -2717,6 +2723,8 @@ export const api: IElectronAPI = {
       invoke("modManager:fileTimes", versionPath, projectType),
     identifyLocal: (requests: ILocalIdentifyRequest[]) =>
       invoke("modManager:identifyLocal", requests),
+    catalogPresence: (items: ICatalogPresenceItem[]) =>
+      invoke("modManager:catalogPresence", items),
     modrinthClientSides: (ids: string[]) =>
       invoke("modManager:modrinthClientSides", ids),
     projectCategories: (modrinthIds: string[], curseforgeIds: string[]) =>

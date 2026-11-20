@@ -16,6 +16,7 @@ import {
   Power,
   PowerOff,
   Server,
+  ShieldQuestion,
   Trash2,
   Undo2,
   UserPlus,
@@ -84,6 +85,7 @@ export const ContentRow = memo(function ContentRow({
   hasUpdate,
   isUnavailable,
   isUnchecked,
+  notInCatalog = false,
   duplicate,
   gameVersion,
   heldVersion,
@@ -112,6 +114,7 @@ export const ContentRow = memo(function ContentRow({
   hasUpdate: boolean;
   isUnavailable: boolean;
   isUnchecked: boolean;
+  notInCatalog?: boolean;
   duplicate?: "extra" | "review";
   gameVersion?: string;
   heldVersion?: string;
@@ -255,6 +258,14 @@ export const ContentRow = memo(function ContentRow({
             <Hint content={t("modManager.notChecked")}>
               <span className="flex size-4 shrink-0 items-center justify-center rounded-sm text-faint">
                 <CloudOff className="size-3.5" />
+              </span>
+            </Hint>
+          )}
+
+          {notInCatalog && (
+            <Hint content={t("modManager.notInCatalog")} className="max-w-64">
+              <span className="flex size-4 shrink-0 items-center justify-center rounded-sm text-warning">
+                <ShieldQuestion className="size-3.5" />
               </span>
             </Hint>
           )}

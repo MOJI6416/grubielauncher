@@ -8,12 +8,14 @@ import {
   IModpackAnnouncement,
   IModpackChannel,
   IModpackChannelUpdate,
+  IModpackRefusal,
   IModpackSessionReport,
   IModpackUpdate,
   ModpackChannelResult,
   UploadFileProgress,
 } from "@/types/Backend";
 import { IPublicProfile } from "@/types/Profile";
+import { modpackRefusalOf } from "./modpackRefusal";
 import type {
   INicknameStatus,
   NicknameAvailability,
@@ -168,7 +170,10 @@ export class Backend extends BaseService {
     return shareCode;
   }
 
-  async updateModpack(shareCode: string, update: IModpackUpdate) {
+  async updateModpack(
+    shareCode: string,
+    update: IModpackUpdate,
+  ): Promise<true | { refused: IModpackRefusal }> {
     const payload: IModpackUpdate =
       update.mods && update.mods.length > 0
         ? {
@@ -177,9 +182,15 @@ export class Backend extends BaseService {
           }
         : update;
 
-    await this.api.patch(`${this.baseUrl}/modpacks/${shareCode}`, {
-      ...payload,
-    });
+    try {
+      await this.api.patch(`${this.baseUrl}/modpacks/${shareCode}`, {
+        ...payload,
+      });
+    } catch (error) {
+      const refused = modpackRefusalOf(error);
+      if (refused) return { refused };
+      throw error;
+    }
 
     return true;
   }

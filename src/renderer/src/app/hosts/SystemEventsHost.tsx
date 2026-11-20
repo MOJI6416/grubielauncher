@@ -88,6 +88,16 @@ export function SystemEventsHost() {
           });
           return;
         }
+        if (payload?.reason === "signature") {
+          toast.warning(tRef.current("app.updateSignatureTitle"), {
+            id: "update-signature",
+            duration: 20_000,
+            description: tRef.current("app.updateSignatureHint", {
+              version: payload.version ?? "",
+            }),
+          });
+          return;
+        }
         showFailureToast(tRef.current("app.updateFailed"), payload?.message, {
           fallbackDescription: payload?.message,
         });

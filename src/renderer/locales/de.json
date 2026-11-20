@@ -871,6 +871,7 @@
     "uncheckedUpdates_one": "{{count}} Mod konnte nicht geprüft werden",
     "uncheckedUpdates_other": "{{count}} Mods konnten nicht geprüft werden",
     "notChecked": "Update-Prüfung für diesen Mod fehlgeschlagen",
+    "notInCatalog": "Weder auf CurseForge noch auf Modrinth gefunden: Herkunft der Datei unbekannt",
     "retryCheck": "Erneut prüfen",
     "sides": {
       "client": "Client",
@@ -2882,6 +2883,8 @@
     "updateFailed": "Launcher-Update fehlgeschlagen – Sie nutzen eine alte Version",
     "updateLoopTitle": "Nach dem Update startete eine ältere Version",
     "updateLoopHint": "Nach dem Versuch, auf {{version}} zu aktualisieren, startet diese Datei weiterhin die ältere Version: {{path}}. Öffnen Sie den installierten Launcher über seine Verknüpfung oder installieren Sie ihn neu. Das automatische Update ist vorübergehend pausiert, um wiederholte Installationen zu vermeiden.",
+    "updateSignatureTitle": "Das Update wurde nicht installiert",
+    "updateSignatureHint": "Version {{version}} ist nicht vom Grubie-Launcher-Team signiert, deshalb wurde die heruntergeladene Datei gelöscht. Sie können mit der aktuellen Version weiterspielen. Wenn das erneut passiert, laden Sie den Launcher von grubielauncher.com herunter.",
     "startupNoVersion": "Keine Instanz zum Starten gewählt",
     "startupNoVersionHint": "Wählen Sie links in der Liste eine Instanz oder installieren Sie eine neue.",
     "startupNoAccount": "Kein aktives Konto",
@@ -3283,7 +3286,14 @@
       "generic": "Die Instanz konnte nicht veröffentlicht werden. Versuchen Sie es später erneut.",
       "localMods": "Lokale Mods konnten nicht hochgeladen werden. Versuchen Sie erneut zu veröffentlichen.",
       "localModsMissing": "Diese Dateien fehlen im Ordner der Instanz: {{files}}. Legen Sie sie zurück oder entfernen Sie diese Mods aus der Instanz und veröffentlichen Sie erneut.",
-      "localModsRejected": "Der Grubie-Server hat diese Dateien nicht angenommen: {{files}}. Prüfen Sie Ihre Verbindung und veröffentlichen Sie erneut."
+      "localModsRejected": "Der Grubie-Server hat diese Dateien nicht angenommen: {{files}}. Prüfen Sie Ihre Verbindung und veröffentlichen Sie erneut.",
+      "infected": "Einige hochgeladene Dateien entsprechen bekannter Schadsoftware. Die Instanz wurde nicht veröffentlicht, und diese Dateien wurden vom Server gelöscht.",
+      "infectedFiles": "Diese Dateien entsprechen bekannter Schadsoftware: {{files}}. Die Instanz wurde nicht veröffentlicht, und die Dateien wurden vom Server gelöscht. Entfernen Sie sie aus der Instanz und prüfen Sie Ihren Computer mit einem Virenscanner.",
+      "filesMissing": "Einige hochgeladene Dateien fehlen auf dem Server. Entfernen Sie sie aus der Instanz, fügen Sie sie erneut hinzu und veröffentlichen Sie erneut.",
+      "filesMissingFiles": "Diese Dateien fehlen auf dem Server: {{files}}. Entfernen Sie sie aus der Instanz, fügen Sie sie erneut hinzu und veröffentlichen Sie erneut.",
+      "scanTooLarge": "Einige Dateien sind zu groß für die Prüfung, deshalb wurde die Instanz nicht veröffentlicht.",
+      "scanTooLargeFiles": "Diese Dateien sind zu groß für die Prüfung: {{files}}. Entfernen Sie sie aus der Instanz und veröffentlichen Sie erneut.",
+      "scanUnavailable": "Der Server konnte die hochgeladenen Dateien gerade nicht prüfen. Versuchen Sie es in ein paar Minuten erneut."
     },
     "title": "Zusammen spielen",
     "streamDiagnostic": {
@@ -3525,7 +3535,10 @@
       "turnHint": "Über den Grubie-TURN-Server: Eine direkte Verbindung kam nicht zustande",
       "relayHint": "Über den Grubie-Server: Direkte Verbindung nicht verfügbar oder ausgeschaltet"
     },
-    "localModsFailed": "Lokale Mods konnten nicht hochgeladen werden"
+    "localModsFailed": "Lokale Mods konnten nicht hochgeladen werden",
+    "publishInfected": "Die Instanz wurde nicht veröffentlicht: bekannte Schadsoftware gefunden",
+    "publishRefused": "Die Instanz wurde nicht veröffentlicht",
+    "publishScanUnavailable": "Die Dateien der Instanz konnten nicht geprüft werden"
   },
   "manageSkins": {
     "reset": "Skin zurücksetzen",
@@ -6049,10 +6062,12 @@
       "name": "Geben Sie der Instanz einen gültigen Namen.",
       "minecraftVersion": "Wählen Sie eine Minecraft-Version.",
       "loaderVersion": "Wählen Sie eine Loader-Version.",
-      "loaderVersionUnresolved": "Wählen Sie eine Loader-Version für dieses Paket."
+      "loaderVersionUnresolved": "Wählen Sie eine Loader-Version für dieses Paket.",
+      "jarCheck": "JAR-Dateien des Pakets werden auf CurseForge und Modrinth geprüft…"
     },
     "warnings": {
       "localMods": "Das Paket enthält manuell hinzugefügte Dateien. Installieren Sie es nur, wenn Sie dem Autor vertrauen.",
+      "unknownJars": "Einige JAR-Dateien des Pakets gibt es weder auf CurseForge noch auf Modrinth. Sie werden nur installiert, wenn Sie sie im Inhalt abhaken.",
       "snapshot": "Ein Snapshot ist eine Testversion des Spiels: Mods und Welten können kaputtgehen.",
       "oldVersion": "Eine sehr alte Version – die meisten modernen Mods laufen darauf nicht.",
       "legacyJava": "Diese Version läuft mit Java 8, es wird ebenfalls heruntergeladen.",
@@ -7011,8 +7026,15 @@
     "optionalShort": "optional",
     "optionalHint": "Der Autor hat diese Dateien als optional markiert. Dateien ohne Häkchen werden deaktiviert heruntergeladen – Sie können sie später im Inhalt der Instanz aktivieren.",
     "optionalFooter": "Dateien ohne Häkchen werden deaktiviert heruntergeladen – später im Inhalt aktivierbar",
+    "unknown": "Nicht gefunden",
+    "unknownHint": "Diese JAR-Dateien gibt es weder auf CurseForge noch auf Modrinth, niemand hat sie geprüft. Nur abgehakte Dateien werden installiert – haken Sie eine Datei nur an, wenn Sie dem Autor des Pakets vertrauen.",
+    "unknownRow": "Weder auf CurseForge noch auf Modrinth gefunden",
+    "uncheckedRow": "Konnte auf CurseForge und Modrinth nicht geprüft werden",
+    "unknownFooter": "Nicht abgehakte Dateien, die es nicht auf CurseForge oder Modrinth gibt, werden nicht installiert",
+    "checkingJars": "JAR-Dateien werden auf CurseForge und Modrinth geprüft…",
     "filter": "Im Inhalt suchen",
     "toggle": "„{{title}}“ aktivieren",
+    "install": "„{{title}}“ installieren",
     "notFound": "Nichts gefunden",
     "enabledOf": "{{enabled}} von {{total}}",
     "empty": "Dieses Modpack enthält keine Mods oder Pakete",

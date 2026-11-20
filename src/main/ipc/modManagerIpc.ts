@@ -37,6 +37,10 @@ import type {
   CatalogLinkResolution,
   ModrinthCollectionImport,
 } from "@/types/Catalog";
+import type {
+  PresenceItem,
+  PresenceResult,
+} from "../utilities/catalogPresence";
 
 const isProvider = check.oneOf(...Object.values(Provider));
 const isProjectType = check.oneOf(...Object.values(ProjectType));
@@ -323,6 +327,38 @@ export function registerModManagerIpc() {
       }
 
       return await ModManager.identifyLocalFiles(valid);
+    },
+  );
+
+  handleSafe<PresenceResult, [PresenceItem[]]>(
+    "modManager:catalogPresence",
+    (items) => ({
+      unknown: [],
+      unchecked: Array.isArray(items)
+        ? items
+            .map((item) => item?.key)
+            .filter((key): key is string => typeof key === "string")
+        : [],
+    }),
+    [check.arrayOf(check.object(), 5000)],
+    async (_, items: PresenceItem[]) => {
+      const valid = items.filter(
+        (item) =>
+          typeof item?.key === "string" &&
+          item.key.length > 0 &&
+          item.key.length <= 512 &&
+          (item.sha1 === undefined ||
+            (typeof item.sha1 === "string" && item.sha1.length <= 64)) &&
+          (item.path === undefined || typeof item.path === "string") &&
+          (item.url === undefined ||
+            (typeof item.url === "string" && /^https?:\/\//i.test(item.url))),
+      );
+
+      for (const item of valid) {
+        if (item.path) assertReadablePath(item.path, "modManager:catalogPresence");
+      }
+
+      return await ModManager.catalogPresence(valid);
     },
   );
 

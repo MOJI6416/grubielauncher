@@ -42,6 +42,13 @@ import {
 } from '../utilities/modManager'
 import { fileCurseForgeFingerprint } from '../utilities/cfFingerprint'
 import { getSha1 } from '../utilities/files'
+import {
+  catalogPresence,
+  downloadCapped,
+  type PresenceItem,
+  type PresenceResult
+} from '../utilities/catalogPresence'
+import { readFile } from 'fs/promises'
 import pLimit from 'p-limit'
 
 const SHA1_PATTERN = /^[0-9a-f]{40}$/
@@ -500,6 +507,21 @@ export class ModManager {
     }
 
     return sides
+  }
+
+  static catalogPresence(items: PresenceItem[]): Promise<PresenceResult> {
+    return catalogPresence(items, {
+      modrinthHashes: async (sha1s) => {
+        const found = await Modrinth.versionsByHashes(sha1s)
+        return found ? new Set(Object.keys(found)) : null
+      },
+      curseforgeFingerprints: async (fingerprints) => {
+        const found = await CurseForge.getFingerprintMatches(fingerprints)
+        return found ? new Set(found.map((match) => match.id)) : null
+      },
+      readFile: (filePath) => readFile(filePath),
+      download: downloadCapped
+    })
   }
 
   static async identifyLocalFiles(

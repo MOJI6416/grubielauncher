@@ -108,6 +108,14 @@ import { hasLocalContent, summarizePackContent } from "./packSummary";
 import { resolvePackVersions } from "./resolvePackVersions";
 import { buildSharedPack } from "./sharedPack";
 import { creationBlockers, creationWarnings } from "./creationPlan";
+import {
+  presenceItems,
+  skippedJarFiles,
+  skippedJarKeys,
+  unknownJarsOf,
+  withoutSkipped,
+  type UnknownJar,
+} from "./unknownJars";
 import { PackStageProgress } from "./PackStageProgress";
 import {
   type ServerTarget,
@@ -219,6 +227,13 @@ export function NewInstancePanel({
   const [blockedMods, setBlockedMods] = useState<IBlockedMod[]>([]);
   const [isBlockedOpen, setBlockedOpen] = useState(false);
   const [cropSource, setCropSource] = useState("");
+  const [jarCheck, setJarCheck] = useState<{
+    checking: boolean;
+    unknown: UnknownJar[];
+  }>({ checking: false, unknown: [] });
+  const [installUnknown, setInstallUnknown] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [serverMode, setServerMode] = useState<ServerMode>("modrinth");
   const [pinnedServer, setPinnedServer] = useState(modrinthServer);
 
@@ -310,6 +325,35 @@ export function NewInstancePanel({
       isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    const pack = state.pack;
+    setInstallUnknown(new Set());
+    if (!pack || pack.foreign) {
+      setJarCheck({ checking: false, unknown: [] });
+      return;
+    }
+
+    let cancelled = false;
+    setJarCheck({ checking: true, unknown: [] });
+    void (async () => {
+      const items = await presenceItems(state.mods, pack, api.path.join);
+      const result =
+        items.length > 0
+          ? await api.modManager.catalogPresence(items)
+          : { unknown: [], unchecked: [] };
+      if (!cancelled) {
+        setJarCheck({ checking: false, unknown: unknownJarsOf(result) });
+      }
+    })().catch(() => {
+      if (!cancelled) setJarCheck({ checking: false, unknown: [] });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.pack]);
 
   useEffect(() => {
     setDownloadedVersion(state.pack?.kind === "share");
@@ -868,11 +912,13 @@ export function NewInstancePanel({
         hasMinecraftVersion: !!state.minecraftVersion,
         hasLoaderVersion: !!state.loaderVersion,
         loaderVersionUnresolved: state.loaderVersionIssue !== null,
+        checkingJars: jarCheck.checking,
       }),
     [
       account,
       isBackendOnline,
       isInternetOnline,
+      jarCheck.checking,
       nameCheck.ok,
       state.loader,
       state.loaderVersion,
@@ -895,6 +941,7 @@ export function NewInstancePanel({
           )
         : null,
       hasLocalMods: hasLocalContent(state.mods),
+      unknownJars: jarCheck.unknown.length,
       bytes: contentSummary.bytes,
       isBackendOnline,
       needsBackend: !!state.pack?.shareCode,
@@ -904,6 +951,7 @@ export function NewInstancePanel({
   }, [
     contentSummary.bytes,
     isBackendOnline,
+    jarCheck.unknown.length,
     state.loader,
     state.loaderVersion?.id,
     state.minecraftVersion,
@@ -959,13 +1007,25 @@ export function NewInstancePanel({
       setBusy("install");
 
       try {
+        const skipped = skippedJarKeys(jarCheck.unknown, installUnknown);
+        if (skipped.size > 0 && state.pack) {
+          for (const file of await skippedJarFiles(
+            mods,
+            skipped,
+            state.pack,
+            api.path.join,
+          )) {
+            await api.fs.rimraf(file).catch(ignoreFailure);
+          }
+        }
+
         const { instance, extraFilesFailed } = await createInstance({
           name: state.name,
           image: state.image,
           loader: state.loader,
           loaderVersion: state.loaderVersion,
           minecraftVersion: state.minecraftVersion,
-          mods,
+          mods: withoutSkipped(mods, skipped),
           servers: state.servers,
           options: state.options,
           runArguments: state.runArguments,
@@ -1017,7 +1077,15 @@ export function NewInstancePanel({
         setBusy(null);
       }
     },
-    [beginInstall, closeModal, state, successCallback, t],
+    [
+      beginInstall,
+      closeModal,
+      installUnknown,
+      jarCheck.unknown,
+      state,
+      successCallback,
+      t,
+    ],
   );
 
   const handleCreate = useCallback(async () => {
@@ -1399,6 +1467,17 @@ export function NewInstancePanel({
                         : undefined
                     }
                     onChangePack={modpack ? undefined : dropPack}
+                    unknownJars={jarCheck.unknown}
+                    installUnknown={installUnknown}
+                    checkingJars={jarCheck.checking}
+                    onToggleInstall={(key, install) =>
+                      setInstallUnknown((current) => {
+                        const next = new Set(current);
+                        if (install) next.add(key);
+                        else next.delete(key);
+                        return next;
+                      })
+                    }
                     onToggleOptional={(key, enabled) =>
                       dispatch({
                         type: "setMods",

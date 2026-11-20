@@ -836,6 +836,7 @@ export class Mods {
     if (!this.version.version.loader.other) return;
 
     const otherUrl = this.version.version.loader.other.url;
+    const otherSha1 = this.version.version.loader.other.sha1;
 
     const tempPath = path.join(this.version.versionPath, "temp");
 
@@ -848,6 +849,7 @@ export class Mods {
               destination: path.join(tempPath, "other.zip"),
               group: "other",
               url: otherUrl,
+              ...(otherSha1 ? { sha1: otherSha1 } : {}),
               options: {
                 extract: true,
                 extractFolder: this.version.versionPath,

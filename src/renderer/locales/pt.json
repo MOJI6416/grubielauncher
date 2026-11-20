@@ -876,6 +876,7 @@
     "uncheckedUpdates_many": "{{count}} mods não puderam ser verificados",
     "uncheckedUpdates_other": "{{count}} mods não puderam ser verificados",
     "notChecked": "A verificação de atualização deste mod falhou",
+    "notInCatalog": "Não encontrado no CurseForge nem no Modrinth: a origem deste arquivo é desconhecida",
     "retryCheck": "Verificar de novo",
     "sides": {
       "client": "Cliente",
@@ -2904,6 +2905,8 @@
     "updateFailed": "A atualização do launcher falhou — você está em uma versão antiga",
     "updateLoopTitle": "Uma versão mais antiga iniciou depois da atualização",
     "updateLoopHint": "Depois da tentativa de atualizar para {{version}}, este arquivo ainda inicia a versão mais antiga: {{path}}. Abra o launcher instalado pelo atalho dele ou reinstale-o. A atualização automática foi pausada temporariamente para evitar instalações repetidas.",
+    "updateSignatureTitle": "A atualização não foi instalada",
+    "updateSignatureHint": "A versão {{version}} não é assinada pela equipe do Grubie Launcher, então o arquivo baixado foi excluído. Você pode continuar jogando na versão atual. Se isso se repetir, baixe o launcher em grubielauncher.com.",
     "startupNoVersion": "Nenhuma instância selecionada para iniciar",
     "startupNoVersionHint": "Escolha uma instância na lista à esquerda ou instale uma nova.",
     "startupNoAccount": "Nenhuma conta ativa",
@@ -3313,7 +3316,14 @@
       "generic": "Não foi possível publicar a instância. Tente de novo mais tarde.",
       "localMods": "Não foi possível enviar os mods locais. Tente publicar de novo.",
       "localModsMissing": "Estes arquivos não estão na pasta da instância: {{files}}. Coloque-os de volta ou remova esses mods da instância e publique de novo.",
-      "localModsRejected": "O servidor do Grubie não aceitou estes arquivos: {{files}}. Verifique a conexão e publique de novo."
+      "localModsRejected": "O servidor do Grubie não aceitou estes arquivos: {{files}}. Verifique a conexão e publique de novo.",
+      "infected": "Alguns arquivos enviados correspondem a malware conhecido. A instância não foi publicada e esses arquivos foram excluídos do servidor.",
+      "infectedFiles": "Estes arquivos correspondem a malware conhecido: {{files}}. A instância não foi publicada e os arquivos foram excluídos do servidor. Remova-os da instância e verifique o computador com um antivírus.",
+      "filesMissing": "Alguns arquivos enviados não estão no servidor. Remova-os da instância, adicione-os de novo e publique de novo.",
+      "filesMissingFiles": "Estes arquivos não estão no servidor: {{files}}. Remova-os da instância, adicione-os de novo e publique de novo.",
+      "scanTooLarge": "Alguns arquivos são grandes demais para verificar, então a instância não foi publicada.",
+      "scanTooLargeFiles": "Estes arquivos são grandes demais para verificar: {{files}}. Remova-os da instância e publique de novo.",
+      "scanUnavailable": "O servidor não conseguiu verificar os arquivos enviados agora. Tente publicar de novo em alguns minutos."
     },
     "title": "Jogar junto",
     "streamDiagnostic": {
@@ -3556,7 +3566,10 @@
       "turnHint": "Pelo servidor TURN do Grubie: não foi possível conectar diretamente",
       "relayHint": "Pelo servidor do Grubie: a conexão direta está indisponível ou desativada"
     },
-    "localModsFailed": "Não foi possível enviar os mods locais"
+    "localModsFailed": "Não foi possível enviar os mods locais",
+    "publishInfected": "A instância não foi publicada: malware conhecido encontrado",
+    "publishRefused": "A instância não foi publicada",
+    "publishScanUnavailable": "Não foi possível verificar os arquivos da instância"
   },
   "manageSkins": {
     "reset": "Redefinir skin",
@@ -6102,10 +6115,12 @@
       "name": "Dê um nome válido à instância.",
       "minecraftVersion": "Escolha uma versão do Minecraft.",
       "loaderVersion": "Escolha uma versão do loader.",
-      "loaderVersionUnresolved": "Escolha uma versão do loader para este pacote."
+      "loaderVersionUnresolved": "Escolha uma versão do loader para este pacote.",
+      "jarCheck": "Verificando os arquivos jar do pacote no CurseForge e no Modrinth…"
     },
     "warnings": {
       "localMods": "O pacote traz arquivos adicionados manualmente. Instale-o só se você confia no autor.",
+      "unknownJars": "Alguns arquivos jar do pacote não estão no CurseForge nem no Modrinth. Eles só são instalados se você os marcar no conteúdo.",
       "snapshot": "Um snapshot é uma versão de teste do jogo: mods e mundos podem quebrar.",
       "oldVersion": "Uma versão muito antiga — a maioria dos mods modernos não roda nela.",
       "legacyJava": "Esta versão roda no Java 8, que também será baixado.",
@@ -7068,8 +7083,15 @@
     "optionalShort": "opcional",
     "optionalHint": "O autor marcou esses arquivos como opcionais. Os desmarcados são baixados desativados — você pode ativá-los depois no conteúdo da instância.",
     "optionalFooter": "Arquivos desmarcados são baixados desativados — ative-os depois em Conteúdo",
+    "unknown": "Não encontrados",
+    "unknownHint": "Estes arquivos jar não estão no CurseForge nem no Modrinth, então ninguém os verificou. Só os marcados são instalados — marque um arquivo só se você confia no autor do pacote.",
+    "unknownRow": "Não encontrado no CurseForge nem no Modrinth",
+    "uncheckedRow": "Não foi possível verificar no CurseForge e no Modrinth",
+    "unknownFooter": "Arquivos desmarcados que não estão no CurseForge nem no Modrinth não serão instalados",
+    "checkingJars": "Verificando arquivos jar no CurseForge e no Modrinth…",
     "filter": "Buscar no conteúdo",
     "toggle": "Ativar “{{title}}”",
+    "install": "Instalar “{{title}}”",
     "notFound": "Nada encontrado",
     "enabledOf": "{{enabled}} de {{total}}",
     "empty": "Este modpack não tem mods nem pacotes",

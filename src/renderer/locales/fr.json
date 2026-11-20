@@ -876,6 +876,7 @@
     "uncheckedUpdates_many": "{{count}} mods n’ont pas pu être vérifiés",
     "uncheckedUpdates_other": "{{count}} mods n’ont pas pu être vérifiés",
     "notChecked": "La recherche de mises à jour a échoué pour ce mod",
+    "notInCatalog": "Introuvable sur CurseForge et Modrinth : l’origine de ce fichier est inconnue",
     "retryCheck": "Vérifier à nouveau",
     "sides": {
       "client": "Client",
@@ -2904,6 +2905,8 @@
     "updateFailed": "La mise à jour du launcher a échoué — vous utilisez une ancienne version",
     "updateLoopTitle": "Une ancienne version a démarré après la mise à jour",
     "updateLoopHint": "Après la tentative de mise à jour vers {{version}}, ce fichier lance toujours l’ancienne version : {{path}}. Ouvrez le launcher installé depuis son raccourci ou réinstallez-le. La mise à jour automatique est suspendue temporairement pour éviter des installations à répétition.",
+    "updateSignatureTitle": "La mise à jour n’a pas été installée",
+    "updateSignatureHint": "La version {{version}} n’est pas signée par l’équipe Grubie Launcher, le fichier téléchargé a donc été supprimé. Vous pouvez continuer à jouer avec la version actuelle. Si cela se reproduit, téléchargez le launcher sur grubielauncher.com.",
     "startupNoVersion": "Aucune instance choisie pour le lancement",
     "startupNoVersionHint": "Choisissez une instance dans la liste à gauche ou installez-en une nouvelle.",
     "startupNoAccount": "Aucun compte actif",
@@ -3313,7 +3316,14 @@
       "generic": "Impossible de publier l’instance. Réessayez plus tard.",
       "localMods": "Impossible d’envoyer les mods locaux. Essayez de publier à nouveau.",
       "localModsMissing": "Ces fichiers manquent dans le dossier de l’instance : {{files}}. Remettez-les ou retirez ces mods de l’instance, puis publiez à nouveau.",
-      "localModsRejected": "Le serveur Grubie n’a pas accepté ces fichiers : {{files}}. Vérifiez votre connexion et publiez à nouveau."
+      "localModsRejected": "Le serveur Grubie n’a pas accepté ces fichiers : {{files}}. Vérifiez votre connexion et publiez à nouveau.",
+      "infected": "Certains fichiers envoyés correspondent à un logiciel malveillant connu. L’instance n’a pas été publiée et ces fichiers ont été supprimés du serveur.",
+      "infectedFiles": "Ces fichiers correspondent à un logiciel malveillant connu : {{files}}. L’instance n’a pas été publiée et les fichiers ont été supprimés du serveur. Retirez-les de l’instance et analysez votre ordinateur avec un antivirus.",
+      "filesMissing": "Certains fichiers envoyés ne sont pas sur le serveur. Retirez-les de l’instance, ajoutez-les à nouveau et publiez à nouveau.",
+      "filesMissingFiles": "Ces fichiers ne sont pas sur le serveur : {{files}}. Retirez-les de l’instance, ajoutez-les à nouveau et publiez à nouveau.",
+      "scanTooLarge": "Certains fichiers sont trop volumineux pour être vérifiés, l’instance n’a donc pas été publiée.",
+      "scanTooLargeFiles": "Ces fichiers sont trop volumineux pour être vérifiés : {{files}}. Retirez-les de l’instance et publiez à nouveau.",
+      "scanUnavailable": "Le serveur n’a pas pu vérifier les fichiers envoyés pour le moment. Réessayez de publier dans quelques minutes."
     },
     "title": "Jouer ensemble",
     "streamDiagnostic": {
@@ -3556,7 +3566,10 @@
       "turnHint": "Via le serveur TURN de Grubie : la connexion directe n'a pas abouti",
       "relayHint": "Via le serveur Grubie : la connexion directe est indisponible ou désactivée"
     },
-    "localModsFailed": "Impossible d’envoyer les mods locaux"
+    "localModsFailed": "Impossible d’envoyer les mods locaux",
+    "publishInfected": "L’instance n’a pas été publiée : un logiciel malveillant connu a été trouvé",
+    "publishRefused": "L’instance n’a pas été publiée",
+    "publishScanUnavailable": "Impossible de vérifier les fichiers de l’instance"
   },
   "manageSkins": {
     "reset": "Réinitialiser le skin",
@@ -6106,10 +6119,12 @@
       "name": "Donnez un nom valide à l’instance.",
       "minecraftVersion": "Choisissez une version de Minecraft.",
       "loaderVersion": "Choisissez une version du chargeur.",
-      "loaderVersionUnresolved": "Choisissez une version du chargeur pour ce pack."
+      "loaderVersionUnresolved": "Choisissez une version du chargeur pour ce pack.",
+      "jarCheck": "Vérification des fichiers jar du pack sur CurseForge et Modrinth…"
     },
     "warnings": {
       "localMods": "Le pack contient des fichiers ajoutés à la main. Ne l’installez que si vous faites confiance à l’auteur.",
+      "unknownJars": "Certains fichiers jar du pack ne sont ni sur CurseForge ni sur Modrinth. Ils ne sont installés que si vous les cochez dans le contenu.",
       "snapshot": "Un snapshot est une version de test du jeu : les mods et les mondes peuvent casser.",
       "oldVersion": "Une version très ancienne — la plupart des mods modernes n’y fonctionneront pas.",
       "legacyJava": "Cette version fonctionne avec Java 8, qui sera aussi téléchargé.",
@@ -7072,8 +7087,15 @@
     "optionalShort": "facultatif",
     "optionalHint": "L’auteur a marqué ces fichiers comme facultatifs. Les fichiers non cochés sont téléchargés désactivés : vous pourrez les activer plus tard dans le contenu de l’instance.",
     "optionalFooter": "Les fichiers non cochés sont téléchargés désactivés : activez-les plus tard dans Contenu",
+    "unknown": "Introuvables",
+    "unknownHint": "Ces fichiers jar ne sont ni sur CurseForge ni sur Modrinth : personne ne les a vérifiés. Seuls les fichiers cochés sont installés — ne cochez un fichier que si vous faites confiance à l’auteur du pack.",
+    "unknownRow": "Introuvable sur CurseForge et Modrinth",
+    "uncheckedRow": "Impossible de vérifier sur CurseForge et Modrinth",
+    "unknownFooter": "Les fichiers non cochés absents de CurseForge et Modrinth ne seront pas installés",
+    "checkingJars": "Vérification des fichiers jar sur CurseForge et Modrinth…",
     "filter": "Rechercher dans le contenu",
     "toggle": "Activer « {{title}} »",
+    "install": "Installer « {{title}} »",
     "notFound": "Aucun résultat",
     "enabledOf": "{{enabled}} sur {{total}}",
     "empty": "Ce modpack ne contient ni mods ni packs",

@@ -129,6 +129,7 @@ jobs:
       needs.release.result == 'success' &&
       (needs.release-mac.result == 'success' || needs.release-mac.result == 'skipped')
     runs-on: ubuntu-latest
+    environment: update-signing
     concurrency:
       group: release-notes
       cancel-in-progress: false
@@ -143,6 +144,11 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
+
+      - name: Check update signatures
+        run: node .github/scripts/update-signing.mjs verify "${{ needs.notes.outputs.version }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish release and notes
         run: node .github/scripts/release-notes.mjs publish "${{ needs.notes.outputs.version }}"

@@ -66,6 +66,12 @@ describe("creationBlockers", () => {
       creationBlockers({ ...ready, loaderVersionUnresolved: true }),
     ).toEqual(["loaderVersionUnresolved"]);
   });
+
+  it("waits until the pack's jars are checked against CurseForge and Modrinth", () => {
+    expect(creationBlockers({ ...ready, checkingJars: true })).toEqual([
+      "jarCheck",
+    ]);
+  });
 });
 
 describe("creationWarnings", () => {
@@ -95,6 +101,12 @@ describe("creationWarnings", () => {
     expect(creationWarnings({ ...quiet, hasLocalMods: true })).toEqual([
       "localMods",
     ]);
+  });
+
+  it("names jars missing from CurseForge and Modrinth instead of the general hand-added note", () => {
+    expect(
+      creationWarnings({ ...quiet, hasLocalMods: true, unknownJars: 2 }),
+    ).toEqual(["unknownJars"]);
   });
 
   it("warns about a heavy download", () => {

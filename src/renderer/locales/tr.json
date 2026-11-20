@@ -871,6 +871,7 @@
     "uncheckedUpdates_one": "{{count}} mod denetlenemedi",
     "uncheckedUpdates_other": "{{count}} mod denetlenemedi",
     "notChecked": "Bu mod için güncelleme denetimi başarısız oldu",
+    "notInCatalog": "CurseForge’da ve Modrinth’te bulunamadı: bu dosyanın kaynağı bilinmiyor",
     "retryCheck": "Yeniden denetle",
     "sides": {
       "client": "İstemci",
@@ -2882,6 +2883,8 @@
     "updateFailed": "Başlatıcı güncellenemedi — eski bir sürümdesiniz",
     "updateLoopTitle": "Güncellemeden sonra eski bir sürüm başladı",
     "updateLoopHint": "{{version}} sürümüne güncelleme denendikten sonra bu dosya hâlâ eski sürümü başlatıyor: {{path}}. Kurulu başlatıcıyı kısayolundan açın veya yeniden kurun. Tekrarlanan kurulumu önlemek için otomatik güncelleme geçici olarak duraklatıldı.",
+    "updateSignatureTitle": "Güncelleme kurulmadı",
+    "updateSignatureHint": "{{version}} sürümü Grubie Launcher ekibi tarafından imzalanmamış, bu yüzden indirilen dosya silindi. Mevcut sürümde oynamaya devam edebilirsiniz. Bu tekrar olursa başlatıcıyı grubielauncher.com adresinden indirin.",
     "startupNoVersion": "Başlatmak için kurulum seçilmedi",
     "startupNoVersionHint": "Soldaki listeden bir kurulum seçin veya yenisini kurun.",
     "startupNoAccount": "Etkin hesap yok",
@@ -3283,7 +3286,14 @@
       "generic": "Kurulum yayımlanamadı. Daha sonra tekrar deneyin.",
       "localMods": "Yerel modlar yüklenemedi. Yeniden yayımlamayı deneyin.",
       "localModsMissing": "Bu dosyalar kurulum klasöründe yok: {{files}}. Onları geri koyun veya bu modları kurulumdan kaldırıp yeniden yayımlayın.",
-      "localModsRejected": "Grubie sunucusu bu dosyaları kabul etmedi: {{files}}. Bağlantınızı kontrol edip yeniden yayımlayın."
+      "localModsRejected": "Grubie sunucusu bu dosyaları kabul etmedi: {{files}}. Bağlantınızı kontrol edip yeniden yayımlayın.",
+      "infected": "Yüklenen bazı dosyalar bilinen bir zararlı yazılımla eşleşiyor. Kurulum yayımlanmadı ve bu dosyalar sunucudan silindi.",
+      "infectedFiles": "Bu dosyalar bilinen bir zararlı yazılımla eşleşiyor: {{files}}. Kurulum yayımlanmadı ve dosyalar sunucudan silindi. Onları kurulumdan kaldırın ve bilgisayarınızı bir antivirüsle tarayın.",
+      "filesMissing": "Yüklenen bazı dosyalar sunucuda yok. Onları kurulumdan kaldırın, yeniden ekleyin ve tekrar yayımlayın.",
+      "filesMissingFiles": "Bu dosyalar sunucuda yok: {{files}}. Onları kurulumdan kaldırın, yeniden ekleyin ve tekrar yayımlayın.",
+      "scanTooLarge": "Bazı dosyalar kontrol edilemeyecek kadar büyük, bu yüzden kurulum yayımlanmadı.",
+      "scanTooLargeFiles": "Bu dosyalar kontrol edilemeyecek kadar büyük: {{files}}. Onları kurulumdan kaldırın ve tekrar yayımlayın.",
+      "scanUnavailable": "Sunucu yüklenen dosyaları şu anda kontrol edemedi. Birkaç dakika sonra tekrar yayımlamayı deneyin."
     },
     "title": "Birlikte oyna",
     "streamDiagnostic": {
@@ -3525,7 +3535,10 @@
       "turnHint": "Grubie TURN sunucusu üzerinden: doğrudan bağlantı kurulamadı",
       "relayHint": "Grubie sunucusu üzerinden: doğrudan bağlantı kullanılamıyor veya kapalı"
     },
-    "localModsFailed": "Yerel modlar yüklenemedi"
+    "localModsFailed": "Yerel modlar yüklenemedi",
+    "publishInfected": "Kurulum yayımlanmadı: bilinen bir zararlı yazılım bulundu",
+    "publishRefused": "Kurulum yayımlanmadı",
+    "publishScanUnavailable": "Kurulum dosyaları kontrol edilemedi"
   },
   "manageSkins": {
     "reset": "Skini sıfırla",
@@ -6049,10 +6062,12 @@
       "name": "Kuruluma geçerli bir ad verin.",
       "minecraftVersion": "Bir Minecraft sürümü seçin.",
       "loaderVersion": "Bir yükleyici sürümü seçin.",
-      "loaderVersionUnresolved": "Bu paket için bir yükleyici sürümü seçin."
+      "loaderVersionUnresolved": "Bu paket için bir yükleyici sürümü seçin.",
+      "jarCheck": "Paketin jar dosyaları CurseForge ve Modrinth’te kontrol ediliyor…"
     },
     "warnings": {
       "localMods": "Paket elle eklenmiş dosyalar içeriyor. Yalnızca yazara güveniyorsanız kurun.",
+      "unknownJars": "Paketteki bazı jar dosyaları CurseForge’da veya Modrinth’te yok. İçerikte işaretlemediğiniz sürece kurulmazlar.",
       "snapshot": "Ön izleme, oyunun test sürümüdür: modlar ve dünyalar bozulabilir.",
       "oldVersion": "Çok eski bir sürüm — çoğu modern mod bunda çalışmaz.",
       "legacyJava": "Bu sürüm Java 8 ile çalışır, o da indirilecek.",
@@ -7011,8 +7026,15 @@
     "optionalShort": "isteğe bağlı",
     "optionalHint": "Yazar bu dosyaları isteğe bağlı olarak işaretledi. İşaretsiz dosyalar kapalı olarak indirilir; bunları daha sonra kurulumun içeriğinden açabilirsiniz.",
     "optionalFooter": "İşaretsiz dosyalar kapalı indirilir; daha sonra İçerik bölümünden açabilirsiniz",
+    "unknown": "Bulunamadı",
+    "unknownHint": "Bu jar dosyaları CurseForge’da veya Modrinth’te yok, yani kimse onları kontrol etmedi. Yalnızca işaretli dosyalar kurulur — bir dosyayı yalnızca paketin yazarına güveniyorsanız işaretleyin.",
+    "unknownRow": "CurseForge’da ve Modrinth’te bulunamadı",
+    "uncheckedRow": "CurseForge ve Modrinth’te kontrol edilemedi",
+    "unknownFooter": "CurseForge’da veya Modrinth’te olmayan işaretsiz dosyalar kurulmaz",
+    "checkingJars": "Jar dosyaları CurseForge ve Modrinth’te kontrol ediliyor…",
     "filter": "İçerikte ara",
     "toggle": "“{{title}}” öğesini aç",
+    "install": "“{{title}}” öğesini kur",
     "notFound": "Hiçbir şey bulunamadı",
     "enabledOf": "{{enabled}} / {{total}}",
     "empty": "Bu mod paketinde mod veya paket yok",

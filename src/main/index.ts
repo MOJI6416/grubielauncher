@@ -43,10 +43,14 @@ import { disposePushToTalk } from "./services/PushToTalk";
 import { initWorldBackupService } from "./services/WorldBackupService";
 import { initTray } from "./tray/tray";
 import { initUsageStats } from "./utilities/usageStats";
-import { startBackgroundUpdateChecks } from "./utilities/backgroundUpdates";
+import {
+  rememberRejectedUpdate,
+  startBackgroundUpdateChecks,
+} from "./utilities/backgroundUpdates";
 import { recoverWindowsStartup } from "./utilities/windowsStartup";
 import { scheduleUpdateInstall } from "./utilities/updateInstall";
 import { loadAutoUpdater } from "./utilities/autoUpdater";
+import { verifyDownloadedUpdate } from "./utilities/updateSignature";
 import { getDataRoot } from "./utilities/dataRoot";
 import { prepareDataRoot } from "./windows/dataLocationWindow";
 import {
@@ -342,7 +346,11 @@ function openMainWindowOnce() {
 
 function notifyMainWindowUpdateFailed(
   message: string,
-  details: { reason?: "loop"; version?: string; path?: string } = {},
+  details: {
+    reason?: "loop" | "signature";
+    version?: string;
+    path?: string;
+  } = {},
 ) {
   openMainWindowOnce();
   showMainWindow();
@@ -620,7 +628,10 @@ if (!gotTheLock) {
       });
     };
 
-    const continueWithFailedUpdate = (message: string) => {
+    const continueWithFailedUpdate = (
+      message: string,
+      details?: { reason: "signature"; version: string },
+    ) => {
       if (updateFlowSettled) return;
       updateFlowSettled = true;
       journal.warn("updater", "update check failed, starting anyway", {
@@ -636,7 +647,7 @@ if (!gotTheLock) {
         );
         openMainWindowOnce();
       } else {
-        notifyMainWindowUpdateFailed(message);
+        notifyMainWindowUpdateFailed(message, details);
       }
       flushPendingDeepLinks();
       startBackgroundUpdateChecks({
@@ -646,15 +657,29 @@ if (!gotTheLock) {
       });
     };
 
-    autoUpdater.on("update-downloaded", (info) => {
+    autoUpdater.on("update-downloaded", async (info) => {
       journal.info("updater", "update downloaded", {
         version: info.version,
         installNow: !updateFlowSettled,
       });
-      const startedWithoutUpdate = updateFlowSettled;
-      updateFlowSettled = true;
+      if (updateFlowSettled) return;
       clearUpdateWatchdog();
-      if (startedWithoutUpdate) return;
+
+      const verdict = await verifyDownloadedUpdate(info);
+      if (!verdict.ok) {
+        journal.warn("updater", "update signature rejected", {
+          version: info.version,
+          reason: verdict.reason,
+        });
+        rememberRejectedUpdate(info.version);
+        continueWithFailedUpdate(
+          `Update ${info.version} was rejected: ${verdict.reason}`,
+          { reason: "signature", version: info.version },
+        );
+        return;
+      }
+      if (updateFlowSettled) return;
+      updateFlowSettled = true;
 
       sendUpdaterStatus("downloaded");
       void scheduleUpdateInstall({

@@ -29,6 +29,7 @@ import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 import { modpackProjectKey } from "@/shared/modpackMerge";
 import { isProjectEnabled, optionalSummary } from "@/shared/modpackOptional";
 import { PackContentList, type PackContentItem } from "./PackContentList";
+import type { UnknownJar } from "./unknownJars";
 
 export function PackConfirm({
   state,
@@ -39,6 +40,10 @@ export function PackConfirm({
   onChangePack,
   onSelectLoaderVersion,
   onToggleOptional,
+  unknownJars = [],
+  installUnknown,
+  checkingJars = false,
+  onToggleInstall,
 }: {
   state: NewInstanceState;
   folderPath: string;
@@ -48,6 +53,10 @@ export function PackConfirm({
   onChangePack?: () => void;
   onSelectLoaderVersion: (id: string) => void;
   onToggleOptional?: (key: string, enabled: boolean) => void;
+  unknownJars?: UnknownJar[];
+  installUnknown?: ReadonlySet<string>;
+  checkingJars?: boolean;
+  onToggleInstall?: (key: string, install: boolean) => void;
 }) {
   const { t } = useTranslation();
   const redact = useRedact();
@@ -60,8 +69,10 @@ export function PackConfirm({
   );
   const contentItems = useMemo((): PackContentItem[] => {
     const keys = new Set(optionalKeys ?? []);
+    const unknown = new Map(unknownJars.map((jar) => [jar.key, jar]));
     return state.mods.map((mod) => {
       const key = modpackProjectKey(mod);
+      const jar = unknown.get(key);
       return {
         key,
         title: mod.title,
@@ -70,9 +81,22 @@ export function PackConfirm({
         projectType: mod.projectType,
         optional: keys.has(key),
         enabled: isProjectEnabled(mod),
+        ...(jar
+          ? {
+              unknown: jar.checked ? ("unknown" as const) : ("unchecked" as const),
+              install: installUnknown?.has(key) === true,
+            }
+          : {}),
       };
     });
-  }, [optionalKeys, state.mods]);
+  }, [installUnknown, optionalKeys, state.mods, unknownJars]);
+  const footerText = checkingJars
+    ? t("packContent.checkingJars")
+    : unknownJars.length > 0
+      ? t("packContent.unknownFooter")
+      : optional.total > 0
+        ? t("packContent.optionalFooter")
+        : t("newInstance.afterInstallHint");
 
   const sizes = [
     t("sizes.0"),
@@ -341,20 +365,11 @@ export function PackConfirm({
           items={contentItems}
           emptyText={t("newInstance.emptyContent")}
           onToggle={onToggleOptional}
+          onToggleInstall={onToggleInstall}
           footer={
-            <Hint
-              content={
-                optional.total > 0
-                  ? t("packContent.optionalFooter")
-                  : t("newInstance.afterInstallHint")
-              }
-              variant="text"
-              truncatedOnly
-            >
+            <Hint content={footerText} variant="text" truncatedOnly>
               <span className="min-w-0 truncate text-2xs text-faint">
-                {optional.total > 0
-                  ? t("packContent.optionalFooter")
-                  : t("newInstance.afterInstallHint")}
+                {footerText}
               </span>
             </Hint>
           }

@@ -205,6 +205,18 @@ export interface ILocalIdentifyResult {
   unavailable: Provider[];
 }
 
+export interface ICatalogPresenceItem {
+  key: string;
+  sha1?: string;
+  path?: string;
+  url?: string;
+}
+
+export interface ICatalogPresenceResult {
+  unknown: string[];
+  unchecked: string[];
+}
+
 export type TrashReason = "updated" | "removed" | "foreign";
 
 export interface IAddedLocalProject {

@@ -82,6 +82,7 @@ import type { ILocalAccount } from "@/types/Account";
 import type { CatalogState } from "./useCatalogSearch";
 import type { DeletionPlan } from "@renderer/utilities/mod";
 import type { ModFileStates } from "./useModFileStates";
+import { useCatalogPresence } from "./useCatalogPresence";
 import type { SelectionGesture } from "@renderer/utilities/rangeSelection";
 import type { ReactVirtualizer, VirtualItem } from "@tanstack/react-virtual";
 import { countFeature } from "@renderer/features/usage/usage";
@@ -285,6 +286,12 @@ export function ContentListPane({
   canInstallShaderLoader,
 }: ContentListPaneProps) {
   const modSets = useModSets();
+  const notInCatalog = useCatalogPresence(
+    scope === "library" ? instancePath : undefined,
+    projectType,
+    rows,
+    fileStates,
+  );
   const favoriteItem =
     detailEntry &&
     isCatalogProvider(detailEntry.provider) &&
@@ -454,6 +461,7 @@ export function ContentListPane({
                           updateCheck.held.get(entry.key)?.name
                         }
                         isUnchecked={updateCheck.unchecked.has(entry.key)}
+                        notInCatalog={notInCatalog.has(entry.key)}
                         origin={
                           scope === "library"
                             ? contentOrigin(entry, libraryPackKeys)

@@ -67,6 +67,8 @@ import {
   publishFailureChannels,
   publishReadiness,
   publishStagePercent,
+  PublishRefusedError,
+  refusedFileList,
   resolvePublishErrorCode,
   summarizePublish,
   uploadStagePercent,
@@ -654,7 +656,33 @@ export function Share({
     if (errorCode === "nameTaken")
       return t("share.nameTaken", { name: selectedVersion?.version.name });
     if (errorCode === "localMods") return t("share.localModsFailed");
+    if (errorCode === "infected") return t("share.publishInfected");
+    if (errorCode === "scanUnavailable") return t("share.publishScanUnavailable");
+    if (errorCode === "filesMissing" || errorCode === "scanTooLarge") {
+      return t("share.publishRefused");
+    }
     return t("versions.publishError");
+  }
+
+  function refusalErrorText(errorCode: PublishErrorCode, error: unknown) {
+    const files = refusedFileList(error);
+    if (!files) return undefined;
+    if (errorCode === "infected") {
+      return t("share.publishErrors.infectedFiles", { files });
+    }
+    if (errorCode === "filesMissing") {
+      return t("share.publishErrors.filesMissingFiles", { files });
+    }
+    if (errorCode === "scanTooLarge") {
+      return t("share.publishErrors.scanTooLargeFiles", { files });
+    }
+    return undefined;
+  }
+
+  function publishFailureDetail(errorCode: PublishErrorCode, error: unknown) {
+    return errorCode === "localMods"
+      ? localModsErrorText(error)
+      : refusalErrorText(errorCode, error);
   }
 
   function localModsErrorText(error: unknown): string | undefined {
@@ -680,8 +708,7 @@ export function Share({
   function showPublishFailure(errorCode: PublishErrorCode, error: unknown) {
     showFailureToast(getPublishErrorToast(errorCode), error, {
       channels: publishFailureChannels(errorCode, error),
-      description:
-        errorCode === "localMods" ? localModsErrorText(error) : undefined,
+      description: publishFailureDetail(errorCode, error),
       fallbackDescription:
         errorCode === "nameTaken"
           ? t("share.nameTakenHint")
@@ -707,6 +734,14 @@ export function Share({
         return t("share.publishErrors.logoFailed");
       case "localMods":
         return t("share.publishErrors.localMods");
+      case "infected":
+        return t("share.publishErrors.infected");
+      case "filesMissing":
+        return t("share.publishErrors.filesMissing");
+      case "scanTooLarge":
+        return t("share.publishErrors.scanTooLarge");
+      case "scanUnavailable":
+        return t("share.publishErrors.scanUnavailable");
       default:
         return t("share.publishErrors.generic");
     }
@@ -1006,7 +1041,12 @@ export function Share({
         shareCode,
         update,
       );
-      if (!isUpdated) throw new Error("not updated");
+      if (isUpdated !== true) {
+        if (isUpdated && typeof isUpdated === "object") {
+          throw new PublishRefusedError(isUpdated.refused);
+        }
+        throw new Error("not updated");
+      }
       isRemoteCommitted = true;
       publishCommittedRef.current = true;
 
@@ -1068,8 +1108,7 @@ export function Share({
         stage: "error",
         percent: 100,
         errorCode,
-        errorDetail:
-          errorCode === "localMods" ? localModsErrorText(error) : undefined,
+        errorDetail: publishFailureDetail(errorCode, error),
         statusCode: uploadProgressRef.current?.statusCode,
         failedStage: publishStageRef.current ?? undefined,
       });

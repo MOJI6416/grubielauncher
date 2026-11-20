@@ -1,7 +1,7 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Package, Search } from "lucide-react";
+import { Package, Search, ShieldQuestion } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Empty, EmptyDescription } from "@/components/ui/empty";
@@ -23,9 +23,11 @@ export interface PackContentItem {
   projectType: ProjectType;
   optional?: boolean;
   enabled?: boolean;
+  unknown?: "unknown" | "unchecked";
+  install?: boolean;
 }
 
-type View = "all" | "optional";
+type View = "all" | "optional" | "unknown";
 
 export function filterPackContent(
   items: PackContentItem[],
@@ -36,7 +38,9 @@ export function filterPackContent(
 
   return items.filter(
     (item) =>
-      (view === "all" || item.optional) &&
+      (view === "all" ||
+        (view === "optional" && item.optional) ||
+        (view === "unknown" && item.unknown)) &&
       (!needle || item.title.toLowerCase().includes(needle)),
   );
 }
@@ -48,6 +52,7 @@ export function PackContentList({
   emptyText,
   footer,
   onToggle,
+  onToggleInstall,
   className,
 }: {
   title: string;
@@ -56,17 +61,32 @@ export function PackContentList({
   emptyText: string;
   footer?: ReactNode;
   onToggle?: (key: string, enabled: boolean) => void;
+  onToggleInstall?: (key: string, install: boolean) => void;
   className?: string;
 }) {
   const { t } = useTranslation();
   const optionalCount = items.filter((item) => item.optional).length;
-  const [view, setView] = useState<View>(optionalCount > 0 ? "optional" : "all");
+  const unknownCount = items.filter((item) => item.unknown).length;
+  const [view, setView] = useState<View>(
+    unknownCount > 0 ? "unknown" : optionalCount > 0 ? "optional" : "all",
+  );
+  const [shownUnknown, setShownUnknown] = useState(unknownCount > 0);
+
+  useEffect(() => {
+    if (unknownCount === 0 || shownUnknown) return;
+    setShownUnknown(true);
+    setView("unknown");
+  }, [shownUnknown, unknownCount]);
   const [query, setQuery] = useState("");
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
   );
 
-  const activeView: View = optionalCount > 0 ? view : "all";
+  const activeView: View =
+    (view === "optional" && optionalCount > 0) ||
+    (view === "unknown" && unknownCount > 0)
+      ? view
+      : "all";
   const visible = useMemo(
     () => filterPackContent(items, query, activeView),
     [activeView, items, query],
@@ -99,19 +119,33 @@ export function PackContentList({
       )}
     >
       <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border pr-1.5 pl-2.5">
-        {optionalCount > 0 ? (
+        {optionalCount > 0 || unknownCount > 0 ? (
           <SegmentedControl<View>
             value={activeView}
             ariaLabel={title}
             onChange={setView}
             options={[
               { value: "all", label: title, count: items.length },
-              {
-                value: "optional",
-                label: t("packContent.optional"),
-                count: optionalCount,
-                hint: t("packContent.optionalHint"),
-              },
+              ...(unknownCount > 0
+                ? [
+                    {
+                      value: "unknown" as const,
+                      label: t("packContent.unknown"),
+                      count: unknownCount,
+                      hint: t("packContent.unknownHint"),
+                    },
+                  ]
+                : []),
+              ...(optionalCount > 0
+                ? [
+                    {
+                      value: "optional" as const,
+                      label: t("packContent.optional"),
+                      count: optionalCount,
+                      hint: t("packContent.optionalHint"),
+                    },
+                  ]
+                : []),
             ]}
           />
         ) : (
@@ -176,11 +210,15 @@ export function PackContentList({
             {virtualizer.getVirtualItems().map((row) => {
               const item = visible[row.index];
               if (!item) return null;
-              const enabled = item.enabled !== false;
+              const enabled = item.unknown
+                ? item.install === true
+                : item.enabled !== false;
               const toggle =
-                item.optional && onToggle
-                  ? (value: boolean) => onToggle(item.key, value)
-                  : null;
+                item.unknown && onToggleInstall
+                  ? (value: boolean) => onToggleInstall(item.key, value)
+                  : item.optional && onToggle
+                    ? (value: boolean) => onToggle(item.key, value)
+                    : null;
 
               return (
                 <div
@@ -198,7 +236,12 @@ export function PackContentList({
                   {toggle && (
                     <Checkbox
                       checked={enabled}
-                      aria-label={t("packContent.toggle", { title: item.title })}
+                      aria-label={t(
+                        item.unknown
+                          ? "packContent.install"
+                          : "packContent.toggle",
+                        { title: item.title },
+                      )}
                       onClick={(event) => event.stopPropagation()}
                       onCheckedChange={(value) => toggle(value === true)}
                     />
@@ -229,7 +272,22 @@ export function PackContentList({
                     </span>
                   </Hint>
 
-                  {item.optional && !toggle && (
+                  {item.unknown && (
+                    <Hint
+                      content={t(
+                        item.unknown === "unknown"
+                          ? "packContent.unknownRow"
+                          : "packContent.uncheckedRow",
+                      )}
+                      className="max-w-64"
+                    >
+                      <span className="flex size-4 shrink-0 items-center justify-center text-warning">
+                        <ShieldQuestion className="size-3.5" />
+                      </span>
+                    </Hint>
+                  )}
+
+                  {item.optional && !item.unknown && !toggle && (
                     <span className="shrink-0 text-3xs text-faint">
                       {t("packContent.optionalShort")}
                     </span>

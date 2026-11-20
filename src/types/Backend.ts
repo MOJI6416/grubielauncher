@@ -102,6 +102,17 @@ export interface IModpackUpdate {
   isPublic?: boolean | null
 }
 
+export type ModpackRefusalCode =
+  | 'infected'
+  | 'filesMissing'
+  | 'tooLarge'
+  | 'scanUnavailable'
+
+export interface IModpackRefusal {
+  code: ModpackRefusalCode
+  files: { file: string; threats?: string[] }[]
+}
+
 export interface IModpackAnnouncement {
   id: string
   text: string

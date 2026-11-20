@@ -13,6 +13,8 @@ import {
   publishFailureChannels,
   publishReadiness,
   publishStagePercent,
+  PublishRefusedError,
+  refusedFileList,
   resolvePublishErrorCode,
   samePaths,
   summarizePublish,
@@ -569,5 +571,36 @@ describe("world publishing and the file list", () => {
 
     expect(pickNewPublishDefaults(fields, new Set())).not.toContain("world");
     expect(pickNewPublishDefaults(fields, new Set())).toContain("mods");
+  });
+});
+
+describe("publish refused by the jar check", () => {
+  it("gets an error code per refusal", () => {
+    const refused = (
+      code: "infected" | "filesMissing" | "tooLarge" | "scanUnavailable",
+    ) => resolvePublishErrorCode(new PublishRefusedError({ code, files: [] }));
+
+    expect(refused("infected")).toBe("infected");
+    expect(refused("filesMissing")).toBe("filesMissing");
+    expect(refused("tooLarge")).toBe("scanTooLarge");
+    expect(refused("scanUnavailable")).toBe("scanUnavailable");
+  });
+
+  it("names the files and what was found in them", () => {
+    const error = new PublishRefusedError({
+      code: "infected",
+      files: [
+        { file: "helper.jar", threats: ["fractureiser", "Skyrage"] },
+        { file: "other" },
+      ],
+    });
+
+    expect(refusedFileList(error)).toBe(
+      "helper.jar (fractureiser, Skyrage), other",
+    );
+    expect(
+      refusedFileList(new PublishRefusedError({ code: "infected", files: [] })),
+    ).toBeUndefined();
+    expect(refusedFileList(new Error("x"))).toBeUndefined();
   });
 });

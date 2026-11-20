@@ -9,10 +9,12 @@ export type CreationBlocker =
   | "name"
   | "minecraftVersion"
   | "loaderVersion"
-  | "loaderVersionUnresolved";
+  | "loaderVersionUnresolved"
+  | "jarCheck";
 
 export type CreationWarning =
   | "localMods"
+  | "unknownJars"
   | "snapshot"
   | "oldVersion"
   | "legacyJava"
@@ -30,12 +32,14 @@ export interface CreationInput {
   hasMinecraftVersion: boolean;
   hasLoaderVersion: boolean;
   loaderVersionUnresolved: boolean;
+  checkingJars?: boolean;
 }
 
 export interface WarningInput {
   versionKind: VersionKind | null;
   javaMajor: number | null;
   hasLocalMods: boolean;
+  unknownJars?: number;
   bytes: number;
   isBackendOnline: boolean;
   needsBackend: boolean;
@@ -55,6 +59,7 @@ export function creationBlockers(input: CreationInput): CreationBlocker[] {
     blockers.push("loaderVersion");
   }
   if (input.loaderVersionUnresolved) blockers.push("loaderVersionUnresolved");
+  if (input.checkingJars) blockers.push("jarCheck");
 
   return blockers;
 }
@@ -66,7 +71,8 @@ export function canCreate(input: CreationInput): boolean {
 export function creationWarnings(input: WarningInput): CreationWarning[] {
   const warnings: CreationWarning[] = [];
 
-  if (input.hasLocalMods) warnings.push("localMods");
+  if ((input.unknownJars ?? 0) > 0) warnings.push("unknownJars");
+  else if (input.hasLocalMods) warnings.push("localMods");
   if (input.versionKind === "snapshot") warnings.push("snapshot");
   if (input.versionKind === "old") warnings.push("oldVersion");
   if (input.javaMajor !== null && input.javaMajor <= 8) {

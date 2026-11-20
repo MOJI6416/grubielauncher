@@ -881,6 +881,7 @@
     "uncheckedUpdates_many": "Nie udało się sprawdzić {{count}} modów",
     "uncheckedUpdates_other": "Nie udało się sprawdzić {{count}} moda",
     "notChecked": "Nie udało się sprawdzić aktualizacji tego moda",
+    "notInCatalog": "Nie znaleziono na CurseForge ani Modrinth: pochodzenie tego pliku jest nieznane",
     "retryCheck": "Sprawdź ponownie",
     "sides": {
       "client": "Klient",
@@ -2923,6 +2924,8 @@
     "updateFailed": "Aktualizacja launchera nie powiodła się — używasz starej wersji",
     "updateLoopTitle": "Po aktualizacji uruchomiła się starsza wersja",
     "updateLoopHint": "Po próbie aktualizacji do {{version}} ten plik nadal uruchamia starszą wersję: {{path}}. Otwórz zainstalowany launcher z jego skrótu lub zainstaluj go ponownie. Automatyczna aktualizacja jest tymczasowo wstrzymana, aby uniknąć powtarzania instalacji.",
+    "updateSignatureTitle": "Aktualizacja nie została zainstalowana",
+    "updateSignatureHint": "Wersja {{version}} nie jest podpisana przez zespół Grubie Launcher, więc pobrany plik został usunięty. Możesz dalej grać na obecnej wersji. Jeśli to się powtórzy, pobierz launcher ze strony grubielauncher.com.",
     "startupNoVersion": "Nie wybrano instancji do uruchomienia",
     "startupNoVersionHint": "Wybierz instancję na liście po lewej lub zainstaluj nową.",
     "startupNoAccount": "Brak aktywnego konta",
@@ -3340,7 +3343,14 @@
       "generic": "Nie udało się opublikować instancji. Spróbuj ponownie później.",
       "localMods": "Nie udało się przesłać lokalnych modów. Spróbuj opublikować ponownie.",
       "localModsMissing": "Tych plików brakuje w folderze instancji: {{files}}. Przywróć je albo usuń te mody z instancji, a potem opublikuj ponownie.",
-      "localModsRejected": "Serwer Grubie nie przyjął tych plików: {{files}}. Sprawdź połączenie i opublikuj ponownie."
+      "localModsRejected": "Serwer Grubie nie przyjął tych plików: {{files}}. Sprawdź połączenie i opublikuj ponownie.",
+      "infected": "Niektóre przesłane pliki pasują do znanego złośliwego oprogramowania. Instancja nie została opublikowana, a te pliki usunięto z serwera.",
+      "infectedFiles": "Te pliki pasują do znanego złośliwego oprogramowania: {{files}}. Instancja nie została opublikowana, a pliki usunięto z serwera. Usuń je z instancji i przeskanuj komputer programem antywirusowym.",
+      "filesMissing": "Części przesłanych plików nie ma na serwerze. Usuń je z instancji, dodaj ponownie i opublikuj jeszcze raz.",
+      "filesMissingFiles": "Tych plików nie ma na serwerze: {{files}}. Usuń je z instancji, dodaj ponownie i opublikuj jeszcze raz.",
+      "scanTooLarge": "Niektóre pliki są za duże, by je sprawdzić, dlatego instancja nie została opublikowana.",
+      "scanTooLargeFiles": "Te pliki są za duże, by je sprawdzić: {{files}}. Usuń je z instancji i opublikuj ponownie.",
+      "scanUnavailable": "Serwer nie mógł teraz sprawdzić przesłanych plików. Spróbuj opublikować za kilka minut."
     },
     "title": "Grajcie razem",
     "streamDiagnostic": {
@@ -3584,7 +3594,10 @@
       "turnHint": "Przez serwer TURN Grubie: nie udało się połączyć bezpośrednio",
       "relayHint": "Przez serwer Grubie: połączenie bezpośrednie jest niedostępne lub wyłączone"
     },
-    "localModsFailed": "Nie udało się przesłać lokalnych modów"
+    "localModsFailed": "Nie udało się przesłać lokalnych modów",
+    "publishInfected": "Instancja nie została opublikowana: wykryto znane złośliwe oprogramowanie",
+    "publishRefused": "Instancja nie została opublikowana",
+    "publishScanUnavailable": "Nie udało się sprawdzić plików instancji"
   },
   "manageSkins": {
     "reset": "Resetuj skin",
@@ -6160,10 +6173,12 @@
       "name": "Nadaj instancji prawidłową nazwę.",
       "minecraftVersion": "Wybierz wersję Minecrafta.",
       "loaderVersion": "Wybierz wersję loadera.",
-      "loaderVersionUnresolved": "Wybierz wersję loadera dla tej paczki."
+      "loaderVersionUnresolved": "Wybierz wersję loadera dla tej paczki.",
+      "jarCheck": "Sprawdzamy pliki jar paczki na CurseForge i Modrinth…"
     },
     "warnings": {
       "localMods": "Paczka zawiera ręcznie dodane pliki. Instaluj ją tylko wtedy, gdy ufasz autorowi.",
+      "unknownJars": "Części plików jar z paczki nie ma na CurseForge ani Modrinth. Nie zostaną zainstalowane, dopóki nie zaznaczysz ich w zawartości.",
       "snapshot": "Snapshot to testowa wersja gry: mody i światy mogą się zepsuć.",
       "oldVersion": "Bardzo stara wersja — większość nowoczesnych modów na niej nie działa.",
       "legacyJava": "Ta wersja działa na Javie 8, ona też zostanie pobrana.",
@@ -7130,8 +7145,15 @@
     "optionalShort": "opcjonalny",
     "optionalHint": "Autor oznaczył te pliki jako opcjonalne. Pliki bez zaznaczenia zostaną pobrane jako wyłączone — możesz je włączyć później w zawartości instancji.",
     "optionalFooter": "Pliki bez zaznaczenia są pobierane jako wyłączone — włączysz je później w Zawartości",
+    "unknown": "Nie znaleziono",
+    "unknownHint": "Tych plików jar nie ma na CurseForge ani Modrinth, więc nikt ich nie sprawdzał. Zainstalują się tylko zaznaczone — zaznaczaj plik tylko wtedy, gdy ufasz autorowi paczki.",
+    "unknownRow": "Nie znaleziono na CurseForge ani Modrinth",
+    "uncheckedRow": "Nie udało się sprawdzić na CurseForge i Modrinth",
+    "unknownFooter": "Niezaznaczone pliki, których nie ma na CurseForge ani Modrinth, nie zostaną zainstalowane",
+    "checkingJars": "Sprawdzamy pliki jar na CurseForge i Modrinth…",
     "filter": "Szukaj w zawartości",
     "toggle": "Włącz „{{title}}”",
+    "install": "Zainstaluj „{{title}}”",
     "notFound": "Nic nie znaleziono",
     "enabledOf": "{{enabled}} z {{total}}",
     "empty": "Ten modpack nie zawiera modów ani paczek",
