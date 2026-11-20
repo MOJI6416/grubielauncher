@@ -20,20 +20,6 @@ describe("resolveInstanceStatuses", () => {
     expect(resolveInstanceStatuses({ installed: false })).toEqual(["broken"]);
   });
 
-  it("hides the downloaded mark while an update is pending", () => {
-    expect(
-      resolveInstanceStatuses({
-        installed: true,
-        downloaded: true,
-        update: "behind",
-      }),
-    ).toEqual(["update"]);
-
-    expect(
-      resolveInstanceStatuses({ installed: true, downloaded: true }),
-    ).toEqual(["downloaded"]);
-  });
-
   it("ignores update states that are not behind", () => {
     expect(
       resolveInstanceStatuses({ installed: true, update: "sync" }),

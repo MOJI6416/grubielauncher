@@ -24,7 +24,7 @@ import {
   Tag,
   Trash2,
   TriangleAlert,
-  UserPlus,
+  LogIn,
   X,
   Blocks,
 } from "lucide-react";
@@ -79,6 +79,7 @@ import {
   versionsAtom,
   versionsLoadedAtom,
   versionsUnreadableAtom,
+  versionsRejectedAtom,
   pathsAtom,
 } from "@renderer/stores/atoms";
 import {
@@ -90,7 +91,6 @@ import {
   toggleUngrouped,
 } from "@/shared/instancesFile";
 import { patchSettings } from "@renderer/utilities/persistSettings";
-import { isOwner, parseVersionOwner } from "@renderer/utilities/versionPure";
 import { reloadInstanceLibrary } from "@renderer/utilities/version";
 import type { InstancesView } from "@/types/Settings";
 import type { InstanceTab } from "@renderer/navigation/routes";
@@ -98,6 +98,7 @@ import type { RunGameParams } from "@renderer/features/launch/types";
 import { GroupDialog } from "./GroupDialog";
 import { InstanceRow, InstanceTile } from "./InstanceCard";
 import { OrphanFolders, useOrphanFolders } from "./OrphanFolders";
+import { RejectedInstances } from "./RejectedInstances";
 import { duplicateInstance } from "./duplicateInstance";
 import { openPortDialog } from "@renderer/features/port/portStore";
 import { buildInstanceActions } from "./instanceActions";
@@ -120,6 +121,7 @@ import {
 import { openNewInstance } from "./newInstance";
 import { navigate } from "@renderer/navigation/navigate";
 import { resolveInstanceStatuses } from "./instanceStatus";
+import { resolveOwnerMark } from "./ownerMark";
 import { selectInstance } from "./selectInstance";
 import { openInstanceScreen } from "./openInstanceScreen";
 import {
@@ -157,6 +159,7 @@ import {
 } from "@renderer/components/RemovalCollapse";
 import { showUndoToast } from "@renderer/utilities/undoToast";
 import { openAddAccount } from "@renderer/features/accounts/addAccountRequest";
+import { PopularModpacks } from "./PopularModpacks";
 
 const api = window.api;
 
@@ -226,7 +229,12 @@ export function InstanceLibrary({
 
   const view = settings.instancesView;
   const sort = settings.instancesSort as LibrarySort;
-  const orphans = useOrphanFolders(versions);
+  const folders = useOrphanFolders(versions);
+  const rejected = useAtomValue(versionsRejectedAtom);
+  const orphans = useMemo(() => {
+    const skip = new Set(rejected.map((entry) => entry.folder));
+    return folders.filter((folder) => !skip.has(folder));
+  }, [folders, rejected]);
 
   useInstanceUpdateCheck(versions, account, isNetwork);
   useModpackUpdateCheck(versions, isInternetOnline);
@@ -678,6 +686,16 @@ export function InstanceLibrary({
               </DropdownMenuContent>
             </DropdownMenu>
 
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-9 shrink-0"
+              onClick={onCreateGroup}
+            >
+              <FolderPlus />
+              {t("versions.groups.button")}
+            </Button>
+
             <SortMenu
               value={sort}
               options={LIBRARY_SORTS.map((option) => ({
@@ -692,13 +710,7 @@ export function InstanceLibrary({
                 )
               }
               className="size-9"
-            >
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={onCreateGroup}>
-                <FolderPlus />
-                <span>{t("versions.groups.create")}</span>
-              </DropdownMenuItem>
-            </SortMenu>
+            />
 
             <SegmentedControl
               iconOnly
@@ -774,16 +786,18 @@ export function InstanceLibrary({
               {t("catalog.open")}
             </Button>
 
-            <Button
-              variant="secondary"
-              className="h-9 shrink-0"
-              data-focus-key="new-instance"
-              disabled={!account}
-              onClick={() => openNewInstance()}
-            >
-              <PackagePlus />
-              {t("versions.create")}
-            </Button>
+            <Hint content={account ? undefined : t("versions.emptyNoAccount")}>
+              <Button
+                variant="secondary"
+                className="h-9 shrink-0"
+                data-focus-key="new-instance"
+                disabled={!account}
+                onClick={() => openNewInstance()}
+              >
+                <PackagePlus />
+                {t("versions.create")}
+              </Button>
+            </Hint>
           </div>
         )
       )}
@@ -891,12 +905,21 @@ export function InstanceLibrary({
                 </Button>
               </>
             ) : (
-              <Button onClick={openAddAccount}>
-                <UserPlus />
-                {t("accounts.addAccount")}
+              <Button
+                size="lg"
+                className="h-11 px-6"
+                onClick={() =>
+                  accounts.length > 0
+                    ? navigate({ name: "accounts" })
+                    : openAddAccount()
+                }
+              >
+                <LogIn />
+                {t("accounts.signIn")}
               </Button>
             )}
           </EmptyContent>
+          <PopularModpacks className="mt-4" />
         </Empty>
       ) : visible.length === 0 ? (
         <Empty className="min-h-0 flex-1 border border-dashed border-border bg-card">
@@ -1043,21 +1066,7 @@ export function InstanceLibrary({
 
                 const instance = entry.instance;
                 const itemKey = entry.key;
-                const ownerOk = isOwner(
-                  instance.version.owner,
-                  account ?? undefined,
-                  instance.version.ownerId,
-                );
-                const ownerInfo = ownerOk
-                  ? null
-                  : parseVersionOwner(instance.version.owner);
-                const ownerAccount = ownerInfo
-                  ? accounts?.find(
-                      (entry) =>
-                        entry.type === ownerInfo.type &&
-                        entry.nickname === ownerInfo.nickname,
-                    )
-                  : undefined;
+                const ownerMark = resolveOwnerMark(instance, account, accounts);
 
                 const actions = renderMenu(instance, itemKey);
                 const deleteAction = actions
@@ -1120,7 +1129,6 @@ export function InstanceLibrary({
                     update:
                       updates[itemKey] ??
                       (modpackUpdates[itemKey] ? "behind" : undefined),
-                    downloaded: instance.version.downloadedVersion,
                   }),
                   tags: tags[itemKey] ?? [],
                   playtime: playtime[itemKey],
@@ -1128,8 +1136,8 @@ export function InstanceLibrary({
                     instance.version.lastLaunch,
                     stats[itemKey],
                   ),
-                  ownerNickname: ownerInfo?.nickname,
-                  ownerImage: ownerAccount?.image,
+                  ownerNickname: ownerMark?.nickname,
+                  ownerImage: ownerMark?.image,
                   canPlay: !!account && !isLaunching,
                   menu,
                   onSelect: () => select(instance),
@@ -1230,6 +1238,14 @@ export function InstanceLibrary({
           </div>
         </ScrollArea>
       )}
+
+      <Collapse show={versionsLoaded && rejected.length > 0}>
+        {versionsLoaded && rejected.length > 0 ? (
+          <div className="mt-2.5">
+            <RejectedInstances orphans={folders} />
+          </div>
+        ) : null}
+      </Collapse>
 
       <Collapse show={versionsLoaded && orphans.length > 0}>
         {versionsLoaded && orphans.length > 0 ? (

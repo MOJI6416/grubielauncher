@@ -73,6 +73,9 @@ export const errorLogSeenAtom = atom(0);
 export const versionsAtom = atom<Version[]>([]);
 export const versionsLoadedAtom = atom(false);
 export const versionsUnreadableAtom = atom<string | null>(null);
+export const versionsRejectedAtom = atom<
+  { folder: string; unreadable?: string }[]
+>([]);
 export const fileDragOverAtom = atom(false);
 export const installActiveAtom = atom(false);
 export const accountsAtom = atom<ILocalAccount[]>([]);

@@ -1263,7 +1263,7 @@
     "importAction": "Importuj",
     "imported": "Dodano serwery: {{total}}",
     "discover": {
-      "mine": "Moje serwery",
+      "mine": "Lista serwerów",
       "byAddress": "Po adresie",
       "title": "Serwery z Modrinth",
       "search": "Szukaj serwerów",
@@ -1934,7 +1934,7 @@
           "nextMatch": "Następne trafienie w wyszukiwaniu logu",
           "prevMatch": "Poprzednie trafienie",
           "clearSearch": "Wyczyść wyszukiwanie w logu",
-          "history": "Historia poleceń konsoli Twojego serwera"
+          "history": "Historia poleceń konsoli serwera instancji"
         },
         "chat": {
           "send": "Wyślij wiadomość",
@@ -2535,7 +2535,7 @@
     "organizeLoadFailedHint": "Plik instances.json jest uszkodzony lub zajęty. Grupy, tagi i kolejność są zablokowane, aby plik nie został nadpisany — uruchom launcher ponownie, gdy znów będzie można go odczytać.",
     "publishError": "Nie udało się opublikować instancji",
     "deleteError": "Nie udało się usunąć instancji",
-    "serverManager": "Zarządzanie serwerem",
+    "serverManager": "Serwer instancji",
     "createingServer": "Tworzenie serwera",
     "serverCore": "Rdzeń serwera",
     "aikarFlags": "Flagi Aikara",
@@ -2548,7 +2548,7 @@
     "copyRelativePath": "Kopiuj polecenie ze ścieżką względną",
     "copyShareLink": "Kliknij, aby skopiować link",
     "ownerTooltip": "Właściciel: {{nickname}}",
-    "downloadedLabel": "Pobrano",
+    "ownerUpdatesHint": "Instancja gracza {{nickname}}: aktualizuje ją autor, nowe wersje przychodzą przez Grubie.",
     "synchronizeDescription": "Pobierz najnowszą wersję instancji z serwera",
     "syncReplacesFiles": "Synchronizacja zastępuje pliki instancji opublikowanymi — lokalne zmiany w konfiguracjach i światach przepadną.",
     "syncInterrupted": "Synchronizacja nie została ukończona",
@@ -2601,6 +2601,7 @@
     },
     "tags": {
       "manage": "Tagi",
+      "edit": "Edytuj tagi",
       "title": "Tagi · {{name}}",
       "empty": "Brak tagów",
       "add": "Dodaj tag i naciśnij Enter",
@@ -2624,6 +2625,7 @@
     "deleteBusyHint": "Launcher jest zajęty inną instalacją lub usuwaniem. Poczekaj na zakończenie i spróbuj ponownie.",
     "groups": {
       "create": "Nowa grupa",
+      "button": "Grupa",
       "placeholder": "Nazwa grupy",
       "hint": "Przeciągnij instancję na nagłówek grupy, aby ją tam przenieść.",
       "ungrouped": "Bez grupy",
@@ -2637,12 +2639,16 @@
     },
     "deleteInstance": "Usuń instancję",
     "serverInstall": "Zainstaluj serwer",
+    "serverEmpty": {
+      "title": "Ta instancja nie ma jeszcze serwera",
+      "hint": "Launcher zainstaluje serwer z tą samą wersją i modami — można na nim grać ze znajomymi. Możesz go w każdej chwili usunąć, trafi do kosza."
+    },
     "serverSetup": {
       "description": "Launcher pobierze rdzeń serwera do folderu instancji i skopiuje do niego zawartość instancji.",
       "coreHint": "Rdzeń to program serwera: od niego zależy, jakie mody i pluginy serwer może uruchomić.",
       "memoryHint": "Dla tej instancji zalecamy {{recommended}} MB. Ten komputer ma łącznie {{total}} MB.",
       "memoryHintShort": "Dla tej instancji zalecamy {{recommended}} MB.",
-      "afterInstall": "Po instalacji instancja dostanie zakładkę „Mój serwer” — tam można uruchomić i skonfigurować serwer.",
+      "afterInstall": "Po instalacji instancja dostanie zakładkę „Serwer instancji” — tam można uruchomić i skonfigurować serwer.",
       "eulaRequired": "Zaakceptuj umowę Minecrafta, aby kontynuować.",
       "confirmLead": "Sprawdź, co launcher zrobi z folderem instancji.",
       "continue": "Dalej",
@@ -2651,7 +2657,7 @@
       "effectCore": "Rdzeń {{core}} zostanie pobrany z internetu.",
       "effectMods": "Mody i konfiguracje instancji zostaną skopiowane na serwer.",
       "effectEula": "Akceptacja umowy Minecrafta zostanie zapisana w eula.txt.",
-      "reversible": "Serwer można później usunąć w zakładce „Mój serwer” — trafi do kosza.",
+      "reversible": "Serwer można później usunąć w zakładce „Serwer instancji” — trafi do kosza.",
       "cleanedUp": "Usunięto niedokończony folder serwera."
     },
     "runCommand": "Polecenie uruchomienia",
@@ -2682,7 +2688,12 @@
       "java": "Java",
       "diskUsage": "Na dysku",
       "launchProfile": "Profil uruchomienia",
-      "javaNotInstalled": "Java {{major}} nie jest jeszcze pobrana — launcher pobierze ją przy uruchomieniu."
+      "javaNotInstalled": "Java {{major}} nie jest jeszcze pobrana — launcher pobierze ją przy uruchomieniu.",
+      "javaProblem": {
+        "missing": "nie znaleziono",
+        "untrusted": "spoza listy launchera",
+        "not_installed": "jeszcze nie pobrana"
+      }
     },
     "screenshots": {
       "title": "Zrzuty ekranu",
@@ -2769,9 +2780,13 @@
       "publishSectionTitle": "Co zmieni się na serwerze"
     },
     "deleteRemoteErrorHint": "Serwer odmówił usunięcia publikacji. Na tym komputerze nic nie usunięto — spróbuj ponownie później.",
-    "unsafeFolderName": "Nazwa folderu ma ponad 32 znaki lub zawiera niedozwolone znaki. Zmień nazwę folderu i uruchom launcher ponownie.",
     "libraryUnreadable": "Nie udało się odczytać biblioteki instancji",
     "libraryUnreadableHint": "Folder versions się nie otworzył. Nic nie usunięto — instancje zostają na dysku. Sprawdź folder i dysk, a potem spróbuj ponownie.",
+    "rejected": {
+      "tooLong": "Nie otwarto: nazwa folderu ma więcej niż {{max}} znaków",
+      "unreadable": "Nie otwarto: nie można odczytać version.json",
+      "openFailed": "Nie udało się otworzyć folderu"
+    },
     "updateLoader": "Aktualizuj wersję loadera",
     "legacyLoaders": "Dla starych wersji",
     "launchProfileDropped": "Nie zostanie przekazane przy uruchomieniu",
@@ -4203,7 +4218,9 @@
       "tooManyChunks": "Za dużo chunków naraz. Zaznacz mniej i powtórz.",
       "backupFailed": "Kopia zapasowa się nie udała, więc nic nie zmieniono.",
       "failed": "Sprawdź wolne miejsce na dysku i spróbuj ponownie."
-    }
+    },
+    "worldMissing": "Nie znaleziono świata",
+    "missingHint": "Folder mógł zostać przemianowany lub usunięty. Wróć i otwórz edytor chunków ponownie."
   },
   "worldBackups": {
     "title": "Kopie zapasowe",
@@ -5551,9 +5568,9 @@
       "modpack": "Modpack",
       "content": "Zawartość",
       "worlds": "Światy",
-      "servers": "Serwery",
+      "servers": "Lista serwerów",
       "settings": "Ustawienia",
-      "server": "Mój serwer",
+      "server": "Serwer instancji",
       "logs": "Logi",
       "statistics": "Statystyki",
       "configs": "Konfiguracje",
@@ -5619,9 +5636,10 @@
   "configs": {
     "emptyTitle": "Brak plików konfiguracji",
     "emptyHint": "Ta instancja nie ma jeszcze folderu config — pojawi się po pierwszym uruchomieniu z modami.",
+    "runToCreate": "Uruchom grę, aby utworzyć konfiguracje",
     "pickFile": "Wybierz plik po lewej, aby go edytować",
     "saved": "Zapisano plik",
-    "savedOverExternal": "Plik zmienił się na dysku od czasu otwarcia — tamta wersja jest teraz najnowszym wpisem w „Przywróć”.",
+    "savedOverExternal": "Plik zmienił się na dysku od czasu otwarcia — tamta zawartość jest teraz najnowszym wpisem w „Kopie pliku”.",
     "saveFailed": "Nie udało się zapisać pliku",
     "saveFailedHint": "Plik nie został zapisany. Zmiany nadal są w edytorze — zamknij grę lub edytor, który trzyma plik, i ponownie naciśnij „Zapisz”.",
     "backupFailedHint": "Nie udało się utworzyć kopii obecnego pliku, więc nic nie nadpisano. Zmiany nadal są w edytorze.",
@@ -5632,9 +5650,9 @@
     "unsaved": "Niezapisane zmiany",
     "unsavedHint": "Zmiany w pliku konfiguracji nie są zapisane. Przepadną, jeśli wyjdziesz.",
     "backupBaseline": "Oryginalny plik",
-    "backupPrevious": "Poprzednia wersja",
-    "backupRestored": "Wersja wczytana do edytora — zapisz, aby ją zastosować",
-    "backupMissing": "Pliku zapisanej wersji już nie ma",
+    "backupPrevious": "Poprzednia kopia",
+    "backupRestored": "Kopia wczytana do edytora — zapisz, aby ją zastosować",
+    "backupMissing": "Pliku zapisanej kopii już nie ma",
     "completion": {
       "literal": "wartość",
       "key": "klucz",
@@ -5649,7 +5667,7 @@
     "findPrevious": "Poprzednie (Shift+Enter)",
     "findNext": "Następne (Enter)",
     "findHint": "Znajdź w pliku ({{mod}}+F)",
-    "backupsHint": "Kliknij wersję, aby przed przywróceniem porównać ją z obecnym plikiem.",
+    "backupsHint": "Kliknij kopię, aby przed przywróceniem porównać ją z obecnym plikiem.",
     "showInFolder": "Pokaż w folderze",
     "discard": "Odrzuć",
     "modeLabel": "Widok edytora",
@@ -5705,7 +5723,7 @@
     "restoredFile": "Przywrócono plik z historii",
     "missing": {
       "title": "Pliku już nie ma",
-      "hint": "Mod utworzy go ponownie przy następnym uruchomieniu gry. Aby odzyskać stare ustawienia, przywróć zapisaną wersję.",
+      "hint": "Mod utworzy go ponownie przy następnym uruchomieniu gry. Aby odzyskać stare ustawienia, przywróć zapisaną kopię.",
       "restore": "Porównaj i przywróć"
     },
     "diff": {
@@ -5713,7 +5731,7 @@
       "short": "Zmiany",
       "changesTitle": "Niezapisane zmiany",
       "back": "Wróć do edycji",
-      "snapshotTitle": "Przywrócić wersję z {{date}}?",
+      "snapshotTitle": "Przywrócić kopię z {{date}}?",
       "apply": "Przywróć",
       "same": "Brak różnic",
       "hidden_one": "{{count}} niezmieniona linia",
@@ -5866,6 +5884,12 @@
       "summary": "Ostatnia aktualizacja: {{from}} → {{to}} · {{date}}",
       "action": "Przywróć {{version}}",
       "backups": "Kopie plików",
+      "filesHint_one": "Cofnięcie przywróci {{count}} plik zapisany przed aktualizacją:",
+      "filesHint_few": "Cofnięcie przywróci {{count}} pliki zapisane przed aktualizacją:",
+      "filesHint_many": "Cofnięcie przywróci {{count}} plików zapisanych przed aktualizacją:",
+      "filesHint_other": "Cofnięcie przywróci {{count}} pliku zapisanego przed aktualizacją:",
+      "filesNone": "Przed aktualizacją nie trzeba było zapisywać żadnego pliku — cofnięcie przywróci tylko wersję modpacka.",
+      "removes": "Nowe pliki z aktualizacji do usunięcia: {{count}}",
       "done": "Instancja wróciła do wersji {{version}}",
       "failed": "Nie udało się przywrócić poprzedniej wersji"
     },
@@ -5968,6 +5992,11 @@
     },
     "offline": "Brak połączenia",
     "offlineHint": "Usługi Grubie są niedostępne, sprawdzanie aktualizacji jest wstrzymane.",
+    "signInHint": "Zaloguj się na konto, aby grać.",
+    "popular": {
+      "title": "Popularne modpacki",
+      "failed": "Nie udało się otworzyć modpacka"
+    },
     "orphans": {
       "title_one": "Nie rozpoznano {{count}} folderu",
       "title_few": "Nie rozpoznano {{count}} folderów",
@@ -6156,6 +6185,15 @@
       "server": "Pod serwer",
       "launchers": "Z launchera"
     },
+    "sourceHints": {
+      "custom": "Loader i wersja",
+      "community": "Od graczy Grubie",
+      "catalog": "CurseForge, Modrinth",
+      "code": "Kod lub link",
+      "file": ".zip lub .mrpack",
+      "launchers": "Prism, TLauncher i inne",
+      "server": "Wersja z adresu"
+    },
     "pickHint": {
       "custom": "Wybierz loader i wersję Minecrafta.",
       "community": "Wybierz paczkę udostępnioną przez innego gracza — zainstaluje się w całości.",
@@ -6227,7 +6265,7 @@
     "pickVersionFirst": "Najpierw wybierz wersję Minecrafta",
     "notChosen": "nie wybrano",
     "releasedOn": "Wydano",
-    "ownServer": "Własny serwer",
+    "ownServer": "Serwer instancji",
     "serverSupported": "obsługiwany",
     "serverUnsupported": "nieobsługiwany",
     "vanillaNote": "Czysta gra bez modów. Wybierz loader, jeśli chcesz mody — instancję zawsze można utworzyć od nowa.",
@@ -6271,7 +6309,9 @@
     "extraFilesFailed": "Utworzono instancję, ale nie wszystkie pliki się pobrały",
     "extraFilesFailedHint": "Część plików instancji nie dotarła. Szczegóły są w dzienniku błędów.",
     "afterInstallHint": "Zawartość, serwery i argumenty uruchamiania można zmienić po instalacji",
-    "modpacksNoneForFilters": "Brak modpacków dla wybranej wersji i loadera — zmień filtry."
+    "modpacksNoneForFilters": "Brak modpacków dla wybranej wersji i loadera — zmień filtry.",
+    "modpacksNoneForAuthor": "Ten autor nie ma tu innych modpacków — usuń filtr autora.",
+    "modpacksCatalogEmpty": "{{source}} nie zwrócił żadnego modpacka. Spróbuj ponownie za minutę."
   },
   "community": {
     "search": "Szukaj po nazwie paczki",

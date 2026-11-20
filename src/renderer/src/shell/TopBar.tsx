@@ -42,6 +42,7 @@ import { ALT_KEY, MOD_KEY } from "@renderer/utilities/platform";
 import { TITLEBAR_HEIGHT } from "@/shared/titlebar";
 import { BrandMark } from "./BrandMark";
 import { useZoneStyle } from "@renderer/features/theme/zoneStyle";
+import { chunkEditorWorldAtom } from "@renderer/features/worlds/chunks/chunkEditorWorld";
 
 const api = window.api;
 
@@ -50,6 +51,7 @@ function useCrumbs(route: Route): { kind?: string; title: string } {
   const versions = useAtomValue(versionsAtom);
   const chats = useAtomValue(agentChatsAtom);
   const currentChatId = useAtomValue(agentCurrentChatAtom);
+  const chunkWorld = useAtomValue(chunkEditorWorldAtom);
 
   switch (route.name) {
     case "home":
@@ -61,6 +63,23 @@ function useCrumbs(route: Route): { kind?: string; title: string } {
       return {
         kind: t("shell.nav.instance"),
         title: instance?.version.name ?? t("shell.nav.instances"),
+      };
+    }
+    case "chunks": {
+      const instance = versions.find(
+        (version) => instanceKey(version) === route.id,
+      );
+      const worldName =
+        chunkWorld?.instanceId === route.id && chunkWorld.folder === route.world
+          ? chunkWorld.name
+          : route.world;
+      return {
+        kind: [
+          instance?.version.name ?? t("shell.nav.instances"),
+          t("worlds.title"),
+          worldName,
+        ].join(" › "),
+        title: t("worlds.tabs.chunks"),
       };
     }
     case "instance-new":
@@ -213,7 +232,13 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
       </div>
 
       <div className="ml-1.5 flex min-w-0 flex-1 items-baseline gap-2 text-sm">
-        {kind && <span className="shrink-0 text-faint">{kind}</span>}
+        {kind && (
+          <Hint content={kind} variant="text" side="bottom" truncatedOnly>
+            <span className="max-w-[70%] shrink-0 truncate text-faint">
+              {kind}
+            </span>
+          </Hint>
+        )}
         <Hint content={title} variant="text" side="bottom" truncatedOnly>
           <span className="truncate font-medium text-foreground">{title}</span>
         </Hint>

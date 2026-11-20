@@ -34,6 +34,7 @@ import { ScreenFallback } from "./ScreenFallback";
 import {
   LazyAgentScreen,
   LazyCatalogScreen,
+  LazyChunkEditorScreen,
   LazyInstanceScreen,
   LazyNewInstanceScreen,
   LazyNewsScreen,
@@ -129,6 +130,14 @@ function RouteScreen({
           key={instanceMountKey(selectedVersion)}
           runGame={runGame}
         />
+      </Suspense>
+    );
+  }
+
+  if (route.name === "chunks") {
+    return (
+      <Suspense fallback={<ScreenFallback />}>
+        <LazyChunkEditorScreen instanceId={route.id} folder={route.world} />
       </Suspense>
     );
   }

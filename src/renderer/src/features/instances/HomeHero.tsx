@@ -5,6 +5,7 @@ import {
   Ellipsis,
   Folder,
   Loader2,
+  LogIn,
   Play,
   SlidersHorizontal,
 } from "lucide-react";
@@ -22,11 +23,13 @@ import { Hint } from "@renderer/components/Hint";
 import { LoaderLabel } from "@renderer/components/Loaders";
 import {
   accountAtom,
+  accountsAtom,
   installActiveAtom,
   isRunningAtom,
   networkAtom,
 } from "@renderer/stores/atoms";
 import { navigate } from "@renderer/navigation/navigate";
+import { openAddAccount } from "@renderer/features/accounts/addAccountRequest";
 import type { InstanceTab } from "@renderer/navigation/routes";
 import { formatRelative } from "@renderer/utilities/date";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
@@ -40,6 +43,8 @@ import { launchProgressAtom } from "@renderer/features/launch/launchProgress";
 import { ContinuePanel } from "./ContinuePanel";
 import { InstanceArt, loaderTint } from "./InstanceArt";
 import { InstanceStatusChip } from "./InstanceStatusChip";
+import { OwnerMark } from "./InstanceCard";
+import { resolveOwnerMark } from "./ownerMark";
 import { InstanceUpdateBadge } from "./InstanceUpdateBadge";
 import { countMods, instanceLastLaunch } from "./contentCounts";
 import { duplicateInstance } from "./duplicateInstance";
@@ -85,6 +90,7 @@ export function HomeHero({
   onManageTags: (key: string, name: string) => void;
 }) {
   const account = useAtomValue(accountAtom);
+  const accounts = useAtomValue(accountsAtom);
   const isLaunching = useAtomValue(isRunningAtom);
   const isInstallActive = useAtomValue(installActiveAtom);
   const isBackendOnline = useAtomValue(networkAtom);
@@ -118,6 +124,7 @@ export function HomeHero({
     return () => clearInterval(timer);
   }, [session]);
 
+  const ownerMark = resolveOwnerMark(instance, account, accounts);
   const statistics = stats[key];
   const image = resolveLocalImage(instance.version.image);
   const modsCount = countMods(instance.version.loader.mods);
@@ -134,7 +141,6 @@ export function HomeHero({
     running: !!session,
     installed: instance.hasManifest,
     update: updates[key] ?? (modpackUpdates[key] ? "behind" : undefined),
-    downloaded: instance.version.downloadedVersion,
   });
 
   const actions = buildInstanceActions({
@@ -246,14 +252,30 @@ export function HomeHero({
 
       <div className="relative flex min-w-0 flex-1 flex-col justify-between p-4">
         <div className="flex min-w-0 items-start gap-3.5">
-          <InstanceArt
-            eager
-            morph="hero"
-            name={instance.version.name}
-            image={instance.version.image}
-            className="size-14 rounded-xl"
-            textClassName="text-base"
-          />
+          <div className="relative shrink-0">
+            <InstanceArt
+              eager
+              morph="hero"
+              name={instance.version.name}
+              image={instance.version.image}
+              className="size-14 rounded-xl"
+              textClassName="text-base"
+            />
+            {ownerMark && (
+              <OwnerMark
+                nickname={ownerMark.nickname}
+                image={ownerMark.image}
+                hint={
+                  instance.version.downloadedVersion
+                    ? t("versions.ownerUpdatesHint", {
+                        nickname: ownerMark.nickname,
+                      })
+                    : undefined
+                }
+                className="absolute -right-1.5 -bottom-1.5 size-5 ring-card"
+              />
+            )}
+          </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex min-w-0 items-center gap-2">
@@ -355,25 +377,40 @@ export function HomeHero({
         )}
 
         <div className="flex min-w-0 items-center gap-2">
-          <Hint
-            content={
-              isRunningInstance && canPlay
-                ? t("versions.playAnotherInstance")
-                : undefined
-            }
-          >
+          {account ? (
+            <Hint
+              content={
+                isRunningInstance && canPlay
+                  ? t("versions.playAnotherInstance")
+                  : undefined
+              }
+            >
+              <Button
+                size="lg"
+                disabled={!canPlay}
+                className="btn-sheen h-11 px-7 text-base font-semibold active:scale-[0.97] [&_svg]:size-5"
+                onClick={() => void runGame({ version: instance })}
+              >
+                {isLaunching ? <Loader2 className="animate-spin" /> : <Play />}
+                {isRunningInstance
+                  ? t("versions.playAnotherShort")
+                  : t("nav.play")}
+              </Button>
+            </Hint>
+          ) : (
             <Button
               size="lg"
-              disabled={!canPlay}
-              className="btn-sheen h-11 px-7 text-base font-semibold active:scale-[0.97] [&_svg]:size-5"
-              onClick={() => void runGame({ version: instance })}
+              className="h-11 px-7 text-base font-semibold active:scale-[0.97] [&_svg]:size-5"
+              onClick={() =>
+                accounts.length > 0
+                  ? navigate({ name: "accounts" })
+                  : openAddAccount()
+              }
             >
-              {isLaunching ? <Loader2 className="animate-spin" /> : <Play />}
-              {isRunningInstance
-                ? t("versions.playAnotherShort")
-                : t("nav.play")}
+              <LogIn />
+              {t("accounts.signIn")}
             </Button>
-          </Hint>
+          )}
 
           <Hint content={t("versions.openInstance")}>
             <Button
@@ -435,13 +472,11 @@ export function HomeHero({
           </DropdownMenu>
 
           {!account ? (
-            <button
-              type="button"
-              onClick={() => navigate({ name: "accounts" })}
-              className="ml-1 rounded text-xs text-warning underline-offset-2 transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            >
-              {t("versions.playBlocked.noAccount")}
-            </button>
+            <Hint content={t("home.signInHint")} variant="text" truncatedOnly>
+              <span className="ml-1 min-w-0 truncate text-xs text-muted-foreground">
+                {t("home.signInHint")}
+              </span>
+            </Hint>
           ) : (
             !isBackendOnline && (
               <Hint content={t("home.offlineHint")}>

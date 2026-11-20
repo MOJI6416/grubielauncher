@@ -4,13 +4,6 @@ import { useTranslation } from "react-i18next";
 import { Coffee, Loader2, Plus, RefreshCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { versionsAtom } from "@renderer/stores/atoms";
 import { Hint } from "@renderer/components/Hint";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
@@ -19,17 +12,10 @@ import {
   SettingsGroup,
 } from "@renderer/features/settings/SettingsPrimitives";
 import type { JavaRuntimeInfo } from "@/shared/javaRuntime";
-import {
-  findRuntime,
-  installedRuntimes,
-  javaMajors,
-  managedRuntime,
-  minecraftRangeKey,
-} from "./javaChoices";
+import { findRuntime, javaMajors, minecraftRangeKey } from "./javaChoices";
+import { JavaPicker } from "./JavaPicker";
 import { useJavaRuntimes } from "./useJavaRuntimes";
 import { useGameLockReason } from "@renderer/features/settings/gameLock";
-
-const AUTO = "auto";
 
 function runtimeName(runtime: Pick<JavaRuntimeInfo, "vendor" | "version">) {
   return [runtime.vendor, runtime.version].filter(Boolean).join(" ") || "Java";
@@ -149,11 +135,6 @@ export function JavaSettingsGroup({ query }: { query: string }) {
     >
       {majors.map((major) => {
         const chosen = list?.defaults[String(major)] ?? null;
-        const chosenRuntime = chosen ? findRuntime(list, chosen) : null;
-        const candidates = installedRuntimes(list).filter(
-          (runtime) => runtime.major === major,
-        );
-        const managed = managedRuntime(list, major);
 
         return (
           <SettingRow
@@ -164,55 +145,19 @@ export function JavaSettingsGroup({ query }: { query: string }) {
             changed={Boolean(chosen)}
             onReset={() => void setDefault(major, null)}
             control={
-              <Select
-                value={chosen ?? AUTO}
+              <JavaPicker
+                lockMajor
+                value={chosen ? { home: chosen } : undefined}
+                requiredMajor={major}
                 disabled={!list}
-                onValueChange={(value) =>
-                  void setDefault(major, value === AUTO ? null : value)
+                className="h-8 w-60 text-sm"
+                onChange={(next) =>
+                  void setDefault(
+                    major,
+                    next && "home" in next ? next.home : null,
+                  )
                 }
-              >
-                <SelectTrigger size="sm" className="w-60">
-                  <SelectValue>
-                    {chosen ? (
-                      chosenRuntime && !chosenRuntime.missing ? (
-                        runtimeName(chosenRuntime)
-                      ) : (
-                        <span className="text-warning">{t("java.missing")}</span>
-                      )
-                    ) : (
-                      <>
-                        {t("java.auto")}
-                        {managed?.vendor && (
-                          <span className="text-faint"> · {managed.vendor}</span>
-                        )}
-                      </>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent align="end">
-                  <SelectItem value={AUTO}>
-                    <span>{t("java.auto")}</span>
-                    <span className="text-faint">
-                      {managed
-                        ? runtimeName(managed)
-                        : t("java.downloadsOnLaunch")}
-                    </span>
-                  </SelectItem>
-                  {candidates.map((runtime) => (
-                    <SelectItem key={runtime.home} value={runtime.home}>
-                      <span>{runtimeName(runtime)}</span>
-                      <span className="text-faint">
-                        {t(`java.source.${runtime.source}`)}
-                      </span>
-                    </SelectItem>
-                  ))}
-                  {chosen && (!chosenRuntime || chosenRuntime.missing) && (
-                    <SelectItem value={chosen} disabled>
-                      <span>{t("java.missing")}</span>
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+              />
             }
           />
         );

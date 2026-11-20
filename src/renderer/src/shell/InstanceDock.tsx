@@ -17,6 +17,7 @@ import {
   consolesMetaAtom,
   installActiveAtom,
   isRunningAtom,
+  selectedVersionAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
 import type { Version } from "@renderer/classes/Version";
@@ -32,6 +33,7 @@ import {
   instanceKey,
 } from "@renderer/features/instances/selectors";
 import { openNewInstance } from "@renderer/features/instances/newInstance";
+import { selectInstance } from "@renderer/features/instances/selectInstance";
 import { currentRouteAtom } from "@renderer/navigation/store";
 import { navigate } from "@renderer/navigation/navigate";
 import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
@@ -67,6 +69,7 @@ export function InstanceDock({
   const isInstallActive = useAtomValue(installActiveAtom);
   const collapsed = useSidebarCollapsed();
   const route = useAtomValue(currentRouteAtom);
+  const selected = useAtomValue(selectedVersionAtom);
   const pinned = useAtomValue(instancePinnedAtom);
   const dockHidden = useAtomValue(instanceDockHiddenAtom);
   const layout = useLayout();
@@ -103,7 +106,21 @@ export function InstanceDock({
     [consoleMetas],
   );
 
-  const activeId = route.name === "instance" ? route.id : null;
+  const isHome = route.name === "home";
+  const activeId =
+    route.name === "instance" || route.name === "chunks"
+      ? route.id
+      : isHome && selected
+        ? instanceKey(selected)
+        : null;
+
+  const activate = (instance: Version, key: string) => {
+    if (isHome) {
+      void selectInstance(instance, account);
+      return;
+    }
+    navigate({ name: "instance", id: key });
+  };
 
   const dockActions = (key: string, name: string): InstanceAction[] => {
     const isPinned = pinned.includes(key);
@@ -271,12 +288,17 @@ export function InstanceDock({
                 <ContextMenuTrigger asChild>
                   <button
                     type="button"
-                    aria-current={isActive ? "page" : undefined}
+                    aria-current={
+                      isActive ? (isHome ? "true" : "page") : undefined
+                    }
                     aria-label={collapsed ? instance.version.name : undefined}
                     data-indicator-active={isActive}
-                    onClick={() => navigate({ name: "instance", id: key })}
+                    onClick={() => activate(instance, key)}
+                    onDoubleClick={() =>
+                      isHome && navigate({ name: "instance", id: key })
+                    }
                     className={cn(
-                      "relative flex h-10 w-full items-center rounded-lg text-left transition-colors not-aria-[current=page]:hover:bg-row-hover",
+                      "relative flex h-10 w-full items-center rounded-lg text-left transition-colors not-data-[indicator-active=true]:hover:bg-row-hover",
                       collapsed ? "justify-center" : "gap-2.5 px-2.5",
                     )}
                   >

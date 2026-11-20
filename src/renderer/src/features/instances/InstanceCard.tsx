@@ -45,19 +45,21 @@ export interface InstanceCardProps {
   };
 }
 
-function OwnerMark({
+export function OwnerMark({
   nickname,
   image,
+  hint,
   className,
 }: {
   nickname: string;
   image?: string;
+  hint?: string;
   className?: string;
 }) {
   const { t } = useTranslation();
 
   return (
-    <Hint content={t("versions.ownerTooltip", { nickname })}>
+    <Hint content={hint ?? t("versions.ownerTooltip", { nickname })}>
       <Avatar
         className={cn("size-4 bg-surface-3 ring-2 ring-surface-2", className)}
       >

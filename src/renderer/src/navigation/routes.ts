@@ -23,6 +23,7 @@ export type PeopleSection = "friends" | "groups" | "requests";
 export type Route =
   | { name: "home" }
   | { name: "instance"; id: string; tab?: InstanceTab }
+  | { name: "chunks"; id: string; world: string }
   | {
       name: "instance-new";
       importPath?: string;
@@ -44,6 +45,8 @@ export function routeKey(route: Route): string {
   switch (route.name) {
     case "instance":
       return route.tab ? `instance:${route.id}:${route.tab}` : `instance:${route.id}`;
+    case "chunks":
+      return `chunks:${route.id}:${route.world}`;
     case "instance-new":
       return [
         "instance-new",
@@ -74,6 +77,8 @@ export function screenKey(route: Route): string {
   switch (route.name) {
     case "instance":
       return `instance:${route.id}`;
+    case "chunks":
+      return `chunks:${route.id}:${route.world}`;
     case "profile":
       return `profile:${route.userId}`;
     default:

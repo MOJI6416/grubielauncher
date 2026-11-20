@@ -136,6 +136,24 @@ describe("history", () => {
     expect(current(state)).toEqual({ name: "settings" });
   });
 
+  it("carries the chunk editor of an instance through a rename and a delete", () => {
+    let state = push(createHistory(), instance("old"));
+    state = push(state, { name: "chunks", id: "old", world: "Base" });
+    state = remapInstanceId(state, "old", "new");
+
+    expect(state.entries[2].route).toEqual({
+      name: "chunks",
+      id: "new",
+      world: "Base",
+    });
+    expect(state.entries[2].key).toBe("chunks:new:Base");
+
+    state = dropInstance(state, "new");
+
+    expect(state.entries.map((entry) => entry.key)).toEqual(["home"]);
+    expect(current(state)).toEqual({ name: "home" });
+  });
+
   it("falls back to home when every entry is dropped", () => {
     const state = dropInstance(createHistory(instance("only")), "only");
 

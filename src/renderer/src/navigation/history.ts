@@ -16,6 +16,12 @@ function entryOf(route: Route): HistoryEntry {
   return { route, key: routeKey(route) };
 }
 
+function isInstanceRoute(
+  route: Route,
+): route is Extract<Route, { name: "instance" | "chunks" }> {
+  return route.name === "instance" || route.name === "chunks";
+}
+
 export function createHistory(route: Route = { name: "home" }): HistoryState {
   return { entries: [entryOf(route)], index: 0 };
 }
@@ -30,6 +36,10 @@ export function canGoBack(state: HistoryState): boolean {
 
 export function canGoForward(state: HistoryState): boolean {
   return state.index < state.entries.length - 1;
+}
+
+export function forwardRoute(state: HistoryState): Route | null {
+  return state.entries[state.index + 1]?.route ?? null;
 }
 
 export function push(state: HistoryState, route: Route): HistoryState {
@@ -77,7 +87,7 @@ export function remapInstanceId(
 
   let changed = false;
   const entries = state.entries.map((entry) => {
-    if (entry.route.name !== "instance" || entry.route.id !== oldId) {
+    if (!isInstanceRoute(entry.route) || entry.route.id !== oldId) {
       return entry;
     }
 
@@ -97,10 +107,7 @@ export function dropInstance(
   let index = state.index;
 
   state.entries.forEach((entry, position) => {
-    const matches =
-      entry.route.name === "instance" && entry.route.id === instanceId;
-
-    if (matches) {
+    if (isInstanceRoute(entry.route) && entry.route.id === instanceId) {
       if (position <= state.index) index -= 1;
       return;
     }

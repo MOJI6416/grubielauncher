@@ -257,19 +257,14 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
   const showNotes = !isSlotHidden(layout, slotId.card("notes"));
   const showSessions = !isSlotHidden(layout, slotId.card("sessions"));
   const screenshotsShown = showScreenshots && hasScreenshots;
-  const hasChannel = !!props.channel;
-  const leftBottom =
-    !screenshotsShown && !hasChannel && showNotes ? "notes" : null;
-  const rightBottom =
-    screenshotsShown || hasChannel
-      ? showNotes
-        ? "notes"
-        : showSessions
-          ? "sessions"
-          : null
+  const leftFill = isFresh
+    ? null
+    : screenshotsShown
+      ? "screenshots"
       : showSessions
         ? "sessions"
         : null;
+  const sessionsRight = showSessions && leftFill === "screenshots";
 
   return (
     <>
@@ -313,13 +308,9 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
           {isFresh ? (
             <HintsCard className="shrink-0" hints={hints} />
           ) : (
-            showScreenshots && (
+            leftFill === "screenshots" && (
               <ScreenshotsCard
-                className={
-                  screenshotsShown || leftBottom !== "notes"
-                    ? "min-h-[150px] flex-1"
-                    : "h-28 shrink-0"
-                }
+                className="min-h-[150px] flex-1"
                 screenshots={screenshots}
                 folder={folder}
                 onUseAsCover={props.onUseScreenshotAsCover}
@@ -333,14 +324,8 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
             )
           )}
 
-          {leftBottom === "notes" && (
-            <SectionCard
-              title={t("versions.notes.title")}
-              icon={NotebookPen}
-              className="min-h-[96px] flex-1"
-            >
-              <InstanceNotes versionPath={instance.versionPath} />
-            </SectionCard>
+          {leftFill === "sessions" && (
+            <SessionsCard className="min-h-[96px] flex-1" sessions={sessions} />
           )}
         </div>
 
@@ -420,20 +405,25 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
                         {t("instanceSettings.java.manual")}
                       </span>
                     )}
-                    <span
-                      className={cn(
-                        "truncate font-mono",
-                        instance.java?.problem === "not_installed"
-                          ? "text-warning"
-                          : instance.java?.problem && "text-destructive",
-                      )}
-                    >
+                    <span className="shrink-0 font-mono">
                       {instance.java
                         ? `Java ${javaLabel(instance.java)}`
                         : instance.javaMajorVersion
                           ? `Java ${instance.javaMajorVersion}`
                           : "—"}
                     </span>
+                    {javaProblem && (
+                      <span
+                        className={cn(
+                          "truncate",
+                          javaProblem === "not_installed"
+                            ? "text-warning"
+                            : "text-destructive",
+                        )}
+                      >
+                        {t(`versions.facts.javaProblem.${javaProblem}`)}
+                      </span>
+                    )}
                   </span>
                 }
                 hint={javaProblemHint}
@@ -464,16 +454,20 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
 
           {props.publishing}
 
-          {rightBottom === "notes" && (
+          {showNotes && (
             <SectionCard
               title={t("versions.notes.title")}
               icon={NotebookPen}
-              className="min-h-[72px] flex-1"
+              className={
+                sessionsRight
+                  ? "h-28 shrink-0 focus-within:min-h-28 focus-within:flex-1"
+                  : "min-h-28 flex-1"
+              }
             >
               <InstanceNotes versionPath={instance.versionPath} />
             </SectionCard>
           )}
-          {rightBottom === "sessions" && (
+          {sessionsRight && (
             <SessionsCard className="min-h-[72px] flex-1" sessions={sessions} />
           )}
         </div>

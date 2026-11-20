@@ -70,6 +70,8 @@ export interface ModpackRollbackInfo {
   fromVersion: string;
   toVersion: string;
   createdAt: string;
+  restores?: string[];
+  removes?: number;
 }
 
 export interface ModpackRollback {

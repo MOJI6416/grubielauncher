@@ -222,7 +222,7 @@ export function SessionsCard({
       title={t("versionStatistics.recentSessions")}
       icon={History}
       className={className}
-      bodyClassName="overflow-y-auto py-1"
+      bodyClassName="overflow-x-hidden overflow-y-auto py-1"
     >
       {latest.length === 0 ? (
         <Empty className="h-full gap-1 p-3">

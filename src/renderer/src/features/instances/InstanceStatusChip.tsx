@@ -8,7 +8,6 @@ const TONE: Record<InstanceStatusKind, string> = {
   running: "border-success/30 bg-success/12 text-success",
   broken: "border-destructive/30 bg-destructive/12 text-destructive",
   update: "border-warning/30 bg-warning/12 text-warning",
-  downloaded: "border-border bg-surface-3 text-muted-foreground",
 };
 
 export function InstanceStatusChip({
@@ -27,9 +26,7 @@ export function InstanceStatusChip({
       ? t("versions.running")
       : kind === "broken"
         ? t("versions.state.notInstalled")
-        : kind === "update"
-          ? t("versions.state.needsUpdate")
-          : t("versions.downloadedLabel");
+        : t("versions.state.needsUpdate");
 
   const chip = (
     <span
@@ -44,7 +41,6 @@ export function InstanceStatusChip({
       )}
       {kind === "update" && <CloudDownload className="size-3 shrink-0" />}
       {kind === "broken" && <TriangleAlert className="size-3 shrink-0" />}
-      {kind === "downloaded" && <CloudDownload className="size-3 shrink-0" />}
       <span className="truncate">{label}</span>
       {detail && (
         <span className="font-mono tabular-nums opacity-80">{detail}</span>
@@ -53,11 +49,7 @@ export function InstanceStatusChip({
   );
 
   return (
-    <Hint
-      variant="text"
-      truncatedOnly={kind !== "downloaded"}
-      content={kind === "downloaded" ? t("modpack.blocked.downloaded") : label}
-    >
+    <Hint variant="text" truncatedOnly content={label}>
       {chip}
     </Hint>
   );

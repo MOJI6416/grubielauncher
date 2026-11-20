@@ -170,10 +170,17 @@ describe("modpack update files", () => {
     expect(read(path.join(instance, "options.txt"))).toBe("player");
     expect(read(path.join(instance, "config/own.toml"))).toBe("own");
 
-    expect(await readModpackRollback(instance)).toMatchObject({
+    const info = await readModpackRollback(instance);
+    expect(info).toMatchObject({
       fromVersion: "1.0",
       toVersion: "2.0",
+      removes: 1,
     });
+    expect([...(info?.restores ?? [])].sort()).toEqual([
+      "config/dropped.toml",
+      "config/edited.toml",
+      "config/same.toml",
+    ]);
 
     const restored = await restoreModpackRollback(instance);
     expect(restored?.conf.modpack?.versionNumber).toBe("1.0");

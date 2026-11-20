@@ -248,7 +248,7 @@ export function buildInstanceActions(
   if (context.onManageTags) {
     tools.push({
       id: "tags",
-      label: t("versions.tags.manage"),
+      label: t("versions.tags.edit"),
       icon: Tag,
       onSelect: context.onManageTags,
     });

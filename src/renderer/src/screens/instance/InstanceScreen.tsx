@@ -30,6 +30,7 @@ import { PanelFallback } from "@renderer/components/PanelFallback";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { BlockedMods } from "@renderer/components/Modals/BlockedMods";
 import { CreateServer } from "@renderer/features/servers/CreateServer";
+import { ServerCreateEmpty } from "@renderer/features/servers/ServerCreateEmpty";
 import { isRunningAtom, pathsAtom, versionsAtom } from "@renderer/stores/atoms";
 import { hasShaderLoader } from "@/shared/shaderLoaders";
 import { navigate } from "@renderer/navigation/navigate";
@@ -273,9 +274,11 @@ export function InstanceScreen({
         worldCount: contents.worlds,
         serverCount: editor.servers.length,
         hasConfigs: contents.hasConfigs,
+        isModded,
         hasStatistics: contents.hasStatistics || isPackAuthor,
         hasServerManager: !!version?.version.version?.serverManager,
         hasOwnServer: !!server,
+        canCreateServer: flags.showServerManagerAction,
         hasUnsavedSettings: changes.changeKinds.includes("settings"),
         hasUnsavedArguments: changes.changeKinds.includes("arguments"),
         hasModpack:
@@ -293,6 +296,8 @@ export function InstanceScreen({
       version,
       changes.changeKinds,
       isPackAuthor,
+      flags.showServerManagerAction,
+      isModded,
     ],
   );
 
@@ -355,18 +360,11 @@ export function InstanceScreen({
         running: isVersionRunning,
         installed: version.hasManifest,
         update: share.versionDiffence === "old" ? "behind" : undefined,
-        downloaded: version.version.downloadedVersion,
       })
     : [];
 
   const identityStatuses = (
     <span className="flex shrink-0 items-center gap-1.5">
-      {statuses
-        .filter((kind) => kind === "downloaded")
-        .map((kind) => (
-          <InstanceStatusChip key={kind} kind={kind} />
-        ))}
-
       {isForeignInstance && (
         <Hint content={readOnlyHint}>
           <span className="flex h-5 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface-3 px-1.5 text-3xs font-medium whitespace-nowrap text-muted-foreground">
@@ -641,13 +639,19 @@ export function InstanceScreen({
             </Suspense>
           ) : activeTab === "server" && version && server ? (
             <Suspense fallback={<PanelFallback variant="stacked" />}>
-              <LazyServerControl
-                onDelete={() => {
-                  setServer(undefined);
-                  setActiveTab("overview");
-                }}
-              />
+              <LazyServerControl onDelete={() => setServer(undefined)} />
             </Suspense>
+          ) : activeTab === "server" && version ? (
+            <ServerCreateEmpty
+              blockedReason={serverBlockedReason}
+              isInstalling={
+                (isLoading && loadingType === "server") ||
+                (editor.isServerCreate && isInstallActive)
+              }
+              onCreate={() =>
+                void editor.installServer(() => setActiveTab("server"))
+              }
+            />
           ) : activeTab === "statistics" && version ? (
             <InstanceStatisticsPanel
               instance={version}
@@ -658,6 +662,11 @@ export function InstanceScreen({
               versionPath={version.versionPath}
               disabled={isLoading}
               mods={content.mods}
+              onRunGame={editor.requestPlay}
+              runBlockedReason={
+                playBlockedReason ??
+                (isLaunching ? t("packAuthor.channel.launching") : undefined)
+              }
             />
           ) : activeTab === "settings" && version && isJarPanelOpen ? (
             <JarModsPanel

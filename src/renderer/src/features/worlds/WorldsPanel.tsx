@@ -6,7 +6,10 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { useAtomValue } from "jotai";
+import { getDefaultStore, useAtomValue } from "jotai";
+import { historyAtom } from "@renderer/navigation/store";
+import { forwardRoute } from "@renderer/navigation/history";
+import { instanceKey } from "@renderer/features/instances/selectors";
 import { useTranslation } from "react-i18next";
 import {
   Archive,
@@ -104,7 +107,13 @@ export function Worlds({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<WorldFilter>("all");
   const [sort, setSort] = useState<WorldSort>("recent");
-  const [selected, setSelected] = useState<string | null>(null);
+  const [chunksReturn] = useState(() => {
+    const next = forwardRoute(getDefaultStore().get(historyAtom));
+    return next?.name === "chunks" && version && next.id === instanceKey(version)
+      ? next.world
+      : null;
+  });
+  const [selected, setSelected] = useState<string | null>(chunksReturn);
   const [isImporting, setIsImporting] = useState(false);
   const [renameRequest, setRenameRequest] = useState<string | null>(null);
 
@@ -776,6 +785,9 @@ export function Worlds({
           locale={i18n.resolvedLanguage || i18n.language}
           actions={actions}
           renameRequested={renameRequest === selectedWorld.path}
+          initialTab={
+            selectedWorld.folderName === chunksReturn ? "chunks" : undefined
+          }
           onRenameHandled={onRenameHandled}
           onPlay={() => {
             countFeature("launch.world");

@@ -8,6 +8,7 @@ import { screenKey, routeKey, type Route } from "@renderer/navigation/routes";
 const SCREENS: Record<Route["name"], UsageFeature> = {
   home: "screen.home",
   instance: "screen.instance",
+  chunks: "feature.chunkEditor",
   "instance-new": "screen.instanceNew",
   people: "screen.people",
   news: "screen.news",

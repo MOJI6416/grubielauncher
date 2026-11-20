@@ -1249,7 +1249,7 @@
     "importAction": "Importer",
     "imported": "Serveurs ajoutés : {{total}}",
     "discover": {
-      "mine": "Mes serveurs",
+      "mine": "Liste des serveurs",
       "byAddress": "Par adresse",
       "title": "Serveurs Modrinth",
       "search": "Rechercher des serveurs",
@@ -1916,7 +1916,7 @@
           "nextMatch": "Résultat suivant de la recherche dans le journal",
           "prevMatch": "Résultat précédent",
           "clearSearch": "Effacer la recherche dans le journal",
-          "history": "Historique des commandes de la console de votre serveur"
+          "history": "Historique des commandes de la console du serveur de l’instance"
         },
         "chat": {
           "send": "Envoyer le message",
@@ -2516,7 +2516,7 @@
     "organizeLoadFailedHint": "instances.json est endommagé ou occupé. Les groupes, les tags et l’ordre sont verrouillés pour ne pas écraser le fichier — redémarrez le launcher quand il pourra de nouveau être lu.",
     "publishError": "Impossible de publier l’instance",
     "deleteError": "Impossible de supprimer l’instance",
-    "serverManager": "Gestion du serveur",
+    "serverManager": "Serveur de l’instance",
     "createingServer": "Création du serveur",
     "serverCore": "Cœur du serveur",
     "aikarFlags": "Flags d’Aikar",
@@ -2529,7 +2529,7 @@
     "copyRelativePath": "Copier la commande avec un chemin relatif",
     "copyShareLink": "Cliquez pour copier le lien",
     "ownerTooltip": "Propriétaire : {{nickname}}",
-    "downloadedLabel": "Téléchargé",
+    "ownerUpdatesHint": "Instance de {{nickname}} : son auteur la met à jour, les nouvelles versions arrivent via Grubie.",
     "synchronizeDescription": "Télécharger la dernière version de l’instance depuis le serveur",
     "syncReplacesFiles": "La synchronisation remplace les fichiers de l’instance par ceux publiés — les modifications locales des configs et des mondes seront perdues.",
     "syncInterrupted": "La synchronisation n’a pas abouti",
@@ -2582,6 +2582,7 @@
     },
     "tags": {
       "manage": "Tags",
+      "edit": "Modifier les tags",
       "title": "Tags · {{name}}",
       "empty": "Aucun tag pour l’instant",
       "add": "Ajoutez un tag et appuyez sur Entrée",
@@ -2605,6 +2606,7 @@
     "deleteBusyHint": "Le launcher est occupé par une autre installation ou suppression. Attendez qu’elle se termine et réessayez.",
     "groups": {
       "create": "Nouveau groupe",
+      "button": "Groupe",
       "placeholder": "Nom du groupe",
       "hint": "Faites glisser une instance sur l’en-tête d’un groupe pour l’y déplacer.",
       "ungrouped": "Sans groupe",
@@ -2618,12 +2620,16 @@
     },
     "deleteInstance": "Supprimer l’instance",
     "serverInstall": "Installer un serveur",
+    "serverEmpty": {
+      "title": "Cette instance n’a pas encore de serveur",
+      "hint": "Le launcher installe un serveur avec la même version et les mêmes mods pour jouer avec vos amis. Vous pouvez le supprimer à tout moment ; il ira à la corbeille."
+    },
     "serverSetup": {
       "description": "Le launcher télécharge un cœur de serveur dans le dossier de l’instance et y copie le contenu de l’instance.",
       "coreHint": "Le cœur est le programme du serveur : il détermine quels mods et plugins le serveur peut faire tourner.",
       "memoryHint": "Nous recommandons {{recommended}} Mo pour cette instance. Cette machine dispose de {{total}} Mo au total.",
       "memoryHintShort": "Nous recommandons {{recommended}} Mo pour cette instance.",
-      "afterInstall": "Après l’installation, l’instance obtient un onglet « Mon serveur » — démarrez et configurez le serveur depuis celui-ci.",
+      "afterInstall": "Après l’installation, l’instance obtient un onglet « Serveur de l’instance » — démarrez et configurez le serveur depuis celui-ci.",
       "eulaRequired": "Acceptez le contrat de Minecraft pour continuer.",
       "confirmLead": "Vérifiez ce que le launcher s’apprête à faire avec le dossier de l’instance.",
       "continue": "Continuer",
@@ -2632,7 +2638,7 @@
       "effectCore": "Le cœur {{core}} est téléchargé depuis Internet.",
       "effectMods": "Les mods et configs de l’instance sont copiés sur le serveur.",
       "effectEula": "Votre acceptation du contrat de Minecraft est inscrite dans eula.txt.",
-      "reversible": "Vous pourrez supprimer le serveur plus tard dans l’onglet « Mon serveur » — il ira à la corbeille.",
+      "reversible": "Vous pourrez supprimer le serveur plus tard dans l’onglet « Serveur de l’instance » — il ira à la corbeille.",
       "cleanedUp": "Le dossier du serveur inachevé a été supprimé."
     },
     "runCommand": "Commande de lancement",
@@ -2663,7 +2669,12 @@
       "java": "Java",
       "diskUsage": "Sur le disque",
       "launchProfile": "Profil de lancement",
-      "javaNotInstalled": "Java {{major}} n’est pas encore téléchargé — le launcher le téléchargera au lancement."
+      "javaNotInstalled": "Java {{major}} n’est pas encore téléchargé — le launcher le téléchargera au lancement.",
+      "javaProblem": {
+        "missing": "introuvable",
+        "untrusted": "absente de la liste du launcher",
+        "not_installed": "pas encore téléchargée"
+      }
     },
     "screenshots": {
       "title": "Captures d’écran",
@@ -2750,9 +2761,13 @@
       "publishSectionTitle": "Ce qui changera sur le serveur"
     },
     "deleteRemoteErrorHint": "Le serveur a refusé de retirer la publication. Rien n’a été supprimé sur cet ordinateur — réessayez plus tard.",
-    "unsafeFolderName": "Le nom du dossier dépasse 32 caractères ou contient des caractères interdits. Renommez le dossier et redémarrez le launcher.",
     "libraryUnreadable": "Impossible de lire la bibliothèque d’instances",
     "libraryUnreadableHint": "Le dossier versions ne s’est pas ouvert. Rien n’a été supprimé — les instances restent sur le disque. Vérifiez le dossier et le disque, puis réessayez.",
+    "rejected": {
+      "tooLong": "Non ouverte : le nom du dossier dépasse {{max}} caractères",
+      "unreadable": "Non ouverte : version.json est illisible",
+      "openFailed": "Impossible d’ouvrir le dossier"
+    },
     "updateLoader": "Mettre à jour le chargeur",
     "legacyLoaders": "Pour les anciennes versions",
     "launchProfileDropped": "Ne sera pas transmis au lancement",
@@ -4165,7 +4180,9 @@
       "tooManyChunks": "Trop de chunks à la fois. Sélectionnez-en moins et recommencez.",
       "backupFailed": "La sauvegarde a échoué, rien n’a donc été modifié.",
       "failed": "Vérifiez l’espace libre sur le disque et réessayez."
-    }
+    },
+    "worldMissing": "Monde introuvable",
+    "missingHint": "Le dossier a peut-être été renommé ou supprimé. Revenez en arrière et rouvrez l’éditeur de chunks."
   },
   "worldBackups": {
     "title": "Sauvegardes",
@@ -5507,9 +5524,9 @@
       "modpack": "Modpack",
       "content": "Contenu",
       "worlds": "Mondes",
-      "servers": "Serveurs",
+      "servers": "Liste des serveurs",
       "settings": "Paramètres",
-      "server": "Mon serveur",
+      "server": "Serveur de l’instance",
       "logs": "Journaux",
       "statistics": "Statistiques",
       "configs": "Configs",
@@ -5573,9 +5590,10 @@
   "configs": {
     "emptyTitle": "Aucun fichier de configuration",
     "emptyHint": "Cette instance n’a pas encore de dossier config — il apparaît après le premier lancement avec des mods.",
+    "runToCreate": "Lancer le jeu pour créer les configs",
     "pickFile": "Choisissez un fichier à gauche pour le modifier",
     "saved": "Fichier enregistré",
-    "savedOverExternal": "Le fichier avait changé sur le disque depuis son ouverture — cette version est désormais l’entrée la plus récente dans Restaurer.",
+    "savedOverExternal": "Le fichier avait changé sur le disque depuis son ouverture — ce contenu est désormais l’entrée la plus récente dans Copies du fichier.",
     "saveFailed": "Impossible d’enregistrer le fichier",
     "saveFailedHint": "Le fichier n’a pas été écrit. Vos modifications sont toujours dans l’éditeur — fermez le jeu ou l’éditeur qui utilise le fichier et appuyez à nouveau sur Enregistrer.",
     "backupFailedHint": "Impossible de faire une copie du fichier actuel, rien n’a donc été écrasé. Vos modifications sont toujours dans l’éditeur.",
@@ -5586,9 +5604,9 @@
     "unsaved": "Modifications non enregistrées",
     "unsavedHint": "Les modifications du fichier de config ne sont pas enregistrées. Elles seront perdues si vous quittez.",
     "backupBaseline": "Fichier d’origine",
-    "backupPrevious": "Version précédente",
-    "backupRestored": "Version chargée dans l’éditeur — enregistrez pour l’appliquer",
-    "backupMissing": "Le fichier de la version enregistrée a disparu",
+    "backupPrevious": "Copie précédente",
+    "backupRestored": "Copie chargée dans l’éditeur — enregistrez pour l’appliquer",
+    "backupMissing": "Le fichier de la copie enregistrée a disparu",
     "completion": {
       "literal": "valeur",
       "key": "clé",
@@ -5603,7 +5621,7 @@
     "findPrevious": "Précédent (Maj+Entrée)",
     "findNext": "Suivant (Entrée)",
     "findHint": "Rechercher dans le fichier ({{mod}}+F)",
-    "backupsHint": "Cliquez sur une version pour la comparer au fichier actuel avant de la restaurer.",
+    "backupsHint": "Cliquez sur une copie pour la comparer au fichier actuel avant de la restaurer.",
     "showInFolder": "Afficher dans le dossier",
     "discard": "Abandonner",
     "modeLabel": "Vue de l’éditeur",
@@ -5659,7 +5677,7 @@
     "restoredFile": "Fichier restauré depuis l’historique",
     "missing": {
       "title": "Le fichier a disparu",
-      "hint": "Le mod le recréera au prochain démarrage du jeu. Pour retrouver vos anciens réglages, restaurez une version enregistrée.",
+      "hint": "Le mod le recréera au prochain démarrage du jeu. Pour retrouver vos anciens réglages, restaurez une copie enregistrée.",
       "restore": "Comparer et restaurer"
     },
     "diff": {
@@ -5667,7 +5685,7 @@
       "short": "Modifications",
       "changesTitle": "Modifications non enregistrées",
       "back": "Retour à l’édition",
-      "snapshotTitle": "Restaurer la version du {{date}} ?",
+      "snapshotTitle": "Restaurer la copie du {{date}} ?",
       "apply": "Restaurer",
       "same": "Aucune différence",
       "hidden_one": "{{count}} ligne inchangée",
@@ -5817,6 +5835,11 @@
       "summary": "Dernière mise à jour : {{from}} → {{to}} · {{date}}",
       "action": "Revenir à {{version}}",
       "backups": "Copies des fichiers",
+      "filesHint_one": "Le retour arrière restaure {{count}} fichier enregistré avant la mise à jour :",
+      "filesHint_many": "Le retour arrière restaure {{count}} fichiers enregistrés avant la mise à jour :",
+      "filesHint_other": "Le retour arrière restaure {{count}} fichiers enregistrés avant la mise à jour :",
+      "filesNone": "Aucun fichier n’a dû être enregistré avant la mise à jour — le retour arrière restaure seulement la version du modpack.",
+      "removes": "Nouveaux fichiers de la mise à jour retirés : {{count}}",
       "done": "L’instance est revenue à la version {{version}}",
       "failed": "Impossible de revenir à la version précédente"
     },
@@ -5918,6 +5941,11 @@
     },
     "offline": "Pas de connexion",
     "offlineHint": "Les services Grubie sont indisponibles, la recherche de mises à jour est suspendue.",
+    "signInHint": "Connectez-vous à un compte pour jouer.",
+    "popular": {
+      "title": "Modpacks populaires",
+      "failed": "Impossible d’ouvrir le modpack"
+    },
     "orphans": {
       "title_one": "{{count}} dossier non reconnu",
       "title_many": "{{count}} dossiers non reconnus",
@@ -6102,6 +6130,15 @@
       "server": "Pour un serveur",
       "launchers": "D’un launcher"
     },
+    "sourceHints": {
+      "custom": "Chargeur et version",
+      "community": "Par des joueurs Grubie",
+      "catalog": "CurseForge, Modrinth",
+      "code": "Code ou lien",
+      "file": ".zip ou .mrpack",
+      "launchers": "Prism, TLauncher, etc.",
+      "server": "Version d’une adresse"
+    },
     "pickHint": {
       "custom": "Choisissez un chargeur et une version de Minecraft.",
       "community": "Choisissez un pack partagé par un autre joueur — il s’installe en entier.",
@@ -6173,7 +6210,7 @@
     "pickVersionFirst": "Choisissez d’abord une version de Minecraft",
     "notChosen": "non choisi",
     "releasedOn": "Sortie",
-    "ownServer": "Mon serveur",
+    "ownServer": "Serveur de l’instance",
     "serverSupported": "pris en charge",
     "serverUnsupported": "non pris en charge",
     "vanillaNote": "Le jeu de base, sans mods. Choisissez un chargeur si vous voulez des mods — l’instance peut toujours être recréée.",
@@ -6217,7 +6254,9 @@
     "extraFilesFailed": "Instance créée, mais tous les fichiers n’ont pas été téléchargés",
     "extraFilesFailedHint": "Certains fichiers de l’instance ne sont pas arrivés. Les détails figurent dans le journal des erreurs.",
     "afterInstallHint": "Le contenu, les serveurs et les arguments de lancement peuvent être modifiés après l’installation",
-    "modpacksNoneForFilters": "Aucun modpack pour la version et le chargeur choisis — changez les filtres."
+    "modpacksNoneForFilters": "Aucun modpack pour la version et le chargeur choisis — changez les filtres.",
+    "modpacksNoneForAuthor": "Cet auteur n’a pas d’autres modpacks ici — retirez le filtre d’auteur.",
+    "modpacksCatalogEmpty": "{{source}} n’a renvoyé aucun modpack. Réessayez dans une minute."
   },
   "community": {
     "search": "Rechercher par nom de pack",

@@ -47,6 +47,18 @@ describe("buildInstanceTabs", () => {
     ]);
   });
 
+  it("offers configs on a modded instance before its first launch", () => {
+    const tabs = buildInstanceTabs({ ...base, isModded: true });
+
+    expect(tabs.map((tab) => tab.id)).toContain("configs");
+  });
+
+  it("keeps the instance server tab where a server can be created", () => {
+    const tabs = buildInstanceTabs({ ...base, canCreateServer: true });
+
+    expect(tabs.map((tab) => tab.id)).toContain("server");
+  });
+
   it("shows the modpack tab next to the overview for linked packs", () => {
     const tabs = buildInstanceTabs({
       ...base,

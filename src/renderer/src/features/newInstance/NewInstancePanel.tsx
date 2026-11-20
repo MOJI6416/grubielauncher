@@ -1240,16 +1240,28 @@ export function NewInstancePanel({
                 aria-current={state.source === source ? "page" : undefined}
                 data-indicator-active={state.source === source}
                 onClick={() => changeSource(source)}
-                className="relative flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-muted-foreground transition-colors not-aria-[current=page]:hover:bg-row-hover hover:text-foreground aria-[current=page]:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                className="group relative flex h-11 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-muted-foreground transition-colors not-aria-[current=page]:hover:bg-row-hover hover:text-foreground aria-[current=page]:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 <Icon className="size-4 shrink-0 text-faint" />
                 <Hint
-                  content={t(`newInstance.sources.${source}`)}
+                  content={
+                    <span className="flex flex-col gap-0.5">
+                      <span className="font-medium">
+                        {t(`newInstance.sources.${source}`)}
+                      </span>
+                      <span>{t(`newInstance.sourceHints.${source}`)}</span>
+                    </span>
+                  }
                   variant="text"
                   truncatedOnly
                 >
-                  <span className="min-w-0 truncate">
-                    {t(`newInstance.sources.${source}`)}
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate leading-tight">
+                      {t(`newInstance.sources.${source}`)}
+                    </span>
+                    <span className="truncate text-3xs leading-tight text-faint">
+                      {t(`newInstance.sourceHints.${source}`)}
+                    </span>
                   </span>
                 </Hint>
               </button>

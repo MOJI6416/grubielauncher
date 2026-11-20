@@ -449,12 +449,20 @@ export function ModpackBrowser({
                     {offlineReason ??
                       (catalog.error
                         ? t("modManager.searchFailedSourceHint")
-                        : query.trim() || author
+                        : query.trim()
                           ? t("modManager.notFoundHint")
-                          : t("newInstance.modpacksNoneForFilters"))}
+                          : gameVersion || loader
+                            ? t("newInstance.modpacksNoneForFilters")
+                            : author
+                              ? t("newInstance.modpacksNoneForAuthor")
+                              : t("newInstance.modpacksCatalogEmpty", {
+                                  source: providerName(provider),
+                                }))}
                   </EmptyDescription>
                 </EmptyHeader>
-                {catalog.error && !offlineReason && (
+                {(catalog.error ||
+                  !(query.trim() || gameVersion || loader || author)) &&
+                  !offlineReason && (
                   <EmptyContent>
                     <Button
                       size="sm"

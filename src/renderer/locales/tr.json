@@ -1235,7 +1235,7 @@
     "importAction": "İçe aktar",
     "imported": "Eklenen sunucu: {{total}}",
     "discover": {
-      "mine": "Sunucularım",
+      "mine": "Sunucu listesi",
       "byAddress": "Adresle",
       "title": "Modrinth sunucuları",
       "search": "Sunucu ara",
@@ -1895,7 +1895,7 @@
           "nextMatch": "Günlük aramasında sonraki eşleşme",
           "prevMatch": "Önceki eşleşme",
           "clearSearch": "Günlük aramasını temizle",
-          "history": "Sunucu konsolunuzun komut geçmişi"
+          "history": "Kurulum sunucusu konsolunun komut geçmişi"
         },
         "chat": {
           "send": "Mesajı gönder",
@@ -2494,7 +2494,7 @@
     "organizeLoadFailedHint": "instances.json hasarlı veya meşgul. Dosyanın üzerine yazılmaması için gruplar, etiketler ve sıra kilitlendi — dosya yeniden okunabilir olunca başlatıcıyı yeniden başlatın.",
     "publishError": "Kurulum yayımlanamadı",
     "deleteError": "Kurulum silinemedi",
-    "serverManager": "Sunucu yönetimi",
+    "serverManager": "Kurulum sunucusu",
     "createingServer": "Sunucu oluşturuluyor",
     "serverCore": "Sunucu çekirdeği",
     "aikarFlags": "Aikar bayrakları",
@@ -2507,7 +2507,7 @@
     "copyRelativePath": "Göreli yollu komutu kopyala",
     "copyShareLink": "Bağlantıyı kopyalamak için tıklayın",
     "ownerTooltip": "Sahibi: {{nickname}}",
-    "downloadedLabel": "İndirildi",
+    "ownerUpdatesHint": "{{nickname}} kurulumu: yazarı günceller, yeni sürümler Grubie üzerinden gelir.",
     "synchronizeDescription": "Kurulumun en son sürümünü sunucudan indir",
     "syncReplacesFiles": "Eşitleme, kurulum dosyalarını yayımlananlarla değiştirir — yapılandırmalarda ve dünyalarda yaptığınız yerel düzenlemeler kaybolur.",
     "syncInterrupted": "Eşitleme tamamlanmadı",
@@ -2560,6 +2560,7 @@
     },
     "tags": {
       "manage": "Etiketler",
+      "edit": "Etiketleri düzenle",
       "title": "Etiketler · {{name}}",
       "empty": "Henüz etiket yok",
       "add": "Bir etiket ekleyip Enter’a basın",
@@ -2583,6 +2584,7 @@
     "deleteBusyHint": "Başlatıcı başka bir kurulum veya kaldırma işlemiyle meşgul. Bitmesini bekleyip tekrar deneyin.",
     "groups": {
       "create": "Yeni grup",
+      "button": "Grup",
       "placeholder": "Grup adı",
       "hint": "Bir kurulumu oraya taşımak için grup başlığının üzerine sürükleyin.",
       "ungrouped": "Grupsuz",
@@ -2596,12 +2598,16 @@
     },
     "deleteInstance": "Kurulumu sil",
     "serverInstall": "Sunucu kur",
+    "serverEmpty": {
+      "title": "Bu kurulumun henüz sunucusu yok",
+      "hint": "Launcher, arkadaşlarınızla oynamak için aynı sürüm ve modlarla bir sunucu kurar. İstediğiniz zaman silebilirsiniz; çöp kutusuna gider."
+    },
     "serverSetup": {
       "description": "Başlatıcı, kurulum klasörüne bir sunucu çekirdeği indirir ve kurulum içeriğini oraya kopyalar.",
       "coreHint": "Çekirdek sunucu programıdır: sunucunun hangi modları ve eklentileri çalıştırabileceğini belirler.",
       "memoryHint": "Bu kurulum için {{recommended}} MB öneriyoruz. Bu bilgisayarda toplam {{total}} MB var.",
       "memoryHintShort": "Bu kurulum için {{recommended}} MB öneriyoruz.",
-      "afterInstall": "Kurulumdan sonra kurulumda “Sunucum” sekmesi belirir — sunucuyu orada başlatıp yapılandırın.",
+      "afterInstall": "Kurulumdan sonra kurulumda “Kurulum sunucusu” sekmesi belirir — sunucuyu orada başlatıp yapılandırın.",
       "eulaRequired": "Devam etmek için Minecraft sözleşmesini kabul edin.",
       "confirmLead": "Başlatıcının kurulum klasörüyle ne yapacağını kontrol edin.",
       "continue": "Devam",
@@ -2610,7 +2616,7 @@
       "effectCore": "{{core}} çekirdeği internetten indirilir.",
       "effectMods": "Kurulumun modları ve yapılandırmaları sunucuya kopyalanır.",
       "effectEula": "Minecraft sözleşmesini kabul ettiğiniz eula.txt dosyasına yazılır.",
-      "reversible": "Sunucuyu daha sonra “Sunucum” sekmesinden silebilirsiniz — çöp kutusuna gider.",
+      "reversible": "Sunucuyu daha sonra “Kurulum sunucusu” sekmesinden silebilirsiniz — çöp kutusuna gider.",
       "cleanedUp": "Tamamlanmamış sunucu klasörü kaldırıldı."
     },
     "runCommand": "Başlatma komutu",
@@ -2641,7 +2647,12 @@
       "java": "Java",
       "diskUsage": "Diskte",
       "launchProfile": "Başlatma profili",
-      "javaNotInstalled": "Java {{major}} henüz indirilmedi — başlatıcı onu açılışta indirir."
+      "javaNotInstalled": "Java {{major}} henüz indirilmedi — başlatıcı onu açılışta indirir.",
+      "javaProblem": {
+        "missing": "bulunamadı",
+        "untrusted": "launcher listesinde yok",
+        "not_installed": "henüz indirilmedi"
+      }
     },
     "screenshots": {
       "title": "Ekran görüntüleri",
@@ -2728,9 +2739,13 @@
       "publishSectionTitle": "Sunucuda neler değişecek"
     },
     "deleteRemoteErrorHint": "Sunucu yayını kaldırmayı reddetti. Bu bilgisayarda hiçbir şey silinmedi — daha sonra tekrar deneyin.",
-    "unsafeFolderName": "Klasör adı 32 karakterden uzun veya yasak karakterler içeriyor. Klasörü yeniden adlandırıp başlatıcıyı yeniden başlatın.",
     "libraryUnreadable": "Kurulum kütüphanesi okunamadı",
     "libraryUnreadableHint": "versions klasörü açılmadı. Hiçbir şey silinmedi — kurulumlar diskte duruyor. Klasörü ve sürücüyü kontrol edip tekrar deneyin.",
+    "rejected": {
+      "tooLong": "Açılmadı: klasör adı {{max}} karakterden uzun",
+      "unreadable": "Açılmadı: version.json okunamıyor",
+      "openFailed": "Klasör açılamadı"
+    },
     "updateLoader": "Yükleyici sürümünü güncelle",
     "legacyLoaders": "Eski sürümler için",
     "launchProfileDropped": "Başlatmada iletilmeyecek",
@@ -4124,7 +4139,9 @@
       "tooManyChunks": "Tek seferde çok fazla yığın. Daha azını seçip tekrarlayın.",
       "backupFailed": "Yedekleme başarısız oldu, bu yüzden hiçbir şey değiştirilmedi.",
       "failed": "Diskteki boş alanı kontrol edip tekrar deneyin."
-    }
+    },
+    "worldMissing": "Dünya bulunamadı",
+    "missingHint": "Klasör yeniden adlandırılmış veya silinmiş olabilir. Geri dönüp yığın düzenleyiciyi yeniden açın."
   },
   "worldBackups": {
     "title": "Yedekler",
@@ -5460,9 +5477,9 @@
       "modpack": "Mod paketi",
       "content": "İçerik",
       "worlds": "Dünyalar",
-      "servers": "Sunucular",
+      "servers": "Sunucu listesi",
       "settings": "Ayarlar",
-      "server": "Sunucum",
+      "server": "Kurulum sunucusu",
       "logs": "Günlükler",
       "statistics": "İstatistikler",
       "configs": "Yapılandırma",
@@ -5524,9 +5541,10 @@
   "configs": {
     "emptyTitle": "Yapılandırma dosyası yok",
     "emptyHint": "Bu kurulumda henüz config klasörü yok — modlarla ilk başlatmadan sonra belirir.",
+    "runToCreate": "Yapılandırmaları oluşturmak için oyunu başlat",
     "pickFile": "Düzenlemek için soldan bir dosya seçin",
     "saved": "Dosya kaydedildi",
-    "savedOverExternal": "Dosya siz açtıktan sonra diskte değişmişti — o sürüm artık Geri yükle altındaki en yeni kayıt.",
+    "savedOverExternal": "Dosya siz açtıktan sonra diskte değişmişti — o içerik artık Dosya kopyaları altındaki en yeni kayıt.",
     "saveFailed": "Dosya kaydedilemedi",
     "saveFailedHint": "Dosya yazılmadı. Değişiklikleriniz hâlâ düzenleyicide — dosyayı tutan oyunu veya düzenleyiciyi kapatıp yeniden Kaydet’e basın.",
     "backupFailedHint": "Mevcut dosyanın kopyası alınamadı, bu yüzden hiçbir şeyin üzerine yazılmadı. Değişiklikleriniz hâlâ düzenleyicide.",
@@ -5537,9 +5555,9 @@
     "unsaved": "Kaydedilmemiş değişiklikler",
     "unsavedHint": "Yapılandırma dosyasındaki düzenlemeler kaydedilmedi. Ayrılırsanız kaybolacaklar.",
     "backupBaseline": "Orijinal dosya",
-    "backupPrevious": "Önceki sürüm",
-    "backupRestored": "Sürüm düzenleyiciye yüklendi — uygulamak için kaydedin",
-    "backupMissing": "Kayıtlı sürüm dosyası yok",
+    "backupPrevious": "Önceki kopya",
+    "backupRestored": "Kopya düzenleyiciye yüklendi — uygulamak için kaydedin",
+    "backupMissing": "Kayıtlı kopya dosyası yok",
     "completion": {
       "literal": "değer",
       "key": "anahtar",
@@ -5554,7 +5572,7 @@
     "findPrevious": "Önceki (Shift+Enter)",
     "findNext": "Sonraki (Enter)",
     "findHint": "Dosyada bul ({{mod}}+F)",
-    "backupsHint": "Geri yüklemeden önce mevcut dosyayla karşılaştırmak için bir sürüme tıklayın.",
+    "backupsHint": "Geri yüklemeden önce mevcut dosyayla karşılaştırmak için bir kopyaya tıklayın.",
     "showInFolder": "Klasörde göster",
     "discard": "At",
     "modeLabel": "Düzenleyici görünümü",
@@ -5610,7 +5628,7 @@
     "restoredFile": "Dosya geçmişten geri yüklendi",
     "missing": {
       "title": "Dosya yok",
-      "hint": "Mod, oyun bir sonraki açılışında onu yeniden oluşturacak. Eski ayarlarınızı geri getirmek için kayıtlı bir sürümü geri yükleyin.",
+      "hint": "Mod, oyun bir sonraki açılışında onu yeniden oluşturacak. Eski ayarlarınızı geri getirmek için kayıtlı bir kopyayı geri yükleyin.",
       "restore": "Karşılaştır ve geri yükle"
     },
     "diff": {
@@ -5618,7 +5636,7 @@
       "short": "Değişiklikler",
       "changesTitle": "Kaydedilmemiş değişiklikler",
       "back": "Düzenlemeye dön",
-      "snapshotTitle": "{{date}} tarihli sürüm geri yüklensin mi?",
+      "snapshotTitle": "{{date}} tarihli kopya geri yüklensin mi?",
       "apply": "Geri yükle",
       "same": "Fark yok",
       "hidden_one": "{{count}} değişmemiş satır",
@@ -5765,6 +5783,10 @@
       "summary": "Son güncelleme: {{from}} → {{to}} · {{date}}",
       "action": "{{version}} sürümünü geri getir",
       "backups": "Dosya kopyaları",
+      "filesHint_one": "Geri alma, güncellemeden önce kaydedilen {{count}} dosyayı geri yükler:",
+      "filesHint_other": "Geri alma, güncellemeden önce kaydedilen {{count}} dosyayı geri yükler:",
+      "filesNone": "Güncellemeden önce hiçbir dosyanın kaydedilmesi gerekmedi — geri alma yalnızca mod paketi sürümünü geri yükler.",
+      "removes": "Kaldırılacak yeni güncelleme dosyaları: {{count}}",
       "done": "Kurulum yeniden {{version}} sürümünde",
       "failed": "Önceki sürüm geri getirilemedi"
     },
@@ -5865,6 +5887,11 @@
     },
     "offline": "Bağlantı yok",
     "offlineHint": "Grubie hizmetleri kullanılamıyor, güncelleme denetimleri duraklatıldı.",
+    "signInHint": "Oynamak için bir hesaba giriş yapın.",
+    "popular": {
+      "title": "Popüler mod paketleri",
+      "failed": "Mod paketi açılamadı"
+    },
     "orphans": {
       "title_one": "{{count}} klasör tanınmadı",
       "title_other": "{{count}} klasör tanınmadı",
@@ -6045,6 +6072,15 @@
       "server": "Sunucu için",
       "launchers": "Launcher'dan"
     },
+    "sourceHints": {
+      "custom": "Yükleyici ve sürüm",
+      "community": "Grubie oyuncularından",
+      "catalog": "CurseForge, Modrinth",
+      "code": "Kod veya bağlantı",
+      "file": ".zip veya .mrpack",
+      "launchers": "Prism, TLauncher vb.",
+      "server": "Adresten sürüm"
+    },
     "pickHint": {
       "custom": "Bir yükleyici ve Minecraft sürümü seçin.",
       "community": "Başka bir oyuncunun paylaştığı bir paketi seçin — bütün olarak kurulur.",
@@ -6116,7 +6152,7 @@
     "pickVersionFirst": "Önce bir Minecraft sürümü seçin",
     "notChosen": "seçilmedi",
     "releasedOn": "Çıkış",
-    "ownServer": "Kendi sunucunuz",
+    "ownServer": "Kurulum sunucusu",
     "serverSupported": "destekleniyor",
     "serverUnsupported": "desteklenmiyor",
     "vanillaNote": "Modsuz, temiz bir oyun. Mod istiyorsanız bir yükleyici seçin — kurulum her zaman yeniden oluşturulabilir.",
@@ -6160,7 +6196,9 @@
     "extraFilesFailed": "Kurulum oluşturuldu, ancak her dosya indirilmedi",
     "extraFilesFailedHint": "Kurulum dosyalarının bir kısmı gelmedi. Ayrıntılar hata günlüğünde.",
     "afterInstallHint": "İçerik, sunucular ve başlatma argümanları kurulumdan sonra değiştirilebilir",
-    "modpacksNoneForFilters": "Seçilen sürüm ve yükleyici için mod paketi yok — filtreleri değiştirin."
+    "modpacksNoneForFilters": "Seçilen sürüm ve yükleyici için mod paketi yok — filtreleri değiştirin.",
+    "modpacksNoneForAuthor": "Bu yazarın burada başka mod paketi yok — yazar filtresini kaldırın.",
+    "modpacksCatalogEmpty": "{{source}} hiç mod paketi döndürmedi. Bir dakika sonra yeniden deneyin."
   },
   "community": {
     "search": "Paket adına göre ara",

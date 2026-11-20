@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   Archive,
   FileCog,
-  FolderOpen,
   History,
   ListChecks,
   Loader2,
@@ -28,6 +27,7 @@ import { ModpackFlowDialogs } from "./ModpackFlowDialogs";
 import { ModpackUpdatePreview } from "./ModpackUpdatePreview";
 import type { ModpackPanelProps } from "./ModpackPanel";
 import { useModpackUpdateFlow } from "./useModpackUpdateFlow";
+import { RollbackFiles } from "./RollbackFiles";
 
 function HowRow({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
   return (
@@ -153,15 +153,7 @@ export function ModpackArchivePanel(props: ModpackPanelProps) {
                 {rollbackSummary}
               </span>
             </Hint>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => void flow.openBackups()}
-            >
-              <FolderOpen />
-              {t("modpack.rollback.backups")}
-            </Button>
+            <RollbackFiles rollback={state.rollback} />
             <Button
               type="button"
               size="sm"

@@ -16,6 +16,7 @@ import {
   pathsAtom,
   versionsAtom,
   versionsLoadedAtom,
+  versionsRejectedAtom,
   versionsUnreadableAtom,
 } from "@renderer/stores/atoms";
 import { isSafeVersionName } from "@/shared/versionName";
@@ -26,11 +27,7 @@ import {
   jarModsSignature,
 } from "@/shared/jarMods";
 import type { VersionInstallStage } from "@/types/InstallationProgress";
-import {
-  consumeRecentFailure,
-  describeFailure,
-  showFailureToast,
-} from "./failures";
+import { consumeRecentFailure, describeFailure } from "./failures";
 import { showErrorToast } from "./errorToast";
 import { toast } from "sonner";
 import {
@@ -363,6 +360,8 @@ ${describeFailure(failure).text}`,
     }
   }
 
+  const rejected: { folder: string; unreadable?: string }[] = [];
+
   const results = await Promise.all(
     directories.map(async (directory) => {
       try {
@@ -375,13 +374,7 @@ ${describeFailure(failure).text}`,
         if (!(await api.fs.pathExists(confPath))) return null;
 
         if (!isSafeVersionName(directory)) {
-          showErrorToast(
-            `${i18n.t("versions.notFound")}: ${directory}`,
-            i18n.t("versions.unsafeFolderName"),
-            "",
-            `version-read-${directory}`,
-          );
-
+          rejected.push({ folder: directory });
           return null;
         }
 
@@ -401,14 +394,19 @@ ${describeFailure(failure).text}`,
       } catch (error) {
         console.error(`[versions] failed to read version ${directory}`, error);
 
-        showFailureToast(`${i18n.t("versions.notFound")}: ${directory}`, error, {
-          channels: ["fs:readJSON", "version:init"],
-          toastId: `version-read-${directory}`,
+        rejected.push({
+          folder: directory,
+          unreadable: error instanceof Error ? error.message : String(error),
         });
 
         return null;
       }
     }),
+  );
+
+  getDefaultStore().set(
+    versionsRejectedAtom,
+    rejected.sort((a, b) => a.folder.localeCompare(b.folder)),
   );
 
   const versions = results.filter(

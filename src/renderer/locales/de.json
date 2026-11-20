@@ -1235,7 +1235,7 @@
     "importAction": "Importieren",
     "imported": "Server hinzugefügt: {{total}}",
     "discover": {
-      "mine": "Meine Server",
+      "mine": "Serverliste",
       "byAddress": "Nach Adresse",
       "title": "Modrinth-Server",
       "search": "Server suchen",
@@ -1895,7 +1895,7 @@
           "nextMatch": "Nächster Treffer der Logsuche",
           "prevMatch": "Vorheriger Treffer",
           "clearSearch": "Logsuche leeren",
-          "history": "Befehlsverlauf Ihrer Serverkonsole"
+          "history": "Befehlsverlauf der Konsole des Instanzservers"
         },
         "chat": {
           "send": "Nachricht senden",
@@ -2494,7 +2494,7 @@
     "organizeLoadFailedHint": "instances.json ist beschädigt oder belegt. Gruppen, Tags und Reihenfolge sind gesperrt, damit die Datei nicht überschrieben wird – starten Sie den Launcher neu, sobald sie wieder lesbar ist.",
     "publishError": "Instanz konnte nicht veröffentlicht werden",
     "deleteError": "Instanz konnte nicht gelöscht werden",
-    "serverManager": "Serververwaltung",
+    "serverManager": "Instanzserver",
     "createingServer": "Server wird erstellt",
     "serverCore": "Serverkern",
     "aikarFlags": "Aikars Flags",
@@ -2507,7 +2507,7 @@
     "copyRelativePath": "Befehl mit relativem Pfad kopieren",
     "copyShareLink": "Klicken, um den Link zu kopieren",
     "ownerTooltip": "Besitzer: {{nickname}}",
-    "downloadedLabel": "Heruntergeladen",
+    "ownerUpdatesHint": "Instanz von {{nickname}}: Der Autor aktualisiert sie, neue Versionen kommen über Grubie.",
     "synchronizeDescription": "Die neueste Version der Instanz vom Server herunterladen",
     "syncReplacesFiles": "Beim Synchronisieren werden die Dateien der Instanz durch die veröffentlichten ersetzt – lokale Änderungen an Konfigurationen und Welten gehen verloren.",
     "syncInterrupted": "Synchronisierung nicht abgeschlossen",
@@ -2560,6 +2560,7 @@
     },
     "tags": {
       "manage": "Tags",
+      "edit": "Tags bearbeiten",
       "title": "Tags · {{name}}",
       "empty": "Noch keine Tags",
       "add": "Tag eingeben und Enter drücken",
@@ -2583,6 +2584,7 @@
     "deleteBusyHint": "Der Launcher ist mit einer anderen Installation oder Entfernung beschäftigt. Warten Sie, bis sie abgeschlossen ist, und versuchen Sie es erneut.",
     "groups": {
       "create": "Neue Gruppe",
+      "button": "Gruppe",
       "placeholder": "Gruppenname",
       "hint": "Ziehen Sie eine Instanz auf eine Gruppenüberschrift, um sie dorthin zu verschieben.",
       "ungrouped": "Ohne Gruppe",
@@ -2596,12 +2598,16 @@
     },
     "deleteInstance": "Instanz löschen",
     "serverInstall": "Server installieren",
+    "serverEmpty": {
+      "title": "Diese Instanz hat noch keinen Server",
+      "hint": "Der Launcher installiert einen Server mit derselben Version und denselben Mods, auf dem Sie mit Freunden spielen können. Sie können ihn jederzeit löschen – er kommt in den Papierkorb."
+    },
     "serverSetup": {
       "description": "Der Launcher lädt einen Serverkern in den Instanzordner herunter und kopiert den Inhalt der Instanz dorthin.",
       "coreHint": "Der Kern ist das Serverprogramm: Er bestimmt, welche Mods und Plugins der Server ausführen kann.",
       "memoryHint": "Wir empfehlen {{recommended}} MB für diese Instanz. Dieser Rechner hat insgesamt {{total}} MB.",
       "memoryHintShort": "Wir empfehlen {{recommended}} MB für diese Instanz.",
-      "afterInstall": "Nach der Installation erhält die Instanz den Tab „Mein Server“ – dort starten und konfigurieren Sie den Server.",
+      "afterInstall": "Nach der Installation erhält die Instanz den Tab „Instanzserver“ – dort starten und konfigurieren Sie den Server.",
       "eulaRequired": "Akzeptieren Sie die Minecraft-Vereinbarung, um fortzufahren.",
       "confirmLead": "Prüfen Sie, was der Launcher mit dem Instanzordner vorhat.",
       "continue": "Weiter",
@@ -2610,7 +2616,7 @@
       "effectCore": "Der Kern {{core}} wird aus dem Internet heruntergeladen.",
       "effectMods": "Mods und Konfigurationen der Instanz werden auf den Server kopiert.",
       "effectEula": "Ihre Zustimmung zur Minecraft-Vereinbarung wird in eula.txt eingetragen.",
-      "reversible": "Sie können den Server später im Tab „Mein Server“ löschen – er kommt in den Papierkorb.",
+      "reversible": "Sie können den Server später im Tab „Instanzserver“ löschen – er kommt in den Papierkorb.",
       "cleanedUp": "Der unfertige Serverordner wurde entfernt."
     },
     "runCommand": "Startbefehl",
@@ -2641,7 +2647,12 @@
       "java": "Java",
       "diskUsage": "Speicherplatz",
       "launchProfile": "Startprofil",
-      "javaNotInstalled": "Java {{major}} ist noch nicht heruntergeladen – der Launcher lädt es beim Start herunter."
+      "javaNotInstalled": "Java {{major}} ist noch nicht heruntergeladen – der Launcher lädt es beim Start herunter.",
+      "javaProblem": {
+        "missing": "nicht gefunden",
+        "untrusted": "nicht in der Launcher-Liste",
+        "not_installed": "noch nicht heruntergeladen"
+      }
     },
     "screenshots": {
       "title": "Screenshots",
@@ -2728,9 +2739,13 @@
       "publishSectionTitle": "Was sich auf dem Server ändert"
     },
     "deleteRemoteErrorHint": "Der Server hat das Entfernen der Veröffentlichung abgelehnt. Auf diesem Computer wurde nichts gelöscht – versuchen Sie es später erneut.",
-    "unsafeFolderName": "Der Ordnername ist länger als 32 Zeichen oder enthält verbotene Zeichen. Benennen Sie den Ordner um und starten Sie den Launcher neu.",
     "libraryUnreadable": "Die Instanzbibliothek konnte nicht gelesen werden",
     "libraryUnreadableHint": "Der Ordner versions ließ sich nicht öffnen. Es wurde nichts gelöscht – die Instanzen bleiben auf der Festplatte. Prüfen Sie Ordner und Laufwerk und versuchen Sie es erneut.",
+    "rejected": {
+      "tooLong": "Nicht geöffnet: Der Ordnername ist länger als {{max}} Zeichen",
+      "unreadable": "Nicht geöffnet: version.json ist nicht lesbar",
+      "openFailed": "Ordner konnte nicht geöffnet werden"
+    },
     "updateLoader": "Loader-Version aktualisieren",
     "legacyLoaders": "Für alte Versionen",
     "launchProfileDropped": "Wird beim Start nicht übergeben",
@@ -2990,7 +3005,7 @@
     "streak": "Serie",
     "byHour": "Nach Tageszeit",
     "peakHour": "Spitze {{hour}}:00",
-    "byServer": "Wo Sie gespielt haben",
+    "byServer": "Wo gespielt",
     "byAccount": "Nach Konto",
     "singleplayer": "Einzelspieler",
     "empty": "Noch keine Statistiken",
@@ -4124,7 +4139,9 @@
       "tooManyChunks": "Zu viele Chunks auf einmal. Wählen Sie weniger aus und wiederholen Sie.",
       "backupFailed": "Das Backup ist fehlgeschlagen, daher wurde nichts geändert.",
       "failed": "Prüfen Sie den freien Speicherplatz und versuchen Sie es erneut."
-    }
+    },
+    "worldMissing": "Welt nicht gefunden",
+    "missingHint": "Der Ordner wurde möglicherweise umbenannt oder gelöscht. Gehen Sie zurück und öffnen Sie den Chunk-Editor erneut."
   },
   "worldBackups": {
     "title": "Backups",
@@ -5460,9 +5477,9 @@
       "modpack": "Modpack",
       "content": "Inhalt",
       "worlds": "Welten",
-      "servers": "Server",
+      "servers": "Serverliste",
       "settings": "Einstellungen",
-      "server": "Mein Server",
+      "server": "Instanzserver",
       "logs": "Logs",
       "statistics": "Statistik",
       "configs": "Konfigs",
@@ -5524,9 +5541,10 @@
   "configs": {
     "emptyTitle": "Keine Konfigurationsdateien",
     "emptyHint": "Diese Instanz hat noch keinen Ordner config – er erscheint nach dem ersten Start mit Mods.",
+    "runToCreate": "Spiel starten, um Konfigurationen zu erstellen",
     "pickFile": "Wählen Sie links eine Datei zum Bearbeiten",
     "saved": "Datei gespeichert",
-    "savedOverExternal": "Die Datei wurde auf der Festplatte geändert, seit Sie sie geöffnet haben – diese Fassung ist jetzt der neueste Eintrag unter „Wiederherstellen“.",
+    "savedOverExternal": "Die Datei wurde auf der Festplatte geändert, seit Sie sie geöffnet haben – dieser Inhalt ist jetzt der neueste Eintrag unter „Dateikopien“.",
     "saveFailed": "Datei konnte nicht gespeichert werden",
     "saveFailedHint": "Die Datei wurde nicht geschrieben. Ihre Änderungen sind noch im Editor – schließen Sie das Spiel oder einen Editor, der die Datei belegt, und drücken Sie erneut „Speichern“.",
     "backupFailedHint": "Es konnte keine Kopie der aktuellen Datei angelegt werden, daher wurde nichts überschrieben. Ihre Änderungen sind noch im Editor.",
@@ -5537,9 +5555,9 @@
     "unsaved": "Ungespeicherte Änderungen",
     "unsavedHint": "Änderungen an der Konfigurationsdatei sind nicht gespeichert. Sie gehen verloren, wenn Sie die Seite verlassen.",
     "backupBaseline": "Originaldatei",
-    "backupPrevious": "Vorherige Fassung",
-    "backupRestored": "Fassung in den Editor geladen – speichern Sie, um sie zu übernehmen",
-    "backupMissing": "Die Datei der gespeicherten Fassung ist weg",
+    "backupPrevious": "Vorherige Kopie",
+    "backupRestored": "Kopie in den Editor geladen – speichern Sie, um sie zu übernehmen",
+    "backupMissing": "Die Datei der gespeicherten Kopie ist weg",
     "completion": {
       "literal": "Wert",
       "key": "Schlüssel",
@@ -5554,7 +5572,7 @@
     "findPrevious": "Vorheriger (Shift+Enter)",
     "findNext": "Nächster (Enter)",
     "findHint": "In Datei suchen ({{mod}}+F)",
-    "backupsHint": "Klicken Sie auf eine Fassung, um sie vor dem Wiederherstellen mit der aktuellen Datei zu vergleichen.",
+    "backupsHint": "Klicken Sie auf eine Kopie, um sie vor dem Wiederherstellen mit der aktuellen Datei zu vergleichen.",
     "showInFolder": "Im Ordner zeigen",
     "discard": "Verwerfen",
     "modeLabel": "Editoransicht",
@@ -5610,7 +5628,7 @@
     "restoredFile": "Datei aus dem Verlauf wiederhergestellt",
     "missing": {
       "title": "Die Datei ist weg",
-      "hint": "Der Mod erstellt sie beim nächsten Spielstart neu. Um Ihre alten Einstellungen zurückzuholen, stellen Sie eine gespeicherte Fassung wieder her.",
+      "hint": "Der Mod erstellt sie beim nächsten Spielstart neu. Um Ihre alten Einstellungen zurückzuholen, stellen Sie eine gespeicherte Kopie wieder her.",
       "restore": "Vergleichen und wiederherstellen"
     },
     "diff": {
@@ -5618,7 +5636,7 @@
       "short": "Änderungen",
       "changesTitle": "Ungespeicherte Änderungen",
       "back": "Zurück zum Bearbeiten",
-      "snapshotTitle": "Fassung vom {{date}} wiederherstellen?",
+      "snapshotTitle": "Kopie vom {{date}} wiederherstellen?",
       "apply": "Wiederherstellen",
       "same": "Keine Unterschiede",
       "hidden_one": "{{count}} unveränderte Zeile",
@@ -5765,6 +5783,10 @@
       "summary": "Letztes Update: {{from}} → {{to}} · {{date}}",
       "action": "{{version}} zurückholen",
       "backups": "Dateikopien",
+      "filesHint_one": "Das Zurücksetzen stellt {{count}} vor dem Update gesicherte Datei wieder her:",
+      "filesHint_other": "Das Zurücksetzen stellt {{count}} vor dem Update gesicherte Dateien wieder her:",
+      "filesNone": "Vor dem Update musste keine Datei gesichert werden – das Zurücksetzen stellt nur die Modpack-Version wieder her.",
+      "removes": "Neue Dateien aus dem Update, die entfernt werden: {{count}}",
       "done": "Die Instanz ist wieder auf Version {{version}}",
       "failed": "Die vorherige Version konnte nicht zurückgeholt werden"
     },
@@ -5865,6 +5887,11 @@
     },
     "offline": "Keine Verbindung",
     "offlineHint": "Die Grubie-Dienste sind nicht verfügbar, Update-Prüfungen sind pausiert.",
+    "signInHint": "Melden Sie sich an, um zu spielen.",
+    "popular": {
+      "title": "Beliebte Modpacks",
+      "failed": "Modpack konnte nicht geöffnet werden"
+    },
     "orphans": {
       "title_one": "{{count}} Ordner nicht erkannt",
       "title_other": "{{count}} Ordner nicht erkannt",
@@ -6045,6 +6072,15 @@
       "server": "Für einen Server",
       "launchers": "Aus Launcher"
     },
+    "sourceHints": {
+      "custom": "Loader und Version",
+      "community": "Von Grubie-Spielern",
+      "catalog": "CurseForge, Modrinth",
+      "code": "Code oder Link",
+      "file": ".zip oder .mrpack",
+      "launchers": "Prism, TLauncher u. a.",
+      "server": "Version per Adresse"
+    },
     "pickHint": {
       "custom": "Wählen Sie einen Loader und eine Minecraft-Version.",
       "community": "Wählen Sie ein Paket, das ein anderer Spieler geteilt hat – es wird komplett installiert.",
@@ -6116,7 +6152,7 @@
     "pickVersionFirst": "Wählen Sie zuerst eine Minecraft-Version",
     "notChosen": "nicht gewählt",
     "releasedOn": "Erschienen",
-    "ownServer": "Eigener Server",
+    "ownServer": "Instanzserver",
     "serverSupported": "unterstützt",
     "serverUnsupported": "nicht unterstützt",
     "vanillaNote": "Ein reines Spiel ohne Mods. Wählen Sie einen Loader, wenn Sie Mods möchten – die Instanz lässt sich jederzeit neu erstellen.",
@@ -6160,7 +6196,9 @@
     "extraFilesFailed": "Instanz erstellt, aber nicht alle Dateien wurden heruntergeladen",
     "extraFilesFailedHint": "Einige Dateien der Instanz sind nicht angekommen. Details stehen im Fehlerprotokoll.",
     "afterInstallHint": "Inhalte, Server und Startargumente lassen sich nach der Installation ändern",
-    "modpacksNoneForFilters": "Für die gewählte Version und den Loader gibt es keine Modpacks – ändern Sie die Filter."
+    "modpacksNoneForFilters": "Für die gewählte Version und den Loader gibt es keine Modpacks – ändern Sie die Filter.",
+    "modpacksNoneForAuthor": "Dieser Autor hat hier keine weiteren Modpacks – entfernen Sie den Autorfilter.",
+    "modpacksCatalogEmpty": "{{source}} hat keine Modpacks geliefert. Versuchen Sie es in einer Minute erneut."
   },
   "community": {
     "search": "Nach Paketnamen suchen",

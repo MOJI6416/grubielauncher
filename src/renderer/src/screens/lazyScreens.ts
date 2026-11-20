@@ -18,6 +18,12 @@ export const LazyNewInstanceScreen = lazyWithPreload(() =>
   })),
 );
 
+export const LazyChunkEditorScreen = lazyWithPreload(() =>
+  import("./chunks/ChunkEditorScreen").then((module) => ({
+    default: module.ChunkEditorScreen,
+  })),
+);
+
 export const LazyCatalogScreen = lazyWithPreload(() =>
   import("./catalog/CatalogScreen").then((module) => ({
     default: module.CatalogScreen,

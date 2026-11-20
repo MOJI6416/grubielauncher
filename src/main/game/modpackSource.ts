@@ -351,6 +351,10 @@ export async function readModpackRollback(
     fromVersion: snapshot.fromVersion,
     toVersion: snapshot.toVersion,
     createdAt: snapshot.createdAt,
+    restores: (snapshot.backedUp ?? []).map((item) =>
+      item.side === "client" ? item.path : `server/${item.path}`,
+    ),
+    removes: (snapshot.created ?? []).length,
   };
 }
 

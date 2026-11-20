@@ -89,26 +89,38 @@ export function javaStatus(
   return null;
 }
 
+function runtimeName(runtime: {
+  vendor: string | null;
+  version: string | null;
+}): string {
+  return [runtime.vendor, runtime.version].filter(Boolean).join(" ") || "Java";
+}
+
 export function JavaPicker({
   value,
   requiredMajor,
   disabled,
   className,
+  lockMajor = false,
   onChange,
 }: {
   value: JavaOverride | undefined;
   requiredMajor: number;
   disabled?: boolean;
   className?: string;
+  lockMajor?: boolean;
   onChange: (next: JavaOverride | undefined) => void;
 }) {
   const { t } = useTranslation();
   const { list, add } = useJavaRuntimes();
   const current = effectiveJava(value, requiredMajor, list);
   const auto = effectiveJava(undefined, requiredMajor, list);
+  const managed = managedRuntime(list, requiredMajor);
   const selected = value ? encodeJavaOverride(value) : JAVA_AUTO;
-  const majors = javaMajors(list, [requiredMajor]);
-  const runtimes = installedRuntimes(list);
+  const majors = lockMajor ? [] : javaMajors(list, [requiredMajor]);
+  const runtimes = installedRuntimes(list).filter(
+    (runtime) => !lockMajor || runtime.major === requiredMajor,
+  );
   const knownValues = new Set([
     JAVA_AUTO,
     ...majors.map((major) => encodeJavaOverride({ major })),
@@ -118,7 +130,7 @@ export function JavaPicker({
   const choose = async (next: string) => {
     if (next === JAVA_ADD) {
       const runtime = await add();
-      if (runtime) {
+      if (runtime && (!lockMajor || runtime.major === requiredMajor)) {
         countFeature("java.pick");
         onChange({ home: runtime.home });
       }
@@ -154,9 +166,18 @@ export function JavaPicker({
         <SelectValue>
           {current.missing ? (
             <span className="text-destructive">{t("java.missing")}</span>
+          ) : value && lockMajor ? (
+            <span>{runtimeName(current)}</span>
           ) : value ? (
             <span className="font-mono tabular-nums">
               Java {javaLabel(current)}
+            </span>
+          ) : lockMajor ? (
+            <span>
+              {t("java.auto")}
+              <span className="text-faint">
+                {` · ${managed?.vendor ?? t("java.downloadsOnLaunch")}`}
+              </span>
             </span>
           ) : (
             <span>
@@ -172,19 +193,25 @@ export function JavaPicker({
         <SelectItem value={JAVA_AUTO}>
           <span>{t("java.auto")}</span>
           <span className="text-faint">
-            {t("instanceSettings.java.autoHint", { major: requiredMajor })}
+            {lockMajor
+              ? managed
+                ? runtimeName(managed)
+                : t("java.downloadsOnLaunch")
+              : t("instanceSettings.java.autoHint", { major: requiredMajor })}
           </span>
         </SelectItem>
         <SelectSeparator />
-        <SelectGroup>
-          <SelectLabel>{t("java.groupLauncher")}</SelectLabel>
-          {majors.map((major) => (
-            <SelectItem key={major} value={encodeJavaOverride({ major })}>
-              <span className="font-mono tabular-nums">Java {major}</span>
-              <span className="text-faint">{vendorOf(major)}</span>
-            </SelectItem>
-          ))}
-        </SelectGroup>
+        {majors.length > 0 && (
+          <SelectGroup>
+            <SelectLabel>{t("java.groupLauncher")}</SelectLabel>
+            {majors.map((major) => (
+              <SelectItem key={major} value={encodeJavaOverride({ major })}>
+                <span className="font-mono tabular-nums">Java {major}</span>
+                <span className="text-faint">{vendorOf(major)}</span>
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        )}
         {runtimes.length > 0 && (
           <SelectGroup>
             <SelectLabel>{t("java.groupInstalled")}</SelectLabel>
@@ -193,12 +220,25 @@ export function JavaPicker({
                 key={runtime.home}
                 value={encodeJavaOverride({ home: runtime.home })}
               >
-                <span className="font-mono tabular-nums">
-                  Java {runtime.major}
-                </span>
-                <span className="text-faint">
-                  {[runtime.vendor, runtime.version].filter(Boolean).join(" ")}
-                </span>
+                {lockMajor ? (
+                  <>
+                    <span>{runtimeName(runtime)}</span>
+                    <span className="text-faint">
+                      {t(`java.source.${runtime.source}`)}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-mono tabular-nums">
+                      Java {runtime.major}
+                    </span>
+                    <span className="text-faint">
+                      {[runtime.vendor, runtime.version]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </span>
+                  </>
+                )}
               </SelectItem>
             ))}
           </SelectGroup>

@@ -12,6 +12,7 @@ import {
   Languages,
   ListChecks,
   Loader2,
+  Play,
   RotateCcw,
   Save,
   Search,
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -185,10 +187,14 @@ export function ConfigsPanel({
   versionPath,
   disabled,
   mods,
+  onRunGame,
+  runBlockedReason,
 }: {
   versionPath: string;
   disabled?: boolean;
   mods?: ILocalProject[];
+  onRunGame?: () => void;
+  runBlockedReason?: string;
 }) {
   const { t } = useTranslation();
   const [entries, setEntries] = useState<ConfigEntry[] | null>(null);
@@ -739,6 +745,20 @@ export function ConfigsPanel({
           <EmptyTitle>{t("configs.emptyTitle")}</EmptyTitle>
           <EmptyDescription>{t("configs.emptyHint")}</EmptyDescription>
         </EmptyHeader>
+        {onRunGame && (
+          <EmptyContent>
+            <Hint content={runBlockedReason}>
+              <Button
+                variant="outline"
+                disabled={!!runBlockedReason}
+                onClick={onRunGame}
+              >
+                <Play />
+                {t("configs.runToCreate")}
+              </Button>
+            </Hint>
+          </EmptyContent>
+        )}
       </Empty>
     );
   }

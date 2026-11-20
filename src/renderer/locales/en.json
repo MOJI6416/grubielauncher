@@ -1235,7 +1235,7 @@
     "importAction": "Import",
     "imported": "Servers added: {{total}}",
     "discover": {
-      "mine": "My servers",
+      "mine": "Server list",
       "byAddress": "By address",
       "title": "Modrinth servers",
       "search": "Search servers",
@@ -1895,7 +1895,7 @@
           "nextMatch": "Next match of the log search",
           "prevMatch": "Previous match",
           "clearSearch": "Clear the log search",
-          "history": "Command history of your server console"
+          "history": "Command history of the instance server console"
         },
         "chat": {
           "send": "Send the message",
@@ -2494,7 +2494,7 @@
     "organizeLoadFailedHint": "instances.json is damaged or busy. Groups, tags and order are locked so the file is not overwritten — restart the launcher once it can be read again.",
     "publishError": "Failed to publish the instance",
     "deleteError": "Failed to delete the instance",
-    "serverManager": "Server management",
+    "serverManager": "Instance server",
     "createingServer": "Creating server",
     "serverCore": "Server core",
     "aikarFlags": "Aikar's flags",
@@ -2507,7 +2507,7 @@
     "copyRelativePath": "Copy command with relative path",
     "copyShareLink": "Click to copy the link",
     "ownerTooltip": "Owner: {{nickname}}",
-    "downloadedLabel": "Downloaded",
+    "ownerUpdatesHint": "{{nickname}}'s instance: the author updates it, new versions arrive through Grubie.",
     "synchronizeDescription": "Download the latest instance version from the server",
     "syncReplacesFiles": "Synchronising replaces the instance files with the published ones — local edits to configs and worlds are lost.",
     "syncInterrupted": "Synchronisation did not finish",
@@ -2560,6 +2560,7 @@
     },
     "tags": {
       "manage": "Tags",
+      "edit": "Edit tags",
       "title": "Tags · {{name}}",
       "empty": "No tags yet",
       "add": "Add a tag and press Enter",
@@ -2583,6 +2584,7 @@
     "deleteBusyHint": "The launcher is busy with another install or removal. Wait for it to finish and try again.",
     "groups": {
       "create": "New group",
+      "button": "Group",
       "placeholder": "Group name",
       "hint": "Drag an instance onto a group header to move it there.",
       "ungrouped": "Ungrouped",
@@ -2596,12 +2598,16 @@
     },
     "deleteInstance": "Delete instance",
     "serverInstall": "Install a server",
+    "serverEmpty": {
+      "title": "This instance has no server yet",
+      "hint": "The launcher installs a server with the same version and mods to play on with friends. You can delete it any time; it goes to the trash."
+    },
     "serverSetup": {
       "description": "The launcher downloads a server core into the instance folder and copies the instance content over to it.",
       "coreHint": "The core is the server program: it decides which mods and plugins the server can run.",
       "memoryHint": "We recommend {{recommended}} MB for this instance. This machine has {{total}} MB in total.",
       "memoryHintShort": "We recommend {{recommended}} MB for this instance.",
-      "afterInstall": "After installing, the instance gets a “Own server” tab — start and configure the server there.",
+      "afterInstall": "After installing, the instance gets an “Instance server” tab — start and configure the server there.",
       "eulaRequired": "Accept the Minecraft agreement to continue.",
       "confirmLead": "Check what the launcher is about to do with the instance folder.",
       "continue": "Continue",
@@ -2610,7 +2616,7 @@
       "effectCore": "The {{core}} core is downloaded from the internet.",
       "effectMods": "The instance mods and configs are copied over to the server.",
       "effectEula": "Your acceptance of the Minecraft agreement is written into eula.txt.",
-      "reversible": "You can delete the server later on the “Own server” tab — it goes to the trash.",
+      "reversible": "You can delete the server later on the “Instance server” tab — it goes to the trash.",
       "cleanedUp": "The unfinished server folder has been removed."
     },
     "runCommand": "Launch command",
@@ -2641,7 +2647,12 @@
       "java": "Java",
       "diskUsage": "On disk",
       "launchProfile": "Launch profile",
-      "javaNotInstalled": "Java {{major}} is not downloaded yet — the launcher downloads it on launch."
+      "javaNotInstalled": "Java {{major}} is not downloaded yet — the launcher downloads it on launch.",
+      "javaProblem": {
+        "missing": "not found",
+        "untrusted": "not in the launcher's list",
+        "not_installed": "not downloaded yet"
+      }
     },
     "screenshots": {
       "title": "Screenshots",
@@ -2728,9 +2739,13 @@
       "publishSectionTitle": "What will change on the server"
     },
     "deleteRemoteErrorHint": "The server refused to remove the publication. Nothing was deleted on this computer — try again later.",
-    "unsafeFolderName": "The folder name is longer than 32 characters or contains forbidden characters. Rename the folder and restart the launcher.",
     "libraryUnreadable": "The instance library could not be read",
     "libraryUnreadableHint": "The versions folder did not open. Nothing was deleted — the instances stay on disk. Check the folder and the drive, then try again.",
+    "rejected": {
+      "tooLong": "Not opened: the folder name is longer than {{max}} characters",
+      "unreadable": "Not opened: version.json can't be read",
+      "openFailed": "Couldn't open the folder"
+    },
     "updateLoader": "Update loader version",
     "legacyLoaders": "For old versions",
     "launchProfileDropped": "Will not be passed at launch",
@@ -4124,7 +4139,9 @@
       "tooManyChunks": "Too many chunks at once. Select fewer and repeat.",
       "backupFailed": "The backup failed, so nothing was changed.",
       "failed": "Check free disk space and try again."
-    }
+    },
+    "worldMissing": "World not found",
+    "missingHint": "Its folder may have been renamed or deleted. Go back and open the chunk editor again."
   },
   "worldBackups": {
     "title": "Backups",
@@ -5460,9 +5477,9 @@
       "modpack": "Modpack",
       "content": "Content",
       "worlds": "Worlds",
-      "servers": "Servers",
+      "servers": "Server list",
       "settings": "Settings",
-      "server": "My server",
+      "server": "Instance server",
       "logs": "Logs",
       "statistics": "Statistics",
       "configs": "Configs",
@@ -5524,9 +5541,10 @@
   "configs": {
     "emptyTitle": "No configuration files",
     "emptyHint": "This instance has no config folder yet — it appears after the first launch with mods.",
+    "runToCreate": "Launch the game to create configs",
     "pickFile": "Pick a file on the left to edit it",
     "saved": "File saved",
-    "savedOverExternal": "The file had changed on disk since you opened it — that version is now the newest entry under Restore.",
+    "savedOverExternal": "The file had changed on disk since you opened it — that content is now the newest entry under File copies.",
     "saveFailed": "Failed to save the file",
     "saveFailedHint": "The file was not written. Your changes are still in the editor — close the game or any editor that holds the file and press Save again.",
     "backupFailedHint": "A copy of the current file could not be made, so nothing was overwritten. Your changes are still in the editor.",
@@ -5537,9 +5555,9 @@
     "unsaved": "Unsaved changes",
     "unsavedHint": "Config file edits are not saved. They will be lost if you leave.",
     "backupBaseline": "Original file",
-    "backupPrevious": "Previous version",
-    "backupRestored": "Version loaded into the editor — save to apply it",
-    "backupMissing": "The saved version file is gone",
+    "backupPrevious": "Previous copy",
+    "backupRestored": "Copy loaded into the editor — save to apply it",
+    "backupMissing": "The saved copy is gone",
     "completion": {
       "literal": "value",
       "key": "key",
@@ -5554,7 +5572,7 @@
     "findPrevious": "Previous (Shift+Enter)",
     "findNext": "Next (Enter)",
     "findHint": "Find in file ({{mod}}+F)",
-    "backupsHint": "Click a version to compare it with the current file before restoring.",
+    "backupsHint": "Click a copy to compare it with the current file before restoring.",
     "showInFolder": "Show in folder",
     "discard": "Discard",
     "modeLabel": "Editor view",
@@ -5610,7 +5628,7 @@
     "restoredFile": "File restored from history",
     "missing": {
       "title": "The file is gone",
-      "hint": "The mod will create it again the next time the game starts. To bring your old settings back, restore a saved version.",
+      "hint": "The mod will create it again the next time the game starts. To bring your old settings back, restore a saved copy.",
       "restore": "Compare and restore"
     },
     "diff": {
@@ -5618,7 +5636,7 @@
       "short": "Changes",
       "changesTitle": "Unsaved changes",
       "back": "Back to editing",
-      "snapshotTitle": "Restore the version from {{date}}?",
+      "snapshotTitle": "Restore the copy from {{date}}?",
       "apply": "Restore",
       "same": "No differences",
       "hidden_one": "{{count}} unchanged line",
@@ -5765,6 +5783,10 @@
       "summary": "Last update: {{from}} → {{to}} · {{date}}",
       "action": "Return {{version}}",
       "backups": "File copies",
+      "filesHint_one": "Rolling back restores {{count}} file saved before the update:",
+      "filesHint_other": "Rolling back restores {{count}} files saved before the update:",
+      "filesNone": "No files needed saving before the update — rolling back only restores the modpack version.",
+      "removes": "New files from the update it removes: {{count}}",
       "done": "The instance is back on version {{version}}",
       "failed": "Could not return the previous version"
     },
@@ -5865,6 +5887,11 @@
     },
     "offline": "No connection",
     "offlineHint": "Grubie services are unavailable, update checks are paused.",
+    "signInHint": "Sign in to an account to play.",
+    "popular": {
+      "title": "Popular modpacks",
+      "failed": "Couldn't open the modpack"
+    },
     "orphans": {
       "title_one": "{{count}} folder not recognised",
       "title_other": "{{count}} folders not recognised",
@@ -6045,6 +6072,15 @@
       "server": "For a server",
       "launchers": "From a launcher"
     },
+    "sourceHints": {
+      "custom": "Loader and version",
+      "community": "From Grubie players",
+      "catalog": "CurseForge, Modrinth",
+      "code": "Code or link",
+      "file": ".zip or .mrpack",
+      "launchers": "Prism, TLauncher and more",
+      "server": "Version from an address"
+    },
     "pickHint": {
       "custom": "Pick a loader and a Minecraft version.",
       "community": "Pick a pack another player shared — it installs whole.",
@@ -6116,7 +6152,7 @@
     "pickVersionFirst": "Pick a Minecraft version first",
     "notChosen": "not chosen",
     "releasedOn": "Released",
-    "ownServer": "Own server",
+    "ownServer": "Instance server",
     "serverSupported": "supported",
     "serverUnsupported": "not supported",
     "vanillaNote": "A clean game without mods. Pick a loader if you want mods — the instance can always be recreated.",
@@ -6160,7 +6196,9 @@
     "extraFilesFailed": "Instance created, but not every file downloaded",
     "extraFilesFailedHint": "Some of the instance files did not arrive. Details are in the error log.",
     "afterInstallHint": "Content, servers and launch arguments can be changed after installation",
-    "modpacksNoneForFilters": "No modpacks for the chosen version and loader — change the filters."
+    "modpacksNoneForFilters": "No modpacks for the chosen version and loader — change the filters.",
+    "modpacksNoneForAuthor": "This author has no other modpacks here — remove the author filter.",
+    "modpacksCatalogEmpty": "{{source}} returned no modpacks. Try again in a minute."
   },
   "community": {
     "search": "Search by pack name",

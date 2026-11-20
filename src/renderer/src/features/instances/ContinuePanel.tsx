@@ -24,6 +24,7 @@ import {
   StatusDot,
 } from "@renderer/features/servers/ServerVisuals";
 import { useServerStatuses } from "@renderer/features/servers/useServerStatuses";
+import { describePingError } from "@renderer/features/servers/ping";
 import type { RunGameParams } from "@renderer/features/launch/types";
 import {
   ContinueServer,
@@ -188,6 +189,9 @@ export function ContinuePanel({
               ping?.state === "online" && ping.players
                 ? `${ping.players.online}/${ping.players.max}`
                 : "";
+            const notFound =
+              ping?.state === "offline" &&
+              describePingError(ping.result?.error) === "dns";
 
             return (
               <li key={target.id}>
@@ -259,6 +263,11 @@ export function ContinuePanel({
                         {players && (
                           <span className="shrink-0 font-mono tabular-nums">
                             {players}
+                          </span>
+                        )}
+                        {notFound && (
+                          <span className="shrink-0">
+                            {t("servers.statusNotFound")}
                           </span>
                         )}
                       </span>

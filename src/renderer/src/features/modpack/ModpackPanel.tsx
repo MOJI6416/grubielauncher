@@ -4,7 +4,6 @@ import {
   ArrowUp,
   Copy,
   ExternalLink,
-  FolderOpen,
   History,
   ListTree,
   Loader2,
@@ -63,6 +62,7 @@ import { ArchiveSourcePopover } from "./ArchiveSourceForm";
 import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { ListSkeleton } from "@renderer/components/ListSkeleton";
+import { RollbackFiles } from "./RollbackFiles";
 
 const api = window.api;
 
@@ -438,15 +438,7 @@ function LinkedModpackPanel(props: ModpackPanelProps) {
                 {rollbackSummary}
               </span>
             </Hint>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => void flow.openBackups()}
-            >
-              <FolderOpen />
-              {t("modpack.rollback.backups")}
-            </Button>
+            <RollbackFiles rollback={state.rollback} />
             <Button
               type="button"
               size="sm"

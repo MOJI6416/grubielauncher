@@ -326,17 +326,6 @@ export function useModpackUpdateFlow(input: ModpackFlowInput) {
     }
   };
 
-  const openBackups = async () => {
-    const folder = await api.path.join(
-      instance.versionPath,
-      "storage",
-      "modpack",
-      "rollback",
-      "files",
-    );
-    await api.shell.openPath(folder);
-  };
-
   const resolveBlockedPack = (resolved: IBlockedMod[] | null) => {
     const pending = blockedPack;
     setBlockedPack(null);
@@ -382,7 +371,6 @@ export function useModpackUpdateFlow(input: ModpackFlowInput) {
     changeRestoreRemoved,
     apply,
     rollback,
-    openBackups,
     resolveBlockedPack,
     resolveBlockedMods,
   };

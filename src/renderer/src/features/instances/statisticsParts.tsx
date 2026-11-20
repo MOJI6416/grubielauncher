@@ -31,21 +31,19 @@ export function Fact({
         )
       }
     >
-      <div className="flex min-w-0 items-center gap-2 rounded-xl border border-border bg-card px-2.5 py-2">
-        <Icon className="size-4 shrink-0 text-faint" />
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate text-3xs leading-tight text-faint">
-            {label}
+      <div className="flex min-w-0 flex-col justify-between gap-0.5 rounded-xl border border-border bg-card px-2.5 py-2">
+        <span className="flex min-w-0 items-start gap-1.5 text-3xs leading-tight text-faint">
+          <Icon className="size-3 shrink-0" />
+          <span className="line-clamp-2 min-w-0 break-words">{label}</span>
+        </span>
+        <span className="flex min-w-0 items-baseline gap-1">
+          <span className="truncate text-sm font-semibold whitespace-nowrap tabular-nums">
+            {value}
           </span>
-          <span className="flex min-w-0 items-baseline gap-1">
-            <span className="truncate text-sm font-semibold tabular-nums">
-              {value}
-            </span>
-            {note && (
-              <span className="truncate text-3xs tabular-nums">{note}</span>
-            )}
-          </span>
-        </div>
+          {note && (
+            <span className="truncate text-3xs tabular-nums">{note}</span>
+          )}
+        </span>
       </div>
     </Hint>
   );

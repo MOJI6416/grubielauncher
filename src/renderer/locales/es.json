@@ -1249,7 +1249,7 @@
     "importAction": "Importar",
     "imported": "Servidores agregados: {{total}}",
     "discover": {
-      "mine": "Mis servidores",
+      "mine": "Lista de servidores",
       "byAddress": "Por dirección",
       "title": "Servidores de Modrinth",
       "search": "Buscar servidores",
@@ -1916,7 +1916,7 @@
           "nextMatch": "Siguiente coincidencia de la búsqueda en el registro",
           "prevMatch": "Coincidencia anterior",
           "clearSearch": "Borrar la búsqueda en el registro",
-          "history": "Historial de comandos de la consola de su servidor"
+          "history": "Historial de comandos de la consola del servidor de la instancia"
         },
         "chat": {
           "send": "Enviar el mensaje",
@@ -2516,7 +2516,7 @@
     "organizeLoadFailedHint": "instances.json está dañado u ocupado. Los grupos, las etiquetas y el orden se bloquearon para no sobrescribir el archivo: reinicie el launcher cuando se pueda volver a leer.",
     "publishError": "No se pudo publicar la instancia",
     "deleteError": "No se pudo eliminar la instancia",
-    "serverManager": "Administración del servidor",
+    "serverManager": "Servidor de la instancia",
     "createingServer": "Creando el servidor",
     "serverCore": "Núcleo del servidor",
     "aikarFlags": "Flags de Aikar",
@@ -2529,7 +2529,7 @@
     "copyRelativePath": "Copiar el comando con ruta relativa",
     "copyShareLink": "Haga clic para copiar el enlace",
     "ownerTooltip": "Dueño: {{nickname}}",
-    "downloadedLabel": "Descargada",
+    "ownerUpdatesHint": "Instancia de {{nickname}}: la actualiza su autor y las nuevas versiones llegan a través de Grubie.",
     "synchronizeDescription": "Descargar del servidor la última versión de la instancia",
     "syncReplacesFiles": "Sincronizar reemplaza los archivos de la instancia por los publicados: se pierden los cambios locales en configuraciones y mundos.",
     "syncInterrupted": "La sincronización no terminó",
@@ -2582,6 +2582,7 @@
     },
     "tags": {
       "manage": "Etiquetas",
+      "edit": "Editar etiquetas",
       "title": "Etiquetas · {{name}}",
       "empty": "Todavía no hay etiquetas",
       "add": "Agregue una etiqueta y presione Enter",
@@ -2605,6 +2606,7 @@
     "deleteBusyHint": "El launcher está ocupado con otra instalación o eliminación. Espere a que termine y vuelva a intentarlo.",
     "groups": {
       "create": "Nuevo grupo",
+      "button": "Grupo",
       "placeholder": "Nombre del grupo",
       "hint": "Arrastre una instancia al encabezado de un grupo para moverla ahí.",
       "ungrouped": "Sin grupo",
@@ -2618,12 +2620,16 @@
     },
     "deleteInstance": "Eliminar instancia",
     "serverInstall": "Instalar un servidor",
+    "serverEmpty": {
+      "title": "Esta instancia aún no tiene servidor",
+      "hint": "El launcher instala un servidor con la misma versión y los mismos mods para jugar con amigos. Puede eliminarlo cuando quiera: irá a la papelera."
+    },
     "serverSetup": {
       "description": "El launcher descarga un núcleo de servidor en la carpeta de la instancia y le copia el contenido de la instancia.",
       "coreHint": "El núcleo es el programa del servidor: decide qué mods y plugins puede ejecutar el servidor.",
       "memoryHint": "Recomendamos {{recommended}} MB para esta instancia. Este equipo tiene {{total}} MB en total.",
       "memoryHintShort": "Recomendamos {{recommended}} MB para esta instancia.",
-      "afterInstall": "Después de instalarlo, la instancia tendrá una pestaña «Servidor propio»: ahí se inicia y se configura el servidor.",
+      "afterInstall": "Después de instalarlo, la instancia tendrá una pestaña «Servidor de la instancia»: ahí se inicia y se configura el servidor.",
       "eulaRequired": "Acepte el acuerdo de Minecraft para continuar.",
       "confirmLead": "Revise lo que el launcher va a hacer con la carpeta de la instancia.",
       "continue": "Continuar",
@@ -2632,7 +2638,7 @@
       "effectCore": "El núcleo {{core}} se descarga de internet.",
       "effectMods": "Los mods y las configuraciones de la instancia se copian al servidor.",
       "effectEula": "Su aceptación del acuerdo de Minecraft se escribe en eula.txt.",
-      "reversible": "Más tarde puede eliminar el servidor en la pestaña «Servidor propio»: irá a la papelera.",
+      "reversible": "Más tarde puede eliminar el servidor en la pestaña «Servidor de la instancia»: irá a la papelera.",
       "cleanedUp": "Se eliminó la carpeta del servidor sin terminar."
     },
     "runCommand": "Comando de inicio",
@@ -2663,7 +2669,12 @@
       "java": "Java",
       "diskUsage": "En el disco",
       "launchProfile": "Perfil de inicio",
-      "javaNotInstalled": "Java {{major}} aún no está descargado: el launcher lo descargará al iniciar."
+      "javaNotInstalled": "Java {{major}} aún no está descargado: el launcher lo descargará al iniciar.",
+      "javaProblem": {
+        "missing": "no encontrada",
+        "untrusted": "fuera de la lista del launcher",
+        "not_installed": "aún sin descargar"
+      }
     },
     "screenshots": {
       "title": "Capturas de pantalla",
@@ -2750,9 +2761,13 @@
       "publishSectionTitle": "Qué cambiará en el servidor"
     },
     "deleteRemoteErrorHint": "El servidor se negó a quitar la publicación. No se eliminó nada en esta computadora: vuelva a intentarlo más tarde.",
-    "unsafeFolderName": "El nombre de la carpeta tiene más de 32 caracteres o contiene caracteres prohibidos. Renombre la carpeta y reinicie el launcher.",
     "libraryUnreadable": "No se pudo leer la biblioteca de instancias",
     "libraryUnreadableHint": "La carpeta versions no se abrió. No se eliminó nada: las instancias siguen en el disco. Revise la carpeta y la unidad, y vuelva a intentarlo.",
+    "rejected": {
+      "tooLong": "No se abrió: el nombre de la carpeta tiene más de {{max}} caracteres",
+      "unreadable": "No se abrió: no se puede leer version.json",
+      "openFailed": "No se pudo abrir la carpeta"
+    },
     "updateLoader": "Actualizar la versión del cargador",
     "legacyLoaders": "Para versiones antiguas",
     "launchProfileDropped": "No se pasará al iniciar",
@@ -4165,7 +4180,9 @@
       "tooManyChunks": "Demasiados chunks a la vez. Seleccione menos y repita.",
       "backupFailed": "La copia de seguridad falló, así que no se cambió nada.",
       "failed": "Revise el espacio libre en el disco y vuelva a intentarlo."
-    }
+    },
+    "worldMissing": "Mundo no encontrado",
+    "missingHint": "Es posible que la carpeta se haya renombrado o eliminado. Vuelva atrás y abra de nuevo el editor de chunks."
   },
   "worldBackups": {
     "title": "Copias de seguridad",
@@ -5507,9 +5524,9 @@
       "modpack": "Modpack",
       "content": "Contenido",
       "worlds": "Mundos",
-      "servers": "Servidores",
+      "servers": "Lista de servidores",
       "settings": "Configuración",
-      "server": "Mi servidor",
+      "server": "Servidor de la instancia",
       "logs": "Registros",
       "statistics": "Estadísticas",
       "configs": "Configs",
@@ -5573,9 +5590,10 @@
   "configs": {
     "emptyTitle": "No hay archivos de configuración",
     "emptyHint": "Esta instancia todavía no tiene carpeta config: aparece después del primer inicio con mods.",
+    "runToCreate": "Iniciar el juego para crear las configuraciones",
     "pickFile": "Elija un archivo a la izquierda para editarlo",
     "saved": "Archivo guardado",
-    "savedOverExternal": "El archivo cambió en el disco desde que lo abrió: esa versión es ahora la entrada más reciente en Restaurar.",
+    "savedOverExternal": "El archivo cambió en el disco desde que lo abrió: ese contenido es ahora la entrada más reciente en Copias del archivo.",
     "saveFailed": "No se pudo guardar el archivo",
     "saveFailedHint": "El archivo no se escribió. Sus cambios siguen en el editor: cierre el juego o cualquier editor que tenga abierto el archivo y presione Guardar de nuevo.",
     "backupFailedHint": "No se pudo hacer una copia del archivo actual, así que no se sobrescribió nada. Sus cambios siguen en el editor.",
@@ -5586,9 +5604,9 @@
     "unsaved": "Cambios sin guardar",
     "unsavedHint": "Los cambios en el archivo de configuración no están guardados. Se perderán si sale.",
     "backupBaseline": "Archivo original",
-    "backupPrevious": "Versión anterior",
-    "backupRestored": "Versión cargada en el editor: guarde para aplicarla",
-    "backupMissing": "El archivo de la versión guardada ya no existe",
+    "backupPrevious": "Copia anterior",
+    "backupRestored": "Copia cargada en el editor: guarde para aplicarla",
+    "backupMissing": "El archivo de la copia guardada ya no existe",
     "completion": {
       "literal": "valor",
       "key": "clave",
@@ -5603,7 +5621,7 @@
     "findPrevious": "Anterior (Shift+Enter)",
     "findNext": "Siguiente (Enter)",
     "findHint": "Buscar en el archivo ({{mod}}+F)",
-    "backupsHint": "Haga clic en una versión para compararla con el archivo actual antes de restaurarla.",
+    "backupsHint": "Haga clic en una copia para compararla con el archivo actual antes de restaurarla.",
     "showInFolder": "Mostrar en la carpeta",
     "discard": "Descartar",
     "modeLabel": "Vista del editor",
@@ -5658,7 +5676,7 @@
     "restoredFile": "Archivo restaurado desde el historial",
     "missing": {
       "title": "El archivo ya no está",
-      "hint": "El mod lo volverá a crear la próxima vez que inicie el juego. Para recuperar su configuración anterior, restaure una versión guardada.",
+      "hint": "El mod lo volverá a crear la próxima vez que inicie el juego. Para recuperar su configuración anterior, restaure una copia guardada.",
       "restore": "Comparar y restaurar"
     },
     "diff": {
@@ -5666,7 +5684,7 @@
       "short": "Cambios",
       "changesTitle": "Cambios sin guardar",
       "back": "Volver a editar",
-      "snapshotTitle": "¿Restaurar la versión del {{date}}?",
+      "snapshotTitle": "¿Restaurar la copia del {{date}}?",
       "apply": "Restaurar",
       "same": "Sin diferencias",
       "hidden_one": "{{count}} línea sin cambios",
@@ -5813,6 +5831,11 @@
       "summary": "Última actualización: {{from}} → {{to}} · {{date}}",
       "action": "Volver a {{version}}",
       "backups": "Copias de archivos",
+      "filesHint_one": "La reversión restaura {{count}} archivo guardado antes de la actualización:",
+      "filesHint_many": "La reversión restaura {{count}} archivos guardados antes de la actualización:",
+      "filesHint_other": "La reversión restaura {{count}} archivos guardados antes de la actualización:",
+      "filesNone": "Antes de la actualización no hubo que guardar ningún archivo: la reversión solo restaura la versión del modpack.",
+      "removes": "Archivos nuevos de la actualización que quitará: {{count}}",
       "done": "La instancia volvió a la versión {{version}}",
       "failed": "No se pudo volver a la versión anterior"
     },
@@ -5914,6 +5937,11 @@
     },
     "offline": "Sin conexión",
     "offlineHint": "Los servicios de Grubie no están disponibles; la búsqueda de actualizaciones está en pausa.",
+    "signInHint": "Inicie sesión en una cuenta para jugar.",
+    "popular": {
+      "title": "Modpacks populares",
+      "failed": "No se pudo abrir el modpack"
+    },
     "orphans": {
       "title_one": "{{count}} carpeta no reconocida",
       "title_many": "{{count}} carpetas no reconocidas",
@@ -6098,6 +6126,15 @@
       "server": "Para un servidor",
       "launchers": "De un launcher"
     },
+    "sourceHints": {
+      "custom": "Cargador y versión",
+      "community": "De jugadores de Grubie",
+      "catalog": "CurseForge, Modrinth",
+      "code": "Código o enlace",
+      "file": ".zip o .mrpack",
+      "launchers": "Prism, TLauncher y otros",
+      "server": "Versión por dirección"
+    },
     "pickHint": {
       "custom": "Elija un cargador y una versión de Minecraft.",
       "community": "Elija un paquete que compartió otro jugador: se instala completo.",
@@ -6169,7 +6206,7 @@
     "pickVersionFirst": "Primero elija una versión de Minecraft",
     "notChosen": "sin elegir",
     "releasedOn": "Lanzada",
-    "ownServer": "Servidor propio",
+    "ownServer": "Servidor de la instancia",
     "serverSupported": "compatible",
     "serverUnsupported": "no compatible",
     "vanillaNote": "El juego limpio, sin mods. Elija un cargador si quiere mods: la instancia siempre se puede volver a crear.",
@@ -6213,7 +6250,9 @@
     "extraFilesFailed": "La instancia se creó, pero no se descargaron todos los archivos",
     "extraFilesFailedHint": "Algunos archivos de la instancia no llegaron. Los detalles están en el registro de errores.",
     "afterInstallHint": "El contenido, los servidores y los argumentos de inicio se pueden cambiar después de instalar",
-    "modpacksNoneForFilters": "No hay modpacks para la versión y el cargador elegidos: cambie los filtros."
+    "modpacksNoneForFilters": "No hay modpacks para la versión y el cargador elegidos: cambie los filtros.",
+    "modpacksNoneForAuthor": "Este autor no tiene más modpacks aquí: quite el filtro de autor.",
+    "modpacksCatalogEmpty": "{{source}} no devolvió ningún modpack. Vuelva a intentarlo en un minuto."
   },
   "community": {
     "search": "Buscar por nombre del paquete",

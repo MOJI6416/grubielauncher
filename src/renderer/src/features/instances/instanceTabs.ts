@@ -11,9 +11,11 @@ export interface InstanceTabsInput {
   worldCount: number;
   serverCount: number;
   hasConfigs: boolean;
+  isModded?: boolean;
   hasStatistics: boolean;
   hasServerManager: boolean;
   hasOwnServer: boolean;
+  canCreateServer?: boolean;
   hasUnsavedSettings?: boolean;
   hasUnsavedArguments?: boolean;
   hasModpack?: boolean;
@@ -33,8 +35,8 @@ export function buildInstanceTabs(input: InstanceTabsInput): InstanceTabItem[] {
   if (input.hasServerManager) {
     tabs.push({ id: "servers", count: input.serverCount });
   }
-  if (input.hasOwnServer) tabs.push({ id: "server" });
-  if (input.hasConfigs) tabs.push({ id: "configs" });
+  if (input.hasOwnServer || input.canCreateServer) tabs.push({ id: "server" });
+  if (input.hasConfigs || input.isModded) tabs.push({ id: "configs" });
 
   tabs.push({ id: "settings", alert: input.hasUnsavedSettings === true });
   tabs.push({ id: "arguments", alert: input.hasUnsavedArguments === true });

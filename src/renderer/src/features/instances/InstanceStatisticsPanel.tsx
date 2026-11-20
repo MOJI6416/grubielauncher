@@ -577,7 +577,6 @@ export function InstanceStatisticsPanel({
             <Panel
               title={t("versionStatistics.byServer")}
               icon={Server}
-              hint={format(sessionsTotal)}
               className="max-h-[240px]"
             >
               <BucketList
@@ -591,7 +590,6 @@ export function InstanceStatisticsPanel({
             <Panel
               title={t("versionStatistics.byAccount")}
               icon={Users}
-              hint={format(sessionsTotal)}
               className="max-h-[240px]"
             >
               <BucketList

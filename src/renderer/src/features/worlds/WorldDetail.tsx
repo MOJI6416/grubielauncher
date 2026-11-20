@@ -43,7 +43,7 @@ const TABS = [
   "backups",
 ] as const;
 
-type WorldTab = (typeof TABS)[number];
+export type WorldTab = (typeof TABS)[number];
 
 export function WorldDetail({
   world,
@@ -58,6 +58,7 @@ export function WorldDetail({
   locale,
   actions,
   renameRequested,
+  initialTab,
   onRenameHandled,
   onPlay,
   onRenamed,
@@ -76,6 +77,7 @@ export function WorldDetail({
   locale: string;
   actions: WorldActions;
   renameRequested: boolean;
+  initialTab?: WorldTab;
   onRenameHandled: () => void;
   onPlay: () => void;
   onRenamed: (nextPath: string) => void;
@@ -83,7 +85,7 @@ export function WorldDetail({
   onWorldPatched: (patch: Partial<IWorld>) => void;
 }) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<WorldTab>("overview");
+  const [tab, setTab] = useState<WorldTab>(initialTab ?? "overview");
   const tabIndicator = useSlidingIndicator<HTMLDivElement>();
   const [editValue, setEditValue] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);

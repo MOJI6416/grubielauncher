@@ -1249,7 +1249,7 @@
     "importAction": "Importar",
     "imported": "Servidores adicionados: {{total}}",
     "discover": {
-      "mine": "Meus servidores",
+      "mine": "Lista de servidores",
       "byAddress": "Por endereço",
       "title": "Servidores do Modrinth",
       "search": "Buscar servidores",
@@ -1916,7 +1916,7 @@
           "nextMatch": "Próximo resultado da busca no log",
           "prevMatch": "Resultado anterior",
           "clearSearch": "Limpar a busca no log",
-          "history": "Histórico de comandos do console do seu servidor"
+          "history": "Histórico de comandos do console do servidor da instância"
         },
         "chat": {
           "send": "Enviar a mensagem",
@@ -2516,7 +2516,7 @@
     "organizeLoadFailedHint": "O instances.json está danificado ou ocupado. Grupos, tags e ordem estão bloqueados para o arquivo não ser sobrescrito — reinicie o launcher quando ele puder ser lido de novo.",
     "publishError": "Falha ao publicar a instância",
     "deleteError": "Falha ao excluir a instância",
-    "serverManager": "Gerenciamento do servidor",
+    "serverManager": "Servidor da instância",
     "createingServer": "Criando servidor",
     "serverCore": "Núcleo do servidor",
     "aikarFlags": "Flags de Aikar",
@@ -2529,7 +2529,7 @@
     "copyRelativePath": "Copiar comando com caminho relativo",
     "copyShareLink": "Clique para copiar o link",
     "ownerTooltip": "Dono: {{nickname}}",
-    "downloadedLabel": "Baixado",
+    "ownerUpdatesHint": "Instância de {{nickname}}: o autor a atualiza, e as novas versões chegam pelo Grubie.",
     "synchronizeDescription": "Baixar a versão mais recente da instância do servidor",
     "syncReplacesFiles": "Sincronizar substitui os arquivos da instância pelos publicados — edições locais em configs e mundos são perdidas.",
     "syncInterrupted": "A sincronização não terminou",
@@ -2582,6 +2582,7 @@
     },
     "tags": {
       "manage": "Tags",
+      "edit": "Editar tags",
       "title": "Tags · {{name}}",
       "empty": "Ainda não há tags",
       "add": "Adicione uma tag e pressione Enter",
@@ -2605,6 +2606,7 @@
     "deleteBusyHint": "O launcher está ocupado com outra instalação ou remoção. Espere terminar e tente de novo.",
     "groups": {
       "create": "Novo grupo",
+      "button": "Grupo",
       "placeholder": "Nome do grupo",
       "hint": "Arraste uma instância até o cabeçalho de um grupo para movê-la para lá.",
       "ungrouped": "Sem grupo",
@@ -2618,12 +2620,16 @@
     },
     "deleteInstance": "Excluir instância",
     "serverInstall": "Instalar um servidor",
+    "serverEmpty": {
+      "title": "Esta instância ainda não tem servidor",
+      "hint": "O launcher instala um servidor com a mesma versão e os mesmos mods para jogar com amigos. Você pode excluí-lo a qualquer momento; ele vai para a lixeira."
+    },
     "serverSetup": {
       "description": "O launcher baixa um núcleo de servidor para a pasta da instância e copia o conteúdo da instância para ele.",
       "coreHint": "O núcleo é o programa do servidor: ele decide quais mods e plugins o servidor pode rodar.",
       "memoryHint": "Recomendamos {{recommended}} MB para esta instância. Este computador tem {{total}} MB no total.",
       "memoryHintShort": "Recomendamos {{recommended}} MB para esta instância.",
-      "afterInstall": "Depois da instalação, a instância ganha a aba “Meu servidor” — inicie e configure o servidor lá.",
+      "afterInstall": "Depois da instalação, a instância ganha a aba “Servidor da instância” — inicie e configure o servidor lá.",
       "eulaRequired": "Aceite o contrato do Minecraft para continuar.",
       "confirmLead": "Confira o que o launcher vai fazer com a pasta da instância.",
       "continue": "Continuar",
@@ -2632,7 +2638,7 @@
       "effectCore": "O núcleo {{core}} é baixado da internet.",
       "effectMods": "Os mods e as configs da instância são copiados para o servidor.",
       "effectEula": "Sua aceitação do contrato do Minecraft é gravada no eula.txt.",
-      "reversible": "Você pode excluir o servidor depois na aba “Meu servidor” — ele vai para a lixeira.",
+      "reversible": "Você pode excluir o servidor depois na aba “Servidor da instância” — ele vai para a lixeira.",
       "cleanedUp": "A pasta do servidor inacabado foi removida."
     },
     "runCommand": "Comando de inicialização",
@@ -2663,7 +2669,12 @@
       "java": "Java",
       "diskUsage": "No disco",
       "launchProfile": "Perfil de inicialização",
-      "javaNotInstalled": "O Java {{major}} ainda não foi baixado — o launcher baixa ao iniciar."
+      "javaNotInstalled": "O Java {{major}} ainda não foi baixado — o launcher baixa ao iniciar.",
+      "javaProblem": {
+        "missing": "não encontrada",
+        "untrusted": "fora da lista do launcher",
+        "not_installed": "ainda não baixada"
+      }
     },
     "screenshots": {
       "title": "Capturas de tela",
@@ -2750,9 +2761,13 @@
       "publishSectionTitle": "O que vai mudar no servidor"
     },
     "deleteRemoteErrorHint": "O servidor se recusou a remover a publicação. Nada foi excluído neste computador — tente de novo mais tarde.",
-    "unsafeFolderName": "O nome da pasta tem mais de 32 caracteres ou contém caracteres proibidos. Renomeie a pasta e reinicie o launcher.",
     "libraryUnreadable": "Não foi possível ler a biblioteca de instâncias",
     "libraryUnreadableHint": "A pasta versions não abriu. Nada foi excluído — as instâncias continuam no disco. Confira a pasta e o disco e tente de novo.",
+    "rejected": {
+      "tooLong": "Não aberta: o nome da pasta tem mais de {{max}} caracteres",
+      "unreadable": "Não aberta: não foi possível ler o version.json",
+      "openFailed": "Não foi possível abrir a pasta"
+    },
     "updateLoader": "Atualizar versão do loader",
     "legacyLoaders": "Para versões antigas",
     "launchProfileDropped": "Não será passado na inicialização",
@@ -4165,7 +4180,9 @@
       "tooManyChunks": "Chunks demais de uma vez. Selecione menos e repita.",
       "backupFailed": "O backup falhou, então nada foi alterado.",
       "failed": "Confira o espaço livre no disco e tente de novo."
-    }
+    },
+    "worldMissing": "Mundo não encontrado",
+    "missingHint": "A pasta pode ter sido renomeada ou excluída. Volte e abra o editor de chunks novamente."
   },
   "worldBackups": {
     "title": "Backups",
@@ -5507,9 +5524,9 @@
       "modpack": "Modpack",
       "content": "Conteúdo",
       "worlds": "Mundos",
-      "servers": "Servidores",
+      "servers": "Lista de servidores",
       "settings": "Configurações",
-      "server": "Meu servidor",
+      "server": "Servidor da instância",
       "logs": "Logs",
       "statistics": "Estatísticas",
       "configs": "Configs",
@@ -5573,9 +5590,10 @@
   "configs": {
     "emptyTitle": "Nenhum arquivo de configuração",
     "emptyHint": "Esta instância ainda não tem pasta config — ela aparece depois da primeira inicialização com mods.",
+    "runToCreate": "Iniciar o jogo para criar as configurações",
     "pickFile": "Escolha um arquivo à esquerda para editá-lo",
     "saved": "Arquivo salvo",
-    "savedOverExternal": "O arquivo mudou no disco desde que você o abriu — aquela versão agora é a entrada mais recente em Restaurar.",
+    "savedOverExternal": "O arquivo mudou no disco desde que você o abriu — aquele conteúdo agora é a entrada mais recente em Cópias do arquivo.",
     "saveFailed": "Falha ao salvar o arquivo",
     "saveFailedHint": "O arquivo não foi gravado. Suas alterações continuam no editor — feche o jogo ou qualquer editor que esteja com o arquivo aberto e clique em Salvar de novo.",
     "backupFailedHint": "Não foi possível fazer uma cópia do arquivo atual, então nada foi sobrescrito. Suas alterações continuam no editor.",
@@ -5586,9 +5604,9 @@
     "unsaved": "Alterações não salvas",
     "unsavedHint": "As edições no arquivo de configuração não foram salvas. Elas vão se perder se você sair.",
     "backupBaseline": "Arquivo original",
-    "backupPrevious": "Versão anterior",
-    "backupRestored": "Versão carregada no editor — salve para aplicá-la",
-    "backupMissing": "O arquivo da versão salva sumiu",
+    "backupPrevious": "Cópia anterior",
+    "backupRestored": "Cópia carregada no editor — salve para aplicá-la",
+    "backupMissing": "O arquivo da cópia salva sumiu",
     "completion": {
       "literal": "valor",
       "key": "chave",
@@ -5603,7 +5621,7 @@
     "findPrevious": "Anterior (Shift+Enter)",
     "findNext": "Próximo (Enter)",
     "findHint": "Buscar no arquivo ({{mod}}+F)",
-    "backupsHint": "Clique em uma versão para compará-la com o arquivo atual antes de restaurar.",
+    "backupsHint": "Clique em uma cópia para compará-la com o arquivo atual antes de restaurar.",
     "showInFolder": "Mostrar na pasta",
     "discard": "Descartar",
     "modeLabel": "Visualização do editor",
@@ -5658,7 +5676,7 @@
     "restoredFile": "Arquivo restaurado do histórico",
     "missing": {
       "title": "O arquivo sumiu",
-      "hint": "O mod vai criá-lo de novo na próxima vez que o jogo iniciar. Para trazer de volta suas configurações antigas, restaure uma versão salva.",
+      "hint": "O mod vai criá-lo de novo na próxima vez que o jogo iniciar. Para trazer de volta suas configurações antigas, restaure uma cópia salva.",
       "restore": "Comparar e restaurar"
     },
     "diff": {
@@ -5666,7 +5684,7 @@
       "short": "Mudanças",
       "changesTitle": "Alterações não salvas",
       "back": "Voltar a editar",
-      "snapshotTitle": "Restaurar a versão de {{date}}?",
+      "snapshotTitle": "Restaurar a cópia de {{date}}?",
       "apply": "Restaurar",
       "same": "Sem diferenças",
       "hidden_one": "{{count}} linha sem mudanças",
@@ -5813,6 +5831,11 @@
       "summary": "Última atualização: {{from}} → {{to}} · {{date}}",
       "action": "Voltar para {{version}}",
       "backups": "Cópias dos arquivos",
+      "filesHint_one": "A reversão restaura {{count}} arquivo salvo antes da atualização:",
+      "filesHint_many": "A reversão restaura {{count}} arquivos salvos antes da atualização:",
+      "filesHint_other": "A reversão restaura {{count}} arquivos salvos antes da atualização:",
+      "filesNone": "Nenhum arquivo precisou ser salvo antes da atualização — a reversão só restaura a versão do modpack.",
+      "removes": "Arquivos novos da atualização que serão removidos: {{count}}",
       "done": "A instância voltou para a versão {{version}}",
       "failed": "Não foi possível voltar para a versão anterior"
     },
@@ -5914,6 +5937,11 @@
     },
     "offline": "Sem conexão",
     "offlineHint": "Os serviços do Grubie estão indisponíveis; as verificações de atualização estão pausadas.",
+    "signInHint": "Entre em uma conta para jogar.",
+    "popular": {
+      "title": "Modpacks populares",
+      "failed": "Não foi possível abrir o modpack"
+    },
     "orphans": {
       "title_one": "{{count}} pasta não reconhecida",
       "title_many": "{{count}} pastas não reconhecidas",
@@ -6098,6 +6126,15 @@
       "server": "Para um servidor",
       "launchers": "De um launcher"
     },
+    "sourceHints": {
+      "custom": "Loader e versão",
+      "community": "De jogadores do Grubie",
+      "catalog": "CurseForge, Modrinth",
+      "code": "Código ou link",
+      "file": ".zip ou .mrpack",
+      "launchers": "Prism, TLauncher e outros",
+      "server": "Versão pelo endereço"
+    },
     "pickHint": {
       "custom": "Escolha um loader e uma versão do Minecraft.",
       "community": "Escolha um pacote que outro jogador compartilhou — ele é instalado inteiro.",
@@ -6169,7 +6206,7 @@
     "pickVersionFirst": "Escolha uma versão do Minecraft primeiro",
     "notChosen": "não escolhida",
     "releasedOn": "Lançada em",
-    "ownServer": "Servidor próprio",
+    "ownServer": "Servidor da instância",
     "serverSupported": "suportado",
     "serverUnsupported": "não suportado",
     "vanillaNote": "Um jogo limpo, sem mods. Escolha um loader se quiser mods — a instância sempre pode ser recriada.",
@@ -6213,7 +6250,9 @@
     "extraFilesFailed": "Instância criada, mas nem todos os arquivos foram baixados",
     "extraFilesFailedHint": "Alguns arquivos da instância não chegaram. Os detalhes estão no registro de erros.",
     "afterInstallHint": "O conteúdo, os servidores e os argumentos de inicialização podem ser mudados depois da instalação",
-    "modpacksNoneForFilters": "Não há modpacks para a versão e o loader escolhidos — mude os filtros."
+    "modpacksNoneForFilters": "Não há modpacks para a versão e o loader escolhidos — mude os filtros.",
+    "modpacksNoneForAuthor": "Este autor não tem outros modpacks aqui — remova o filtro de autor.",
+    "modpacksCatalogEmpty": "{{source}} não retornou nenhum modpack. Tente de novo em um minuto."
   },
   "community": {
     "search": "Buscar pelo nome do pacote",

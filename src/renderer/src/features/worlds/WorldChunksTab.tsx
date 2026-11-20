@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import { Boxes, Globe, Map as MapIcon, TriangleAlert } from "lucide-react";
 import { IWorld } from "@/types/World";
@@ -20,7 +21,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Hint } from "@renderer/components/Hint";
 import { formatBytes } from "@renderer/utilities/file";
 import { formatNumber } from "@renderer/utilities/numbers";
-import { ChunkEditorDialog } from "./chunks/ChunkEditorDialog";
+import { selectedVersionAtom } from "@renderer/stores/atoms";
+import { instanceKey } from "@renderer/features/instances/selectors";
+import { navigate } from "@renderer/navigation/navigate";
 
 const api = window.api;
 
@@ -35,20 +38,18 @@ type Status = "loading" | "ready" | "error";
 export function WorldChunksTab({
   world,
   locked,
-  lockReason,
   locale,
-  onChanged,
 }: {
   world: IWorld;
   locked: boolean;
   lockReason?: string;
   locale: string;
-  onChanged: () => void;
+  onChanged?: () => void;
 }) {
   const { t } = useTranslation();
+  const version = useAtomValue(selectedVersionAtom);
   const [dimensions, setDimensions] = useState<IChunkDimension[]>([]);
   const [status, setStatus] = useState<Status>("loading");
-  const [open, setOpen] = useState(false);
 
   const mounted = useRef(true);
   useEffect(() => {
@@ -144,7 +145,14 @@ export function WorldChunksTab({
             variant="secondary"
             size="sm"
             className="h-8 shrink-0"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              if (!version) return;
+              navigate({
+                name: "chunks",
+                id: instanceKey(version),
+                world: world.folderName,
+              });
+            }}
           >
             <MapIcon className="size-3.5" />
             {t("worldChunks.open")}
@@ -221,23 +229,6 @@ export function WorldChunksTab({
             ))}
           </ul>
         </div>
-      )}
-
-      {open && (
-        <ChunkEditorDialog
-          world={world}
-          locked={locked}
-          lockReason={lockReason}
-          locale={locale}
-          onClose={() => {
-            setOpen(false);
-            void load();
-          }}
-          onChanged={() => {
-            onChanged();
-            void load();
-          }}
-        />
       )}
     </div>
   );

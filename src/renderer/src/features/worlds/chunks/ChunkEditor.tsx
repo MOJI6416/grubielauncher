@@ -34,13 +34,6 @@ import {
 import { normalizeWorldBackupKeep } from "@/types/WorldBackup";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -57,6 +50,8 @@ import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import { formatNumber } from "@renderer/utilities/numbers";
 import { settingsAtom } from "@renderer/stores/atoms";
 import { registerNavigationBlocker } from "@renderer/navigation/guards";
+import { confirmPendingNavigation } from "@renderer/navigation/navigate";
+import { pendingNavigationAtom } from "@renderer/navigation/store";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { formatBytes } from "@renderer/utilities/file";
 import { toast } from "sonner";
@@ -95,7 +90,6 @@ import {
 } from "./chunkSelection";
 import { useChunkWorld } from "./useChunkWorld";
 import { useSurfaceTiles } from "./useSurfaceTiles";
-import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -107,23 +101,22 @@ const DIMENSION_LABELS: Record<string, string> = {
   [END_ID]: "end",
 };
 
-export function ChunkEditorDialog({
+export function ChunkEditor({
   world,
   locked,
   lockReason,
   locale,
-  onClose,
   onChanged,
 }: {
   world: IWorld;
   locked: boolean;
   lockReason?: string;
   locale: string;
-  onClose: () => void;
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
   const settings = useAtomValue(settingsAtom);
+  const pendingNavigation = useAtomValue(pendingNavigationAtom);
   const chunkWorld = useChunkWorld(world.path);
   const {
     dimensions,
@@ -156,23 +149,27 @@ export function ChunkEditorDialog({
   const satellite = colorMode === "satellite";
   const surfaces = useSurfaceTiles(world.path, dimension, satellite);
 
+  const rootRef = useRef<HTMLDivElement>(null);
   const fittedFor = useRef<string | null>(null);
   const detailsToken = useRef(0);
   const mounted = useRef(true);
 
   useEffect(() => {
     mounted.current = true;
+    rootRef.current?.focus({ preventScroll: true });
     return () => {
       mounted.current = false;
     };
   }, []);
 
-  useEffect(() => countFeature("feature.chunkEditor"), []);
-
   useEffect(
     () => registerNavigationBlocker("chunk-editor", () => busy),
     [busy],
   );
+
+  useEffect(() => {
+    if (pendingNavigation && !busy) confirmPendingNavigation();
+  }, [busy, pendingNavigation]);
 
   const colorContext = useMemo(() => colorContextFrom(totals), [totals]);
   const stats = useMemo(
@@ -485,6 +482,13 @@ export function ChunkEditorDialog({
       case "Backspace":
         if (!locked && !busy && count > 0) setPending("delete");
         break;
+      case "Escape":
+        if (event.defaultPrevented || busy || (count === 0 && !focused)) {
+          return;
+        }
+        setSelection(emptySelection());
+        setFocused(null);
+        break;
       case "ArrowLeft":
       case "ArrowRight":
       case "ArrowUp":
@@ -541,381 +545,361 @@ export function ChunkEditorDialog({
 
   return (
     <>
-      <Dialog
-        open
-        onOpenChange={(open) => {
-          if (!open && !busy) onClose();
-        }}
+      <div
+        ref={rootRef}
+        tabIndex={-1}
+        className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-card outline-none"
+        onKeyDown={handleKeyDown}
       >
-        <DialogContent
-          className="flex h-[calc(100%-2.5rem)] w-[calc(100%-3rem)] max-w-[1440px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1440px]"
-          onKeyDown={handleKeyDown}
-          onEscapeKeyDown={(event) => {
-            if (busy || count > 0 || focused) {
-              event.preventDefault();
-              if (!busy) {
-                setSelection(emptySelection());
-                setFocused(null);
-              }
+        <header className="flex shrink-0 items-center gap-3 border-b px-4 py-2.5">
+          <WorldIcon
+            icon={world.icon}
+            size={36}
+            className="size-9 rounded-md"
+            iconClassName="size-4"
+          />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Hint content={t("worldChunks.title")} variant="text" truncatedOnly>
+              <h2 className="truncate font-heading text-sm leading-none font-medium">
+                {t("worldChunks.title")}
+              </h2>
+            </Hint>
+            <Hint content={headerSummary} variant="text" truncatedOnly>
+              <p className="truncate text-xs text-muted-foreground">
+                {headerSummary}
+              </p>
+            </Hint>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <Select
+              value={dimension ?? ""}
+              onValueChange={setDimension}
+              disabled={dimensions.length === 0}
+            >
+              <SelectTrigger
+                size="sm"
+                className="w-48 text-xs"
+                aria-label={t("worldChunks.dimension")}
+              >
+                <Globe className="size-3.5 text-muted-foreground" />
+                <SelectValue placeholder={t("worldChunks.dimension")} />
+              </SelectTrigger>
+              <SelectContent>
+                {dimensions.map((entry) => (
+                  <SelectItem
+                    key={entry.id}
+                    value={entry.id}
+                    className="text-xs"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>{dimensionLabel(entry.id)}</span>
+                      <span className="font-mono text-3xs text-faint">
+                        {nf(entry.chunkCount)}
+                      </span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={colorMode}
+              onValueChange={(value) => setColorMode(value as ChunkColorMode)}
+            >
+              <SelectTrigger
+                size="sm"
+                className="w-44 text-xs"
+                aria-label={t("worldChunks.colorMode")}
+              >
+                <Layers className="size-3.5 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CHUNK_COLOR_MODES.map((mode) => (
+                  <SelectItem key={mode} value={mode} className="text-xs">
+                    {t(`worldChunks.colorModes.${mode}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </header>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b px-3 py-1.5">
+          <SegmentedControl
+            value={tool}
+            iconOnly
+            ariaLabel={t("worldChunks.tools.label")}
+            options={[
+              {
+                value: "select",
+                label: `${t("worldChunks.tools.select")} · V`,
+                icon: <MousePointer2 className="size-3.5" />,
+              },
+              {
+                value: "pan",
+                label: `${t("worldChunks.tools.pan")} · H`,
+                icon: <Hand className="size-3.5" />,
+              },
+            ]}
+            onChange={setTool}
+          />
+
+          <Divider />
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8"
+            onClick={() => setSelection(selectAll(state))}
+          >
+            {t("worldChunks.tools.all")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8"
+            disabled={count === 0}
+            onClick={() => setSelection(emptySelection())}
+          >
+            {t("worldChunks.tools.none")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8"
+            onClick={() =>
+              setSelection((previous) => invertSelection(previous, state))
             }
-          }}
-          onInteractOutside={(event) => {
-            if (busy) event.preventDefault();
-          }}
-        >
-          <DialogHeader className="shrink-0 gap-0 border-b px-4 py-2.5">
-            <div className="flex items-center gap-3 pr-8">
-              <WorldIcon
-                icon={world.icon}
-                size={36}
-                className="size-9 rounded-md"
-                iconClassName="size-4"
-              />
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <Hint
-                  content={t("worldChunks.title")}
-                  variant="text"
-                  truncatedOnly
-                >
-                  <DialogTitle className="truncate text-sm">
-                    {t("worldChunks.title")}
-                  </DialogTitle>
-                </Hint>
-                <Hint content={headerSummary} variant="text" truncatedOnly>
-                  <DialogDescription className="truncate text-xs">
-                    {headerSummary}
-                  </DialogDescription>
-                </Hint>
-              </div>
+          >
+            {t("worldChunks.tools.invert")}
+          </Button>
+          <ChunkFilterPopover
+            disabled={totals.scannedRegions === 0}
+            worldDataVersion={totals.dominantDataVersion}
+            spawn={spawn}
+            onApply={applyFilter}
+          />
 
-              <div className="ml-auto flex items-center gap-2">
-                <Select
-                  value={dimension ?? ""}
-                  onValueChange={setDimension}
-                  disabled={dimensions.length === 0}
-                >
-                  <SelectTrigger
-                    size="sm"
-                    className="w-48 text-xs"
-                    aria-label={t("worldChunks.dimension")}
-                  >
-                    <Globe className="size-3.5 text-muted-foreground" />
-                    <SelectValue placeholder={t("worldChunks.dimension")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dimensions.map((entry) => (
-                      <SelectItem
-                        key={entry.id}
-                        value={entry.id}
-                        className="text-xs"
-                      >
-                        <span className="flex items-center gap-2">
-                          <span>{dimensionLabel(entry.id)}</span>
-                          <span className="font-mono text-3xs text-faint">
-                            {nf(entry.chunkCount)}
-                          </span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <Divider />
 
-                <Select
-                  value={colorMode}
-                  onValueChange={(value) =>
-                    setColorMode(value as ChunkColorMode)
-                  }
-                >
-                  <SelectTrigger
-                    size="sm"
-                    className="w-44 text-xs"
-                    aria-label={t("worldChunks.colorMode")}
-                  >
-                    <Layers className="size-3.5 text-muted-foreground" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CHUNK_COLOR_MODES.map((mode) => (
-                      <SelectItem key={mode} value={mode} className="text-xs">
-                        {t(`worldChunks.colorModes.${mode}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b px-3 py-1.5">
-            <SegmentedControl
-              value={tool}
-              iconOnly
-              ariaLabel={t("worldChunks.tools.label")}
-              options={[
-                {
-                  value: "select",
-                  label: `${t("worldChunks.tools.select")} · V`,
-                  icon: <MousePointer2 className="size-3.5" />,
-                },
-                {
-                  value: "pan",
-                  label: `${t("worldChunks.tools.pan")} · H`,
-                  icon: <Hand className="size-3.5" />,
-                },
-              ]}
-              onChange={setTool}
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              className="h-8 w-20 text-xs"
+              placeholder="X"
+              aria-label={t("worldChunks.tools.gotoX")}
+              value={gotoX}
+              onChange={(event) => setGotoX(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") goTo();
+              }}
             />
-
-            <Divider />
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8"
-              onClick={() => setSelection(selectAll(state))}
-            >
-              {t("worldChunks.tools.all")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8"
-              disabled={count === 0}
-              onClick={() => setSelection(emptySelection())}
-            >
-              {t("worldChunks.tools.none")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8"
-              onClick={() =>
-                setSelection((previous) => invertSelection(previous, state))
-              }
-            >
-              {t("worldChunks.tools.invert")}
-            </Button>
-            <ChunkFilterPopover
-              disabled={totals.scannedRegions === 0}
-              worldDataVersion={totals.dominantDataVersion}
-              spawn={spawn}
-              onApply={applyFilter}
+            <Input
+              type="number"
+              className="h-8 w-20 text-xs"
+              placeholder="Z"
+              aria-label={t("worldChunks.tools.gotoZ")}
+              value={gotoZ}
+              onChange={(event) => setGotoZ(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") goTo();
+              }}
             />
-
-            <Divider />
-
-            <div className="flex items-center gap-1">
-              <Input
-                type="number"
-                className="h-8 w-20 text-xs"
-                placeholder="X"
-                aria-label={t("worldChunks.tools.gotoX")}
-                value={gotoX}
-                onChange={(event) => setGotoX(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") goTo();
-                }}
-              />
-              <Input
-                type="number"
-                className="h-8 w-20 text-xs"
-                placeholder="Z"
-                aria-label={t("worldChunks.tools.gotoZ")}
-                value={gotoZ}
-                onChange={(event) => setGotoZ(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") goTo();
-                }}
-              />
-              <Hint content={t("worldChunks.tools.goto")}>
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  className="size-8"
-                  aria-label={t("worldChunks.tools.goto")}
-                  onClick={goTo}
-                >
-                  <Locate className="size-3.5" />
-                </Button>
-              </Hint>
-            </div>
-
-            <Hint content={`${t("worldChunks.tools.fit")} · F`}>
+            <Hint content={t("worldChunks.tools.goto")}>
               <Button
                 variant="outline"
                 size="icon-sm"
                 className="size-8"
-                aria-label={t("worldChunks.tools.fit")}
-                onClick={() => fitToWorld()}
+                aria-label={t("worldChunks.tools.goto")}
+                onClick={goTo}
               >
-                <Maximize className="size-3.5" />
+                <Locate className="size-3.5" />
               </Button>
             </Hint>
-            <Hint content={t("worldChunks.tools.zoomIn")}>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="size-8"
-                aria-label={t("worldChunks.tools.zoomIn")}
-                onClick={() => zoomBy(1.25)}
-              >
-                <ZoomIn className="size-3.5" />
-              </Button>
-            </Hint>
-            <Hint content={t("worldChunks.tools.zoomOut")}>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="size-8"
-                aria-label={t("worldChunks.tools.zoomOut")}
-                onClick={() => zoomBy(0.8)}
-              >
-                <ZoomOut className="size-3.5" />
-              </Button>
-            </Hint>
-
-            <div className="ml-auto flex items-center gap-2">
-              {scanning ? (
-                <div className="flex w-52 items-center gap-2">
-                  <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
-                  <Progress
-                    value={(progress.done / Math.max(1, progress.total)) * 100}
-                    className="h-1.5"
-                  />
-                  <span className="shrink-0 font-mono text-3xs text-faint">
-                    {progress.done}/{progress.total}
-                  </span>
-                </div>
-              ) : (
-                <Hint content={t("worldChunks.tools.rescan")}>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="size-8"
-                    aria-label={t("worldChunks.tools.rescan")}
-                    disabled={busy}
-                    onClick={() => {
-                      fittedFor.current = null;
-                      reload();
-                    }}
-                  >
-                    <RefreshCw className="size-3.5" />
-                  </Button>
-                </Hint>
-              )}
-            </div>
           </div>
 
-          {locked && lockReason && (
-            <div className="flex shrink-0 items-center gap-2 border-b bg-warning/10 px-3 py-1.5 text-2xs text-warning">
-              <TriangleAlert className="size-3.5 shrink-0" />
-              {t("worldChunks.readOnly", { reason: lockReason })}
-            </div>
-          )}
+          <Hint content={`${t("worldChunks.tools.fit")} · F`}>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              className="size-8"
+              aria-label={t("worldChunks.tools.fit")}
+              onClick={() => fitToWorld()}
+            >
+              <Maximize className="size-3.5" />
+            </Button>
+          </Hint>
+          <Hint content={t("worldChunks.tools.zoomIn")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="size-8"
+              aria-label={t("worldChunks.tools.zoomIn")}
+              onClick={() => zoomBy(1.25)}
+            >
+              <ZoomIn className="size-3.5" />
+            </Button>
+          </Hint>
+          <Hint content={t("worldChunks.tools.zoomOut")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="size-8"
+              aria-label={t("worldChunks.tools.zoomOut")}
+              onClick={() => zoomBy(0.8)}
+            >
+              <ZoomOut className="size-3.5" />
+            </Button>
+          </Hint>
 
-          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_18.5rem]">
-            <div className="relative min-h-0 min-w-0">
-              <ChunkMap
-                className="h-full w-full"
-                state={state}
-                selection={selection}
-                colorMode={colorMode}
-                colorContext={colorContext}
-                surfaces={satellite ? surfaces.tiles : null}
-                surfaceVersion={surfaces.version}
-                onVisibleRegions={surfaces.request}
-                camera={camera}
-                onCameraChange={setCamera}
-                tool={tool}
-                spawn={spawn}
-                focused={focused}
-                onHover={setHovered}
-                onSelectRect={handleSelectRect}
-                onClickChunk={handleClickChunk}
-                onResize={handleResize}
-              />
-
-              {regionsStatus === "ready" && totals.regions === 0 && (
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <p className="rounded-lg bg-surface-2/90 px-3 py-2 text-xs text-muted-foreground">
-                    {t("worldChunks.noRegions")}
-                  </p>
-                </div>
-              )}
-
-              {regionsStatus === "error" && (
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <p className="rounded-lg bg-surface-2/90 px-3 py-2 text-xs text-destructive">
-                    {t("worldChunks.loadError")}
-                  </p>
-                </div>
-              )}
-
-              {regionsStatus === "loading" && (
-                <Skeleton
-                  aria-busy
-                  className="pointer-events-none absolute inset-3 rounded-xl"
+          <div className="ml-auto flex items-center gap-2">
+            {scanning ? (
+              <div className="flex w-52 items-center gap-2">
+                <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+                <Progress
+                  value={(progress.done / Math.max(1, progress.total)) * 100}
+                  className="h-1.5"
                 />
-              )}
-            </div>
+                <span className="shrink-0 font-mono text-3xs text-faint">
+                  {progress.done}/{progress.total}
+                </span>
+              </div>
+            ) : (
+              <Hint content={t("worldChunks.tools.rescan")}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-8"
+                  aria-label={t("worldChunks.tools.rescan")}
+                  disabled={busy}
+                  onClick={() => {
+                    fittedFor.current = null;
+                    reload();
+                  }}
+                >
+                  <RefreshCw className="size-3.5" />
+                </Button>
+              </Hint>
+            )}
+          </div>
+        </div>
 
-            <aside className="min-h-0 overflow-y-auto border-l bg-card">
-              <ChunkInspector
-                locale={locale}
-                stats={stats}
-                locked={locked}
-                lockReason={lockReason}
-                busy={busy}
-                focused={focused}
-                lookup={focusedLookup}
-                details={details}
-                detailsStatus={detailsStatus}
-                regionExtension={currentDimension?.regionExtension ?? "mca"}
-                onDelete={() => setPending("delete")}
-                onReset={() => setPending("reset")}
-                onSelectRegion={selectRegionOf}
+        {locked && lockReason && (
+          <div className="flex shrink-0 items-center gap-2 border-b bg-warning/10 px-3 py-1.5 text-2xs text-warning">
+            <TriangleAlert className="size-3.5 shrink-0" />
+            {t("worldChunks.readOnly", { reason: lockReason })}
+          </div>
+        )}
+
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_18.5rem]">
+          <div
+            className="relative min-h-0 min-w-0"
+            onPointerDown={() =>
+              rootRef.current?.focus({ preventScroll: true })
+            }
+          >
+            <ChunkMap
+              className="h-full w-full"
+              state={state}
+              selection={selection}
+              colorMode={colorMode}
+              colorContext={colorContext}
+              surfaces={satellite ? surfaces.tiles : null}
+              surfaceVersion={surfaces.version}
+              onVisibleRegions={surfaces.request}
+              camera={camera}
+              onCameraChange={setCamera}
+              tool={tool}
+              spawn={spawn}
+              focused={focused}
+              onHover={setHovered}
+              onSelectRect={handleSelectRect}
+              onClickChunk={handleClickChunk}
+              onResize={handleResize}
+            />
+
+            {regionsStatus === "ready" && totals.regions === 0 && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <p className="rounded-lg bg-surface-2/90 px-3 py-2 text-xs text-muted-foreground">
+                  {t("worldChunks.noRegions")}
+                </p>
+              </div>
+            )}
+
+            {regionsStatus === "error" && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <p className="rounded-lg bg-surface-2/90 px-3 py-2 text-xs text-destructive">
+                  {t("worldChunks.loadError")}
+                </p>
+              </div>
+            )}
+
+            {regionsStatus === "loading" && (
+              <Skeleton
+                aria-busy
+                className="pointer-events-none absolute inset-3 rounded-xl"
               />
-            </aside>
+            )}
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t px-3 py-1.5 text-3xs text-faint">
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-              {legend.map((entry) => (
-                <span key={entry.key} className="flex items-center gap-1">
-                  <span
-                    className="size-2.5 rounded-sm"
-                    style={{ backgroundColor: rgbCss(entry.rgb) }}
-                  />
-                  {t(`worldChunks.legend.${entry.key}`)}
-                </span>
-              ))}
-            </div>
+          <aside className="min-h-0 overflow-y-auto border-l bg-card">
+            <ChunkInspector
+              locale={locale}
+              stats={stats}
+              locked={locked}
+              lockReason={lockReason}
+              busy={busy}
+              focused={focused}
+              lookup={focusedLookup}
+              details={details}
+              detailsStatus={detailsStatus}
+              regionExtension={currentDimension?.regionExtension ?? "mca"}
+              onDelete={() => setPending("delete")}
+              onReset={() => setPending("reset")}
+              onSelectRegion={selectRegionOf}
+            />
+          </aside>
+        </div>
 
-            <span className="ml-auto flex items-center gap-3 font-mono">
-              {satellite && surfaces.pending > 0 && (
-                <span className="flex items-center gap-1">
-                  <Loader2 className="size-3 animate-spin" />
-                  {t("worldChunks.rendering", { count: surfaces.pending })}
-                </span>
-              )}
-              {totals.problems > 0 && (
-                <span className="text-destructive">
-                  {t("worldChunks.problemsCount", { count: totals.problems })}
-                </span>
-              )}
-              {hovered && hoveredBlock && (
-                <span>
-                  {t("worldChunks.hover", {
-                    x: hovered.x,
-                    z: hovered.z,
-                    block: hoveredBlock,
-                  })}
-                </span>
-              )}
-            </span>
+        <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t px-3 py-1.5 text-3xs text-faint">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            {legend.map((entry) => (
+              <span key={entry.key} className="flex items-center gap-1">
+                <span
+                  className="size-2.5 rounded-sm"
+                  style={{ backgroundColor: rgbCss(entry.rgb) }}
+                />
+                {t(`worldChunks.legend.${entry.key}`)}
+              </span>
+            ))}
           </div>
-        </DialogContent>
-      </Dialog>
+
+          <span className="ml-auto flex items-center gap-3 font-mono">
+            {satellite && surfaces.pending > 0 && (
+              <span className="flex items-center gap-1">
+                <Loader2 className="size-3 animate-spin" />
+                {t("worldChunks.rendering", { count: surfaces.pending })}
+              </span>
+            )}
+            {totals.problems > 0 && (
+              <span className="text-destructive">
+                {t("worldChunks.problemsCount", { count: totals.problems })}
+              </span>
+            )}
+            {hovered && hoveredBlock && (
+              <span>
+                {t("worldChunks.hover", {
+                  x: hovered.x,
+                  z: hovered.z,
+                  block: hoveredBlock,
+                })}
+              </span>
+            )}
+          </span>
+        </div>
+      </div>
 
       {pending && (
         <Confirmation

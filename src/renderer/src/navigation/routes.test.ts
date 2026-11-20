@@ -25,5 +25,11 @@ describe("screenKey", () => {
     expect(screenKey({ name: "profile", userId: "a" })).not.toBe(
       screenKey({ name: "profile", userId: "b" }),
     );
+    expect(screenKey({ name: "chunks", id: "a", world: "w1" })).not.toBe(
+      screenKey({ name: "chunks", id: "a", world: "w2" }),
+    );
+    expect(screenKey({ name: "chunks", id: "a", world: "w1" })).not.toBe(
+      screenKey({ name: "instance", id: "a", tab: "worlds" }),
+    );
   });
 });
