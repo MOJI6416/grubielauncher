@@ -1228,6 +1228,7 @@ export function ContentManager({
         };
 
         const added: ILocalProject[] = [];
+        const missingDependencies: IProject[] = [];
         let next = [...mods];
 
         if (explicit) {
@@ -1282,7 +1283,9 @@ export function ContentManager({
             if (!dep.project) continue;
             const plan = await planQuickInstall(dep.project, next, fetchers, {
               requiredBy: explicit,
+              channel: effectiveChannel,
             });
+            missingDependencies.push(...plan.missingDependencies);
             next = [...next, ...plan.added];
             added.push(...plan.added);
           }
@@ -1295,10 +1298,12 @@ export function ContentManager({
               ? {
                   loader: overrideLoader,
                   dependencies: !skipsDependencies(loader, overrideLoader),
+                  channel: effectiveChannel,
                 }
-              : undefined,
+              : { channel: effectiveChannel },
           );
           if (plan.skippedDependencies) skippedDepsRef.current = true;
+          missingDependencies.push(...plan.missingDependencies);
 
           if (plan.added.length === 0) {
             if (plan.rootMissingVersion) {
@@ -1332,6 +1337,14 @@ export function ContentManager({
             : unresolvedDepsRef.current
               ? t("modManager.dependenciesUnresolved")
               : "",
+          missingDependencies.length > 0
+            ? t("modManager.dependenciesMissing", {
+                names: [
+                  ...new Set(missingDependencies.map((project) => project.title)),
+                ].join(", "),
+                title: entry.title,
+              })
+            : "",
         ].filter(Boolean);
 
         void commitMods(next, {
@@ -1341,7 +1354,9 @@ export function ContentManager({
           ),
           description: notes.length > 0 ? notes.join("\n") : undefined,
           tone:
-            skippedDepsRef.current || unresolvedDepsRef.current
+            skippedDepsRef.current ||
+            unresolvedDepsRef.current ||
+            missingDependencies.length > 0
               ? "warning"
               : "success",
           failTitle: t(
@@ -1374,6 +1389,7 @@ export function ContentManager({
       commitMods,
       detail,
       doneTitle,
+      effectiveChannel,
       fetchers,
       fileStates.disabled,
       forgetRemoved,

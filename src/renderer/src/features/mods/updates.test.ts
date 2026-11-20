@@ -369,4 +369,116 @@ describe("planQuickInstall", () => {
 
     expect(parents).toEqual(["chosen"]);
   });
+
+  it("installs the newest release, not a newer beta", async () => {
+    const plan = await planQuickInstall(
+      project(),
+      [],
+      fetchers({
+        p1: [
+          version({ id: "0.9.3-beta.4", releaseType: "beta" }),
+          version({ id: "0.9.2", releaseType: "release" }),
+          version({ id: "0.9.1", releaseType: "release" }),
+        ],
+      }),
+    );
+
+    expect(plan.added[0].version?.id).toBe("0.9.2");
+  });
+
+  it("follows a wider update channel", async () => {
+    const plan = await planQuickInstall(
+      project(),
+      [],
+      fetchers({
+        p1: [
+          version({ id: "alpha", releaseType: "alpha" }),
+          version({ id: "beta", releaseType: "beta" }),
+          version({ id: "release", releaseType: "release" }),
+        ],
+      }),
+      { channel: "beta" },
+    );
+
+    expect(plan.added[0].version?.id).toBe("beta");
+  });
+
+  it("falls back to the most stable version the channel does not cover", async () => {
+    const plan = await planQuickInstall(
+      project(),
+      [],
+      fetchers({
+        p1: [
+          version({ id: "alpha", releaseType: "alpha" }),
+          version({ id: "beta-new", releaseType: "beta" }),
+          version({ id: "beta-old", releaseType: "beta" }),
+        ],
+      }),
+    );
+
+    expect(plan.added[0].version?.id).toBe("beta-new");
+  });
+
+  it("offers the picker only versions of the channel", async () => {
+    const seen: string[][] = [];
+
+    await planQuickInstall(project(), [], {
+      ...fetchers({
+        p1: [
+          version({ id: "beta", releaseType: "beta" }),
+          version({ id: "release", releaseType: "release" }),
+        ],
+      }),
+      pickVersion: async (versions) => {
+        seen.push(versions.map((item) => item.id));
+        return versions[0];
+      },
+    });
+
+    expect(seen).toEqual([["release"]]);
+  });
+
+  it("names a required dependency that has no version for this game", async () => {
+    const proxLib = project({ id: "prox", title: "ProxLib" });
+    const toProx: IVersionDependency = {
+      projectId: "prox",
+      versionId: null,
+      relationType: DependencyType.REQUIRED,
+      project: proxLib,
+    };
+    const toApi: IVersionDependency = {
+      projectId: "api",
+      versionId: null,
+      relationType: DependencyType.REQUIRED,
+      project: fabricApi,
+    };
+
+    const plan = await planQuickInstall(
+      project(),
+      [],
+      fetchers({
+        p1: [version({ id: "v1", dependencies: [toProx, toApi] })],
+        api: [version({ id: "apiv1", dependencies: [toProx] })],
+      }),
+    );
+
+    expect(plan.added.map((item) => item.id)).toEqual(["p1", "api"]);
+    expect(plan.missingDependencies.map((item) => item.id)).toEqual(["prox"]);
+    expect(plan.rootMissingVersion).toBe(false);
+  });
+
+  it("counts a missing root as a missing dependency when a parent needs it", async () => {
+    const plan = await planQuickInstall(fabricApi, [], fetchers({}), {
+      requiredBy: version({ id: "parent" }),
+    });
+
+    expect(plan.rootMissingVersion).toBe(true);
+    expect(plan.missingDependencies.map((item) => item.id)).toEqual(["api"]);
+  });
+
+  it("does not report a missing root as a dependency", async () => {
+    const plan = await planQuickInstall(project(), [], fetchers({}));
+
+    expect(plan.missingDependencies).toEqual([]);
+  });
 });

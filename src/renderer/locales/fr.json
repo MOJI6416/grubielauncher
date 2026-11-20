@@ -777,6 +777,7 @@
     "noDependencies": "Aucune dépendance",
     "dependenciesFailed": "Impossible de charger les dépendances",
     "dependenciesUnresolved": "La source n’a pas renseigné les dépendances de ce mod. Vérifiez-les manuellement ou réessayez plus tard.",
+    "dependenciesMissing": "Aucune version de {{names}} ne correspond à votre version du jeu et à votre chargeur : « {{title}} » risque de ne pas démarrer.",
     "quarantinedTitle": "{{count}} fichier(s) qui ne font plus partie de cette instance ont été mis en quarantaine",
     "quarantinedHint": "Ouvrez le gestionnaire de contenu pour les restaurer",
     "trashCount": "Supprimés récemment : {{count}}",

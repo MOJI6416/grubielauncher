@@ -777,6 +777,7 @@
     "noDependencies": "Sem dependências",
     "dependenciesFailed": "Não foi possível carregar as dependências",
     "dependenciesUnresolved": "A fonte não respondeu sobre as dependências deste mod. Confira-as manualmente ou tente de novo mais tarde.",
+    "dependenciesMissing": "Não há versão de {{names}} para a sua versão do jogo e loader — “{{title}}” pode não iniciar.",
     "quarantinedTitle": "{{count}} arquivo(s) que não estão mais nesta instância foram movidos para a quarentena",
     "quarantinedHint": "Abra o gerenciador de conteúdo para restaurá-los",
     "trashCount": "Excluídos recentemente: {{count}}",

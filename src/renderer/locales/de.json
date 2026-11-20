@@ -775,6 +775,7 @@
     "noDependencies": "Keine Abhängigkeiten",
     "dependenciesFailed": "Abhängigkeiten konnten nicht geladen werden",
     "dependenciesUnresolved": "Die Quelle hat nicht zu den Abhängigkeiten dieses Mods geantwortet. Prüfen Sie sie manuell oder versuchen Sie es später erneut.",
+    "dependenciesMissing": "Für Ihre Spielversion und Ihren Loader gibt es keine Version von {{names}} – „{{title}}“ startet möglicherweise nicht.",
     "quarantinedTitle": "{{count}} Datei(en), die nicht mehr zu dieser Instanz gehören, wurden in Quarantäne verschoben",
     "quarantinedHint": "Öffnen Sie die Inhaltsverwaltung, um sie wiederherzustellen",
     "trashCount": "Kürzlich gelöscht: {{count}}",

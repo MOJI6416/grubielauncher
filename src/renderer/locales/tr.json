@@ -775,6 +775,7 @@
     "noDependencies": "Bağımlılık yok",
     "dependenciesFailed": "Bağımlılıklar yüklenemedi",
     "dependenciesUnresolved": "Kaynak bu modun bağımlılıkları hakkında yanıt vermedi. Onları elle kontrol edin veya daha sonra tekrar deneyin.",
+    "dependenciesMissing": "Oyun sürümünüz ve yükleyiciniz için {{names}} sürümü yok — “{{title}}” başlamayabilir.",
     "quarantinedTitle": "Artık bu kurulumda olmayan {{count}} dosya karantinaya taşındı",
     "quarantinedHint": "Geri yüklemek için içerik yöneticisini açın",
     "trashCount": "Son silinenler: {{count}}",

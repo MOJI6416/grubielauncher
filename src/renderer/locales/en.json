@@ -775,6 +775,7 @@
     "noDependencies": "No dependencies",
     "dependenciesFailed": "Could not load dependencies",
     "dependenciesUnresolved": "The source did not answer about this mod's dependencies. Check them manually or try again later.",
+    "dependenciesMissing": "No version of {{names}} fits your game version and loader — “{{title}}” may not start.",
     "quarantinedTitle": "{{count}} file(s) no longer in this instance were moved to quarantine",
     "quarantinedHint": "Open the content manager to restore them",
     "trashCount": "Recently deleted: {{count}}",

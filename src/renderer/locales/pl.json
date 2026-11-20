@@ -779,6 +779,7 @@
     "noDependencies": "Brak zależności",
     "dependenciesFailed": "Nie udało się wczytać zależności",
     "dependenciesUnresolved": "Źródło nie podało zależności tego moda. Sprawdź je ręcznie lub spróbuj ponownie później.",
+    "dependenciesMissing": "Brak wersji {{names}} dla Twojej wersji gry i loadera — „{{title}}” może się nie uruchomić.",
     "quarantinedTitle": "Pliki, których nie ma już w tej instancji, przeniesiono do kwarantanny: {{count}}",
     "quarantinedHint": "Otwórz menedżer zawartości, aby je przywrócić",
     "trashCount": "Ostatnio usunięte: {{count}}",

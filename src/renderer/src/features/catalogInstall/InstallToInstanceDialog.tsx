@@ -193,7 +193,12 @@ export function InstallToInstanceDialog({
     const key = instanceKey(instance);
     setBusy(key);
     try {
-      const plan = await planInstallInto(instance, project, versionId);
+      const plan = await planInstallInto(
+        instance,
+        project,
+        versionId,
+        settings.modUpdateChannel,
+      );
       if (plan.status === "already") {
         setDone((prev) => new Set(prev).add(key));
         return;
@@ -205,18 +210,27 @@ export function InstallToInstanceDialog({
       await commitInstallInto(instance, plan.added, settings);
       countFeature("mods.installTo");
       setDone((prev) => new Set(prev).add(key));
-      toast.success(
+      const missing = plan.missingDependencies;
+      const notes = [
+        plan.added.length > 1
+          ? t("catalogInstall.withDependencies", {
+              count: plan.added.length - 1,
+            })
+          : "",
+        missing.length > 0
+          ? t("modManager.dependenciesMissing", {
+              names: missing.map((item) => displayTitle(item.title)).join(", "),
+              title: displayTitle(project.title),
+            })
+          : "",
+      ].filter(Boolean);
+      (missing.length > 0 ? toast.warning : toast.success)(
         t("catalogInstall.installed", {
           title: displayTitle(project.title),
           instance: instance.version.name,
         }),
         {
-          description:
-            plan.added.length > 1
-              ? t("catalogInstall.withDependencies", {
-                  count: plan.added.length - 1,
-                })
-              : undefined,
+          description: notes.length > 0 ? notes.join("\n") : undefined,
           action: {
             label: t("catalogInstall.openInstance"),
             onClick: () =>

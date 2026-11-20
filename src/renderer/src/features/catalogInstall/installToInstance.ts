@@ -10,6 +10,11 @@ import {
 import type { IServerConf } from "@/types/Server";
 import type { Loader } from "@/types/Loader";
 import type { TSettings } from "@/types/Settings";
+import {
+  DEFAULT_UPDATE_CHANNEL,
+  resolveUpdateChannel,
+  type UpdateChannel,
+} from "@/shared/updateChannel";
 import { Version } from "@renderer/classes/Version";
 import { Mods } from "@renderer/classes/Mods";
 import { checkBlockedMods } from "@renderer/utilities/blockedMods";
@@ -32,7 +37,11 @@ const api = window.api;
 export const INSTALL_BLOCKED = "catalog-install-blocked";
 
 export type InstallOutcome =
-  | { status: "installed"; added: ILocalProject[] }
+  | {
+      status: "installed";
+      added: ILocalProject[];
+      missingDependencies: IProject[];
+    }
   | { status: "already" }
   | { status: "noVersion" };
 
@@ -96,11 +105,17 @@ export async function planInstallInto(
   instance: Version,
   project: IProject,
   versionId?: string,
+  globalChannel: UpdateChannel = DEFAULT_UPDATE_CHANNEL,
 ): Promise<InstallOutcome> {
   const mods = instance.version.loader.mods ?? [];
   if (findInInstance(instance, project)) return { status: "already" };
 
   const fetchers = instanceFetchers(instance);
+  const channel = resolveUpdateChannel({
+    instance: instance.version.updateChannel,
+    global: globalChannel,
+    gameVersionType: instance.version.version.type,
+  });
 
   if (versionId) {
     const versions = await fetchers.fetchVersions(project);
@@ -109,6 +124,7 @@ export async function planInstallInto(
       const local = toLocalProject(project, explicit, { disabled: false });
       let next = [...mods, local];
       const added = [local];
+      const missingDependencies: IProject[] = [];
       const required = (explicit.dependencies ?? []).filter(
         (dep) => dep.relationType === DependencyType.REQUIRED && dep.project,
       );
@@ -119,21 +135,27 @@ export async function planInstallInto(
         }
         const plan = await planQuickInstall(dep.project, next, fetchers, {
           requiredBy: explicit,
+          channel,
         });
         next = [...next, ...plan.added];
         added.push(...plan.added);
+        missingDependencies.push(...plan.missingDependencies);
       }
-      return { status: "installed", added };
+      return { status: "installed", added, missingDependencies };
     }
   }
 
-  const plan = await planQuickInstall(project, mods, fetchers);
+  const plan = await planQuickInstall(project, mods, fetchers, { channel });
   if (plan.added.length === 0) {
     return plan.rootMissingVersion
       ? { status: "noVersion" }
       : { status: "already" };
   }
-  return { status: "installed", added: plan.added };
+  return {
+    status: "installed",
+    added: plan.added,
+    missingDependencies: plan.missingDependencies,
+  };
 }
 
 export async function commitInstallInto(

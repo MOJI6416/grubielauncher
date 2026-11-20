@@ -7,6 +7,12 @@ import {
   Provider,
 } from "@/types/ModManager";
 import { Loader } from "@/types/Loader";
+import {
+  allowsReleaseType,
+  channelRank,
+  DEFAULT_UPDATE_CHANNEL,
+  type UpdateChannel,
+} from "@/shared/updateChannel";
 import { normalizeProjectTitle, sharesFile } from "@renderer/utilities/mod";
 import { applyDisabledState, entryKey } from "./entries";
 
@@ -131,6 +137,22 @@ export interface QuickInstallPlan {
   added: ILocalProject[];
   rootMissingVersion: boolean;
   skippedDependencies: boolean;
+  missingDependencies: IProject[];
+}
+
+export function channelVersions(
+  versions: ModVersion[],
+  channel: UpdateChannel,
+): ModVersion[] {
+  const allowed = versions.filter((item) =>
+    allowsReleaseType(channel, item.releaseType),
+  );
+  if (allowed.length > 0) return allowed;
+
+  const stablest = Math.min(
+    ...versions.map((item) => channelRank(item.releaseType)),
+  );
+  return versions.filter((item) => channelRank(item.releaseType) === stablest);
 }
 
 export async function planQuickInstall(
@@ -141,9 +163,11 @@ export async function planQuickInstall(
     loader?: Loader;
     dependencies?: boolean;
     requiredBy?: ModVersion;
+    channel?: UpdateChannel;
   } = {},
 ): Promise<QuickInstallPlan> {
   const withDependencies = options.dependencies !== false;
+  const channel = options.channel ?? DEFAULT_UPDATE_CHANNEL;
   let skippedDependencies = false;
 
   const seenIds = new Set(
@@ -166,12 +190,16 @@ export async function planQuickInstall(
     { project: root, requiredBy: options.requiredBy },
   ];
   let rootMissingVersion = false;
+  const missingDependencies: IProject[] = [];
 
   while (queue.length) {
     const { project, requiredBy } = queue.shift()!;
     if (isHandled(project)) continue;
 
-    const versions = await fetchers.fetchVersions(project);
+    const versions = channelVersions(
+      await fetchers.fetchVersions(project),
+      channel,
+    );
     const latest =
       (await fetchers.pickVersion?.(versions, requiredBy)) ?? versions[0];
 
@@ -179,6 +207,8 @@ export async function planQuickInstall(
       if (project.id === root.id && project.provider === root.provider) {
         rootMissingVersion = true;
       }
+      if (requiredBy) missingDependencies.push(project);
+      seenIds.add(entryKey(project.provider, project.id));
       continue;
     }
 
@@ -225,5 +255,5 @@ export async function planQuickInstall(
     }
   }
 
-  return { added, rootMissingVersion, skippedDependencies };
+  return { added, rootMissingVersion, skippedDependencies, missingDependencies };
 }
