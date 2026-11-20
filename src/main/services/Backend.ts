@@ -869,13 +869,14 @@ export class Backend extends BaseService {
     return response.data;
   }
 
-  async getLauncherReleases(locale: string, limit: number) {
+  async getLauncherReleases(locale: string, limit: number, offset = 0) {
     const response = await this.api.get<ILauncherReleasePage>(
       `${this.baseUrl}/launcher/releases`,
       {
         params: {
           locale,
           limit,
+          ...(offset > 0 ? { offset } : {}),
         },
       },
     );

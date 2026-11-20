@@ -575,12 +575,13 @@ export function registerBackendIpc() {
   handleSafe(
     "backend:getLauncherReleases",
     null,
-    [isLocale, check.integer()],
-    async (_, locale: string, limit: number) => {
+    [isLocale, check.integer(), check.optional(check.integer())],
+    async (_, locale: string, limit: number, offset?: number | null) => {
       const backend = new Backend();
       return await backend.getLauncherReleases(
         locale,
         Math.min(LAUNCHER_RELEASES_MAX, Math.max(1, limit)),
+        Math.max(0, offset ?? 0),
       );
     },
   );

@@ -876,6 +876,7 @@ export interface IElectronAPI {
     getLauncherReleases: (
       locale: string,
       limit: number,
+      offset?: number,
     ) => Promise<ILauncherReleasePage | null>;
     getSponsoredNewsAd: (
       locale: string,
@@ -2235,8 +2236,8 @@ export const api: IElectronAPI = {
     getAchievementReach: () => invoke("backend:getAchievementReach"),
     getWhatsNew: (version: string, locale: string) =>
       invoke("backend:getWhatsNew", version, locale),
-    getLauncherReleases: (locale: string, limit: number) =>
-      invoke("backend:getLauncherReleases", locale, limit),
+    getLauncherReleases: (locale: string, limit: number, offset?: number) =>
+      invoke("backend:getLauncherReleases", locale, limit, offset ?? null),
     getSponsoredNewsAd: (locale: string, hiddenIds: string[]) =>
       invoke("backend:getSponsoredNewsAd", locale, hiddenIds),
     recordSponsoredAdImpression: (id: string) =>

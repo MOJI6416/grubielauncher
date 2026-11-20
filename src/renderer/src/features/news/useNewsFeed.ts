@@ -49,6 +49,7 @@ export function useNewsFeed() {
 
   const [news, setNews] = useState<INews[]>([]);
   const [releases, setReleases] = useState<ILauncherReleaseNote[]>([]);
+  const [releasesTotal, setReleasesTotal] = useState(0);
   const [sponsoredAd, setSponsoredAd] = useState<ISponsoredNewsAd | null>(null);
   const [hiddenSponsoredAdIds, setHiddenSponsoredAdIds] = useState<string[]>(
     () =>
@@ -151,6 +152,11 @@ export function useNewsFeed() {
       setPartialError(outcome.partialError);
       setNews(mergeNewsItems([], items));
       setReleases(ours);
+      setReleasesTotal(
+        releasesResult.status === "fulfilled"
+          ? Math.max(ours.length, releasesResult.value?.total ?? 0)
+          : ours.length,
+      );
       setCursor(page.nextCursor);
       setUpdatedAt(items.length > 0 || ours.length > 0 ? Date.now() : 0);
       setSponsoredAd(
@@ -162,6 +168,7 @@ export function useNewsFeed() {
       setPartialError(false);
       setNews([]);
       setReleases([]);
+      setReleasesTotal(0);
       setCursor(null);
       setSponsoredAd(null);
     } finally {
@@ -169,8 +176,66 @@ export function useNewsFeed() {
     }
   }, [i18n.language]);
 
+  const hasMoreReleases = releases.length < releasesTotal;
+
+  const loadMoreReleases = useCallback(async () => {
+    const reqId = reqIdRef.current;
+    loadingMoreRef.current = true;
+    setIsLoadingMore(true);
+
+    try {
+      const page = await api.backend.getLauncherReleases(
+        i18n.language,
+        LAUNCHER_RELEASES_SIZE,
+        releases.length,
+      );
+      if (reqIdRef.current !== reqId) return;
+
+      if (!page) {
+        setLoadMoreFailed(true);
+        showFailureToast(t("news.loadFailed"), undefined, {
+          channels: ["backend:getLauncherReleases"],
+          fallbackDescription: t("news.loadFailedSource"),
+        });
+        return;
+      }
+
+      setReleases((current) => {
+        const known = new Set(current.map((release) => release.version));
+        return [
+          ...current,
+          ...page.items.filter((release) => !known.has(release.version)),
+        ];
+      });
+      setReleasesTotal((current) =>
+        page.items.length === 0
+          ? releases.length
+          : Math.max(page.total ?? current, releases.length + page.items.length),
+      );
+      setLoadMoreFailed(false);
+      setStalledSource(null);
+    } catch (error) {
+      if (reqIdRef.current !== reqId) return;
+      setLoadMoreFailed(true);
+      showFailureToast(t("news.loadFailed"), error, {
+        channels: ["backend:getLauncherReleases"],
+        fallbackDescription: t("news.loadFailedSource"),
+      });
+    } finally {
+      if (reqIdRef.current === reqId) {
+        loadingMoreRef.current = false;
+        setIsLoadingMore(false);
+      }
+    }
+  }, [i18n.language, releases.length, t]);
+
   const loadMore = useCallback(async () => {
-    if (!cursor || loadingMoreRef.current) return;
+    if (loadingMoreRef.current) return;
+    if (source === "grubie") {
+      if (hasMoreReleases) await loadMoreReleases();
+      return;
+    }
+    if (!cursor) return;
 
     const reqId = reqIdRef.current;
     loadingMoreRef.current = true;
@@ -215,7 +280,7 @@ export function useNewsFeed() {
         setIsLoadingMore(false);
       }
     }
-  }, [cursor, source, t]);
+  }, [cursor, source, t, hasMoreReleases, loadMoreReleases]);
 
   useEffect(() => {
     if (!isNetwork) {
@@ -225,6 +290,7 @@ export function useNewsFeed() {
       setLoadMoreFailed(false);
       setNews([]);
       setReleases([]);
+      setReleasesTotal(0);
       setCursor(null);
       setUpdatedAt(0);
       setSponsoredAd(null);
@@ -310,6 +376,7 @@ export function useNewsFeed() {
     unread,
     updatedAt,
     cursor,
+    canLoadMore: source === "grubie" ? hasMoreReleases : Boolean(cursor),
     isLoading,
     isLoadingMore,
     loadMoreFailed,
