@@ -56,6 +56,8 @@ import {
   type Bucket,
 } from "./statistics";
 import { formatDuration } from "@renderer/utilities/duration";
+import { PackAnalyticsView } from "@renderer/features/packAuthor/PackAnalyticsView";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -121,7 +123,15 @@ function BucketList({
   );
 }
 
-export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
+type StatisticsView = "game" | "resources" | "players";
+
+export function InstanceStatisticsPanel({
+  instance,
+  authorCode,
+}: {
+  instance: Version;
+  authorCode?: string | null;
+}) {
   const account = useAtomValue(accountAtom);
   const [statistics, setStatistics] = useState<IVersionStatistics | null>(null);
   const [sessions, setSessions] = useState<IVersionSession[]>([]);
@@ -132,7 +142,7 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [isSessionsLoaded, setIsSessionsLoaded] = useState(false);
-  const [view, setView] = useState<"game" | "resources">("game");
+  const [view, setView] = useState<StatisticsView | null>(null);
   const revision = useInstanceDataRevision();
   const contents = useInstanceContents(instance.versionPath);
   const { t } = useTranslation();
@@ -198,39 +208,82 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
     );
   }
 
+  const shownView: StatisticsView =
+    view ?? (authorCode && !statistics ? "players" : "game");
+
+  const viewSwitch = (
+    <div className="flex shrink-0 items-center gap-2">
+      <SegmentedControl
+        value={shownView}
+        onChange={(next) => {
+          setView(next);
+          if (next === "players") countFeature("instance.packAnalytics");
+        }}
+        ariaLabel={t("versionStatistics.resources.viewLabel")}
+        options={[
+          { value: "game", label: t("versionStatistics.resources.viewGame") },
+          {
+            value: "resources",
+            label: t("versionStatistics.resources.viewResources"),
+          },
+          ...(authorCode
+            ? [
+                {
+                  value: "players" as const,
+                  label: t("packAuthor.analytics.viewPlayers"),
+                },
+              ]
+            : []),
+        ]}
+      />
+    </div>
+  );
+
+  if (authorCode && shownView === "players") {
+    return (
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        {viewSwitch}
+        <PackAnalyticsView code={authorCode} />
+      </div>
+    );
+  }
+
   if (!statistics) {
     return (
-      <Empty className="h-full border border-dashed border-border bg-card">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            {loadFailed ? <TriangleAlert /> : <Activity />}
-          </EmptyMedia>
-          <EmptyTitle>
-            {t(
-              loadFailed
-                ? "versionStatistics.loadFailed"
-                : "versionStatistics.empty",
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        {authorCode && viewSwitch}
+        <Empty className="min-h-0 flex-1 border border-dashed border-border bg-card">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              {loadFailed ? <TriangleAlert /> : <Activity />}
+            </EmptyMedia>
+            <EmptyTitle>
+              {t(
+                loadFailed
+                  ? "versionStatistics.loadFailed"
+                  : "versionStatistics.empty",
+              )}
+            </EmptyTitle>
+            {loadFailed && (
+              <EmptyDescription>
+                {t("versionStatistics.loadFailedHint")}
+              </EmptyDescription>
             )}
-          </EmptyTitle>
+          </EmptyHeader>
           {loadFailed && (
-            <EmptyDescription>
-              {t("versionStatistics.loadFailedHint")}
-            </EmptyDescription>
+            <EmptyContent>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => setAttempt((current) => current + 1)}
+              >
+                {t("common.retry")}
+              </Button>
+            </EmptyContent>
           )}
-        </EmptyHeader>
-        {loadFailed && (
-          <EmptyContent>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => setAttempt((current) => current + 1)}
-            >
-              {t("common.retry")}
-            </Button>
-          </EmptyContent>
-        )}
-      </Empty>
+        </Empty>
+      </div>
     );
   }
 
@@ -329,19 +382,9 @@ export function InstanceStatisticsPanel({ instance }: { instance: Version }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
-      <div className="flex shrink-0 items-center gap-2">
-        <SegmentedControl
-          value={view}
-          onChange={setView}
-          ariaLabel={t("versionStatistics.resources.viewLabel")}
-          options={[
-            { value: "game", label: t("versionStatistics.resources.viewGame") },
-            { value: "resources", label: t("versionStatistics.resources.viewResources") },
-          ]}
-        />
-      </div>
+      {viewSwitch}
 
-      {view === "resources" ? (
+      {shownView === "resources" ? (
         <InstanceResourcesView sessions={sessions} />
       ) : (
       <>

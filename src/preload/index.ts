@@ -39,7 +39,13 @@ import {
   IExplorePage,
   IExploreQuery,
   IModpack,
+  IModpackAnalytics,
+  IModpackAnnouncement,
+  IModpackChannel,
+  IModpackChannelUpdate,
+  IModpackSessionReport,
   IModpackUpdate,
+  ModpackChannelResult,
   UploadFileProgress,
 } from "@/types/Backend";
 import { IPublicProfile } from "@/types/Profile";
@@ -251,7 +257,10 @@ import {
   ILauncherReleaseNote,
   ILauncherReleasePage,
 } from "@/types/LauncherRelease";
-import { IPlaytimeSyncEntry } from "@/types/VersionStatistics";
+import {
+  IPackSessionEntry,
+  IPlaytimeSyncEntry,
+} from "@/types/VersionStatistics";
 import {
   StorageBreakdown,
   StorageCleanupKind,
@@ -771,6 +780,34 @@ export interface IElectronAPI {
       isDirectory?: boolean,
     ) => Promise<boolean>;
     modpackDownloaded: (at: string, shareCode: string) => Promise<boolean>;
+    reportModpackSession: (
+      at: string,
+      code: string,
+      report: IModpackSessionReport,
+    ) => Promise<"counted" | "skipped" | "gone" | "failed">;
+    getModpackChannel: (
+      at: string,
+      code: string,
+    ) => Promise<IModpackChannel | null>;
+    getModpackAnalytics: (
+      at: string,
+      code: string,
+    ) => Promise<IModpackAnalytics | null>;
+    updateModpackChannel: (
+      at: string,
+      code: string,
+      update: IModpackChannelUpdate,
+    ) => Promise<ModpackChannelResult<IModpackChannel> | null>;
+    postModpackAnnouncement: (
+      at: string,
+      code: string,
+      text: string,
+    ) => Promise<ModpackChannelResult<IModpackAnnouncement> | null>;
+    deleteModpackAnnouncement: (
+      at: string,
+      code: string,
+      id: string,
+    ) => Promise<ModpackChannelResult<{ ok: boolean }> | null>;
     getNews: () => Promise<INews[]>;
     getNewsPage: (params: {
       limit?: number;
@@ -1393,6 +1430,8 @@ export interface IElectronAPI {
   statistics: {
     getSyncQueue: () => Promise<IPlaytimeSyncEntry[]>;
     resolveSyncEntries: (ids: string[]) => Promise<boolean>;
+    getPackSessionQueue: () => Promise<IPackSessionEntry[]>;
+    resolvePackSessions: (ids: string[]) => Promise<boolean>;
   };
   modTranslations: {
     status: (
@@ -2044,6 +2083,24 @@ export const api: IElectronAPI = {
       invoke("backend:deleteFile", at, key, isDirectory),
     modpackDownloaded: (at: string, shareCode: string) =>
       invoke("backend:modpackDownloaded", at, shareCode),
+    reportModpackSession: (
+      at: string,
+      code: string,
+      report: IModpackSessionReport,
+    ) => invoke("backend:reportModpackSession", at, code, report),
+    getModpackChannel: (at: string, code: string) =>
+      invoke("backend:getModpackChannel", at, code),
+    getModpackAnalytics: (at: string, code: string) =>
+      invoke("backend:getModpackAnalytics", at, code),
+    updateModpackChannel: (
+      at: string,
+      code: string,
+      update: IModpackChannelUpdate,
+    ) => invoke("backend:updateModpackChannel", at, code, update),
+    postModpackAnnouncement: (at: string, code: string, text: string) =>
+      invoke("backend:postModpackAnnouncement", at, code, text),
+    deleteModpackAnnouncement: (at: string, code: string, id: string) =>
+      invoke("backend:deleteModpackAnnouncement", at, code, id),
     getNews: () => invoke("backend:getNews"),
     getNewsPage: (params: {
       limit?: number;
@@ -2710,6 +2767,9 @@ export const api: IElectronAPI = {
     getSyncQueue: () => invoke("statistics:getSyncQueue"),
     resolveSyncEntries: (ids: string[]) =>
       invoke("statistics:resolveSyncEntries", ids),
+    getPackSessionQueue: () => invoke("statistics:getPackSessionQueue"),
+    resolvePackSessions: (ids: string[]) =>
+      invoke("statistics:resolvePackSessions", ids),
   },
   modTranslations: {
     status: (versionPath: string, launcherLang: string, token?: string) =>

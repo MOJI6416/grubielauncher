@@ -4,7 +4,13 @@ import {
   IExplorePage,
   IExploreQuery,
   IModpack,
+  IModpackAnalytics,
+  IModpackAnnouncement,
+  IModpackChannel,
+  IModpackChannelUpdate,
+  IModpackSessionReport,
   IModpackUpdate,
+  ModpackChannelResult,
   UploadFileProgress,
 } from "@/types/Backend";
 import { IPublicProfile } from "@/types/Profile";
@@ -696,6 +702,95 @@ export class Backend extends BaseService {
       reason?: string;
     }>(`${this.baseUrl}/modpacks/${shareCode}/downloaded`);
     return response.data.counted;
+  }
+
+  async reportModpackSession(
+    code: string,
+    report: IModpackSessionReport,
+  ): Promise<"counted" | "skipped" | "gone"> {
+    try {
+      const response = await this.api.post<{ counted: boolean }>(
+        `${this.baseUrl}/modpacks/${encodeURIComponent(code)}/sessions`,
+        report,
+      );
+      return response.data?.counted ? "counted" : "skipped";
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 400 || status === 403 || status === 404) return "gone";
+      throw error;
+    }
+  }
+
+  async getModpackChannel(code: string): Promise<IModpackChannel | null> {
+    try {
+      const response = await this.api.get<IModpackChannel>(
+        `${this.baseUrl}/modpacks/${encodeURIComponent(code)}/channel`,
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 404) return null;
+      throw error;
+    }
+  }
+
+  async getModpackAnalytics(code: string): Promise<IModpackAnalytics | null> {
+    try {
+      const response = await this.api.get<IModpackAnalytics>(
+        `${this.baseUrl}/modpacks/${encodeURIComponent(code)}/analytics`,
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 404) return null;
+      throw error;
+    }
+  }
+
+  private async channelRequest<T>(
+    request: () => Promise<{ data: T }>,
+  ): Promise<ModpackChannelResult<T>> {
+    try {
+      const response = await request();
+      return { ok: true, value: response.data };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 400 || status === 403 || status === 404 || status === 429) {
+        const body = error.response.data;
+        const code =
+          typeof body?.code === "string"
+            ? body.code
+            : status === 429
+              ? "announcement_limit"
+              : `http_${status}`;
+        return { ok: false, code };
+      }
+      throw error;
+    }
+  }
+
+  updateModpackChannel(code: string, update: IModpackChannelUpdate) {
+    return this.channelRequest(() =>
+      this.api.patch<IModpackChannel>(
+        `${this.baseUrl}/modpacks/${encodeURIComponent(code)}/channel`,
+        update,
+      ),
+    );
+  }
+
+  postModpackAnnouncement(code: string, text: string) {
+    return this.channelRequest(() =>
+      this.api.post<IModpackAnnouncement>(
+        `${this.baseUrl}/modpacks/${encodeURIComponent(code)}/announcements`,
+        { text },
+      ),
+    );
+  }
+
+  deleteModpackAnnouncement(code: string, id: string) {
+    return this.channelRequest(() =>
+      this.api.delete<{ ok: boolean }>(
+        `${this.baseUrl}/modpacks/${encodeURIComponent(code)}/announcements/${encodeURIComponent(id)}`,
+      ),
+    );
   }
 
   async getNews() {

@@ -2,8 +2,10 @@ import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs-extra";
 import {
+  IPackSessionEntry,
   IPlaytimeSyncEntry,
   ISessionConfig,
+  ISessionPack,
   ISessionResources,
   IVersionSession,
   IVersionStatistics,
@@ -29,6 +31,7 @@ export interface SessionContext {
   accountSub: string | null;
   accountLabel?: string;
   config?: SessionConfigInput;
+  pack?: ISessionPack | null;
 }
 
 const MOD_DIFF_TITLES = 12;
@@ -82,6 +85,7 @@ interface PendingMarker extends ActiveSession {
 }
 
 const SESSIONS_LIMIT = 500;
+const PACK_QUEUE_LIMIT = 200;
 const HEARTBEAT_MS = 30_000;
 const MAX_SESSION_SECONDS = 24 * 60 * 60;
 const LAUNCH_LAG_SECONDS = 30;
@@ -124,6 +128,10 @@ function markerPath(id: string): string {
 
 function syncQueuePath(): string {
   return path.join(dataDir(), "sync-queue.json");
+}
+
+function packQueuePath(): string {
+  return path.join(dataDir(), "pack-sessions.json");
 }
 
 function statisticsPath(versionPath: string): string {
@@ -322,6 +330,15 @@ async function enqueueSync(entry: IPlaytimeSyncEntry): Promise<void> {
   });
 }
 
+async function enqueuePackSession(entry: IPackSessionEntry): Promise<void> {
+  await withLock(packQueuePath(), async () => {
+    const queue = await readJSONArray<IPackSessionEntry>(packQueuePath());
+    if (!queue.writable) return;
+    queue.value.push(entry);
+    await tryWriteJSON(packQueuePath(), queue.value.slice(-PACK_QUEUE_LIMIT));
+  });
+}
+
 async function recordSession(
   ctx: SessionContext & { server?: string },
   session: IVersionSession,
@@ -331,6 +348,18 @@ async function recordSession(
       id: session.id,
       sub: ctx.accountSub,
       seconds: session.durationSec,
+      createdAt: session.endedAt,
+    });
+  }
+
+  if (ctx.accountSub && ctx.pack?.code) {
+    await enqueuePackSession({
+      id: session.id,
+      sub: ctx.accountSub,
+      code: ctx.pack.code,
+      build: ctx.pack.build,
+      seconds: session.durationSec,
+      crashed: session.crashed,
       createdAt: session.endedAt,
     });
   }
@@ -536,6 +565,23 @@ export async function resolveSyncEntries(ids: string[]): Promise<void> {
     if (!queue.writable) return;
     await tryWriteJSON(
       syncQueuePath(),
+      queue.value.filter((entry) => !set.has(entry.id)),
+    );
+  });
+}
+
+export async function readPackSessionQueue(): Promise<IPackSessionEntry[]> {
+  return (await readJSONArray<IPackSessionEntry>(packQueuePath())).value;
+}
+
+export async function resolvePackSessions(ids: string[]): Promise<void> {
+  if (!ids || ids.length === 0) return;
+  const set = new Set(ids);
+  await withLock(packQueuePath(), async () => {
+    const queue = await readJSONArray<IPackSessionEntry>(packQueuePath());
+    if (!queue.writable) return;
+    await tryWriteJSON(
+      packQueuePath(),
       queue.value.filter((entry) => !set.has(entry.id)),
     );
   });

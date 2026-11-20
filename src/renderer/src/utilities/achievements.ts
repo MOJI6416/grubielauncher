@@ -39,6 +39,16 @@ import {
   Headphones,
   AudioLines,
   HandCoins,
+  TrendingUp,
+  Trophy,
+  Library,
+  CalendarClock,
+  Earth,
+  Paintbrush,
+  SwatchBook,
+  PaintBucket,
+  Award,
+  Brush,
 } from "lucide-react";
 import { IAchievementStats } from "@/types/Achievements";
 
@@ -146,11 +156,23 @@ export const ACHIEVEMENTS: IAchievementDef[] = [
   { id: "skin_author_10", category: "community", points: 45, granted: true, icon: Palette },
   { id: "skin_downloads_100", category: "community", points: 35, granted: true, icon: Download },
   { id: "skin_downloads_1000", category: "community", points: 80, granted: true, icon: Flame },
+  { id: "skin_author_50", category: "community", points: 65, granted: true, icon: Brush },
 
   { id: "modpack_first", category: "community", points: 15, granted: true, icon: Package },
   { id: "modpack_downloads_5", category: "community", points: 20, granted: true, icon: PackageCheck },
   { id: "modpack_downloads_25", category: "community", points: 35, granted: true, icon: Boxes },
   { id: "modpack_downloads_100", category: "community", points: 55, granted: true, icon: Rocket },
+  { id: "modpack_downloads_250", category: "community", points: 60, granted: true, icon: TrendingUp },
+  { id: "modpack_downloads_1000", category: "community", points: 90, granted: true, icon: Trophy },
+  { id: "modpack_author_5", category: "community", points: 35, granted: true, icon: Library },
+  { id: "modpack_hours_100", category: "community", points: 40, granted: true, icon: CalendarClock },
+  { id: "modpack_hours_1000", category: "community", points: 75, granted: true, icon: Earth },
+
+  { id: "theme_first", category: "community", points: 20, granted: true, icon: Paintbrush },
+  { id: "theme_author_5", category: "community", points: 40, granted: true, icon: SwatchBook },
+  { id: "theme_downloads_100", category: "community", points: 35, granted: true, icon: PaintBucket },
+  { id: "theme_downloads_1000", category: "community", points: 75, granted: true, icon: Award },
+
   { id: "friends_10", category: "community", points: 20, granted: true, icon: UserPlus },
   { id: "group_popular", category: "community", points: 30, granted: true, icon: UsersRound },
 

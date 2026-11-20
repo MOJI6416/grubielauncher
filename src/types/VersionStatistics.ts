@@ -58,3 +58,16 @@ export interface IPlaytimeSyncEntry {
   seconds: number
   createdAt: string
 }
+
+export interface ISessionPack {
+  code: string
+  build: number
+}
+
+export interface IPackSessionEntry extends ISessionPack {
+  id: string
+  sub: string
+  seconds: number
+  crashed: boolean
+  createdAt: string
+}

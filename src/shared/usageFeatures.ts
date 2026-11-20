@@ -216,6 +216,8 @@ export const USAGE_FEATURES = [
   "news.open",
   "dataLocation.move",
   "storage.cleanup",
+  "instance.packAnalytics",
+  "feature.packChannel",
 ] as const;
 
 export type UsageFeature = (typeof USAGE_FEATURES)[number];

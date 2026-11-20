@@ -172,6 +172,7 @@ export type TSettings = {
   catalogLinks: boolean;
   crashTelemetry: boolean;
   usageStats: boolean;
+  packAnalytics: boolean;
   aiLogAnalysis: boolean;
   agentChatSync: boolean;
   sounds: boolean;
@@ -248,6 +249,7 @@ export const DEFAULT_SETTINGS: TSettings = {
   catalogLinks: false,
   crashTelemetry: true,
   usageStats: true,
+  packAnalytics: true,
   aiLogAnalysis: false,
   agentChatSync: true,
   sounds: true,
@@ -416,6 +418,10 @@ export function normalizeSettings(
         ? value.crashTelemetry
         : DEFAULT_SETTINGS.crashTelemetry,
     usageStats: booleanOr(value?.usageStats, DEFAULT_SETTINGS.usageStats),
+    packAnalytics: booleanOr(
+      value?.packAnalytics,
+      DEFAULT_SETTINGS.packAnalytics,
+    ),
     aiLogAnalysis:
       typeof value?.aiLogAnalysis === "boolean"
         ? value.aiLogAnalysis

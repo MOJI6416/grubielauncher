@@ -57,6 +57,9 @@ import { instanceKey } from "@renderer/features/instances/selectors";
 import { InstancePublishingCard } from "@renderer/features/instances/InstancePublishingCard";
 import { InstanceSettingsPanel } from "@renderer/features/instances/InstanceSettingsPanel";
 import { SharedSettingsCard } from "@renderer/features/sharedSettings/SharedSettingsCard";
+import { PackChannelCard } from "@renderer/features/packAuthor/PackChannelCard";
+import { usePackChannel } from "@renderer/features/packAuthor/usePackAuthor";
+import { hasChannelContent } from "@renderer/features/packAuthor/packChannel";
 import {
   ModTranslationRow,
   canTranslateMods,
@@ -247,6 +250,22 @@ export function InstanceScreen({
     setActiveTab("settings");
   };
 
+  const packCode = version?.version.shareCode || undefined;
+  const isPackAuthor =
+    !!packCode &&
+    !version?.version.downloadedVersion &&
+    isOwnerVersion &&
+    !!account &&
+    account.type !== "plain";
+  const isPackSubscriber = !!packCode && !!version?.version.downloadedVersion;
+  const packChannel = usePackChannel(
+    packCode,
+    isPackAuthor || isPackSubscriber,
+  );
+  const isChannelShown = isPackAuthor
+    ? !!packChannel.data
+    : hasChannelContent(packChannel.data);
+
   const tabs = useMemo(
     () =>
       buildInstanceTabs({
@@ -255,7 +274,7 @@ export function InstanceScreen({
         serverCount: editor.servers.length,
         hasSaves: contents.hasSaves,
         hasConfigs: contents.hasConfigs,
-        hasStatistics: contents.hasStatistics,
+        hasStatistics: contents.hasStatistics || isPackAuthor,
         hasServerManager: !!version?.version.version?.serverManager,
         hasOwnServer: !!server,
         hasUnsavedSettings: changes.changeKinds.includes("settings"),
@@ -274,6 +293,7 @@ export function InstanceScreen({
       server,
       version,
       changes.changeKinds,
+      isPackAuthor,
     ],
   );
 
@@ -454,6 +474,22 @@ export function InstanceScreen({
     />
   ) : null;
 
+  const channelCard =
+    version && packCode && isChannelShown ? (
+      <PackChannelCard
+        key={packCode}
+        code={packCode}
+        isAuthor={isPackAuthor}
+        playBlockedReason={
+          playBlockedReason ??
+          (isLaunching ? t("packAuthor.channel.launching") : undefined)
+        }
+        onPlayServer={(address) =>
+          void runGame({ version, quick: { multiplayer: address } })
+        }
+      />
+    ) : null;
+
   const resolved = resolveInstanceSettings(settings, draft.overrides);
   const javaRuntimes = useJavaRuntimes();
 
@@ -614,7 +650,10 @@ export function InstanceScreen({
               />
             </Suspense>
           ) : activeTab === "statistics" && version ? (
-            <InstanceStatisticsPanel instance={version} />
+            <InstanceStatisticsPanel
+              instance={version}
+              authorCode={isPackAuthor ? packCode : null}
+            />
           ) : activeTab === "configs" && version ? (
             <ConfigsPanel
               versionPath={version.versionPath}
@@ -857,6 +896,7 @@ export function InstanceScreen({
                 ) : null
               }
               publishing={publishing}
+              channel={channelCard}
               onOpenTab={setActiveTab}
               onNameChange={draft.setName}
               onStartRename={() => draft.setEditName(true)}

@@ -121,6 +121,7 @@ export interface InstanceOverviewProps {
   banner?: ReactNode;
   updateDetails?: ReactNode;
   publishing?: ReactNode;
+  channel?: ReactNode;
   onOpenTab: (tab: InstanceTab) => void;
   onNameChange: (value: string) => void;
   onStartRename: () => void;
@@ -254,16 +255,19 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
   const showNotes = !isSlotHidden(layout, slotId.card("notes"));
   const showSessions = !isSlotHidden(layout, slotId.card("sessions"));
   const screenshotsShown = showScreenshots && hasScreenshots;
-  const leftBottom = !screenshotsShown && showNotes ? "notes" : null;
-  const rightBottom = screenshotsShown
-    ? showNotes
-      ? "notes"
+  const hasChannel = !!props.channel;
+  const leftBottom =
+    !screenshotsShown && !hasChannel && showNotes ? "notes" : null;
+  const rightBottom =
+    screenshotsShown || hasChannel
+      ? showNotes
+        ? "notes"
+        : showSessions
+          ? "sessions"
+          : null
       : showSessions
         ? "sessions"
-        : null
-    : showSessions
-      ? "sessions"
-      : null;
+        : null;
 
   return (
     <>
@@ -301,6 +305,8 @@ function InstanceOverviewBody(props: InstanceOverviewProps) {
               <ActionTile key={action.id} action={action} />
             ))}
           </div>
+
+          {props.channel}
 
           {isFresh ? (
             <HintsCard className="shrink-0" hints={hints} />

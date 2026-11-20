@@ -481,7 +481,7 @@ export function runGame(
   serverAddress?: string,
   stats?: Pick<
     SessionContext,
-    "trackStatistics" | "accountSub" | "accountLabel" | "config"
+    "trackStatistics" | "accountSub" | "accountLabel" | "config" | "pack"
   > & { gcLogPath?: string | null },
   highPriority: boolean = false,
   workingDirectory?: string,
@@ -582,6 +582,7 @@ export function runGame(
       accountSub: stats.accountSub,
       accountLabel: stats.accountLabel,
       config: stats.config,
+      pack: stats.pack,
     });
   }
 

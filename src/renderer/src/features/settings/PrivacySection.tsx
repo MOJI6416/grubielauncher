@@ -227,6 +227,24 @@ export function PrivacySection({
           />
         )}
 
+        {visible("packAnalytics") && (
+          <SettingRow
+            htmlFor="settings-pack-analytics"
+            title={t("settings.packAnalytics")}
+            description={t("settings.packAnalyticsDescription")}
+            query={query}
+            changed={isChanged("packAnalytics")}
+            onReset={() => reset("packAnalytics")}
+            control={
+              <Switch
+                id="settings-pack-analytics"
+                checked={settings.packAnalytics}
+                onCheckedChange={(value) => commit({ packAnalytics: value })}
+              />
+            }
+          />
+        )}
+
         {visible("aiLogAnalysis") && (
           <SettingRow
             htmlFor="settings-ai-log"

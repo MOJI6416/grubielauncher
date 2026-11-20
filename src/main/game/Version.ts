@@ -2321,6 +2321,13 @@ export class Version {
             trackStatistics: true,
             accountSub: authData?.sub ?? null,
             accountLabel: account.nickname,
+            pack:
+              this.version.downloadedVersion && this.version.shareCode
+                ? {
+                    code: this.version.shareCode,
+                    build: this.version.build ?? 0,
+                  }
+                : null,
             gcLogPath,
             config: {
               minecraft: this.version.version.id,

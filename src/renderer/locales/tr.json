@@ -1609,6 +1609,8 @@
     "crashTelemetryDescription": "Teşhis kodu ve hata satırı; başlatıcının kendisi çökerse hata metni. Kullanıcı adı ve günlük olmadan",
     "usageStats": "Özellik sayaçları",
     "usageStatsDescription": "Ekranların günde kaç kez açıldığı ve özelliklerin kaç kez kullanıldığı. Yalnızca toplamlar; kullanıcı adı, mod adları ve yollar olmadan",
+    "packAnalytics": "Mod paketi yazarları için istatistik",
+    "packAnalyticsDescription": "Grubie’den bir mod paketi oynadığınızda yazarı toplam sayıları görür: kaç kişinin oynadığını, ne kadar süre oynandığını ve oyunun ne sıklıkla çöktüğünü. Yazar takma adınızı görmez.",
     "aiLogAnalysis": "Yapay zekâ ile günlük analizi",
     "aiLogAnalysisDescription": "Onay adımını atlar: analiz, pencere açılır açılmaz başlar",
     "sounds": "Bildirim sesleri",
@@ -2082,6 +2084,11 @@
         "title": "Özellik sayaçları",
         "description": "Özellik kullanımının anonim sayaçları",
         "keywords": "istatistik telemetri analiz gizlilik özellikler sayaçlar kullanım"
+      },
+      "packAnalytics": {
+        "title": "Mod paketi yazarları için istatistik",
+        "description": "Topluluk mod paketlerindeki oynama süresi ve çökmeler, yazarları için",
+        "keywords": "istatistik analiz gizlilik mod paketi yazar süre çökmeler"
       },
       "aiLogAnalysis": {
         "title": "Yapay zekâ ile günlük analizi",
@@ -4299,6 +4306,11 @@
         "desc": "Skinlerinizden biri 1000 kez alındı",
         "descOther": "Bir skini 1000 kez alındı"
       },
+      "skin_author_50": {
+        "name": "Skin Stüdyosu",
+        "desc": "Galeride 50 skininiz olsun",
+        "descOther": "Galeride 50 skin"
+      },
       "modpack_first": {
         "name": "Paket Yazarı",
         "desc": "İlk mod paketinizi katalogda yayımlayın",
@@ -4318,6 +4330,51 @@
         "name": "Herkesin Gözdesi",
         "desc": "Mod paketiniz 100 kez indirildi",
         "descOther": "Bir mod paketi 100 kez indirildi"
+      },
+      "modpack_downloads_250": {
+        "name": "Dilden Dile",
+        "desc": "Mod paketiniz 250 kez indirildi",
+        "descOther": "Bir mod paketi 250 kez indirildi"
+      },
+      "modpack_downloads_1000": {
+        "name": "Paket Efsanesi",
+        "desc": "Mod paketiniz 1000 kez indirildi",
+        "descOther": "Bir mod paketi 1000 kez indirildi"
+      },
+      "modpack_author_5": {
+        "name": "Paket Koleksiyonu",
+        "desc": "Katalogda 5 mod paketiniz olsun",
+        "descOther": "Katalogda 5 mod paketi"
+      },
+      "modpack_hours_100": {
+        "name": "Bırakılmıyor",
+        "desc": "Oyuncular mod paketlerinizde 100 saat geçirdi",
+        "descOther": "Oyuncular mod paketlerinde 100 saat geçirdi"
+      },
+      "modpack_hours_1000": {
+        "name": "Kendi Başına Bir Dünya",
+        "desc": "Oyuncular mod paketlerinizde 1000 saat geçirdi",
+        "descOther": "Oyuncular mod paketlerinde 1000 saat geçirdi"
+      },
+      "theme_first": {
+        "name": "Stilist",
+        "desc": "İlk temanız galeriye onaylandı",
+        "descOther": "İlk tema galeriye onaylandı"
+      },
+      "theme_author_5": {
+        "name": "Tema Ustası",
+        "desc": "Galeride 5 temanız olsun",
+        "descOther": "Galeride 5 tema"
+      },
+      "theme_downloads_100": {
+        "name": "Trend Belirleyici",
+        "desc": "Temalarınızdan biri 100 kez kuruldu",
+        "descOther": "Bir tema 100 kez kuruldu"
+      },
+      "theme_downloads_1000": {
+        "name": "Stil İkonu",
+        "desc": "Temalarınızdan biri 1000 kez kuruldu",
+        "descOther": "Bir tema 1000 kez kuruldu"
       },
       "friends_10": {
         "name": "Yakın Çevre",
@@ -7030,5 +7087,81 @@
     "failed": "{{source}} yanıt vermedi",
     "installTo": "Şuraya yükle…",
     "more": "Daha fazla göster"
+  },
+  "packAuthor": {
+    "channel": {
+      "title": "Yazarın kanalı",
+      "edit": "Düzenle",
+      "all": "Tümü ({{count}})",
+      "new": "Yeni",
+      "copyAddress": "Sunucu adresini kopyala",
+      "play": "Oyna",
+      "openDiscord": "Discord",
+      "authorEmpty": "Sunucunuzu, Discord’unuzu ve haberlerinizi ekleyin; mod paketini kuran herkes onları burada görür.",
+      "launching": "Oyun başlatılıyor",
+      "authorHint": "Mod paketini kuran herkes sunucuyu, Discord’u ve duyuruları paketin genel bakışında görür.",
+      "readerHint": "Mod paketinin yazarından haberler.",
+      "server": "Sunucu adresi",
+      "discord": "Discord daveti",
+      "saved": "Kanal kaydedildi",
+      "newAnnouncement": "Yeni duyuru",
+      "announcementPlaceholder": "Cuma günü sıfırlama, yeni sürüm, sunucuda etkinlik…",
+      "post": "Yayımla",
+      "posted": "Duyuru yayımlandı",
+      "announcements": "Duyurular",
+      "noAnnouncements": "Henüz duyuru yok",
+      "remove": "Duyuruyu sil",
+      "removeTitle": "Bu duyuru silinsin mi?",
+      "removeText": "Mod paketinin oyuncuları artık onu görmeyecek."
+    },
+    "errors": {
+      "invalidServer": "play.example.com veya play.example.com:25565 gibi bir adres girin.",
+      "invalidDiscord": "Bir Discord daveti yapıştırın: discord.gg/… veya discord.com/invite/….",
+      "invalidText": "1 ile 1000 karakter arasında yazın.",
+      "announcementLimit": "Bir mod paketi için günde en fazla 5 duyuru yayımlayabilirsiniz.",
+      "publishBanned": "Hesabınız için yayımlama kapalı.",
+      "generic": "Grubie sunucusu değişikliği kabul etmedi.",
+      "saveFailed": "Kanal kaydedilemedi",
+      "postFailed": "Duyuru yayımlanamadı",
+      "removeFailed": "Duyuru silinemedi",
+      "openFailed": "Bağlantı açılamadı"
+    },
+    "analytics": {
+      "viewPlayers": "Oyuncular",
+      "installs": "Kurulumlar",
+      "players": "Oyuncular",
+      "playersHint": "Mod paketini en az bir kez oynayan herkes, siz hariç",
+      "activeWeek": "7 günde aktif",
+      "activeHint": "Bugün {{day}}, 30 günde {{month}}",
+      "playTime": "Pakette geçen süre",
+      "sessions": "Oturumlar",
+      "crashRate": "Çökme oranı",
+      "crashRateHint": "Çökmeyle biten oturumların payı",
+      "byDay": "Güne göre",
+      "metricLabel": "Güne göre ne gösterilsin",
+      "hours": "Saat",
+      "byBuild": "Paket sürümüne göre",
+      "noBuilds": "Henüz hiçbir sürümde oturum yok",
+      "buildLabel": "Sürüm {{build}}",
+      "current": "güncel",
+      "fewSessions": "az oturum",
+      "buildSince": "{{date}} tarihinden beri",
+      "since": "Oturumlar {{date}} tarihinden beri sayılıyor. Yalnızca toplamları görürsünüz, oyuncuların takma adlarını asla.",
+      "noSessionsYet": "Sayım başladığından beri mod paketini kimse oynamadı. Yalnızca toplamları görürsünüz, oyuncuların takma adlarını asla.",
+      "failed": "Analiz yüklenemedi",
+      "failedHint": "Grubie sunucusu yanıt vermedi. Bir dakika sonra tekrar deneyin.",
+      "unavailable": "Analiz henüz kullanılamıyor",
+      "unavailableHint": "Grubie sunucusu henüz oturumları saymıyor. Güncellemesinden sonra görünecek.",
+      "activePlayersCount_one": "30 günde {{count}} oyuncu",
+      "activePlayersCount_other": "30 günde {{count}} oyuncu",
+      "installsHint_one": "Tekrar bir gün sonra sayılır; toplam {{count}} hesap",
+      "installsHint_other": "Tekrar bir gün sonra sayılır; toplam {{count}} hesap",
+      "sessionsCount_one": "{{count}} oturum",
+      "sessionsCount_other": "{{count}} oturum",
+      "crashesCount_one": "{{count}} çökme",
+      "crashesCount_other": "{{count}} çökme",
+      "installsCount_one": "{{count}} kurulum",
+      "installsCount_other": "{{count}} kurulum"
+    }
   }
 }

@@ -3,6 +3,7 @@ import { PrivacyNotice } from "@renderer/features/privacy/PrivacyNotice";
 import { LauncherImportOffer } from "@renderer/features/launcherImport/LauncherImportOffer";
 import { WebLoginPrompt } from "@renderer/components/Modals/WebLoginPrompt";
 import { AchievementsHost } from "./hosts/AchievementsHost";
+import { PackSessionsHost } from "./hosts/PackSessionsHost";
 import { BootstrapHost } from "./hosts/BootstrapHost";
 import { ConnectivityHost } from "./hosts/ConnectivityHost";
 import { ConsoleHost } from "./hosts/ConsoleHost";
@@ -65,6 +66,7 @@ export function AppHosts() {
       <CrashHost />
       <SupportHost />
       <AchievementsHost />
+      <PackSessionsHost />
       <SystemEventsHost />
       <DeepLinkHost />
       <StartScreenHost />

@@ -102,6 +102,65 @@ export interface IModpackUpdate {
   isPublic?: boolean | null
 }
 
+export interface IModpackAnnouncement {
+  id: string
+  text: string
+  createdAt: string
+}
+
+export interface IModpackChannel {
+  server: string | null
+  discord: string | null
+  announcements: IModpackAnnouncement[]
+}
+
+export interface IModpackChannelUpdate {
+  server?: string | null
+  discord?: string | null
+}
+
+export type ModpackChannelResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; code: string }
+
+export interface IModpackSessionReport {
+  build: number
+  seconds: number
+  crashed: boolean
+}
+
+export interface IModpackAnalyticsDay {
+  day: string
+  installs: number
+  players: number
+  sessions: number
+  crashes: number
+  playSeconds: number
+}
+
+export interface IModpackAnalyticsBuild {
+  build: number
+  installs: number
+  sessions: number
+  crashes: number
+  playSeconds: number
+  activePlayers: number
+  since: string | null
+}
+
+export interface IModpackAnalytics {
+  build: number
+  installs: number
+  installAccounts: number
+  players: number
+  sessions: number
+  playSeconds: number
+  active: { day: number; week: number; month: number }
+  since: string | null
+  days: IModpackAnalyticsDay[]
+  builds: IModpackAnalyticsBuild[]
+}
+
 export type UploadFileProgressStatus =
   | 'preparing'
   | 'uploading'

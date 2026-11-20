@@ -71,6 +71,7 @@ export type SettingsEntryId =
   | "directConnect"
   | "crashTelemetry"
   | "usageStats"
+  | "packAnalytics"
   | "aiLogAnalysis"
   | "agentChatSync"
   | "devMode"
@@ -222,6 +223,7 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "directConnect", section: "privacy", keys: ["directConnect"] },
   { id: "crashTelemetry", section: "privacy", keys: ["crashTelemetry"] },
   { id: "usageStats", section: "privacy", keys: ["usageStats"] },
+  { id: "packAnalytics", section: "privacy", keys: ["packAnalytics"] },
   { id: "aiLogAnalysis", section: "privacy", keys: ["aiLogAnalysis"] },
   { id: "agentChatSync", section: "privacy", keys: ["agentChatSync"] },
   { id: "allowedPaths", section: "privacy", keys: [] },

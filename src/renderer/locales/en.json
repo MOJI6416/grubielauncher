@@ -1609,6 +1609,8 @@
     "crashTelemetryDescription": "The diagnosis code and the error line, or the error text if the launcher itself fails. No nickname, no logs",
     "usageStats": "Feature counters",
     "usageStatsDescription": "How many times a day screens were opened and features used. Totals only, without nickname, mod names or paths",
+    "packAnalytics": "Statistics for modpack authors",
+    "packAnalyticsDescription": "When you play a modpack from Grubie, its author sees totals: how many people play, for how long and how often the game crashes. The author does not see your nickname.",
     "aiLogAnalysis": "AI log analysis",
     "aiLogAnalysisDescription": "Skip the confirmation step: the analysis starts as soon as the window opens",
     "sounds": "Notification sounds",
@@ -2082,6 +2084,11 @@
         "title": "Feature counters",
         "description": "Anonymous feature usage counters",
         "keywords": "statistics telemetry analytics privacy features counters usage"
+      },
+      "packAnalytics": {
+        "title": "Statistics for modpack authors",
+        "description": "Playtime and crashes in community modpacks, for their authors",
+        "keywords": "statistics analytics privacy modpack author playtime crashes"
       },
       "aiLogAnalysis": {
         "title": "AI log analysis",
@@ -4299,6 +4306,11 @@
         "desc": "One of your skins was taken 1000 times",
         "descOther": "A skin was taken 1000 times"
       },
+      "skin_author_50": {
+        "name": "Skin Studio",
+        "desc": "Have 50 of your skins in the gallery",
+        "descOther": "50 skins in the gallery"
+      },
       "modpack_first": {
         "name": "Pack Author",
         "desc": "Publish your first modpack to the catalog",
@@ -4318,6 +4330,51 @@
         "name": "Crowd Favorite",
         "desc": "Your modpack was downloaded 100 times",
         "descOther": "A modpack was downloaded 100 times"
+      },
+      "modpack_downloads_250": {
+        "name": "Word of Mouth",
+        "desc": "Your modpack was downloaded 250 times",
+        "descOther": "A modpack was downloaded 250 times"
+      },
+      "modpack_downloads_1000": {
+        "name": "Pack Legend",
+        "desc": "Your modpack was downloaded 1000 times",
+        "descOther": "A modpack was downloaded 1000 times"
+      },
+      "modpack_author_5": {
+        "name": "Pack Collection",
+        "desc": "Have 5 of your modpacks in the catalog",
+        "descOther": "5 modpacks in the catalog"
+      },
+      "modpack_hours_100": {
+        "name": "Worth the Time",
+        "desc": "Players spent 100 hours in your modpacks",
+        "descOther": "Players spent 100 hours in their modpacks"
+      },
+      "modpack_hours_1000": {
+        "name": "A World of Its Own",
+        "desc": "Players spent 1000 hours in your modpacks",
+        "descOther": "Players spent 1000 hours in their modpacks"
+      },
+      "theme_first": {
+        "name": "Stylist",
+        "desc": "Get your first theme approved to the gallery",
+        "descOther": "First theme approved to the gallery"
+      },
+      "theme_author_5": {
+        "name": "Theme Maker",
+        "desc": "Have 5 of your themes in the gallery",
+        "descOther": "5 themes in the gallery"
+      },
+      "theme_downloads_100": {
+        "name": "Trendsetter",
+        "desc": "One of your themes was installed 100 times",
+        "descOther": "A theme was installed 100 times"
+      },
+      "theme_downloads_1000": {
+        "name": "Icon of Style",
+        "desc": "One of your themes was installed 1000 times",
+        "descOther": "A theme was installed 1000 times"
       },
       "friends_10": {
         "name": "Inner Circle",
@@ -7030,5 +7087,81 @@
     "failed": "{{source}} didn’t answer",
     "installTo": "Install to…",
     "more": "Show more"
+  },
+  "packAuthor": {
+    "channel": {
+      "title": "Author’s channel",
+      "edit": "Edit",
+      "all": "All ({{count}})",
+      "new": "New",
+      "copyAddress": "Copy server address",
+      "play": "Play",
+      "openDiscord": "Discord",
+      "authorEmpty": "Add your server, Discord and news — everyone who installed the modpack will see them here.",
+      "launching": "The game is starting",
+      "authorHint": "Everyone who installed the modpack sees the server, Discord and announcements on its overview.",
+      "readerHint": "News from the modpack’s author.",
+      "server": "Server address",
+      "discord": "Discord invite",
+      "saved": "Channel saved",
+      "newAnnouncement": "New announcement",
+      "announcementPlaceholder": "A wipe on Friday, a new version, an event on the server…",
+      "post": "Post",
+      "posted": "Announcement posted",
+      "announcements": "Announcements",
+      "noAnnouncements": "No announcements yet",
+      "remove": "Delete announcement",
+      "removeTitle": "Delete this announcement?",
+      "removeText": "Players of the modpack will no longer see it."
+    },
+    "errors": {
+      "invalidServer": "Enter an address like play.example.com or play.example.com:25565.",
+      "invalidDiscord": "Paste a Discord invite: discord.gg/… or discord.com/invite/….",
+      "invalidText": "Write from 1 to 1000 characters.",
+      "announcementLimit": "You can post up to 5 announcements a day for one modpack.",
+      "publishBanned": "Publishing is turned off for your account.",
+      "generic": "The Grubie server did not accept the change.",
+      "saveFailed": "Could not save the channel",
+      "postFailed": "Could not post the announcement",
+      "removeFailed": "Could not delete the announcement",
+      "openFailed": "Could not open the link"
+    },
+    "analytics": {
+      "viewPlayers": "Players",
+      "installs": "Installs",
+      "players": "Players",
+      "playersHint": "Everyone who played the modpack at least once, you excluded",
+      "activeWeek": "Active in 7 days",
+      "activeHint": "Today {{day}}, in 30 days {{month}}",
+      "playTime": "Time in the modpack",
+      "sessions": "Sessions",
+      "crashRate": "Crash rate",
+      "crashRateHint": "Share of sessions that ended in a crash",
+      "byDay": "By day",
+      "metricLabel": "What to show by day",
+      "hours": "Hours",
+      "byBuild": "By modpack version",
+      "noBuilds": "No sessions on any version yet",
+      "buildLabel": "Version {{build}}",
+      "current": "current",
+      "fewSessions": "few sessions",
+      "buildSince": "since {{date}}",
+      "since": "Sessions are counted since {{date}}. You see totals only — never the players’ nicknames.",
+      "noSessionsYet": "Nobody has played the modpack since sessions started being counted. You see totals only — never the players’ nicknames.",
+      "failed": "Could not load the analytics",
+      "failedHint": "The Grubie server did not answer. Try again in a minute.",
+      "unavailable": "Analytics is not available yet",
+      "unavailableHint": "The Grubie server does not count sessions yet. It will appear after its update.",
+      "activePlayersCount_one": "{{count}} player in 30 days",
+      "activePlayersCount_other": "{{count}} players in 30 days",
+      "installsHint_one": "Counted with a repeat after a day; {{count}} account in total",
+      "installsHint_other": "Counted with a repeat after a day; {{count}} accounts in total",
+      "sessionsCount_one": "{{count}} session",
+      "sessionsCount_other": "{{count}} sessions",
+      "crashesCount_one": "{{count}} crash",
+      "crashesCount_other": "{{count}} crashes",
+      "installsCount_one": "{{count}} install",
+      "installsCount_other": "{{count}} installs"
+    }
   }
 }

@@ -1645,6 +1645,8 @@
     "crashTelemetryDescription": "Kod diagnozy i wiersz błędu, a gdy zawiedzie sam launcher — treść błędu. Bez nicku i logów",
     "usageStats": "Liczniki funkcji",
     "usageStatsDescription": "Ile razy dziennie otwierano ekrany i używano funkcji. Tylko sumy, bez nicku, nazw modów i ścieżek",
+    "packAnalytics": "Statystyki dla autorów modpacków",
+    "packAnalyticsDescription": "Gdy grasz w modpack z Grubie, jego autor widzi łączne liczby: ile osób gra, jak długo i jak często gra ulega awarii. Autor nie widzi Twojego nicku.",
     "aiLogAnalysis": "Analiza logów przez AI",
     "aiLogAnalysisDescription": "Pomija potwierdzenie: analiza zaczyna się od razu po otwarciu okna",
     "sounds": "Dźwięki powiadomień",
@@ -2118,6 +2120,11 @@
         "title": "Liczniki funkcji",
         "description": "Anonimowe liczniki użycia funkcji",
         "keywords": "statystyki telemetria analityka prywatność funkcje liczniki użycie"
+      },
+      "packAnalytics": {
+        "title": "Statystyki dla autorów modpacków",
+        "description": "Czas gry i awarie w modpackach społeczności — dla ich autorów",
+        "keywords": "statystyki analityka prywatność modpack autor czas awarie"
       },
       "aiLogAnalysis": {
         "title": "Analiza logów przez AI",
@@ -4373,6 +4380,11 @@
         "desc": "Jeden z Twoich skinów wzięto 1000 razy",
         "descOther": "Skin wzięto 1000 razy"
       },
+      "skin_author_50": {
+        "name": "Studio skinów",
+        "desc": "50 Twoich skinów w galerii",
+        "descOther": "50 skinów w galerii"
+      },
       "modpack_first": {
         "name": "Autor paczki",
         "desc": "Opublikuj pierwszy modpack w katalogu",
@@ -4392,6 +4404,51 @@
         "name": "Ulubieniec tłumów",
         "desc": "Twój modpack pobrano 100 razy",
         "descOther": "Modpack pobrano 100 razy"
+      },
+      "modpack_downloads_250": {
+        "name": "Poczta pantoflowa",
+        "desc": "Twój modpack pobrano 250 razy",
+        "descOther": "Modpack pobrano 250 razy"
+      },
+      "modpack_downloads_1000": {
+        "name": "Legenda modpacków",
+        "desc": "Twój modpack pobrano 1000 razy",
+        "descOther": "Modpack pobrano 1000 razy"
+      },
+      "modpack_author_5": {
+        "name": "Kolekcja modpacków",
+        "desc": "5 Twoich modpacków w katalogu",
+        "descOther": "5 modpacków w katalogu"
+      },
+      "modpack_hours_100": {
+        "name": "Nie da się oderwać",
+        "desc": "Gracze spędzili 100 godzin w Twoich modpackach",
+        "descOther": "Gracze spędzili 100 godzin w modpackach"
+      },
+      "modpack_hours_1000": {
+        "name": "Cały świat",
+        "desc": "Gracze spędzili 1000 godzin w Twoich modpackach",
+        "descOther": "Gracze spędzili 1000 godzin w modpackach"
+      },
+      "theme_first": {
+        "name": "Stylista",
+        "desc": "Twój pierwszy motyw zatwierdzono w galerii",
+        "descOther": "Pierwszy motyw zatwierdzony w galerii"
+      },
+      "theme_author_5": {
+        "name": "Twórca motywów",
+        "desc": "5 Twoich motywów w galerii",
+        "descOther": "5 motywów w galerii"
+      },
+      "theme_downloads_100": {
+        "name": "Wyznacza trendy",
+        "desc": "Jeden z Twoich motywów zainstalowano 100 razy",
+        "descOther": "Motyw zainstalowano 100 razy"
+      },
+      "theme_downloads_1000": {
+        "name": "Ikona stylu",
+        "desc": "Jeden z Twoich motywów zainstalowano 1000 razy",
+        "descOther": "Motyw zainstalowano 1000 razy"
       },
       "friends_10": {
         "name": "Bliski krąg",
@@ -7176,5 +7233,91 @@
     "failed": "{{source}} nie odpowiedział",
     "installTo": "Zainstaluj w…",
     "more": "Pokaż więcej"
+  },
+  "packAuthor": {
+    "channel": {
+      "title": "Kanał autora",
+      "edit": "Edytuj",
+      "all": "Wszystkie ({{count}})",
+      "new": "Nowe",
+      "copyAddress": "Kopiuj adres serwera",
+      "play": "Graj",
+      "openDiscord": "Discord",
+      "authorEmpty": "Podaj serwer, Discord i nowości — zobaczą je tutaj wszyscy, którzy zainstalowali modpack.",
+      "launching": "Gra się uruchamia",
+      "authorHint": "Wszyscy, którzy zainstalowali modpack, widzą serwer, Discord i ogłoszenia w jego przeglądzie.",
+      "readerHint": "Nowości od autora modpacka.",
+      "server": "Adres serwera",
+      "discord": "Zaproszenie na Discorda",
+      "saved": "Kanał zapisany",
+      "newAnnouncement": "Nowe ogłoszenie",
+      "announcementPlaceholder": "Wipe w piątek, nowa wersja, event na serwerze…",
+      "post": "Opublikuj",
+      "posted": "Ogłoszenie opublikowane",
+      "announcements": "Ogłoszenia",
+      "noAnnouncements": "Na razie brak ogłoszeń",
+      "remove": "Usuń ogłoszenie",
+      "removeTitle": "Usunąć to ogłoszenie?",
+      "removeText": "Gracze modpacka już go nie zobaczą."
+    },
+    "errors": {
+      "invalidServer": "Podaj adres w stylu play.example.com lub play.example.com:25565.",
+      "invalidDiscord": "Wklej zaproszenie na Discorda: discord.gg/… lub discord.com/invite/….",
+      "invalidText": "Napisz od 1 do 1000 znaków.",
+      "announcementLimit": "Dziennie możesz opublikować do 5 ogłoszeń dla jednego modpacka.",
+      "publishBanned": "Publikowanie jest wyłączone dla Twojego konta.",
+      "generic": "Serwer Grubie nie przyjął zmiany.",
+      "saveFailed": "Nie udało się zapisać kanału",
+      "postFailed": "Nie udało się opublikować ogłoszenia",
+      "removeFailed": "Nie udało się usunąć ogłoszenia",
+      "openFailed": "Nie udało się otworzyć linku"
+    },
+    "analytics": {
+      "viewPlayers": "Gracze",
+      "installs": "Instalacje",
+      "players": "Gracze",
+      "playersHint": "Wszyscy, którzy choć raz grali w modpack, poza Tobą",
+      "activeWeek": "Aktywni w 7 dni",
+      "activeHint": "Dziś {{day}}, w 30 dni {{month}}",
+      "playTime": "Czas w modpacku",
+      "sessions": "Sesje",
+      "crashRate": "Odsetek awarii",
+      "crashRateHint": "Jaka część sesji zakończyła się awarią",
+      "byDay": "Według dni",
+      "metricLabel": "Co pokazać według dni",
+      "hours": "Godziny",
+      "byBuild": "Według wersji modpacka",
+      "noBuilds": "Na żadnej wersji nie ma jeszcze sesji",
+      "buildLabel": "Wersja {{build}}",
+      "current": "aktualna",
+      "fewSessions": "mało sesji",
+      "buildSince": "od {{date}}",
+      "since": "Sesje są liczone od {{date}}. Widzisz tylko łączne liczby — nigdy nicków graczy.",
+      "noSessionsYet": "Od początku liczenia nikt jeszcze nie grał w modpack. Widzisz tylko łączne liczby — nigdy nicków graczy.",
+      "failed": "Nie udało się wczytać analityki",
+      "failedHint": "Serwer Grubie nie odpowiedział. Spróbuj ponownie za minutę.",
+      "unavailable": "Analityka nie jest jeszcze dostępna",
+      "unavailableHint": "Serwer Grubie jeszcze nie liczy sesji. Pojawi się po jego aktualizacji.",
+      "activePlayersCount_one": "{{count}} gracz w 30 dni",
+      "activePlayersCount_few": "{{count}} gracze w 30 dni",
+      "activePlayersCount_many": "{{count}} graczy w 30 dni",
+      "activePlayersCount_other": "{{count}} gracza w 30 dni",
+      "installsHint_one": "Powtórka liczy się po dobie; łącznie {{count}} konto",
+      "installsHint_few": "Powtórka liczy się po dobie; łącznie {{count}} konta",
+      "installsHint_many": "Powtórka liczy się po dobie; łącznie {{count}} kont",
+      "installsHint_other": "Powtórka liczy się po dobie; łącznie {{count}} konta",
+      "sessionsCount_one": "{{count}} sesja",
+      "sessionsCount_few": "{{count}} sesje",
+      "sessionsCount_many": "{{count}} sesji",
+      "sessionsCount_other": "{{count}} sesji",
+      "crashesCount_one": "{{count}} awaria",
+      "crashesCount_few": "{{count}} awarie",
+      "crashesCount_many": "{{count}} awarii",
+      "crashesCount_other": "{{count}} awarii",
+      "installsCount_one": "{{count}} instalacja",
+      "installsCount_few": "{{count}} instalacje",
+      "installsCount_many": "{{count}} instalacji",
+      "installsCount_other": "{{count}} instalacji"
+    }
   }
 }

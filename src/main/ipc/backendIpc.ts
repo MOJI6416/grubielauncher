@@ -411,6 +411,89 @@ export function registerBackendIpc() {
     },
   );
 
+  handleSafe(
+    "backend:reportModpackSession",
+    "failed" as "counted" | "skipped" | "gone" | "failed",
+    [isToken, isCode, isPayload],
+    async (
+      _,
+      at: string,
+      code: string,
+      report: { build?: unknown; seconds?: unknown; crashed?: unknown },
+    ) => {
+      const backend = new Backend(at);
+      return await backend.reportModpackSession(code, {
+        build: Math.max(0, Math.floor(Number(report.build) || 0)),
+        seconds: Math.max(0, Math.floor(Number(report.seconds) || 0)),
+        crashed: report.crashed === true,
+      });
+    },
+  );
+
+  handleSafe(
+    "backend:getModpackChannel",
+    null,
+    [isToken, isCode],
+    async (_, at: string, code: string) => {
+      const backend = new Backend(at);
+      return await backend.getModpackChannel(code);
+    },
+  );
+
+  handleSafe(
+    "backend:getModpackAnalytics",
+    null,
+    [isToken, isCode],
+    async (_, at: string, code: string) => {
+      const backend = new Backend(at);
+      return await backend.getModpackAnalytics(code);
+    },
+  );
+
+  handleSafe(
+    "backend:updateModpackChannel",
+    null,
+    [isToken, isCode, isPayload],
+    async (
+      _,
+      at: string,
+      code: string,
+      update: { server?: unknown; discord?: unknown },
+    ) => {
+      const backend = new Backend(at);
+      const pick = (value: unknown) =>
+        value === null
+          ? null
+          : typeof value === "string"
+            ? value.slice(0, 512)
+            : undefined;
+      return await backend.updateModpackChannel(code, {
+        server: pick(update.server),
+        discord: pick(update.discord),
+      });
+    },
+  );
+
+  handleSafe(
+    "backend:postModpackAnnouncement",
+    null,
+    [isToken, isCode, check.nonEmptyString(4096)],
+    async (_, at: string, code: string, text: string) => {
+      const backend = new Backend(at);
+      return await backend.postModpackAnnouncement(code, text);
+    },
+  );
+
+  handleSafe(
+    "backend:deleteModpackAnnouncement",
+    null,
+    [isToken, isCode, isId],
+    async (_, at: string, code: string, id: string) => {
+      const backend = new Backend(at);
+      return await backend.deleteModpackAnnouncement(code, id);
+    },
+  );
+
   handleSafe("backend:getNews", [], async () => {
     const backend = new Backend();
     return await backend.getNews();

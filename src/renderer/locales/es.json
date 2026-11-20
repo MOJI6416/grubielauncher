@@ -1627,6 +1627,8 @@
     "crashTelemetryDescription": "El código del diagnóstico y la línea del error, o el texto del error si falla el propio launcher. Sin nombre de usuario ni registros",
     "usageStats": "Contadores de funciones",
     "usageStatsDescription": "Cuántas veces al día se abrieron pantallas y se usaron funciones. Solo totales, sin nombre de usuario, nombres de mods ni rutas",
+    "packAnalytics": "Estadísticas para autores de modpacks",
+    "packAnalyticsDescription": "Cuando juega un modpack de Grubie, su autor ve totales: cuántas personas juegan, cuánto tiempo y con qué frecuencia falla el juego. El autor no ve su nombre de usuario.",
     "aiLogAnalysis": "Análisis del registro con IA",
     "aiLogAnalysisDescription": "Omite la confirmación: el análisis empieza en cuanto se abre la ventana",
     "sounds": "Sonidos de notificación",
@@ -2100,6 +2102,11 @@
         "title": "Contadores de funciones",
         "description": "Contadores anónimos del uso de funciones",
         "keywords": "estadísticas telemetría analítica privacidad funciones contadores uso"
+      },
+      "packAnalytics": {
+        "title": "Estadísticas para autores de modpacks",
+        "description": "Tiempo de juego y fallos en modpacks de la comunidad, para sus autores",
+        "keywords": "estadísticas analítica privacidad modpack autor tiempo fallos"
       },
       "aiLogAnalysis": {
         "title": "Análisis del registro con IA",
@@ -4336,6 +4343,11 @@
         "desc": "Una de sus skins se tomó 1000 veces",
         "descOther": "Una skin se tomó 1000 veces"
       },
+      "skin_author_50": {
+        "name": "Estudio de skins",
+        "desc": "Tenga 50 de sus skins en la galería",
+        "descOther": "50 skins en la galería"
+      },
       "modpack_first": {
         "name": "Autor de modpacks",
         "desc": "Publique su primer modpack en el catálogo",
@@ -4355,6 +4367,51 @@
         "name": "Favorito del público",
         "desc": "Su modpack se descargó 100 veces",
         "descOther": "Un modpack se descargó 100 veces"
+      },
+      "modpack_downloads_250": {
+        "name": "De boca en boca",
+        "desc": "Su modpack se descargó 250 veces",
+        "descOther": "Un modpack se descargó 250 veces"
+      },
+      "modpack_downloads_1000": {
+        "name": "Leyenda de los modpacks",
+        "desc": "Su modpack se descargó 1000 veces",
+        "descOther": "Un modpack se descargó 1000 veces"
+      },
+      "modpack_author_5": {
+        "name": "Colección de modpacks",
+        "desc": "Tenga 5 de sus modpacks en el catálogo",
+        "descOther": "5 modpacks en el catálogo"
+      },
+      "modpack_hours_100": {
+        "name": "Imposible dejarlo",
+        "desc": "Los jugadores pasaron 100 horas en sus modpacks",
+        "descOther": "Los jugadores pasaron 100 horas en los modpacks"
+      },
+      "modpack_hours_1000": {
+        "name": "Un mundo propio",
+        "desc": "Los jugadores pasaron 1000 horas en sus modpacks",
+        "descOther": "Los jugadores pasaron 1000 horas en los modpacks"
+      },
+      "theme_first": {
+        "name": "Estilista",
+        "desc": "Su primer tema fue aprobado en la galería",
+        "descOther": "Primer tema aprobado en la galería"
+      },
+      "theme_author_5": {
+        "name": "Creador de temas",
+        "desc": "Tenga 5 de sus temas en la galería",
+        "descOther": "5 temas en la galería"
+      },
+      "theme_downloads_100": {
+        "name": "Marca tendencia",
+        "desc": "Uno de sus temas se instaló 100 veces",
+        "descOther": "Un tema se instaló 100 veces"
+      },
+      "theme_downloads_1000": {
+        "name": "Icono de estilo",
+        "desc": "Uno de sus temas se instaló 1000 veces",
+        "descOther": "Un tema se instaló 1000 veces"
       },
       "friends_10": {
         "name": "Círculo íntimo",
@@ -7099,5 +7156,86 @@
     "failed": "{{source}} no respondió",
     "installTo": "Instalar en…",
     "more": "Mostrar más"
+  },
+  "packAuthor": {
+    "channel": {
+      "title": "Canal del autor",
+      "edit": "Editar",
+      "all": "Todos ({{count}})",
+      "new": "Nuevo",
+      "copyAddress": "Copiar la dirección del servidor",
+      "play": "Jugar",
+      "openDiscord": "Discord",
+      "authorEmpty": "Indique el servidor, Discord y las novedades: aquí los verán todos los que instalaron el modpack.",
+      "launching": "El juego se está iniciando",
+      "authorHint": "Todos los que instalaron el modpack ven el servidor, Discord y los anuncios en su resumen.",
+      "readerHint": "Novedades del autor del modpack.",
+      "server": "Dirección del servidor",
+      "discord": "Invitación de Discord",
+      "saved": "Canal guardado",
+      "newAnnouncement": "Nuevo anuncio",
+      "announcementPlaceholder": "Reinicio el viernes, nueva versión, un evento en el servidor…",
+      "post": "Publicar",
+      "posted": "Anuncio publicado",
+      "announcements": "Anuncios",
+      "noAnnouncements": "Todavía no hay anuncios",
+      "remove": "Eliminar anuncio",
+      "removeTitle": "¿Eliminar este anuncio?",
+      "removeText": "Los jugadores del modpack ya no lo verán."
+    },
+    "errors": {
+      "invalidServer": "Indique una dirección como play.example.com o play.example.com:25565.",
+      "invalidDiscord": "Pegue una invitación de Discord: discord.gg/… o discord.com/invite/….",
+      "invalidText": "Escriba de 1 a 1000 caracteres.",
+      "announcementLimit": "Puede publicar hasta 5 anuncios al día para un modpack.",
+      "publishBanned": "La publicación está desactivada para su cuenta.",
+      "generic": "El servidor de Grubie no aceptó el cambio.",
+      "saveFailed": "No se pudo guardar el canal",
+      "postFailed": "No se pudo publicar el anuncio",
+      "removeFailed": "No se pudo eliminar el anuncio",
+      "openFailed": "No se pudo abrir el enlace"
+    },
+    "analytics": {
+      "viewPlayers": "Jugadores",
+      "installs": "Instalaciones",
+      "players": "Jugadores",
+      "playersHint": "Todos los que jugaron el modpack al menos una vez, excepto usted",
+      "activeWeek": "Activos en 7 días",
+      "activeHint": "Hoy {{day}}, en 30 días {{month}}",
+      "playTime": "Tiempo en el modpack",
+      "sessions": "Sesiones",
+      "crashRate": "Tasa de fallos",
+      "crashRateHint": "Parte de las sesiones que terminaron en un fallo",
+      "byDay": "Por día",
+      "metricLabel": "Qué mostrar por día",
+      "hours": "Horas",
+      "byBuild": "Por versión del modpack",
+      "noBuilds": "Aún no hay sesiones en ninguna versión",
+      "buildLabel": "Versión {{build}}",
+      "current": "actual",
+      "fewSessions": "pocas sesiones",
+      "buildSince": "desde el {{date}}",
+      "since": "Las sesiones se cuentan desde el {{date}}. Solo ve totales, nunca los nombres de los jugadores.",
+      "noSessionsYet": "Desde que empezó el conteo nadie ha jugado el modpack. Solo ve totales, nunca los nombres de los jugadores.",
+      "failed": "No se pudo cargar la analítica",
+      "failedHint": "El servidor de Grubie no respondió. Inténtelo de nuevo en un minuto.",
+      "unavailable": "La analítica aún no está disponible",
+      "unavailableHint": "El servidor de Grubie todavía no cuenta sesiones. Aparecerá tras su actualización.",
+      "activePlayersCount_one": "{{count}} jugador en 30 días",
+      "activePlayersCount_many": "{{count}} jugadores en 30 días",
+      "activePlayersCount_other": "{{count}} jugadores en 30 días",
+      "installsHint_one": "Una repetición cuenta tras un día; {{count}} cuenta en total",
+      "installsHint_many": "Una repetición cuenta tras un día; {{count}} cuentas en total",
+      "installsHint_other": "Una repetición cuenta tras un día; {{count}} cuentas en total",
+      "sessionsCount_one": "{{count}} sesión",
+      "sessionsCount_many": "{{count}} sesiones",
+      "sessionsCount_other": "{{count}} sesiones",
+      "crashesCount_one": "{{count}} fallo",
+      "crashesCount_many": "{{count}} fallos",
+      "crashesCount_other": "{{count}} fallos",
+      "installsCount_one": "{{count}} instalación",
+      "installsCount_many": "{{count}} instalaciones",
+      "installsCount_other": "{{count}} instalaciones"
+    }
   }
 }
