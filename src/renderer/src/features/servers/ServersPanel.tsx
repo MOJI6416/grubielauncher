@@ -80,6 +80,7 @@ import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { createDesktopShortcut } from "@renderer/features/instances/instanceActions";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { ContentProviderIcon } from "@renderer/components/ContentProviderIcon";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -224,6 +225,7 @@ export function ServersPanel({
     (server: IServer) => {
       if (!runGame || !selectedVersion) return;
 
+      countFeature("launch.server");
       void runGame({
         version: selectedVersion,
         quick: { multiplayer: server.ip },
@@ -246,6 +248,7 @@ export function ServersPanel({
 
   const addDiscovered = useCallback(
     (server: ModrinthServer) => {
+      countFeature("servers.discoverAdd");
       setServers((prev) =>
         findDuplicateAddress(prev, server.address) >= 0
           ? prev
@@ -368,6 +371,7 @@ export function ServersPanel({
               canPlay={!!runGame && !!selectedVersion}
               onPlay={() => {
                 if (!runGame || !selectedVersion) return;
+                countFeature("launch.server");
                 void runGame({
                   version: selectedVersion,
                   quick: { multiplayer: server.address },
@@ -718,6 +722,7 @@ export function ServersPanel({
                 editIndex={mode === "edit" ? selected : null}
                 onCancel={() => setMode("details")}
                 onSubmit={(server) => {
+                  if (mode !== "edit") countFeature("servers.add");
                   if (mode === "edit") {
                     setServers((prev) =>
                       prev.map((entry, index) =>
@@ -780,6 +785,7 @@ export function ServersPanel({
           servers={servers}
           onClose={() => setIsImporting(false)}
           onImport={(imported) => {
+            countFeature("servers.import");
             setServers((prev) => [...prev, ...imported]);
             setIsImporting(false);
             toast.success(

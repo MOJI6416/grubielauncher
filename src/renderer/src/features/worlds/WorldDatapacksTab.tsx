@@ -28,6 +28,7 @@ import { splitDatapacks } from "./worldFacts";
 import { removeWithUndo } from "@renderer/utilities/removeWithUndo";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { bumpInstanceDataRevision } from "@renderer/features/instances/instanceRevision";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -71,6 +72,7 @@ export function WorldDatapacksTab({
 
   const add = async (option: DatapackOption) => {
     if (installedSet.has(option.filename)) return;
+    countFeature("worlds.datapack");
 
     setBusy(option.filename);
 

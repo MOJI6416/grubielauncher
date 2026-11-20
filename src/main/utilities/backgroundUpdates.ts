@@ -4,6 +4,7 @@ import { mainWindow } from "../windows/mainWindow";
 import { scheduleUpdateInstall } from "./updateInstall";
 import { gameRuntime } from "./runtime";
 import { loadAutoUpdater } from "./autoUpdater";
+import { countUsage } from "./usageStats";
 
 export const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 export const FIRST_UPDATE_CHECK_DELAY_MS = 20 * 60 * 1000;
@@ -87,6 +88,7 @@ export function startBackgroundUpdateChecks(options: {
 export async function installDownloadedUpdate(): Promise<boolean> {
   if (state.status !== "ready" || !state.version) return false;
   if (gameRuntime.processes.size > 0) return false;
+  countUsage("app.update");
 
   return scheduleUpdateInstall({
     version: state.version,

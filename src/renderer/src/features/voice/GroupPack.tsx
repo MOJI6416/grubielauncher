@@ -17,6 +17,7 @@ import { loadGroups } from "@renderer/features/friends/groups";
 import { openNewInstance } from "@renderer/features/instances/newInstance";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { usePackManifest } from "@renderer/utilities/packShortCode";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -55,6 +56,7 @@ export function GroupPack({
 
   const savePack = async (code: string) => {
     if (isSaving) return;
+    countFeature("groups.pack");
     setSaving(true);
     try {
       const updated = await api.backend.groupSetPack(

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { Socket } from "socket.io-client";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const PING_TIMEOUT_MS = 15000;
 
@@ -88,6 +89,7 @@ export function useVoicePing(socket: Socket | null | undefined) {
   const ping = useCallback(
     (recipientId: string, groupId: string) => {
       if (!socket || !recipientId || !groupId) return;
+      countFeature("groups.ping");
       if (!socket.connected) {
         toast.warning(t("friends.operationErrors.offline"));
         return;

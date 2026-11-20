@@ -13,6 +13,7 @@ import type { DataLocationInfo, DataLocationPlan } from "@/types/DataLocation";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import { PathRows, PathText } from "../dataLocation/PathRows";
 import { useRedact } from "../streamer/streamerMode";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -71,6 +72,7 @@ export function DataLocationGroup({ query }: { query: string }) {
 
   const apply = async () => {
     if (!plan) return;
+    countFeature("dataLocation.move");
     setApplying(true);
 
     try {

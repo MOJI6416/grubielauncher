@@ -28,6 +28,7 @@ import {
 } from "./modpackUpdate";
 import { modpackVersionLabel } from "./modpackVersions";
 import type { ModpackSourceState } from "./useModpackSource";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -177,6 +178,7 @@ export function useModpackUpdateFlow(input: ModpackFlowInput) {
     ]);
     const filePath = picked?.[0];
     if (!filePath) return;
+    countFeature("modpack.fromFile");
 
     setPhase("preparing");
     setStage("extract");
@@ -201,6 +203,7 @@ export function useModpackUpdateFlow(input: ModpackFlowInput) {
     project?: IProject,
     versions?: IProjectVersion[],
   ) => {
+    countFeature("modpack.fromUrl");
     setPhase("preparing");
     setDownloadInfo(null);
     try {
@@ -256,6 +259,7 @@ export function useModpackUpdateFlow(input: ModpackFlowInput) {
         return;
       }
 
+      countFeature("modpack.update");
       const label = modpackVersionLabel(prepared.target);
       if (outcome.extraFilesFailed) {
         toast.warning(t("modpack.doneWithGaps", { version: label }), {
@@ -303,6 +307,7 @@ export function useModpackUpdateFlow(input: ModpackFlowInput) {
         server: input.server,
       });
       if (done) {
+        countFeature("modpack.rollback");
         toast.success(t("modpack.rollback.done", { version: previous }));
       } else {
         showFailureToast(t("modpack.rollback.failed"), undefined, {

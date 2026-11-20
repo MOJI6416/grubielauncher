@@ -16,6 +16,7 @@ import {
 } from "./updateQuery";
 import type { UpdateChannel } from "@/shared/updateChannel";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -247,7 +248,10 @@ export function useUpdateCheck({
       isChecking,
       checked,
       pending: targets.length - checked,
-      check: (force?: boolean) => void run(force),
+      check: (force?: boolean) => {
+        if (force) countFeature("mods.updateCheck");
+        void run(force);
+      },
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targets, gameVersion, loader, channel, isChecking, revision, run]);

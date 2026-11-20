@@ -46,6 +46,7 @@ import { keepOwnServers } from "./joinServers";
 import { isInstanceRunning } from "./launchPlan";
 import { runGame } from "./runGame";
 import type { JoinFriendWorldParams } from "./types";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -217,12 +218,20 @@ export async function joinFriendWorld(
         })
         .catch(ignoreFailure);
       if (link?.address) address = link.address;
+      countFeature(
+        link?.transport === "direct"
+          ? "share.direct"
+          : link?.transport === "turn"
+            ? "share.turn"
+            : "share.relay",
+      );
     }
 
     if (!address) {
       toast.error(t0("friends.friendNoJoinTarget"), { id: toastId });
       return;
     }
+    countFeature(params.slug ? "share.join" : "friends.joinServer");
 
     store.set(selectedVersionAtom, version);
 

@@ -85,6 +85,7 @@ import type { DeletionPlan } from "@renderer/utilities/mod";
 import type { ModFileStates } from "./useModFileStates";
 import type { SelectionGesture } from "@renderer/utilities/rangeSelection";
 import type { ReactVirtualizer, VirtualItem } from "@tanstack/react-virtual";
+import { countFeature } from "@renderer/features/usage/usage";
 
 function catalogSourceName(scope: Scope): string {
   return scope === Provider.CURSEFORGE ? "CurseForge" : "Modrinth";
@@ -302,6 +303,7 @@ export function ContentListPane({
       : null;
   const flipFavorite = async (item: IModSetItem) => {
     const favorite = await toggleFavorite(item);
+    if (favorite) countFeature("mods.favorite");
     if (favorite === null) {
       showFailureToast(t("modSets.saveFailed"), undefined, {
         channels: ["fs:writeJSON"],

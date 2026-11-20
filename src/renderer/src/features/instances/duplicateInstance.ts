@@ -10,6 +10,7 @@ import {
 } from "@renderer/utilities/failures";
 import { suggestInstanceName } from "@renderer/features/newInstance/nameValidation";
 import { instanceKey } from "./selectors";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -70,6 +71,7 @@ export async function duplicateInstance(source: Version): Promise<void> {
 
     store.set(versionsAtom, [...store.get(versionsAtom), instance]);
 
+    countFeature("manage.duplicate");
     toast.success(t("versions.duplicated", { name: conf.name }), {
       id: toastId,
       description: t("versions.duplicatedHint"),

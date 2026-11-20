@@ -53,6 +53,7 @@ import {
   useModSets,
 } from "./modSetsStore";
 import { resolveModSet } from "./resolveModSet";
+import { countFeature } from "@renderer/features/usage/usage";
 
 export type ModSetsDialogMode =
   | { kind: "save"; mods: ILocalProject[]; defaultName: string }
@@ -99,6 +100,7 @@ function ImportCollectionView({
         });
         return;
       }
+      countFeature("modSets.collection");
       toast.success(
         t("modSets.collectionImported", { name: set.name, count: items.length }),
       );
@@ -179,6 +181,7 @@ function SaveSetView({
     setIsSaving(true);
     const set = await saveModSet(name, mods);
     setIsSaving(false);
+    if (set) countFeature("modSets.save");
 
     if (!set) {
       showFailureToast(t("modSets.saveFailed"), undefined, {

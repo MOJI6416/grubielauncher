@@ -1631,7 +1631,7 @@
     "crashTelemetry": "Diagnozy awarii",
     "crashTelemetryDescription": "Kod diagnozy i wiersz błędu, a gdy zawiedzie sam launcher — treść błędu. Bez nicku i logów",
     "usageStats": "Liczniki funkcji",
-    "usageStatsDescription": "Ile razy dziennie otwierano ekrany i funkcje. Tylko sumy, bez nicku",
+    "usageStatsDescription": "Ile razy dziennie otwierano ekrany i używano funkcji. Tylko sumy, bez nicku, nazw modów i ścieżek",
     "aiLogAnalysis": "Analiza logów przez AI",
     "aiLogAnalysisDescription": "Pomija potwierdzenie: analiza zaczyna się od razu po otwarciu okna",
     "sounds": "Dźwięki powiadomień",

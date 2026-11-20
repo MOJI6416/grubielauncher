@@ -8,6 +8,7 @@ import {
   type Point,
 } from "./trayPopupPlacement";
 import { appPageUrl } from "./appPages";
+import { countUsage } from "../utilities/usageStats";
 
 const MIN_HEIGHT = 120;
 const MAX_HEIGHT = 640;
@@ -104,6 +105,7 @@ export function prewarmTrayPopup(): void {
 }
 
 export function showTrayPopup(icon: Rectangle | null): void {
+  countUsage("tray.popup");
   anchor = resolveTrayAnchor(screen.getCursorScreenPoint(), icon);
   if (!isAlive(popup)) popup = create();
 

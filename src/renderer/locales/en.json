@@ -1595,7 +1595,7 @@
     "crashTelemetry": "Crash diagnoses",
     "crashTelemetryDescription": "The diagnosis code and the error line, or the error text if the launcher itself fails. No nickname, no logs",
     "usageStats": "Feature counters",
-    "usageStatsDescription": "How many times a day screens and features were opened. Totals only, no nickname",
+    "usageStatsDescription": "How many times a day screens were opened and features used. Totals only, without nickname, mod names or paths",
     "aiLogAnalysis": "AI log analysis",
     "aiLogAnalysisDescription": "Skip the confirmation step: the analysis starts as soon as the window opens",
     "sounds": "Notification sounds",

@@ -90,6 +90,7 @@ import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { GroupPanel } from "./GroupPanel";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 const SEARCH_THRESHOLD = 5;
@@ -470,12 +471,14 @@ export function GroupsTab({
     setCreateOpen(false);
     void loadGroups();
     openGroup(group._id);
+    countFeature("groups.create");
     toast.success(t("groups.created", { name: group.name }));
   };
 
   const handleJoinByCode = async () => {
     const code = parseGroupJoinCode(joinCode) ?? joinCode.trim();
     if (!code || isSubmitting) return;
+    countFeature("groups.join");
 
     const memberBefore = groups.map((entry) => entry._id);
 
@@ -513,6 +516,7 @@ export function GroupsTab({
 
   const inviteToGame = (group: IGroup) => {
     if (!friendSocket || !gameInviteTarget) return;
+    countFeature("groups.inviteGame");
 
     const friendIds = new Set(friends.map((friend) => friend.user._id));
     const recipients = group.members.filter(

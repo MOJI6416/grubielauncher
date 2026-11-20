@@ -143,6 +143,8 @@ import {
   LauncherImportFooter,
   openImportedInstance,
 } from "@renderer/features/launcherImport/LauncherImportView";
+import { countFeature } from "@renderer/features/usage/usage";
+import type { UsageFeature } from "@/shared/usageFeatures";
 
 const api = window.api;
 
@@ -155,6 +157,15 @@ const LazyImageCropper = lazyWithPreload(() =>
 type BusyKind = "file" | "code" | "modpack" | "install" | null;
 
 type ServerMode = "modrinth" | "address";
+
+const CREATE_FEATURES: Partial<Record<NewInstanceSource, UsageFeature>> = {
+  custom: "newInstance.custom",
+  community: "newInstance.community",
+  catalog: "newInstance.catalog",
+  code: "newInstance.code",
+  file: "newInstance.file",
+  server: "newInstance.server",
+};
 
 const SOURCE_ICONS = {
   custom: PencilLine,
@@ -956,6 +967,8 @@ export function NewInstancePanel({
         });
 
         setBlockedMods([]);
+        const createFeature = CREATE_FEATURES[state.source];
+        if (createFeature) countFeature(createFeature);
 
         if (extraFilesFailed) {
           toast.warning(t("newInstance.extraFilesFailed"), {

@@ -1613,7 +1613,7 @@
     "crashTelemetry": "Diagnósticos de crash",
     "crashTelemetryDescription": "O código do diagnóstico e a linha do erro, ou o texto do erro se o próprio launcher falhar. Sem nick e sem logs",
     "usageStats": "Contadores de recursos",
-    "usageStatsDescription": "Quantas vezes por dia telas e recursos foram abertos. Só totais, sem nick",
+    "usageStatsDescription": "Quantas vezes por dia telas foram abertas e recursos usados. Só totais, sem nick, nomes de mods ou caminhos",
     "aiLogAnalysis": "Análise de logs com IA",
     "aiLogAnalysisDescription": "Pula a etapa de confirmação: a análise começa assim que a janela abre",
     "sounds": "Sons de notificação",

@@ -6,6 +6,7 @@ import {
   authDataAtom,
 } from "@renderer/stores/atoms";
 import { accountIdentity, accountUuid } from "./identity";
+import { countFeature } from "@renderer/features/usage/usage";
 
 export type SwitchAccountResult = "switched" | "unchanged" | "failed";
 
@@ -34,6 +35,7 @@ export async function switchAccount(
   if (!saved) return "failed";
 
   store.set(accountAtom, account);
+  countFeature("accounts.switch");
 
   return "switched";
 }

@@ -25,6 +25,7 @@ import { CatalogPanel } from "@renderer/features/skins/CatalogPanel";
 import { WardrobePanel } from "@renderer/features/skins/WardrobePanel";
 import { useSkinsData } from "@renderer/features/skins/useSkinsData";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -81,6 +82,7 @@ export function ManageSkins() {
   const handleImportFromCatalog = useCallback(
     async (skin: ICatalogSkin) => {
       if (!authData || !account) return;
+      countFeature("skins.gallery");
 
       setIsImporting(true);
       try {

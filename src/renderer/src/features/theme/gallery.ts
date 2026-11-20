@@ -16,6 +16,7 @@ import {
 } from "@/shared/themeGallery";
 import { addTheme } from "./themeTransfer";
 import { newThemeId, userThemesAtom } from "./themesStore";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -90,6 +91,7 @@ export async function prepareGalleryImages(path: string): Promise<PublishImages 
 }
 
 export async function publishTheme(theme: ThemeDefinition): Promise<boolean> {
+  countFeature("theme.publish");
   const token = galleryToken();
   if (!token) {
     toast.info(i18n.t("theme.gallery.signIn"));
@@ -134,6 +136,7 @@ export async function publishTheme(theme: ThemeDefinition): Promise<boolean> {
 }
 
 export async function installGalleryTheme(item: GalleryTheme): Promise<boolean> {
+  countFeature("theme.install");
   const installed = getDefaultStore()
     .get(userThemesAtom)
     .find((theme) => theme.galleryId === item.id);

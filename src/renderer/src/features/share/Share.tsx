@@ -93,6 +93,7 @@ import {
   resolvePackShortCode,
   usePackShortCode,
 } from "@renderer/utilities/packShortCode";
+import { countFeature } from "@renderer/features/usage/usage";
 const api = window.api;
 
 interface SharePublishProgress {
@@ -1084,6 +1085,7 @@ export function Share({
       return;
     }
 
+    countFeature("modpack.unpublish");
     toast.success(t("ownModpacks.deleted"));
   }, [selectedVersion, account, authData, versions, closeModal, t]);
 
@@ -1095,7 +1097,10 @@ export function Share({
         false,
         selectedVersion.version.shareCode,
       );
-      if (isUpdated) closeModal();
+      if (isUpdated) {
+        countFeature("modpack.republish");
+        closeModal();
+      }
       return;
     }
 
@@ -1182,6 +1187,7 @@ export function Share({
       onPublished?.(shareCode);
       void copyWithFeedback(buildPackShareUrl(shortCode || shareCode));
 
+      countFeature("modpack.publish");
       toast.success(t("versions.published"));
       isPublished = true;
     } catch (error) {

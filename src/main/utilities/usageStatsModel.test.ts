@@ -4,6 +4,7 @@ import {
   addUse,
   dropStaleDays,
   finishedDays,
+  isRejectedReport,
   localDay,
   normalizeUsageDays,
 } from "./usageStatsModel";
@@ -67,5 +68,14 @@ describe("usage stats model", () => {
       "2026-11-20": { "screen.home": USAGE_MAX_PER_DAY },
     });
     expect(normalizeUsageDays(null)).toEqual({});
+  });
+
+  it("gives up only on a day the api refuses to read, so it cannot hold back the next days", () => {
+    expect(isRejectedReport(400)).toBe(true);
+    expect(isRejectedReport(413)).toBe(true);
+    expect(isRejectedReport(404)).toBe(false);
+    expect(isRejectedReport(429)).toBe(false);
+    expect(isRejectedReport(503)).toBe(false);
+    expect(isRejectedReport(undefined)).toBe(false);
   });
 });

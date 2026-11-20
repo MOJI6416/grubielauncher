@@ -30,6 +30,7 @@ import {
   voiceSetMicMuted,
 } from "@renderer/utilities/voiceClient";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -65,6 +66,7 @@ async function launchFromTray(versionName: string): Promise<void> {
     return;
   }
 
+  countFeature("launch.tray");
   await runGame({ version });
 
   const started = store
@@ -81,6 +83,7 @@ function answerCall(event: "voiceCallAccept" | "voiceCallDecline"): void {
   const call = store.get(voiceCallAtom);
   if (call.status !== "incoming" || !call.callId) return;
 
+  if (event === "voiceCallAccept") countFeature("voice.answer");
   store.get(friendSocketAtom)?.emit(event, { callId: call.callId });
 }
 

@@ -91,6 +91,7 @@ import { VERSION_INSTALL_CANCELLED } from "@/types/InstallationProgress";
 import { VERSION_FILE_STAGES, contentPlan } from "@/shared/installPlan";
 import { loaderChangeErrorKey } from "./loaderUpdate";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -347,6 +348,7 @@ export function useInstanceEditor({
 
   async function runIntegrityCheck() {
     if (!version) return;
+    countFeature("manage.integrity");
 
     if (!account) {
       toast.error(t("versions.integrityError"), {
@@ -646,6 +648,7 @@ export function useInstanceEditor({
 
   async function copyRunCommand(isRelative: boolean) {
     if (!version || !account) return;
+    countFeature("manage.copyCommand");
 
     const command = await api.version.getRunCommand(
       account,
@@ -792,6 +795,7 @@ export function useInstanceEditor({
 
   async function changeLoaderVersion(targetId: string) {
     if (!version || !account || isLoading) return false;
+    countFeature("manage.loaderVersion");
 
     const previousId = version.version.loader.version?.id;
 

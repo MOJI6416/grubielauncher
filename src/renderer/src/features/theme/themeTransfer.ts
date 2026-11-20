@@ -18,6 +18,7 @@ import { patchSettings } from "@renderer/utilities/persistSettings";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { newThemeId, saveUserThemes, userThemesAtom } from "./themesStore";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -55,6 +56,7 @@ export async function addTheme(theme: ThemeDefinition): Promise<boolean> {
 }
 
 export async function importThemeFromFile(sourcePath?: string): Promise<boolean> {
+  countFeature("theme.importFile");
   try {
     const result = await api.theme.importFile(sourcePath);
     if (!result) {
@@ -76,6 +78,7 @@ export async function importThemeFromFile(sourcePath?: string): Promise<boolean>
 }
 
 export async function importThemeFromCode(text: string): Promise<boolean> {
+  countFeature("theme.importCode");
   const theme = decodeThemeCode(text, newThemeId());
   if (!theme) {
     toast.error(i18n.t("theme.transfer.badCode"));
@@ -85,6 +88,7 @@ export async function importThemeFromCode(text: string): Promise<boolean> {
 }
 
 export async function exportThemeToFile(theme: ThemeDefinition): Promise<void> {
+  countFeature("theme.export");
   try {
     const result = await api.theme.exportFile(
       themeManifest(theme),
@@ -100,6 +104,7 @@ export async function exportThemeToFile(theme: ThemeDefinition): Promise<void> {
 }
 
 export async function copyThemeCode(theme: ThemeDefinition): Promise<void> {
+  countFeature("theme.export");
   if (!(await copyWithFeedback(encodeThemeCode(theme)))) return;
   if (theme.backdrop) toast.info(i18n.t("theme.transfer.codeNoPicture"));
 }

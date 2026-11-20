@@ -28,6 +28,7 @@ import {
   preferredRuntime,
 } from "./javaChoices";
 import { useJavaRuntimes } from "./useJavaRuntimes";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const JAVA_AUTO = "auto";
 const JAVA_ADD = "add";
@@ -117,7 +118,10 @@ export function JavaPicker({
   const choose = async (next: string) => {
     if (next === JAVA_ADD) {
       const runtime = await add();
-      if (runtime) onChange({ home: runtime.home });
+      if (runtime) {
+        countFeature("java.pick");
+        onChange({ home: runtime.home });
+      }
       return;
     }
     if (next === JAVA_AUTO) {
@@ -125,7 +129,10 @@ export function JavaPicker({
       return;
     }
     const java = decodeJavaOverride(next);
-    if (java) onChange(java);
+    if (java) {
+      countFeature("java.pick");
+      onChange(java);
+    }
   };
 
   const vendorOf = (major: number) => {

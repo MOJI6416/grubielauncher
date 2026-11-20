@@ -3,6 +3,7 @@ import { IFilterGroup, IProject, ProjectType, Provider } from "@/types/ModManage
 import { hasMorePages, mergeCatalogPages } from "./entries";
 import { CATALOG_PAGE_SIZE, CatalogRequest, requestSignature } from "./catalog";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -35,6 +36,7 @@ export function useCatalogSearch(
   requestRef.current = request;
   const stateRef = useRef(state);
   stateRef.current = state;
+  const countedQueryRef = useRef("");
 
   const fetchPage = useCallback(
     async (offset: number, append: boolean) => {
@@ -102,6 +104,16 @@ export function useCatalogSearch(
       setState(INITIAL);
       requestIdRef.current += 1;
       return;
+    }
+
+    const query = requestRef.current.query.trim();
+    if (query && query !== countedQueryRef.current) {
+      countedQueryRef.current = query;
+      countFeature(
+        requestRef.current.projectType === ProjectType.MODPACK
+          ? "modpacks.search"
+          : "mods.catalogSearch",
+      );
     }
 
     void fetchPage(0, false);

@@ -30,6 +30,7 @@ import {
   readChatDraft,
   writeChatDraft,
 } from "@renderer/features/friends/chatDrafts";
+import { countFeature, countMessage } from "@renderer/features/usage/usage";
 
 const api = window.api;
 const SEND_TIMEOUT_MS = 12000;
@@ -514,6 +515,8 @@ export function useGroupChat({
       const own = ownUserIdRef.current;
       if (!own || !socket || !groupIdRef.current) return false;
       if (!body.value.trim()) return false;
+      countMessage(body._type);
+      countFeature("groups.chat");
 
       const reply = replyRef.current;
       const replyTo =
@@ -617,6 +620,7 @@ export function useGroupChat({
   const toggleReaction = useCallback(
     (message: IMessage, emoji: string) => {
       if (!socket || !groupIdRef.current || !message.id) return;
+      countFeature("chat.reaction");
       if (!socket.connected) {
         warnOffline();
         return;

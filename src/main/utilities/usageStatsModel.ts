@@ -69,3 +69,7 @@ export function dropStaleDays(days: UsageDays, today: string): UsageDays {
     ),
   );
 }
+
+export function isRejectedReport(status: number | undefined): boolean {
+  return status === 400 || status === 413;
+}

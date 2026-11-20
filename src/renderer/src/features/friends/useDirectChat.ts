@@ -29,6 +29,7 @@ import {
 } from "./chatPaging";
 import { hasPendingReconcile, hasPendingResend } from "./outbox";
 import { lastReadOwnKey, mergeReadSeq } from "./readReceipt";
+import { countFeature, countMessage } from "@renderer/features/usage/usage";
 
 const api = window.api;
 const SEND_TIMEOUT_MS = 12000;
@@ -601,6 +602,7 @@ export function useDirectChat({
       const own = ownUserIdRef.current;
       if (!own || !socket || !friendIdRef.current) return false;
       if (!body.value.trim()) return false;
+      countMessage(body._type);
 
       const reply = replyRef.current;
       const replyTo =
@@ -705,6 +707,7 @@ export function useDirectChat({
   const toggleReaction = useCallback(
     (message: IMessage, emoji: string) => {
       if (!socket || !friendIdRef.current || !message.id) return;
+      countFeature("chat.reaction");
       if (!socket.connected) {
         warnOffline();
         return;

@@ -4,6 +4,7 @@ import {
   lazyWithPreload,
   schedulePreload,
 } from "@renderer/utilities/lazyPreload";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const LazyLogoPickerBody = lazyWithPreload(() =>
   import("./LogoPickerBody").then((module) => ({
@@ -40,7 +41,13 @@ export function LogoPicker({
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (next) countFeature("manage.logoPicker");
+        setOpen(next);
+      }}
+    >
       {children}
       <PopoverContent
         ref={contentRef}

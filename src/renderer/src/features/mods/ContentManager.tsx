@@ -179,6 +179,7 @@ import { shaderSupport } from "./shaderSupport";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import type { CommitMods } from "./contentCommit";
 import { isLockedWhileRunning, typesWhileRunning } from "./runningLock";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -558,6 +559,7 @@ export function ContentManager({
     (provider: Provider, author: IProjectAuthor) => {
       if (!canFilterByAuthor(provider)) return;
       setCatalogAuthor({ provider, author });
+      countFeature("mods.authorSearch");
       setRawQuery("");
       setQuery("");
       setCatalogFilters([]);
@@ -663,6 +665,7 @@ export function ContentManager({
     (next: UpdateChannel | null) => {
       if (!instanceConf) return;
       const previous = instanceConf.version.updateChannel ?? null;
+      countFeature("mods.updateChannel");
       if (next) instanceConf.version.updateChannel = next;
       else delete instanceConf.version.updateChannel;
       setInstanceChannel(next);
@@ -1316,6 +1319,7 @@ export function ContentManager({
         for (const item of added) forgetRemoved(item);
 
         const isUpdate = Boolean(explicit && entry.installed);
+        countFeature(isUpdate ? "mods.installVersion" : "mods.install");
         const dependencies = added.slice(1);
         const notes = [
           dependencies.length > 0
@@ -1498,6 +1502,7 @@ export function ContentManager({
       );
       if (removed.length === 0) return;
 
+      countFeature("mods.removeDuplicates");
       for (const item of removed) rememberRemoved(item);
       void commitMods(
         mods.filter((item) => !keys.has(entryKey(item.provider, item.id))),
@@ -1520,6 +1525,7 @@ export function ContentManager({
           .map((entry) => entry.key),
       );
       if (keys.size === 0) return;
+      if (pinned) countFeature("mods.pin");
 
       void commitMods(
         mods.map((item) => {
@@ -1555,6 +1561,7 @@ export function ContentManager({
         return;
       }
 
+      countFeature(updates.size > 1 ? "mods.updateAll" : "mods.update");
       const result = applyUpdates(mods, updates, fileStates.disabled);
       if ([...updateCheck.updatable].every((key) => updates.has(key))) {
         setLibraryFacets((prev) => prev.filter((facet) => facet !== "update"));
@@ -1958,6 +1965,7 @@ export function ContentManager({
       if (targets.length === 0 || isIdentifying) return;
 
       setIsIdentifying(true);
+      countFeature("mods.identify");
       try {
         const folder = await folderNameForType(projectType);
         const requests = (
@@ -2309,6 +2317,7 @@ export function ContentManager({
 
     const project = current.project;
     if (!project) return;
+    countFeature("mods.translateDescription");
 
     const cacheKey = `${current.entry.key}|${lang}`;
     const cached = translationsRef.current.get(cacheKey);
@@ -2524,6 +2533,7 @@ export function ContentManager({
 
       const link = parseProjectLink(text);
       if (!link) return false;
+      countFeature("mods.catalogLink");
       if (!isOnline) {
         toast.warning(t("modManager.linkOffline"));
         return true;
@@ -2661,6 +2671,7 @@ export function ContentManager({
 
   const moveToGroup = useCallback(
     (entries: ContentEntry[], groupId: string) => {
+      countFeature("modGroups.move");
       const name =
         groupId === UNGROUPED_ID
           ? t("modGroups.ungrouped")
@@ -2740,6 +2751,7 @@ export function ContentManager({
       return;
     }
 
+    countFeature("modGroups.create");
     const id = crypto.randomUUID();
     const { keys } = groupDialog;
     void saveGroups(
@@ -2816,6 +2828,7 @@ export function ContentManager({
     (projects: ILocalProject[]) => {
       if (projects.length === 0) return;
       for (const project of projects) forgetRemoved(project);
+      countFeature("modSets.apply");
       void commitMods([...mods, ...projects], {
         title: t("modSets.added", { count: projects.length }),
         failTitle: t("modManager.failed.install"),
@@ -2828,6 +2841,7 @@ export function ContentManager({
     (added: ILocalProject[], mode: ImportMode) => {
       if (added.length === 0) return;
       for (const project of added) forgetRemoved(project);
+      countFeature(mode === "restore" ? "mods.trashRestore" : "mods.addFiles");
 
       const elsewhere = [
         ...new Set(

@@ -117,6 +117,7 @@ import { useMsFriends } from "@renderer/features/friends/useMsFriends";
 import { listMsFriends } from "@renderer/features/friends/msFriendsModel";
 import { shareGuestLinksAtom } from "@renderer/features/share/guestLinks";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -467,6 +468,7 @@ export function PeopleScreen({
   const handleStartCall = useCallback(
     (friendId: string) => {
       if (!socket || warnIfOffline()) return;
+      countFeature("voice.call");
       socket.emit("voiceCallRequest", { recipientId: friendId });
     },
     [socket, warnIfOffline],

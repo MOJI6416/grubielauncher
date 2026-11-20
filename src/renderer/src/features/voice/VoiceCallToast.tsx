@@ -12,6 +12,7 @@ import {
   voiceCallAtom,
   voiceSessionMetaAtom,
 } from "@renderer/stores/atoms";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const CALL_TOAST_ID = "voice-call";
 
@@ -42,6 +43,7 @@ export function VoiceCallToast() {
     const emit = (event: string, action: "accept" | "decline") => {
       if (pending) return;
       setPending(action);
+      if (action === "accept") countFeature("voice.answer");
       getDefaultStore().get(friendSocketAtom)?.emit(event, { callId });
     };
 

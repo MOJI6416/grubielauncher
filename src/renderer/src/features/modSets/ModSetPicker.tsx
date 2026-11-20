@@ -15,6 +15,7 @@ import { type PortItem, portedProjects } from "@renderer/features/port/portPlan"
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { useModSets } from "./modSetsStore";
 import { resolveModSet } from "./resolveModSet";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const NO_SET = "none";
 
@@ -119,6 +120,7 @@ export function ModSetPicker({
           disabled={!hasSets}
           onValueChange={(value) => {
             isManagedRef.current = true;
+            if (value !== NO_SET) countFeature("modSets.onCreate");
             setSetId(value === NO_SET ? "" : value);
           }}
         >

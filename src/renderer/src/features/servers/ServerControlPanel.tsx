@@ -60,6 +60,7 @@ import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { effectiveJava, javaLabel } from "@renderer/features/java/javaChoices";
 import { useJavaRuntimes } from "@renderer/features/java/useJavaRuntimes";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -261,6 +262,7 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
   const control = useCallback(
     async (action: "start" | "stop" | "force") => {
       if (!runtime || !serverPath) return;
+      countFeature(action === "start" ? "server.start" : "server.stop");
 
       setIsBusy(true);
 
@@ -347,6 +349,7 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
 
   const sendCommand = useCallback(
     async (command: string) => {
+      countFeature("server.command");
       const result = await api.server.command(serverPath, command);
       if (result?.ok) return;
 
@@ -445,6 +448,7 @@ export function ServerControlPanel({ onDelete }: { onDelete: () => void }) {
     samePath(sharedTarget.serverPath ?? "", serverPath);
 
   const openForFriends = useCallback(async () => {
+    countFeature("server.share");
     if (!account || account.type === "plain") {
       toast.warning(t("share.panel.stage.accountUnsupported.title"), {
         description: t("share.panel.stage.accountUnsupported.description"),

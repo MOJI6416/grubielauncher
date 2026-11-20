@@ -40,6 +40,7 @@ import {
   TrayCommand,
   TrayMenuEntry,
 } from "./trayMenu";
+import { countUsage } from "../utilities/usageStats";
 
 const USES_POPUP = process.platform !== "linux";
 const KEEPS_POPUP_OPEN = new Set<TrayCommand["type"]>(["toggleMute", "toggleDeafen"]);
@@ -237,6 +238,7 @@ function hideWindowToTray(): boolean {
   if (!tray || tray.isDestroyed()) return false;
   if (!mainWindow || mainWindow.isDestroyed()) return false;
 
+  countUsage("tray.hide");
   mainWindow.hide();
   applyThrottling();
   showHintOnce();

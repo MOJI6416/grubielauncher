@@ -26,6 +26,7 @@ import {
 } from "./crashFixPlan";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -231,6 +232,7 @@ export function CrashFixes({
   const apply = async (fix: CrashFix) => {
     const key = fixKey(fix);
     setState(key, { phase: "running" });
+    countFeature("crash.fix");
 
     const result = await applyFix(version.version.name, fix).catch(
       (error): ToolResult => ({ ok: false, error: String(error) }),

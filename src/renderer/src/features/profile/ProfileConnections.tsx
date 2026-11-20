@@ -47,6 +47,7 @@ import {
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { formatClock } from "@renderer/utilities/duration";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -155,6 +156,7 @@ export function ProfileConnections({
 
   const runDiscordLink = async () => {
     if (!accessToken) return;
+    countFeature("accounts.discordLink");
 
     const attempt = ++attemptRef.current;
     setError(null);
@@ -198,6 +200,7 @@ export function ProfileConnections({
 
   const runTelegramLink = async () => {
     if (!accessToken) return;
+    countFeature("accounts.telegramLink");
 
     const attempt = ++attemptRef.current;
     setError(null);

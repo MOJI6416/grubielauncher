@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { patchSettings } from "@renderer/utilities/persistSettings";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -35,6 +36,7 @@ export function CloseChoiceHost() {
   const choose = async (choice: CloseChoice) => {
     if (busy) return;
     setBusy(choice);
+    countFeature(choice === "tray" ? "closeChoice.tray" : "closeChoice.quit");
     try {
       if (remember) {
         await patchSettings({ closeToTray: choice === "tray" }).catch((error) =>

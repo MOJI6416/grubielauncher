@@ -63,6 +63,12 @@ describe("routeUsage", () => {
     ]);
   });
 
+  it("counts the catalog outside an instance apart from the content tab", () => {
+    expect(routeUsage({ name: "home" }, { name: "catalog" }, "content")).toEqual([
+      "screen.catalog",
+    ]);
+  });
+
   it("knows every instance tab and settings section", () => {
     const known = new Set<string>(USAGE_FEATURES);
     for (const tab of INSTANCE_TABS) expect(known.has(`instance.${tab}`)).toBe(true);

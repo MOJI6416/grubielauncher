@@ -12,6 +12,7 @@ import {
 import { showFailureToast } from "@renderer/utilities/failures";
 import { showUndoToast } from "@renderer/utilities/undoToast";
 import { sharedRefOf } from "./SharedSettingsCard";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -46,6 +47,7 @@ export function SharedSettingsGroup({ query }: { query: string }) {
   const profile = overview?.profile;
 
   const setAuto = (value: boolean) => {
+    countFeature("sharedSettings.auto");
     setBusy(true);
     void api.sharedSettings
       .setAutoConnect(value)
@@ -87,6 +89,7 @@ export function SharedSettingsGroup({ query }: { query: string }) {
   };
 
   const connectRest = async () => {
+    countFeature("sharedSettings.connectAll");
     const { done, failure } = await setConnected(rest, true);
     const failed = rest.length - done.length;
     if (failed > 0) {

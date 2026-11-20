@@ -51,6 +51,7 @@ import type { PortItem } from "./portPlan";
 import { PortPreview } from "./PortPreview";
 import { PORT_VERSION_FAILED, runPort } from "./runPort";
 import { Hint } from "@renderer/components/Hint";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -209,6 +210,7 @@ export function PortInstanceDialog({
           copyFailed ? t("port.copyFailed") : "",
         ].filter(Boolean);
 
+        countFeature("manage.port");
         toast.success(t("port.created", { name: instance.version.name }), {
           id: toastId,
           description: notes.length > 0 ? notes.join(" ") : undefined,

@@ -1613,7 +1613,7 @@
     "crashTelemetry": "Diagnostics de plantage",
     "crashTelemetryDescription": "Le code du diagnostic et la ligne d’erreur, ou le texte de l’erreur si le launcher lui-même plante. Sans pseudo ni journaux",
     "usageStats": "Compteurs de fonctions",
-    "usageStatsDescription": "Combien de fois par jour les écrans et fonctions ont été ouverts. Totaux uniquement, sans pseudo",
+    "usageStatsDescription": "Combien de fois par jour les écrans ont été ouverts et les fonctions utilisées. Totaux uniquement, sans pseudo, noms de mods ni chemins",
     "aiLogAnalysis": "Analyse du journal par IA",
     "aiLogAnalysisDescription": "Sauter l’étape de confirmation : l’analyse démarre dès l’ouverture de la fenêtre",
     "sounds": "Sons des notifications",

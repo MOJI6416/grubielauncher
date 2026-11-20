@@ -11,6 +11,7 @@ import {
   remoteImageName,
   saveRemoteImage,
 } from "@renderer/utilities/remoteImage";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -33,6 +34,8 @@ export function ChatImageViewer({
 }) {
   const { t } = useTranslation();
   const index = items.findIndex((item) => item.key === activeKey);
+
+  useEffect(() => countFeature("chat.viewer"), []);
 
   useEffect(() => {
     if (index < 0) onClose();

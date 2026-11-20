@@ -44,6 +44,7 @@ import {
   isValidPlayerName,
   ruleLabel,
 } from "./serverAdminModel";
+import { countFeature } from "@renderer/features/usage/usage";
 
 type PlayersTab = "online" | "operators" | "bans";
 
@@ -187,6 +188,7 @@ export function ServerPlayersPanel({
   }, [ruleQuery, snapshot.gamerules]);
 
   const run = async (action: ServerAdminAction, done?: string) => {
+    countFeature("server.players");
     setBusy(true);
     try {
       const result = await perform(action);

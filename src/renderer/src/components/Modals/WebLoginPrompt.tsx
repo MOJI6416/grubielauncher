@@ -28,6 +28,7 @@ import {
 import { Hint } from "@renderer/components/Hint";
 import { cn } from "@/lib/utils";
 import { showFailureToast } from "@renderer/utilities/failures";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -116,6 +117,7 @@ export function WebLoginPrompt() {
   };
 
   const approve = async () => {
+    countFeature("accounts.webLogin");
     const token = chosenAccount?.accessToken;
     if (!token) {
       toast.error(t("webLogin.noAccount"));

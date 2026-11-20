@@ -42,6 +42,7 @@ import { toast } from "sonner";
 import { backupFreshness } from "./worldFacts";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { formatDuration } from "@renderer/utilities/duration";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -154,6 +155,7 @@ export function WorldBackupsTab({
 
   const handleCreate = async () => {
     if (creatingRef.current) return;
+    countFeature("worlds.backup");
 
     creatingRef.current = true;
     const startedAt = Date.now();
@@ -179,6 +181,7 @@ export function WorldBackupsTab({
   };
 
   const handleRestore = async (backup: IWorldBackup) => {
+    countFeature("worlds.restore");
     setBusyId(backup.id);
 
     try {

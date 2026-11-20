@@ -45,6 +45,7 @@ import { useAtomValue } from "jotai";
 import { streamerActiveAtom } from "@renderer/features/streamer/streamerMode";
 import { settingsAtom } from "@renderer/stores/atoms";
 import { redactText } from "@renderer/features/streamer/redact";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const LEVEL_TEXT: Record<LogLevel, string> = {
   fatal: "text-destructive",
@@ -262,7 +263,10 @@ export function LogViewer({
           <Input
             ref={searchRef}
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              if (!search && event.target.value) countFeature("logs.search");
+              setSearch(event.target.value);
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();

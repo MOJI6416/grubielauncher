@@ -65,6 +65,7 @@ import {
   javaStatus,
 } from "@renderer/features/java/JavaPicker";
 import { useJavaRuntimes } from "@renderer/features/java/useJavaRuntimes";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -298,6 +299,7 @@ export function ServerSettingsPanel({
 
   const save = useCallback(async () => {
     if (!draft || !baseline) return;
+    countFeature("server.settings");
 
     const normalized = normalizeDraft(draft);
     setIsSaving(true);

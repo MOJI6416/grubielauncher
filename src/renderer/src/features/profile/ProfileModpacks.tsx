@@ -51,6 +51,7 @@ import { Hint } from "@renderer/components/Hint";
 import { useOwnModpacks } from "./useProfileData";
 import { packShareCode, publishedShareCodes } from "./ownPacks";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -123,6 +124,7 @@ export function ProfileModpacks({ user }: { user: IUser }) {
         return;
       }
 
+      countFeature("modpack.unpublish");
       toast.success(t("ownModpacks.deleted"));
       await modpacks.refetch();
     } catch (error) {

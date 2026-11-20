@@ -48,6 +48,7 @@ import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { classifyAgentError } from "./providerErrors";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -319,6 +320,7 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
 
   async function handleSave() {
     if (!form) return;
+    countFeature("agent.provider");
 
     setSaving(true);
     try {

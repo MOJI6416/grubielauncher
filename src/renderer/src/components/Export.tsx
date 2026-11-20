@@ -35,6 +35,7 @@ import { useInstanceDiskUsage } from "@renderer/features/instances/useInstanceIn
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { Hint } from "@renderer/components/Hint";
 import { formatNumber } from "@renderer/utilities/numbers";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -266,6 +267,7 @@ export function Export({
       }
 
       onClose();
+      countFeature("modpack.export");
       toast.success(t("export.success"), {
         action: {
           label: t("common.openFolder"),

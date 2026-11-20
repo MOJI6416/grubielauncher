@@ -101,6 +101,7 @@ import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { ShareStatus } from "./ShareStatus";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -322,7 +323,12 @@ export function LanShareModal({
         }
       }
       const result = await api.share.startShare(draftVisibility);
-      if (!result.ok) reportError(result.error);
+      if (!result.ok) {
+        reportError(result.error);
+      } else {
+        countFeature("share.start");
+        if (draftInviteOnly) countFeature("share.inviteOnly");
+      }
     } finally {
       setPendingAction(null);
     }
@@ -421,6 +427,7 @@ export function LanShareModal({
 
   const handleKick = useCallback(
     async (row: ShareGuestRow, name: string) => {
+      countFeature("share.kick");
       const guest = { ...guestRefOf(row), nickname: name };
       const result = await api.share.kickGuest(guest);
       if (!result.ok) {
@@ -513,6 +520,7 @@ export function LanShareModal({
 
   const handleInvite = useCallback(
     async (recipientId: string) => {
+      countFeature("share.invite");
       if (accessMode === "invite") {
         const members = hostRef.current?.members ?? [];
         const nickname =
@@ -862,7 +870,10 @@ export function LanShareModal({
               <ShareSeatLimit
                 value={host?.maxGuests ?? 0}
                 disabled={isVisibilityLocked || !hasTarget}
-                onChange={(maxGuests) => void updateHost({ maxGuests })}
+                onChange={(maxGuests) => {
+                  countFeature("share.seats");
+                  void updateHost({ maxGuests });
+                }}
               />
               {serverAllowlistOn && (
                 <p className="text-xs leading-4 text-warning">

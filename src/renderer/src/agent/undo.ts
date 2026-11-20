@@ -19,6 +19,7 @@ import {
   syncMods,
 } from "./tools/shared";
 import { AgentUndo, ToolResult } from "./types";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -178,6 +179,7 @@ export async function undoToolCall(itemId: string): Promise<void> {
   const item = state.timeline.find((entry) => entry.id === itemId);
   if (!item || item.kind !== "tool" || !item.undo) return;
   if (item.undoState === "running" || item.undoState === "done") return;
+  countFeature("agent.undo");
 
   patchTimelineItem(itemId, (entry) =>
     entry.kind === "tool"

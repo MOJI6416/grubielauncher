@@ -23,6 +23,7 @@ import { formatDate } from "@renderer/utilities/date";
 import { NICKNAME_MAX, validateOfflineNickname } from "./nickname";
 import { nicknameAccountId } from "./gameName";
 import { Hint } from "@renderer/components/Hint";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const CHECK_DELAY_MS = 400;
 
@@ -100,6 +101,7 @@ export function ChangeNicknameDialog({
   const submit = async () => {
     if (!canSubmit || !account.accessToken || !accountId) return;
 
+    countFeature("accounts.nickname");
     setPending(true);
     try {
       const result = await window.api.backend.changeNickname(

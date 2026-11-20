@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import type { Socket } from "socket.io-client";
 import type { ShareState } from "@/types/Share";
 import type { IUpdateStatus } from "@/types/IFriend";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const STARTING_PHASES = [
   "share_starting",
@@ -97,6 +98,7 @@ export function useGameInvite({
       }
 
       if (ownPresence.serverAddress) {
+        countFeature("friends.invite");
         socket.emit("gameInvite", {
           recipientId,
           target: { type: "server" },
@@ -112,6 +114,7 @@ export function useGameInvite({
         shareState.sessionId &&
         shareState.publicAddress
       ) {
+        countFeature("friends.invite");
         socket.emit("gameInvite", {
           recipientId,
           target: {

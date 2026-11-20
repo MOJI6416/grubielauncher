@@ -40,6 +40,7 @@ import {
   totalReclaimable,
   type CleanupAction,
 } from "./storageModel";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -144,6 +145,7 @@ export function StorageSection({
   const showCleanup = visible("storageCleanup");
 
   const run = async (action: CleanupAction) => {
+    countFeature("storage.cleanup");
     setPending(null);
     setBusy(action);
     try {

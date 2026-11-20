@@ -35,6 +35,7 @@ import { nextSelectionAfterRemoval } from "./list";
 import { switchAccount } from "./switchAccount";
 import type { OnlineProvider } from "./providers";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -232,6 +233,15 @@ export function useAccountsController() {
 
         setProgress(null);
         if (!saved) return;
+        if (!replaced) {
+          countFeature(
+            callback.provider === "microsoft"
+              ? "accounts.microsoft"
+              : callback.provider === "elyby"
+                ? "accounts.elyby"
+                : "accounts.discord",
+          );
+        }
         toast.success(replaced ? t("accountInfo.updated") : t("accounts.added"));
       } catch (error) {
         if (sessionRef.current !== sessionId) return;
@@ -253,6 +263,7 @@ export function useAccountsController() {
   const finishLittleSkin = useCallback(
     async (authUser: IAuthResponse) => {
       const { replaced, saved } = await upsertAccount("littleskin", authUser);
+      if (saved && !replaced) countFeature("accounts.littleskin");
       if (saved) {
         toast.success(
           replaced ? t("accountInfo.updated") : t("accounts.added"),
@@ -314,6 +325,7 @@ export function useAccountsController() {
         return false;
       }
 
+      countFeature("accounts.offline");
       setSelectedAccount(account);
       toast.success(t("accounts.added"));
       return true;

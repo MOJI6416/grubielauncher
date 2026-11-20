@@ -14,6 +14,7 @@ import { screenshotLabel, sortScreenshots } from "./instanceOverview";
 import { bumpInstanceDataRevision } from "./instanceRevision";
 import type { InstanceScreenshot } from "./useInstanceInsights";
 import { captureCopyAnchor, flashCopied } from "@renderer/utilities/copyFeedback";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -86,6 +87,7 @@ export function ScreenshotViewer({
 
   const copy = useCallback(async () => {
     if (!current) return;
+    countFeature("screenshots.copy");
     const anchor = captureCopyAnchor();
     const fail = (error?: unknown) =>
       showFailureToast(t("common.copyFailed"), error, {
@@ -186,6 +188,7 @@ export function ScreenshotViewer({
                 <MediaViewerAction
                   label={t("versions.screenshots.useAsCover")}
                   onClick={() => {
+                    countFeature("screenshots.cover");
                     onUseAsCover(current.path);
                     onClose();
                   }}

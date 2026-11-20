@@ -13,6 +13,7 @@ import {
   ModTranslationStatus,
   supportsModTranslation,
 } from "@/types/ModTranslations";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -106,6 +107,7 @@ export function ModTranslationRow({
 
   const toggle = (next: boolean) => {
     setSwitching(true);
+    if (next) countFeature("mods.autoTranslate");
     void api.modTranslations
       .setEnabled(versionPath, next, settings.lang, token)
       .then(setStatus)

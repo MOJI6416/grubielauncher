@@ -28,6 +28,8 @@ import { reportIpcFailure, showFailureToast } from "@renderer/utilities/failures
 import { reportGroupJoinFailure } from "@renderer/utilities/groupJoin";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import type { LauncherDeepLink } from "@/types/DeepLink";
+import { countFeature } from "@renderer/features/usage/usage";
+import { Provider } from "@/types/ModManager";
 
 const api = window.api;
 
@@ -58,6 +60,7 @@ export function DeepLinkHost() {
     pendingRef.current = null;
 
     if (decision.kind === "launch") {
+      countFeature("launch.shortcut");
       void runGame({
         version: decision.version,
         instance: decision.instance,
@@ -120,6 +123,7 @@ export function DeepLinkHost() {
       }
 
       if (intent.kind === "groupJoin") {
+        countFeature("links.group");
         const token = linkAccount?.accessToken ?? "";
         const group = await api.backend.groupJoinByCode(token, intent.code);
         if (!group || typeof group === "string") {
@@ -133,32 +137,42 @@ export function DeepLinkHost() {
       }
 
       if (intent.kind === "skin") {
+        countFeature("links.skin");
         setPendingSkinDeepLink(intent.skinId);
         return;
       }
 
       if (intent.kind === "theme") {
+        countFeature("links.theme");
         getDefaultStore().set(galleryFocusAtom, intent.themeId);
         navigate({ name: "settings", section: "themes" });
         return;
       }
 
       if (intent.kind === "webLogin") {
+        countFeature("links.webLogin");
         setPendingWebLogin(intent.requestId);
         return;
       }
 
       if (intent.kind === "catalog") {
+        countFeature(
+          intent.link.provider === Provider.CURSEFORGE
+            ? "links.curseforge"
+            : "links.modrinth",
+        );
         openCatalogInstall({ kind: "link", link: intent.link });
         return;
       }
 
       if (intent.kind === "friendRequest") {
+        countFeature("links.friend");
         setPendingFriendRequest(intent.userId);
         navigate({ name: "people", section: "requests" });
         return;
       }
 
+      countFeature("links.pack");
       try {
         await LazyNewInstanceScreen.preload();
 

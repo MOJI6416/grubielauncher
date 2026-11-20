@@ -19,6 +19,7 @@ import { Hint } from "@renderer/components/Hint";
 import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -227,7 +228,10 @@ export function DownloadsSection({
                 <SegmentedControl<UpdateChannel>
                   ariaLabel={t("settings.downloads.updateChannel")}
                   value={settings.modUpdateChannel}
-                  onChange={(value) => commit({ modUpdateChannel: value })}
+                  onChange={(value) => {
+                    countFeature("mods.defaultChannel");
+                    commit({ modUpdateChannel: value });
+                  }}
                   options={UPDATE_CHANNELS.map((channel) => ({
                     value: channel,
                     label: t(`modManager.updateChannel.segment.${channel}`),
@@ -253,6 +257,7 @@ export function DownloadsSection({
                   id="settings-catalogLinks"
                   checked={settings.catalogLinks}
                   onCheckedChange={(value) => {
+                    if (value) countFeature("links.catalogProtocols");
                     void api.other
                       .setCatalogLinks(value)
                       .then((applied) => {

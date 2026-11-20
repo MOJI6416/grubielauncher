@@ -13,6 +13,7 @@ import { recordError } from "@renderer/utilities/errorToast";
 import { lazyWithPreload } from "@renderer/utilities/lazyPreload";
 import { playSound } from "@renderer/utilities/sounds";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -95,7 +96,10 @@ export function CrashHost() {
         duration: 30000,
         action: {
           label: tRef.current("aiCrash.analyzeAction"),
-          onClick: () => setOpenKey(key),
+          onClick: () => {
+            countFeature("crash.ai");
+            setOpenKey(key);
+          },
         },
       });
     });

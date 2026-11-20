@@ -43,6 +43,7 @@ import {
   showFailureToast,
 } from "@renderer/utilities/failures";
 import { Hint } from "@renderer/components/Hint";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -149,6 +150,7 @@ export function LaunchHost() {
           onClose={() => setPlayAsVersion(null)}
           onPick={(account) => {
             setPlayAsVersion(null);
+            countFeature("launch.playAs");
             void runGame({ version: playAsVersion, account });
           }}
         />

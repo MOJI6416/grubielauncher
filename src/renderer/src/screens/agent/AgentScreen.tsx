@@ -59,6 +59,7 @@ import {
   useBuiltinStatus,
 } from "@renderer/features/agent/builtinStatus";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -147,6 +148,7 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
 
     if (!currentChatId) startNewChat();
 
+    countFeature("agent.send");
     const text = draft;
     setDraft("");
     await sendAgentMessage(active.id, text, model);
@@ -155,12 +157,14 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
   const reply = useCallback(
     (text: string) => {
       if (!active || !canUse || chat.running) return;
+      countFeature("agent.send");
       void sendAgentMessage(active.id, text, model);
     },
     [active, canUse, chat.running, model],
   );
 
   const newChat = useCallback(async () => {
+    countFeature("agent.newChat");
     await leaveRunningChat(true);
     startNewChat();
     setDraft("");

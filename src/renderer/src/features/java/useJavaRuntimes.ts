@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { JavaRuntimeInfo, JavaRuntimeList } from "@/shared/javaRuntime";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -55,6 +56,7 @@ export function useJavaRuntimes() {
   const add = useCallback(async (): Promise<JavaRuntimeInfo | null> => {
     const result = await api.java.add();
     if (result.ok) {
+      countFeature("java.add");
       storeList(result.list);
       toast.success(
         t("java.added", {

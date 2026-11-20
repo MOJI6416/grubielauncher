@@ -19,6 +19,7 @@ import {
   groupByLauncher,
   orderedParts,
 } from "./selection";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -118,6 +119,7 @@ export function useLauncherImportWizard(enabled: boolean) {
 
   const start = useCallback(() => {
     if (blocker || chosen.length === 0) return;
+    countFeature("launcherImport.start");
     void startLauncherImport(chosen, orderedParts(parts));
   }, [blocker, chosen, parts]);
 

@@ -67,6 +67,7 @@ import { WorldDetail } from "./WorldDetail";
 import { WorldIcon } from "./WorldIcon";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { useWorldActions, WorldMenuItems } from "./worldActions";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -220,6 +221,7 @@ export function Worlds({
       { name: "Minecraft world", extensions: ["zip"] },
     ]);
     if (!picked?.length) return;
+    countFeature("worlds.import");
 
     setIsImporting(true);
 
@@ -597,6 +599,7 @@ export function Worlds({
           renameRequested={renameRequest === selectedWorld.path}
           onRenameHandled={onRenameHandled}
           onPlay={() => {
+            countFeature("launch.world");
             void runGame({
               version,
               quick: { single: selectedWorld.folderName },

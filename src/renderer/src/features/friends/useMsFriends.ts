@@ -8,6 +8,7 @@ import type {
 } from "@/shared/msFriends";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { mergeSnapshot } from "./msFriendsModel";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 const REFRESH_MS = 2 * 60_000;
@@ -67,6 +68,13 @@ export function useMsFriends(account: ILocalAccount | null | undefined): MsFrien
       action: MsFriendAction,
       target: { profileId?: string; name?: string },
     ): Promise<MsFriendsError | null> => {
+      countFeature(
+        action === "add"
+          ? "msFriends.add"
+          : action === "accept"
+            ? "msFriends.accept"
+            : "msFriends.remove",
+      );
       const forToken = tokenRef.current;
       if (!forToken) return "not_microsoft";
       const key = target.profileId ?? target.name ?? "";

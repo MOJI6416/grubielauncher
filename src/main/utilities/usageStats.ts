@@ -4,10 +4,12 @@ import axios from "axios";
 import { app } from "electron";
 import { getApiBaseUrl } from "./apiHost";
 import { getDataRoot } from "./dataRoot";
+import type { UsageFeature } from "@/shared/usageFeatures";
 import {
   addUse,
   dropStaleDays,
   finishedDays,
+  isRejectedReport,
   localDay,
   normalizeUsageDays,
   type UsageDays,
@@ -73,6 +75,12 @@ export function recordUsage(feature: string): void {
   scheduleSave();
 }
 
+export function countUsage(feature: UsageFeature): void {
+  void isAllowed().then((allowed) => {
+    if (allowed) recordUsage(feature);
+  });
+}
+
 export function clearUsage(): void {
   ensureLoaded();
   days = {};
@@ -93,11 +101,16 @@ export async function flushUsage(): Promise<void> {
     days = dropStaleDays(days, today);
 
     for (const day of finishedDays(days, today)) {
-      await axios.post(
-        `${getApiBaseUrl()}/feature-usage`,
-        { day, features: days[day] },
-        { timeout: 10_000 },
-      );
+      try {
+        await axios.post(
+          `${getApiBaseUrl()}/feature-usage`,
+          { day, features: days[day] },
+          { timeout: 10_000 },
+        );
+      } catch (error) {
+        const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+        if (!isRejectedReport(status)) throw error;
+      }
       const rest = { ...days };
       delete rest[day];
       days = rest;

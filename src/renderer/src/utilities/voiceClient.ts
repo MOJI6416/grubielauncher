@@ -11,6 +11,7 @@ import type {
 import i18n from "@renderer/i18n";
 import { playVoiceSound } from "./sounds";
 import { voiceGetSavedDevice, voiceSaveDevice } from "./voiceDevices";
+import { countFeature } from "@renderer/features/usage/usage";
 
 export { voiceGetSavedDevice };
 import { settingsAtom, voiceSessionAtom } from "@renderer/stores/atoms";
@@ -716,6 +717,7 @@ export async function voiceConnect(
   if (!grant?.token || !grant?.url) {
     throw new Error("no_token");
   }
+  if (!info.roomId.startsWith("dm_")) countFeature("voice.group");
 
   const lk = await loadLivekit();
   const { RoomEvent, Track } = lk;

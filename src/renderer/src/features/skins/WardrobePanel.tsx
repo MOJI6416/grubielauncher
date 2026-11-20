@@ -97,6 +97,7 @@ import { readFavorites, writeFavorites } from "./favorites";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { LITTLESKIN_CLOSET_URL } from "@/shared/config";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 const ELYBY_SKINS_URL = "https://ely.by/skins";
@@ -463,6 +464,7 @@ export function WardrobePanel({
 
   const handleCape = useCallback(
     async (capeId: string | undefined) => {
+      countFeature("skins.cape");
       await runSkinAction(
         "apply",
         () => api.skins.setCape(authData.uuid, account.type, capeId),
@@ -476,6 +478,7 @@ export function WardrobePanel({
     async (skinId?: string) => {
       const target = skinId ?? selected?.id;
       if (!target || !canUseSkinService) return;
+      countFeature("skins.apply");
 
       if (skinId && skinId !== selected?.id) {
         if (!(await handleSelect(skinId))) return;
@@ -578,6 +581,13 @@ export function WardrobePanel({
 
   const handleImport = useCallback(
     async (request: AddSkinRequest) => {
+      countFeature(
+        request.source === "file"
+          ? "skins.importFile"
+          : request.source === "link"
+            ? "skins.importLink"
+            : "skins.importNick",
+      );
       setBusy("import");
       try {
         let next: SkinsData | null = null;
@@ -634,6 +644,7 @@ export function WardrobePanel({
     }) => {
       if (!publishId || !account.accessToken) return;
 
+      countFeature("skins.publish");
       setBusy("publish");
       try {
         const result = await api.skins.publishCommunity(

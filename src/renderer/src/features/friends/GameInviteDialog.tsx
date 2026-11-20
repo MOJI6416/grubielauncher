@@ -14,6 +14,7 @@ import {
 import { joinFriendWorld } from "@renderer/features/launch/joinFriendWorld";
 import { describeIncomingInvite } from "./gameInvite";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { countFeature } from "@renderer/features/usage/usage";
 
 export function GameInviteDialog({
   invite,
@@ -28,6 +29,7 @@ export function GameInviteDialog({
 
   const join = async () => {
     if (isJoining) return;
+    countFeature("share.acceptInvite");
 
     setIsJoining(true);
     try {

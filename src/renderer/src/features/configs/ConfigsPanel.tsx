@@ -93,6 +93,7 @@ import { ConfigTextEditor, ConfigTextEditorHandle } from "./ConfigTextEditor";
 import { ConfigFormView } from "./ConfigFormView";
 import { ConfigDiffView } from "./ConfigDiffView";
 import { MOD_KEY } from "@renderer/utilities/platform";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -428,6 +429,7 @@ export function ConfigsPanel({
   };
 
   const openMatch = async (entry: ConfigEntry, match: LineMatch) => {
+    countFeature("configs.search");
     const opened = await openEntry(entry);
     if (opened) revealLine(match.line, match.column, match.length);
   };
@@ -556,6 +558,7 @@ export function ConfigsPanel({
 
   const applySnapshot = async (text: string) => {
     if (!selected) return;
+    countFeature("configs.snapshot");
     setView(null);
 
     if (!isMissing) {
@@ -1011,7 +1014,10 @@ export function ConfigsPanel({
                       "size-7",
                       isTranslationOn ? "text-foreground" : "text-faint",
                     )}
-                    onClick={() => setIsTranslationOn((value) => !value)}
+                    onClick={() => {
+                      if (!isTranslationOn) countFeature("configs.translate");
+                      setIsTranslationOn((value) => !value);
+                    }}
                   >
                     {translation.isTranslating ? (
                       <Loader2 className="size-3.5 animate-spin" />

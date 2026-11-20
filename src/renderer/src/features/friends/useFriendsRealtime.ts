@@ -40,6 +40,7 @@ import {
   totalUnread,
   type UnreadCounts,
 } from "./unread";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const LIST_SETTLE_MS = 8000;
 const TYPING_SWEEP_MS = 1500;
@@ -464,6 +465,7 @@ export function useFriendsRealtime({
     (requestId: string) => {
       if (!socket || isOffline()) return;
       setPendingRequestIds((prev) => [...prev, requestId]);
+      countFeature("friends.accept");
       socket.emit("acceptFriendRequest", { requestId });
     },
     [isOffline, socket],
@@ -482,6 +484,7 @@ export function useFriendsRealtime({
     (friendId: string) => {
       if (!socket || !friendId || isOffline()) return false;
       setLookupState("sending");
+      countFeature("friends.add");
       socket.emit("friendRequest", { friendId });
       return true;
     },

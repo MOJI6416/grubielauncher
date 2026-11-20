@@ -35,6 +35,7 @@ import { Hint } from "@renderer/components/Hint";
 import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { pickBackdrop } from "./themesStore";
 import { BackdropFramer } from "./BackdropFramer";
+import { countFeature } from "@renderer/features/usage/usage";
 
 type ColorKey = "background" | "surface" | "foreground" | "accent";
 
@@ -168,6 +169,7 @@ export function ThemeEditor({
   const choosePicture = async () => {
     const path = await pickBackdrop();
     if (!path) return;
+    countFeature("theme.backdrop");
     onChange({
       ...draft,
       backdrop: {

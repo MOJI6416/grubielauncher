@@ -23,6 +23,7 @@ import {
   reportShareSyncInterruption,
   syncShare,
 } from "@renderer/utilities/version";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -125,6 +126,7 @@ export function useShareFlow({
         account,
       );
 
+      countFeature("modpack.sync");
       toast.success(t("versions.updated"));
 
       closeModal();

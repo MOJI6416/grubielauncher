@@ -1595,7 +1595,7 @@
     "crashTelemetry": "Çökme teşhisleri",
     "crashTelemetryDescription": "Teşhis kodu ve hata satırı; başlatıcının kendisi çökerse hata metni. Kullanıcı adı ve günlük olmadan",
     "usageStats": "Özellik sayaçları",
-    "usageStatsDescription": "Ekranların ve özelliklerin günde kaç kez açıldığı. Yalnızca toplamlar, kullanıcı adı olmadan",
+    "usageStatsDescription": "Ekranların günde kaç kez açıldığı ve özelliklerin kaç kez kullanıldığı. Yalnızca toplamlar; kullanıcı adı, mod adları ve yollar olmadan",
     "aiLogAnalysis": "Yapay zekâ ile günlük analizi",
     "aiLogAnalysisDescription": "Onay adımını atlar: analiz, pencere açılır açılmaz başlar",
     "sounds": "Bildirim sesleri",

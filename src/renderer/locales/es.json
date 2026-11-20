@@ -1613,7 +1613,7 @@
     "crashTelemetry": "Diagnósticos de fallos",
     "crashTelemetryDescription": "El código del diagnóstico y la línea del error, o el texto del error si falla el propio launcher. Sin nombre de usuario ni registros",
     "usageStats": "Contadores de funciones",
-    "usageStatsDescription": "Cuántas veces al día se abrieron pantallas y funciones. Solo totales, sin nombre de usuario",
+    "usageStatsDescription": "Cuántas veces al día se abrieron pantallas y se usaron funciones. Solo totales, sin nombre de usuario, nombres de mods ni rutas",
     "aiLogAnalysis": "Análisis del registro con IA",
     "aiLogAnalysisDescription": "Omite la confirmación: el análisis empieza en cuanto se abre la ventana",
     "sounds": "Sonidos de notificación",

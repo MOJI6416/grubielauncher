@@ -45,6 +45,7 @@ import {
 } from "@renderer/features/theme/themesStore";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
+import { countFeature } from "@renderer/features/usage/usage";
 
 export function ThemeSection({
   settings,
@@ -106,6 +107,7 @@ export function ThemeSection({
       toast.error(t("theme.limit", { count: MAX_USER_THEMES }));
       return;
     }
+    countFeature("theme.create");
     setDraft({
       id: newThemeId(),
       name: name.slice(0, 40),
@@ -117,11 +119,15 @@ export function ThemeSection({
 
   const select = (theme: ThemeDefinition) => {
     if (draft) setDraft(null);
-    if (theme.id !== settings.themeId) commit({ themeId: theme.id });
+    if (theme.id !== settings.themeId) {
+      countFeature("theme.select");
+      commit({ themeId: theme.id });
+    }
   };
 
   const save = async () => {
     if (!draft || !draft.name.trim() || !isThemeReadable(draft, accent)) return;
+    countFeature("theme.save");
     const theme = { ...draft, name: draft.name.trim() };
     const next = userThemes.some((item) => item.id === theme.id)
       ? userThemes.map((item) => (item.id === theme.id ? theme : item))

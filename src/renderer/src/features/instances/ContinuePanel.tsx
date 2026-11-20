@@ -36,6 +36,7 @@ import {
 import { instanceKey } from "./selectors";
 import { useContinueTargets } from "./useContinueTargets";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
+import { countFeature } from "@renderer/features/usage/usage";
 
 export function ContinuePanel({
   instance,
@@ -91,6 +92,7 @@ export function ContinuePanel({
       return;
     }
 
+    countFeature(target.kind === "world" ? "launch.world" : "launch.server");
     void runGame({
       version: instance,
       quick:

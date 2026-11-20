@@ -71,6 +71,7 @@ import {
   type ServerDiscoveryRequest,
   useServerDiscovery,
 } from "./useServerDiscovery";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -116,7 +117,10 @@ export function ServerDiscovery({
   );
 
   useEffect(() => {
-    const timer = setTimeout(() => setQuery(rawQuery), 350);
+    const timer = setTimeout(() => {
+      setQuery(rawQuery);
+      if (rawQuery.trim()) countFeature("servers.discover");
+    }, 350);
     return () => clearTimeout(timer);
   }, [rawQuery]);
 

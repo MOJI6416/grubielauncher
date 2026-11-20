@@ -1,5 +1,6 @@
 import { getDefaultStore } from "jotai";
 import { DEFAULT_SETTINGS } from "@/types/Settings";
+import type { MessageBodyType } from "@/types/IMessage";
 import { isUsageFeature, type UsageFeature } from "@/shared/usageFeatures";
 import { settingsAtom } from "@renderer/stores/atoms";
 import { screenKey, routeKey, type Route } from "@renderer/navigation/routes";
@@ -14,7 +15,7 @@ const SCREENS: Record<Route["name"], UsageFeature> = {
   profile: "screen.profile",
   accounts: "screen.accounts",
   settings: "screen.settings",
-  catalog: "instance.content",
+  catalog: "screen.catalog",
 };
 
 function subFeature(route: Route, instanceTab: string): string | null {
@@ -62,4 +63,17 @@ export function countFeature(feature: UsageFeature): void {
   } catch {
     return;
   }
+}
+
+const MESSAGE_FEATURES: Partial<Record<MessageBodyType, UsageFeature>> = {
+  text: "chat.text",
+  image: "chat.image",
+  sticker: "chat.sticker",
+  modpack: "chat.modpack",
+  groupInvite: "chat.groupInvite",
+};
+
+export function countMessage(type: MessageBodyType): void {
+  const feature = MESSAGE_FEATURES[type];
+  if (feature) countFeature(feature);
 }

@@ -16,6 +16,7 @@ import { Hint } from "@renderer/components/Hint";
 import { SectionCard } from "@renderer/features/instances/SectionCard";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { showUndoToast } from "@renderer/utilities/undoToast";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -103,6 +104,7 @@ export function SharedSettingsCard({
 
   const toggleGroup = (group: SharedGroup, on: boolean) => {
     if (!status) return;
+    countFeature("sharedSettings.groups");
     const off = on
       ? status.off.filter((item) => item !== group)
       : [...status.off, group];
@@ -129,12 +131,13 @@ export function SharedSettingsCard({
             variant="ghost"
             disabled={locked}
             className="h-6 px-2 text-2xs text-faint"
-            onClick={() =>
+            onClick={() => {
+              countFeature("sharedSettings.disconnect");
               void configure(
                 { connected: false, off: status?.off ?? [] },
                 t("sharedSettings.disconnected"),
-              )
-            }
+              );
+            }}
           >
             {t("sharedSettings.disconnect")}
           </Button>
@@ -205,12 +208,13 @@ export function SharedSettingsCard({
             variant="outline"
             disabled={locked}
             className="h-7 shrink-0"
-            onClick={() =>
+            onClick={() => {
+              countFeature("sharedSettings.connect");
               void configure(
                 { connected: true, off: [] },
                 t("sharedSettings.connected"),
-              )
-            }
+              );
+            }}
           >
             {t("sharedSettings.connect")}
           </Button>

@@ -14,6 +14,7 @@ import { PathRow, SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import { ReleaseHistory } from "./ReleaseHistory";
 import { platformName } from "./systemReport";
 import type { SettingsEntryId } from "./catalog";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -81,7 +82,10 @@ export function AboutSection({
           size="sm"
           className="shrink-0"
           disabled={isWhatsNewLoading}
-          onClick={onShowWhatsNew}
+          onClick={() => {
+            countFeature("whatsNew.open");
+            onShowWhatsNew?.();
+          }}
         >
           {isWhatsNewLoading ? (
             <Loader2 className="size-3.5 animate-spin" />

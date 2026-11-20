@@ -24,6 +24,7 @@ import { createDesktopShortcut } from "@renderer/features/instances/instanceActi
 import { showFailureToast } from "@renderer/utilities/failures";
 import { nextAvailableName } from "./worldFacts";
 import { removeWithUndo } from "@renderer/utilities/removeWithUndo";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -64,6 +65,7 @@ export function useWorldActions({
     !isOwner || Boolean(world.isDownloaded) || isVersionRunning;
 
   const duplicate = async (world: IWorld) => {
+    countFeature("worlds.duplicate");
     setBusy("duplicate");
 
     try {
@@ -95,6 +97,7 @@ export function useWorldActions({
   const exportWorld = async (world: IWorld) => {
     const picked = await api.other.openFileDialog(true);
     if (!picked?.length) return;
+    countFeature("worlds.export");
 
     setBusy("export");
 

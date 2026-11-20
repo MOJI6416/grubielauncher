@@ -10,6 +10,7 @@ import { openReleaseNote } from "@renderer/features/whatsNew/whatsNewStore";
 import { formatDate, formatRelative } from "@renderer/utilities/date";
 import { NewsCard, NewsSource } from "./feed";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -32,6 +33,7 @@ function openLink(url: string) {
 }
 
 function openCard(card: NewsCard) {
+  countFeature("news.open");
   if (card.release) {
     openReleaseNote(card.release);
     return;

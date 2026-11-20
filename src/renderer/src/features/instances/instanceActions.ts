@@ -27,6 +27,7 @@ import { playAsVersionAtom } from "@renderer/features/launch/atoms";
 import { navigate } from "@renderer/navigation/navigate";
 import { getDeleteCopy, isForeignPublication } from "./deleteGates";
 import { instanceKey } from "./selectors";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -94,6 +95,13 @@ export async function createDesktopShortcut(
     );
 
     if (result?.success) {
+      countFeature(
+        target?.world
+          ? "shortcut.world"
+          : target?.server
+            ? "shortcut.server"
+            : "shortcut.instance",
+      );
       toast.success(t("versions.shortcutCreated"));
       return;
     }

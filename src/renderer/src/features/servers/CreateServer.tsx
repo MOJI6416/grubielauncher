@@ -62,6 +62,7 @@ import { SERVER_FILE_STAGES, contentPlan } from "@/shared/installPlan";
 import { describeFailure } from "@renderer/utilities/failures";
 import { toast } from "sonner";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -271,6 +272,7 @@ export function CreateServer({
         await mods.check({ operation: "server", plan });
       }
 
+      countFeature("server.create");
       toast.success(t("versions.serverInstalled"));
 
       success = true;

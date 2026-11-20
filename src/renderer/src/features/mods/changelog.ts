@@ -6,6 +6,7 @@ import { AI_PROMPT_MAX_CHARS } from "@/shared/config";
 import { accountAtom } from "@renderer/stores/atoms";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -115,6 +116,7 @@ export function useTranslatableText(key: string, text: string) {
       setShown(null);
       return;
     }
+    countFeature("mods.translateChangelog");
 
     if (translation !== undefined) {
       setShown(cacheKey);

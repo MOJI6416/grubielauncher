@@ -27,6 +27,7 @@ import { recentSessions, screenshotLabel } from "./instanceOverview";
 import { InstanceScreenshot } from "./useInstanceInsights";
 import { ScreenshotViewer } from "./ScreenshotViewer";
 import { formatDuration } from "@renderer/utilities/duration";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -100,7 +101,10 @@ export function ScreenshotsCard({
               key={shot.path}
               type="button"
               aria-label={screenshotLabel(shot.name)}
-              onClick={() => setViewing(shot.path)}
+              onClick={() => {
+                countFeature("screenshots.view");
+                setViewing(shot.path);
+              }}
               className="group relative min-h-[68px] overflow-hidden rounded-lg border border-border bg-surface-3 transition-colors hover:border-input focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <img

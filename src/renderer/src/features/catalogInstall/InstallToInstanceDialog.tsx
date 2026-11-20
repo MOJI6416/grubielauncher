@@ -47,6 +47,7 @@ import {
   pickModpackVersion,
   planInstallInto,
 } from "./installToInstance";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -202,6 +203,7 @@ export function InstallToInstanceDialog({
         return;
       }
       await commitInstallInto(instance, plan.added, settings);
+      countFeature("mods.installTo");
       setDone((prev) => new Set(prev).add(key));
       toast.success(
         t("catalogInstall.installed", {

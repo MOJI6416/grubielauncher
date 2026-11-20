@@ -32,6 +32,7 @@ import { parseProjectLink } from "@renderer/features/mods/projectLinks";
 import { openCatalogInstall } from "@renderer/features/catalogInstall/catalogInstallStore";
 import { useAtomValue } from "jotai";
 import { internetAtom, settingsAtom } from "@renderer/stores/atoms";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -77,6 +78,7 @@ export function CatalogScreen() {
     if (/^https?:\/\//i.test(text)) {
       const link = parseProjectLink(text);
       if (!link) return;
+      countFeature("mods.catalogLink");
       setRawQuery("");
       void api.modManager
         .resolveLink(link.provider, link.ref, link.projectType)

@@ -8,6 +8,7 @@ import {
   openWhatsNew,
   whatsNewLoadingAtom,
 } from "@renderer/features/whatsNew/whatsNewStore";
+import { countFeature } from "@renderer/features/usage/usage";
 
 export function MilestoneNewsCard({
   release,
@@ -21,7 +22,10 @@ export function MilestoneNewsCard({
     <button
       type="button"
       disabled={isLoading}
-      onClick={() => void openWhatsNew()}
+      onClick={() => {
+        countFeature("whatsNew.open");
+        void openWhatsNew();
+      }}
       className="group relative flex h-15 w-full shrink-0 items-center gap-3 overflow-hidden rounded-xl bg-surface-2 px-3 text-left outline-none transition-colors not-disabled:hover:bg-surface-3 focus-visible:ring-3 focus-visible:ring-ring/40"
     >
       <MilestoneBeam />

@@ -1595,7 +1595,7 @@
     "crashTelemetry": "Absturzdiagnosen",
     "crashTelemetryDescription": "Diagnosecode und Fehlerzeile, bei einem Fehler des Launchers selbst der Fehlertext. Ohne Nickname und Logs",
     "usageStats": "Funktionszähler",
-    "usageStatsDescription": "Wie oft am Tag Bildschirme und Funktionen geöffnet wurden. Nur Summen, ohne Nickname",
+    "usageStatsDescription": "Wie oft am Tag Bildschirme geöffnet und Funktionen genutzt wurden. Nur Summen, ohne Nickname, Modnamen und Pfade",
     "aiLogAnalysis": "KI-Loganalyse",
     "aiLogAnalysisDescription": "Bestätigung überspringen: Die Analyse startet, sobald sich das Fenster öffnet",
     "sounds": "Benachrichtigungstöne",
