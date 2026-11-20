@@ -5,7 +5,7 @@ import path from "path";
 import {
   countPackedIndices,
   inspectSchematic,
-  legacyBlockName,
+  legacyBlockState,
   listSchematics,
   parseSchematicBuffer,
   safeSchematicSegments,
@@ -77,9 +77,11 @@ describe("real schematic files", () => {
       blockTypes: 14,
     });
     expect(counts(details?.blocks ?? [])).toMatchObject({
-      "minecraft:planks": 611,
-      "minecraft:log": 472,
+      "minecraft:spruce_planks": 485,
+      "minecraft:spruce_log": 472,
       "minecraft:oak_stairs": 416,
+      "minecraft:oak_door": 1,
+      "minecraft:torch": 23,
     });
   });
 });
@@ -309,23 +311,31 @@ describe("MCEdit and Schematica", () => {
       "minecraft:stone": 1,
       "minecraft:chest": 1,
       "mymod:crusher": 1,
-      "minecraft:flowing_water": 1,
+      "minecraft:water": 1,
       "legacy:272": 1,
     });
   });
 
-  it("names the vanilla 1.12 ids", () => {
-    expect(legacyBlockName(1)).toBe("minecraft:stone");
-    expect(legacyBlockName(54)).toBe("minecraft:chest");
-    expect(legacyBlockName(152)).toBe("minecraft:redstone_block");
-    expect(legacyBlockName(218)).toBe("minecraft:observer");
-    expect(legacyBlockName(219)).toBe("minecraft:white_shulker_box");
-    expect(legacyBlockName(234)).toBe("minecraft:black_shulker_box");
-    expect(legacyBlockName(250)).toBe("minecraft:black_glazed_terracotta");
-    expect(legacyBlockName(251)).toBe("minecraft:concrete");
-    expect(legacyBlockName(252)).toBe("minecraft:concrete_powder");
-    expect(legacyBlockName(255)).toBe("minecraft:structure_block");
-    expect(legacyBlockName(253)).toBe("legacy:253");
+  it("turns 1.12 ids and data into modern states", () => {
+    expect(legacyBlockState(1, 0)).toBe("minecraft:stone");
+    expect(legacyBlockState(1, 3)).toBe("minecraft:diorite");
+    expect(legacyBlockState(54, 3)).toBe("minecraft:chest[facing=south]");
+    expect(legacyBlockState(152, 0)).toBe("minecraft:redstone_block");
+    expect(legacyBlockState(219, 0)).toBe("minecraft:white_shulker_box");
+    expect(legacyBlockState(251, 14)).toBe("minecraft:red_concrete");
+    expect(legacyBlockState(35, 8)).toBe("minecraft:light_gray_wool");
+    expect(legacyBlockState(53, 6)).toBe("minecraft:oak_stairs[facing=south,half=top]");
+    expect(legacyBlockState(44, 12)).toBe("minecraft:brick_slab[type=top]");
+    expect(legacyBlockState(17, 5)).toBe("minecraft:spruce_log[axis=x]");
+    expect(legacyBlockState(17, 12)).toBe("minecraft:oak_wood[axis=y]");
+    expect(legacyBlockState(50, 1)).toBe("minecraft:wall_torch[facing=east]");
+    expect(legacyBlockState(50, 5)).toBe("minecraft:torch");
+    expect(legacyBlockState(64, 8)).toBe("minecraft:oak_door[half=upper,hinge=left]");
+    expect(legacyBlockState(155, 2)).toBe("minecraft:quartz_pillar[axis=y]");
+    expect(legacyBlockState(253, 0)).toBe("legacy:253");
+    expect(legacyBlockState(500, 0, new Map([[500, "mymod:crusher"]]))).toBe(
+      "mymod:crusher",
+    );
   });
 });
 

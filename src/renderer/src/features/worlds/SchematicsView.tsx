@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -15,6 +17,7 @@ import {
   Box,
   Copy,
   FolderOpen,
+  Info,
   Loader2,
   Ruler,
   Search,
@@ -63,10 +66,17 @@ import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { removeWithUndo } from "@renderer/utilities/removeWithUndo";
 import { useInstanceDataRevision } from "@renderer/features/instances/instanceRevision";
 import { countFeature } from "@renderer/features/usage/usage";
+import { MaterialsList } from "./schematic3d/MaterialsList";
+import { useBlockInfo } from "./schematic3d/blockInfo";
+import { useSchematicThumbnail } from "./schematic3d/thumbnails";
 
 const api = window.api;
 
-const TOP_BLOCKS = 12;
+const SchematicViewer = lazy(() =>
+  import("./schematic3d/SchematicViewer").then((module) => ({
+    default: module.SchematicViewer,
+  })),
+);
 
 const FORMAT_LABELS: Record<Exclude<SchematicFormat, "structure">, string> = {
   litematic: "Litematica",
@@ -114,10 +124,6 @@ function useFormatLabel() {
   const { t } = useTranslation();
   return (format: SchematicFormat) =>
     format === "structure" ? t("schematics.structure") : FORMAT_LABELS[format];
-}
-
-function shortBlockId(id: string): string {
-  return id.startsWith("minecraft:") ? id.slice("minecraft:".length) : id;
 }
 
 export function SchematicsView({
@@ -260,9 +266,12 @@ export function SchematicsView({
                       onClick={() => setSelected(file.path)}
                       className="flex w-full min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-row-hover aria-selected:bg-row-selected"
                     >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-surface-3 text-faint">
-                        <Box className="size-3.5" />
-                      </span>
+                      <SchematicThumb
+                        file={file}
+                        versionPath={version.versionPath}
+                        className="size-8 rounded-md"
+                        iconClassName="size-3.5"
+                      />
                       <span className="flex min-w-0 flex-1 flex-col">
                         <Hint content={file.name} variant="text" truncatedOnly>
                           <span className="truncate text-xs font-medium">
@@ -329,6 +338,45 @@ export function SchematicsView({
   );
 }
 
+function SchematicThumb({
+  file,
+  versionPath,
+  className,
+  iconClassName,
+}: {
+  file: ISchematicFile;
+  versionPath: string;
+  className: string;
+  iconClassName: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [visible, setVisible] = useState(false);
+  const url = useSchematicThumbnail(file, versionPath, visible);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || visible) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) setVisible(true);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  return (
+    <span
+      ref={ref}
+      className={`flex shrink-0 items-center justify-center overflow-hidden border bg-surface-3 text-faint ${className}`}
+    >
+      {url ? (
+        <img src={url} alt="" draggable={false} className="size-full object-contain" />
+      ) : (
+        <Box className={iconClassName} />
+      )}
+    </span>
+  );
+}
+
 function SchematicDetail({
   file,
   version,
@@ -347,6 +395,8 @@ function SchematicDetail({
   const { t } = useTranslation();
   const formatLabel = useFormatLabel();
   const [result, setResult] = useState<SchematicInspectResult | null>(null);
+  const [paletteIds, setPaletteIds] = useState<string[]>([]);
+  const [focusId, setFocusId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -365,13 +415,21 @@ function SchematicDetail({
 
   const details = result?.ok ? result.details : null;
   const title = details?.name && details.name !== file.name ? details.name : file.name;
+  const blockIds = useMemo(
+    () => [...(details?.blocks.map((block) => block.id) ?? []), ...paletteIds],
+    [details, paletteIds],
+  );
+  const blockInfo = useBlockInfo(version.versionPath, blockIds);
 
   return (
     <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card">
       <div className="flex shrink-0 items-center gap-3 border-b px-3 py-2.5">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-lg border bg-surface-3 text-faint">
-          <Box className="size-5" />
-        </span>
+        <SchematicThumb
+          file={file}
+          versionPath={version.versionPath}
+          className="size-12 rounded-lg"
+          iconClassName="size-5"
+        />
 
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <Hint content={title} variant="text" truncatedOnly>
@@ -415,11 +473,11 @@ function SchematicDetail({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
         {result === null ? (
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-16 rounded-xl" />
-            <Skeleton className="h-40 rounded-xl" />
+          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_16rem] gap-2">
+            <Skeleton className="h-full rounded-xl" />
+            <Skeleton className="h-full rounded-xl" />
           </div>
         ) : !details ? (
           <Empty className="h-full border border-dashed border-border bg-surface-1">
@@ -434,7 +492,31 @@ function SchematicDetail({
             </EmptyHeader>
           </Empty>
         ) : (
-          <SchematicFacts details={details} file={file} locale={locale} />
+          <>
+            <SchematicFacts details={details} file={file} locale={locale} />
+            <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_16rem] gap-2">
+              <Suspense fallback={<Skeleton className="h-full rounded-xl" />}>
+                <SchematicViewer
+                  file={file}
+                  versionPath={version.versionPath}
+                  info={blockInfo.get}
+                  onPick={setFocusId}
+                  onPalette={setPaletteIds}
+                />
+              </Suspense>
+              <MaterialsList
+                title={title}
+                blocks={details.blocks}
+                info={blockInfo.get}
+                focusId={focusId}
+                emptyText={
+                  details.blockCount === null
+                    ? t("schematics.tooBigToCount")
+                    : t("schematics.noBlocks")
+                }
+              />
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -453,90 +535,35 @@ function SchematicFacts({
   const { t } = useTranslation();
   const nf = (value: number) => formatNumber(value, locale);
   const { x, y, z } = details.size;
-  const top = details.blocks.slice(0, TOP_BLOCKS);
-  const max = top[0]?.count ?? 0;
-  const rest = details.blockTypes - top.length;
   const changed = details.modifiedAt ?? details.createdAt ?? file.modifiedAt;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Fact
-          icon={Ruler}
-          label={t("schematics.size")}
-          value={`${nf(x)} × ${nf(y)} × ${nf(z)}`}
-          mono
-        />
-        <Fact
-          icon={Blocks}
-          label={t("schematics.blocks")}
-          value={details.blockCount === null ? "—" : nf(details.blockCount)}
-        />
-        <Fact
-          icon={Shapes}
-          label={t("schematics.blockTypes")}
-          value={nf(details.blockTypes)}
-        />
-        <Fact
-          icon={User}
-          label={t("schematics.author")}
-          value={details.author ?? "—"}
-          hint={formatDate(new Date(changed))}
-        />
-      </div>
-
+    <div className="flex min-w-0 shrink-0 items-center gap-1.5">
+      <Fact icon={Ruler} label={t("schematics.size")} value={`${nf(x)} × ${nf(y)} × ${nf(z)}`} mono />
+      <Fact
+        icon={Blocks}
+        label={t("schematics.blocks")}
+        value={details.blockCount === null ? "—" : nf(details.blockCount)}
+        mono
+      />
+      <Fact icon={Shapes} label={t("schematics.blockTypes")} value={nf(details.blockTypes)} mono />
+      <Fact
+        icon={User}
+        label={t("schematics.author")}
+        value={details.author ?? "—"}
+        hint={`${t("schematics.author")}: ${details.author ?? "—"} · ${formatDate(new Date(changed))}`}
+        grow
+      />
       {details.description && (
-        <p className="rounded-xl border bg-surface-1 px-3 py-2 text-xs whitespace-pre-line text-muted-foreground">
-          {details.description}
-        </p>
+        <Hint content={details.description}>
+          <span
+            aria-label={details.description}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-surface-1 text-faint"
+          >
+            <Info className="size-3.5" />
+          </span>
+        </Hint>
       )}
-
-      <div className="flex min-w-0 flex-col rounded-xl border bg-surface-1">
-        <div className="flex items-center gap-2 border-b px-3 py-2 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-          <span className="min-w-0 flex-1 truncate">
-            {t("schematics.blockList")}
-          </span>
-          <span className="shrink-0 font-mono whitespace-nowrap text-faint normal-case tabular-nums">
-            {t("schematics.volume", { value: nf(details.volume) })}
-          </span>
-        </div>
-
-        <div className="flex flex-col gap-1.5 p-3">
-          {top.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              {details.blockCount === null
-                ? t("schematics.tooBigToCount")
-                : t("schematics.noBlocks")}
-            </p>
-          ) : (
-            top.map((block) => (
-              <div key={block.id} className="flex min-w-0 items-center gap-2">
-                <Hint content={block.id} variant="text" truncatedOnly>
-                  <span className="min-w-0 flex-1 truncate font-mono text-xs">
-                    {shortBlockId(block.id)}
-                  </span>
-                </Hint>
-                <span className="h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-surface-3">
-                  <span
-                    className="block h-full rounded-full bg-muted-foreground/60"
-                    style={{
-                      width: `${max > 0 ? Math.max(4, (block.count / max) * 100) : 0}%`,
-                    }}
-                  />
-                </span>
-                <span className="shrink-0 text-right font-mono text-3xs whitespace-nowrap text-muted-foreground tabular-nums">
-                  {nf(block.count)}
-                </span>
-              </div>
-            ))
-          )}
-          {rest > 0 && (
-            <p className="text-2xs text-faint">
-              {t("schematics.moreTypes", { count: rest })}
-            </p>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
@@ -668,27 +695,30 @@ function Fact({
   value,
   hint,
   mono,
+  grow,
 }: {
   icon: typeof Ruler;
   label: string;
   value: string;
   hint?: string;
   mono?: boolean;
+  grow?: boolean;
 }) {
   return (
-    <Hint content={hint ?? `${label}: ${value}`} variant="text" truncatedOnly={!hint}>
-      <div className="flex h-16 min-w-0 items-center gap-2.5 rounded-xl border bg-surface-1 px-3">
-        <Icon className="size-4 shrink-0 text-faint" />
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate text-3xs leading-none text-faint">{label}</span>
-          <span
-            className={`truncate leading-tight font-semibold tabular-nums ${
-              mono ? "font-mono text-sm" : "text-base"
-            }`}
-          >
-            {value}
-          </span>
-        </div>
+    <Hint content={hint ?? `${label}: ${value}`}>
+      <div
+        className={`flex h-8 min-w-0 items-center gap-1.5 rounded-lg border bg-surface-1 px-2 ${
+          grow ? "flex-1" : "shrink-0"
+        }`}
+      >
+        <Icon className="size-3.5 shrink-0 text-faint" aria-label={label} />
+        <span
+          className={`truncate text-xs leading-tight font-medium tabular-nums ${
+            mono ? "font-mono" : ""
+          }`}
+        >
+          {value}
+        </span>
       </div>
     </Hint>
   );

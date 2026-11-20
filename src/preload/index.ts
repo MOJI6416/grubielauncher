@@ -161,9 +161,12 @@ import {
   WorldImportResult,
 } from "@/types/World";
 import type {
+  BlockInfo,
+  BlockModelSet,
   ISchematicFile,
   SchematicInspectResult,
   SchematicTransferResult,
+  SchematicVolumeResult,
 } from "@/types/Schematic";
 import {
   IWorldBackupList,
@@ -1487,6 +1490,15 @@ export interface IElectronAPI {
   schematics: {
     list: (versionPath: string) => Promise<ISchematicFile[]>;
     inspect: (filePath: string) => Promise<SchematicInspectResult>;
+    volume: (filePath: string, yFrom?: number) => Promise<SchematicVolumeResult>;
+    blocks: (
+      versionPath: string,
+      ids: string[],
+      locale: string,
+    ) => Promise<Record<string, BlockInfo>>;
+    models: (versionPath: string, states: string[]) => Promise<BlockModelSet>;
+    thumbnail: (filePath: string) => Promise<string | null>;
+    saveThumbnail: (filePath: string, png: Uint8Array) => Promise<boolean>;
     transfer: (
       sourceVersionPath: string,
       relativePath: string,
@@ -2883,6 +2895,15 @@ export const api: IElectronAPI = {
   schematics: {
     list: (versionPath: string) => invoke("schematics:list", versionPath),
     inspect: (filePath: string) => invoke("schematics:inspect", filePath),
+    volume: (filePath: string, yFrom?: number) =>
+      invoke("schematics:volume", filePath, yFrom ?? null),
+    blocks: (versionPath: string, ids: string[], locale: string) =>
+      invoke("schematics:blocks", versionPath, ids, locale),
+    models: (versionPath: string, states: string[]) =>
+      invoke("schematics:models", versionPath, states),
+    thumbnail: (filePath: string) => invoke("schematics:thumbnail", filePath),
+    saveThumbnail: (filePath: string, png: Uint8Array) =>
+      invoke("schematics:saveThumbnail", filePath, png),
     transfer: (
       sourceVersionPath: string,
       relativePath: string,

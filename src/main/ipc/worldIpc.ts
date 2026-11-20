@@ -46,7 +46,18 @@ import {
   listSchematics,
   transferSchematic,
 } from '../utilities/schematics'
-import { ISchematicFile, SchematicInspectResult, SchematicTransferResult } from '@/types/Schematic'
+import {
+  BlockInfo,
+  BlockModelSet,
+  ISchematicFile,
+  SchematicInspectResult,
+  SchematicTransferResult,
+  SchematicVolumeResult,
+} from '@/types/Schematic'
+import { loadSchematicVolume } from '../utilities/schematicVolume'
+import { describeBlocks } from '../utilities/blockInfo'
+import { bakeBlockModels } from '../utilities/blockModels'
+import { readSchematicThumbnail, saveSchematicThumbnail } from '../utilities/schematicThumbnails'
 
 const LIST_FALLBACK: IWorldBackupList = {
   backups: [],
@@ -62,6 +73,12 @@ const IMPORT_FALLBACK: WorldImportResult = { ok: false, error: 'failed' }
 const INSPECT_FALLBACK: SchematicInspectResult = { ok: false, error: 'unreadable' }
 const TRANSFER_FALLBACK: SchematicTransferResult = { ok: false, error: 'failed' }
 const NO_SCHEMATICS: ISchematicFile[] = []
+const VOLUME_FALLBACK: SchematicVolumeResult = { ok: false, error: 'unreadable' }
+const NO_BLOCK_INFO: Record<string, BlockInfo> = {}
+const NO_MODELS: BlockModelSet = { textures: [], blocks: [], vanillaSource: 'none' }
+const isBlockId = check.nonEmptyString(512)
+const isLocale = check.pattern(/^[a-zA-Z_-]{2,16}$/, 16)
+const isPng = (value: unknown) => value instanceof Uint8Array && value.byteLength <= 512 * 1024
 
 const isPath = check.nonEmptyString(4096)
 const isAccount = check.optional(check.object())
@@ -201,6 +218,51 @@ export function registerWorldIpc() {
     assertReadablePath(filePath, 'schematics:inspect')
     return await inspectSchematic(filePath)
   })
+
+  handleSafe(
+    'schematics:volume',
+    VOLUME_FALLBACK,
+    [isPath, check.optional(check.integer())],
+    async (_, filePath: string, yFrom?: number | null) => {
+      assertReadablePath(filePath, 'schematics:volume')
+      return await loadSchematicVolume(filePath, yFrom ?? 0)
+    },
+  )
+
+  handleSafe(
+    'schematics:blocks',
+    NO_BLOCK_INFO,
+    [isPath, check.arrayOf(isBlockId, 20000), isLocale],
+    async (_, versionPath: string, ids: string[], locale: string) => {
+      assertReadablePath(versionPath, 'schematics:blocks')
+      return await describeBlocks(versionPath, ids, locale)
+    },
+  )
+
+  handleSafe(
+    'schematics:models',
+    NO_MODELS,
+    [isPath, check.arrayOf(isBlockId, 65535)],
+    async (_, versionPath: string, states: string[]) => {
+      assertReadablePath(versionPath, 'schematics:models')
+      return await bakeBlockModels(versionPath, states)
+    },
+  )
+
+  handleSafe('schematics:thumbnail', null, [isPath], async (_, filePath: string) => {
+    assertReadablePath(filePath, 'schematics:thumbnail')
+    return await readSchematicThumbnail(filePath)
+  })
+
+  handleSafe(
+    'schematics:saveThumbnail',
+    false,
+    [isPath, isPng],
+    async (_, filePath: string, png: Uint8Array) => {
+      assertReadablePath(filePath, 'schematics:saveThumbnail')
+      return await saveSchematicThumbnail(filePath, png)
+    },
+  )
 
   handleSafe(
     'schematics:transfer',

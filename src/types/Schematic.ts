@@ -44,3 +44,49 @@ export type SchematicInspectResult =
 export type SchematicTransferResult =
   | { ok: true; path: string; relativePath: string }
   | { ok: false; error: 'missing' | 'sameInstance' | 'invalidPath' | 'failed' }
+
+export interface SchematicVolume {
+  size: { x: number; y: number; z: number }
+  palette: string[]
+  data: Uint16Array | Uint32Array
+  yFrom: number
+  yTo: number
+  blocks: number
+}
+
+export type SchematicVolumeResult =
+  | { ok: true; volume: SchematicVolume }
+  | { ok: false; error: 'missing' | 'tooLarge' | 'unreadable' }
+
+export interface BlockInfo {
+  name: string
+  icon: string | null
+}
+
+export interface BakedQuad {
+  positions: number[]
+  uvs: number[]
+  texture: number
+  cull: number
+  shade: number
+  tint: number
+}
+
+export interface BakedBlock {
+  quads: BakedQuad[]
+  cube: boolean
+  liquid: boolean
+  missing: boolean
+}
+
+export interface BlockTexture {
+  name: string
+  png: Uint8Array | null
+  color: [number, number, number] | null
+}
+
+export interface BlockModelSet {
+  textures: BlockTexture[]
+  blocks: BakedBlock[]
+  vanillaSource: 'instance' | 'other' | 'none'
+}
