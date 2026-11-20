@@ -281,13 +281,14 @@ export function CommunityBrowser({
               )}
             </Empty>
           ) : (
-            <div className={cn("grid gap-1.5", isResultWave && "result-wave")}>
+            <div className={cn("grid grid-cols-1 gap-1.5", isResultWave && "result-wave")}>
               {catalog.items.map((pack, index) => {
                 const instanceKey = findInstalledInstanceKey(installed, pack);
 
                 return (
                   <div
                     key={pack.id}
+                    className="min-w-0"
                     data-wave-row
                     style={{ "--wave-index": index } as CSSProperties}
                   >

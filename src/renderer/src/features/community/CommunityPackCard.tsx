@@ -74,23 +74,24 @@ export function CommunityPackCard({
               {pack.owner.nickname}
             </span>
           </Hint>
+          <span aria-hidden className="shrink-0 text-faint">
+            ·
+          </span>
           <LoaderLabel loader={pack.loader.name} className="shrink-0" />
           <span className="shrink-0 font-mono tabular-nums text-faint">
             {pack.minecraftVersion}
           </span>
-          {updated && (
-            <Hint content={updatedAt ? formatDay(updatedAt) : ""}>
-              <span className="shrink-0 text-faint">
-                {t("ownModpacks.updated", { when: updated })}
-              </span>
-            </Hint>
-          )}
           {pack.description && (
-            <Hint content={pack.description} variant="text" truncatedOnly>
-              <p className="min-w-0 flex-1 truncate text-faint">
-                {pack.description}
-              </p>
-            </Hint>
+            <>
+              <span aria-hidden className="shrink-0 text-faint">
+                ·
+              </span>
+              <Hint content={pack.description} variant="text" truncatedOnly>
+                <p className="min-w-0 flex-1 truncate text-faint">
+                  {pack.description}
+                </p>
+              </Hint>
+            </>
           )}
         </div>
       </div>
@@ -114,13 +115,22 @@ export function CommunityPackCard({
           </span>
         )}
 
-        {downloads && (
-          <Hint content={t("addVersion.preview.installs")}>
-            <span className="flex w-12 shrink-0 items-center justify-end gap-1 font-mono text-2xs tabular-nums text-faint">
-              <Download className="size-3" />
-              {downloads}
-            </span>
-          </Hint>
+        {(downloads || updated) && (
+          <span className="flex shrink-0 flex-col items-end gap-0.5 text-2xs whitespace-nowrap text-faint">
+            {downloads && (
+              <Hint content={t("addVersion.preview.installs")}>
+                <span className="flex items-center gap-1 font-mono tabular-nums">
+                  <Download className="size-3" />
+                  {downloads}
+                </span>
+              </Hint>
+            )}
+            {updated && (
+              <Hint content={updatedAt ? formatDay(updatedAt) : ""}>
+                <span>{updated}</span>
+              </Hint>
+            )}
+          </span>
         )}
 
         {action}

@@ -318,8 +318,12 @@ export function LauncherImportBody({
             const state = groupState(wizard.selected, group);
             const id = `launcher-import-group-${group.launcher}`;
             return (
-              <section key={group.launcher} aria-labelledby={`${id}-title`} className="grid gap-0.5">
-                <label htmlFor={id} className="flex h-9 cursor-pointer items-center gap-3 rounded-lg px-3 hover:bg-row-hover">
+              <section
+                key={group.launcher}
+                aria-labelledby={`${id}-title`}
+                className="grid gap-1 rounded-lg bg-surface-2 p-1"
+              >
+                <label htmlFor={id} className="flex h-11 cursor-pointer items-center gap-3 rounded-md px-2.5 hover:bg-row-hover">
                   <Checkbox
                     id={id}
                     checked={state}
@@ -327,25 +331,27 @@ export function LauncherImportBody({
                       wizard.setSelected(toggleGroup(wizard.selected, group, value === true))
                     }
                   />
-                  <span className="flex size-8 shrink-0 items-center justify-center">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3">
                     <LauncherMark launcher={group.launcher} />
                   </span>
-                  <span id={`${id}-title`} className="min-w-0 truncate text-xs font-semibold text-foreground">
+                  <span id={`${id}-title`} className="min-w-0 truncate text-sm font-semibold text-foreground">
                     {launcherName(group.launcher)}
                   </span>
-                  <span className="shrink-0 font-mono text-2xs tabular-nums text-faint">
+                  <span className="shrink-0 rounded-md bg-surface-3 px-1.5 py-0.5 font-mono text-2xs tabular-nums text-muted-foreground">
                     {group.instances.length}
                   </span>
                 </label>
-                {group.instances.map((instance) => (
-                  <InstanceRow
-                    key={instance.id}
-                    instance={instance}
-                    checked={wizard.selected.has(instance.id)}
-                    imported={wizard.imported.has(instance.id)}
-                    onToggle={(value) => wizard.toggleInstance(instance.id, value)}
-                  />
-                ))}
+                <div className="ml-[1.0625rem] grid gap-0.5 border-l border-border pl-2">
+                  {group.instances.map((instance) => (
+                    <InstanceRow
+                      key={instance.id}
+                      instance={instance}
+                      checked={wizard.selected.has(instance.id)}
+                      imported={wizard.imported.has(instance.id)}
+                      onToggle={(value) => wizard.toggleInstance(instance.id, value)}
+                    />
+                  ))}
+                </div>
               </section>
             );
           })}
