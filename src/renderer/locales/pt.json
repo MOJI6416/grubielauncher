@@ -148,7 +148,12 @@
       "network": "Não foi possível acessar o provedor.",
       "provider": "O serviço do provedor está respondendo com um erro.",
       "unknown": "O login não foi concluído.",
-      "cancelled": "Login cancelado."
+      "cancelled": "Login cancelado.",
+      "noMinecraft": "Esta conta Microsoft não tem Minecraft: Java Edition.",
+      "xboxProfile": "Esta conta Microsoft ainda não tem perfil Xbox.",
+      "childAccount": "Esta é uma conta infantil da Microsoft, e o Xbox exige a permissão de um adulto.",
+      "xboxBanned": "O Xbox bloqueou esta conta Microsoft.",
+      "xboxRegion": "O Xbox Live não está disponível no país ou na região desta conta."
     },
     "authFix": {
       "timeout": "Comece de novo e termine o login na janela do navegador.",
@@ -157,7 +162,12 @@
       "network": "Verifique a conexão com a internet, a VPN e o firewall e tente de novo.",
       "provider": "O problema é do lado do provedor — tente de novo em alguns minutos.",
       "unknown": "Tente de novo; se repetir, copie o código e envie ao suporte.",
-      "cancelled": "Comece o login de novo quando estiver pronto."
+      "cancelled": "Comece o login de novo quando estiver pronto.",
+      "noMinecraft": "O login com Microsoft só funciona com o jogo comprado. Sem ele, escolha Ely.by, Discord ou uma conta offline em “Adicionar conta”. Se você tem o jogo, confira se escolheu a conta Microsoft certa e definiu um nome de perfil em minecraft.net.",
+      "xboxProfile": "Entre com esta conta em xbox.com, crie um perfil gratuito e tente de novo.",
+      "childAccount": "Um adulto precisa adicionar a conta a um grupo familiar Microsoft e permitir que ela jogue; depois tente de novo. Enquanto isso, você pode entrar com Ely.by, Discord ou uma conta offline.",
+      "xboxBanned": "O launcher não pode remover o bloqueio. Entre com outra conta Microsoft, com Ely.by, Discord ou uma conta offline.",
+      "xboxRegion": "Entre com Ely.by, Discord ou uma conta offline."
     },
     "launcherSession": "Sessão do launcher",
     "providerSession": "Sessão do {{provider}}",

@@ -8,6 +8,13 @@ const OAUTH_HOSTS = ["127.0.0.1", "::1"];
 
 export type OAuthCallbackProvider = "microsoft" | "discord" | "elyby";
 
+export class OAuthCancelledError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OAuthCancelledError";
+  }
+}
+
 function parseExpectedState(expectedState: string): OAuthCallbackProvider {
   const [provider, nonce] = expectedState.split(":", 2);
 
@@ -58,7 +65,7 @@ export async function stopOAuthServer(
 
   await closeServer();
 
-  rejectPending?.(new Error(reason));
+  rejectPending?.(new OAuthCancelledError(reason));
 }
 
 export function startOAuthServer(expectedState: string): Promise<{
@@ -98,7 +105,7 @@ export function startOAuthServer(expectedState: string): Promise<{
 
     (async () => {
       if (pendingReject) {
-        pendingReject(new Error("OAuth server was restarted."));
+        pendingReject(new OAuthCancelledError("OAuth server was restarted."));
       }
 
       pendingReject = safeReject;
@@ -107,7 +114,7 @@ export function startOAuthServer(expectedState: string): Promise<{
 
       timeoutId = setTimeout(async () => {
         await closeServer();
-        safeReject(new Error("OAuth callback timed out."));
+        safeReject(new OAuthCancelledError("OAuth callback timed out."));
       }, OAUTH_TIMEOUT_MS);
 
       const handleRequest = async (

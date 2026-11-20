@@ -3,6 +3,7 @@ import type {
   ILittleSkinDeviceCode,
   ILittleSkinProfile,
   ILittleSkinSession,
+  IOAuthCancelled,
   LittleSkinSignInResult
 } from '@/types/Auth'
 import {
@@ -27,10 +28,12 @@ import {
 } from '../services/LittleSkin'
 import { LITTLESKIN_OAUTH_CLIENT_ID } from '@/shared/config'
 import {
+  OAuthCancelledError,
   startOAuthServer,
   stopOAuthServer,
   type OAuthCallbackProvider,
 } from '../utilities/authServer'
+import { journal } from '../journal/journal'
 
 let oauthServerPromise:
   | Promise<{
@@ -223,7 +226,15 @@ export function registerAuthIpc() {
         }
       })
     }
-    return await oauthServerPromise
+
+    try {
+      return await oauthServerPromise
+    } catch (error) {
+      if (!(error instanceof OAuthCancelledError)) throw error
+      journal.info('auth', 'OAuth sign-in ended without a callback', { reason: error.message })
+      const cancelled: IOAuthCancelled = { cancelled: true, message: error.message }
+      return cancelled
+    }
   })
 
   register('auth:stopServer', async () => {

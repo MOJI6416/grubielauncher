@@ -358,7 +358,12 @@ export function AccountsPanel() {
                 key={provider}
                 type="button"
                 data-selected={form?.kind === provider}
-                disabled={!available || (!opensForm && progress !== null)}
+                disabled={
+                  !available ||
+                  (!opensForm &&
+                    progress !== null &&
+                    progress.stage !== "failed")
+                }
                 onClick={() => pickProvider(provider)}
                 className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-row-hover disabled:cursor-not-allowed disabled:opacity-45 data-[selected=true]:bg-row-selected"
               >

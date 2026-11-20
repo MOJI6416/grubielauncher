@@ -40,3 +40,8 @@ export interface ILittleSkinDeviceCode {
 export type LittleSkinSignInResult =
   | { status: 'signedIn'; auth: IAuthResponse }
   | { status: 'chooseProfile'; session: ILittleSkinSession; profiles: ILittleSkinProfile[] }
+
+export interface IOAuthCancelled {
+  cancelled: true
+  message: string
+}

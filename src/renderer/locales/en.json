@@ -148,7 +148,12 @@
       "network": "The provider could not be reached.",
       "provider": "The provider service is answering with an error.",
       "unknown": "The sign-in did not complete.",
-      "cancelled": "Sign-in cancelled."
+      "cancelled": "Sign-in cancelled.",
+      "noMinecraft": "This Microsoft account does not have Minecraft: Java Edition.",
+      "xboxProfile": "This Microsoft account does not have an Xbox profile yet.",
+      "childAccount": "This is a child Microsoft account, and Xbox needs an adult's permission.",
+      "xboxBanned": "Xbox has blocked this Microsoft account.",
+      "xboxRegion": "Xbox Live is not available in this account's country or region."
     },
     "authFix": {
       "timeout": "Start again and finish the sign-in in the browser window.",
@@ -157,7 +162,12 @@
       "network": "Check the internet connection, VPN and firewall, then try again.",
       "provider": "The problem is on the provider side — try again in a few minutes.",
       "unknown": "Try again; if it repeats, copy the code and send it to support.",
-      "cancelled": "Start the sign-in again when you are ready."
+      "cancelled": "Start the sign-in again when you are ready.",
+      "noMinecraft": "Signing in with Microsoft works only with a purchased game. Without it, pick Ely.by, Discord or an offline account in “Add account”. If you own the game, check that you chose the right Microsoft account and set a profile name on minecraft.net.",
+      "xboxProfile": "Sign in to xbox.com with this account, create a free profile and try again.",
+      "childAccount": "An adult needs to add the account to a Microsoft family group and allow it to play, then try again. Until then you can sign in with Ely.by, Discord or an offline account.",
+      "xboxBanned": "The launcher cannot lift the block. Sign in with another Microsoft account, Ely.by, Discord or an offline account.",
+      "xboxRegion": "Sign in with Ely.by, Discord or an offline account."
     },
     "launcherSession": "Launcher session",
     "providerSession": "{{provider}} session",

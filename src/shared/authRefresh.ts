@@ -27,6 +27,36 @@ export function providerOutageError(error: unknown): Error | null {
   );
 }
 
+export const AUTH_REFUSED = "auth_refused";
+
+const REFUSAL_CODE = /^[a-z][a-z0-9_]{0,63}$/;
+const REFUSAL_MARKER = new RegExp(`${AUTH_REFUSED}:([a-z][a-z0-9_]{0,63})\\b`);
+
+export function authRefusalError(error: unknown): Error | null {
+  const response = (
+    error as { response?: { status?: unknown; data?: unknown } } | null
+  )?.response;
+  const status = response?.status;
+  if (typeof status !== "number" || status < 400 || status >= 500) return null;
+
+  const code = (response?.data as { code?: unknown } | null | undefined)?.code;
+  if (typeof code !== "string" || !REFUSAL_CODE.test(code)) return null;
+
+  return new Error(
+    `${AUTH_REFUSED}:${code}: Request failed with status code ${status}`,
+  );
+}
+
+export function authRefusalCode(error: unknown): string | null {
+  const message =
+    typeof error === "string"
+      ? error
+      : (error as { message?: unknown } | null)?.message;
+  if (typeof message !== "string") return null;
+
+  return REFUSAL_MARKER.exec(message)?.[1] ?? null;
+}
+
 const EXPIRED_CAUSES = new Set(["badRequest", "unauthorized", "forbidden"]);
 
 const SERVICE_DOWN_CAUSES = new Set([

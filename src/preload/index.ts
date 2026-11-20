@@ -174,6 +174,7 @@ import {
   ILittleSkinDeviceCode,
   ILittleSkinProfile,
   ILittleSkinSession,
+  IOAuthCancelled,
   IRefreshTokenResponse,
   LittleSkinSignInResult,
 } from "@/types/Auth";
@@ -634,10 +635,13 @@ export interface IElectronAPI {
       refreshToken: string,
       id: string,
     ) => Promise<IRefreshTokenResponse | null>;
-    startServer: (expectedState: string) => Promise<{
-      code: string;
-      provider: "microsoft" | "discord" | "elyby" | "twitch" | "github";
-    }>;
+    startServer: (expectedState: string) => Promise<
+      | {
+          code: string;
+          provider: "microsoft" | "discord" | "elyby" | "twitch" | "github";
+        }
+      | IOAuthCancelled
+    >;
     stopServer: () => Promise<boolean>;
   };
   backend: {

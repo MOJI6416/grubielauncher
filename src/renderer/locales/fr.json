@@ -148,7 +148,12 @@
       "network": "Impossible de joindre le fournisseur.",
       "provider": "Le service du fournisseur répond par une erreur.",
       "unknown": "La connexion n’a pas abouti.",
-      "cancelled": "Connexion annulée."
+      "cancelled": "Connexion annulée.",
+      "noMinecraft": "Ce compte Microsoft ne possède pas Minecraft: Java Edition.",
+      "xboxProfile": "Ce compte Microsoft n’a pas encore de profil Xbox.",
+      "childAccount": "C’est un compte Microsoft enfant : Xbox exige l’autorisation d’un adulte.",
+      "xboxBanned": "Xbox a bloqué ce compte Microsoft.",
+      "xboxRegion": "Xbox Live n’est pas disponible dans le pays ou la région de ce compte."
     },
     "authFix": {
       "timeout": "Recommencez et terminez la connexion dans la fenêtre du navigateur.",
@@ -157,7 +162,12 @@
       "network": "Vérifiez la connexion Internet, le VPN et le pare-feu, puis réessayez.",
       "provider": "Le problème vient du fournisseur — réessayez dans quelques minutes.",
       "unknown": "Réessayez ; si cela se reproduit, copiez le code et envoyez-le au support.",
-      "cancelled": "Relancez la connexion quand vous serez prêt."
+      "cancelled": "Relancez la connexion quand vous serez prêt.",
+      "noMinecraft": "La connexion avec Microsoft ne fonctionne qu’avec le jeu acheté. Sans lui, choisissez Ely.by, Discord ou un compte hors ligne dans « Ajouter un compte ». Si vous possédez le jeu, vérifiez que vous avez choisi le bon compte Microsoft et défini un nom de profil sur minecraft.net.",
+      "xboxProfile": "Connectez-vous avec ce compte sur xbox.com, créez un profil gratuit, puis réessayez.",
+      "childAccount": "Un adulte doit ajouter le compte à un groupe familial Microsoft et l’autoriser à jouer, puis réessayez. En attendant, vous pouvez vous connecter avec Ely.by, Discord ou un compte hors ligne.",
+      "xboxBanned": "Le launcher ne peut pas lever le blocage. Connectez-vous avec un autre compte Microsoft, avec Ely.by, Discord ou un compte hors ligne.",
+      "xboxRegion": "Connectez-vous avec Ely.by, Discord ou un compte hors ligne."
     },
     "launcherSession": "Session du launcher",
     "providerSession": "Session {{provider}}",

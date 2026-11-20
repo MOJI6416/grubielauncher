@@ -148,7 +148,12 @@
       "network": "Nie udało się połączyć z dostawcą.",
       "provider": "Usługa dostawcy odpowiada błędem.",
       "unknown": "Logowanie nie zostało ukończone.",
-      "cancelled": "Anulowano logowanie."
+      "cancelled": "Anulowano logowanie.",
+      "noMinecraft": "To konto Microsoft nie ma Minecraft: Java Edition.",
+      "xboxProfile": "To konto Microsoft nie ma jeszcze profilu Xbox.",
+      "childAccount": "To konto dziecka Microsoft — Xbox wymaga zgody osoby dorosłej.",
+      "xboxBanned": "Xbox zablokował to konto Microsoft.",
+      "xboxRegion": "Xbox Live nie jest dostępny w kraju lub regionie tego konta."
     },
     "authFix": {
       "timeout": "Zacznij od nowa i dokończ logowanie w oknie przeglądarki.",
@@ -157,7 +162,12 @@
       "network": "Sprawdź połączenie z internetem, VPN i zaporę, a potem spróbuj ponownie.",
       "provider": "Problem leży po stronie dostawcy — spróbuj ponownie za kilka minut.",
       "unknown": "Spróbuj ponownie; jeśli to się powtórzy, skopiuj kod i wyślij go do pomocy technicznej.",
-      "cancelled": "Rozpocznij logowanie ponownie, gdy wszystko będzie gotowe."
+      "cancelled": "Rozpocznij logowanie ponownie, gdy wszystko będzie gotowe.",
+      "noMinecraft": "Logowanie przez Microsoft działa tylko z kupioną grą. Bez niej wybierz w „Dodaj konto” Ely.by, Discord lub konto offline. Jeśli masz grę, sprawdź, czy wybrano właściwe konto Microsoft i ustawiono nazwę profilu na minecraft.net.",
+      "xboxProfile": "Zaloguj się tym kontem na xbox.com, utwórz darmowy profil i spróbuj ponownie.",
+      "childAccount": "Osoba dorosła musi dodać konto do grupy rodzinnej Microsoft i zezwolić na granie, a potem spróbuj ponownie. Do tego czasu możesz zalogować się przez Ely.by, Discord lub kontem offline.",
+      "xboxBanned": "Launcher nie może zdjąć blokady. Zaloguj się innym kontem Microsoft, przez Ely.by, Discord lub kontem offline.",
+      "xboxRegion": "Zaloguj się przez Ely.by, Discord lub kontem offline."
     },
     "launcherSession": "Sesja launchera",
     "providerSession": "Sesja {{provider}}",

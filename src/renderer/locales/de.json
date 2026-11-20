@@ -148,7 +148,12 @@
       "network": "Der Anbieter ist nicht erreichbar.",
       "provider": "Der Dienst des Anbieters antwortet mit einem Fehler.",
       "unknown": "Die Anmeldung wurde nicht abgeschlossen.",
-      "cancelled": "Anmeldung abgebrochen."
+      "cancelled": "Anmeldung abgebrochen.",
+      "noMinecraft": "Auf diesem Microsoft-Konto gibt es kein Minecraft: Java Edition.",
+      "xboxProfile": "Dieses Microsoft-Konto hat noch kein Xbox-Profil.",
+      "childAccount": "Dies ist ein Kinderkonto von Microsoft – Xbox verlangt die Erlaubnis eines Erwachsenen.",
+      "xboxBanned": "Xbox hat dieses Microsoft-Konto gesperrt.",
+      "xboxRegion": "Xbox Live ist im Land oder in der Region dieses Kontos nicht verfügbar."
     },
     "authFix": {
       "timeout": "Starten Sie erneut und schließen Sie die Anmeldung im Browserfenster ab.",
@@ -157,7 +162,12 @@
       "network": "Prüfen Sie die Internetverbindung, das VPN und die Firewall und versuchen Sie es erneut.",
       "provider": "Das Problem liegt beim Anbieter – versuchen Sie es in ein paar Minuten erneut.",
       "unknown": "Versuchen Sie es erneut; wenn es sich wiederholt, kopieren Sie den Code und senden Sie ihn an den Support.",
-      "cancelled": "Starten Sie die Anmeldung erneut, wenn Sie bereit sind."
+      "cancelled": "Starten Sie die Anmeldung erneut, wenn Sie bereit sind.",
+      "noMinecraft": "Die Anmeldung mit Microsoft funktioniert nur mit einem gekauften Spiel. Ohne Spiel wählen Sie unter „Konto hinzufügen“ Ely.by, Discord oder ein Offline-Konto. Wenn Sie das Spiel besitzen, prüfen Sie, ob Sie das richtige Microsoft-Konto gewählt und auf minecraft.net einen Profilnamen festgelegt haben.",
+      "xboxProfile": "Melden Sie sich mit diesem Konto auf xbox.com an, erstellen Sie ein kostenloses Profil und versuchen Sie es erneut.",
+      "childAccount": "Ein Erwachsener muss das Konto einer Microsoft-Familiengruppe hinzufügen und das Spielen erlauben; versuchen Sie es dann erneut. Bis dahin können Sie sich mit Ely.by, Discord oder einem Offline-Konto anmelden.",
+      "xboxBanned": "Der Launcher kann die Sperre nicht aufheben. Melden Sie sich mit einem anderen Microsoft-Konto, mit Ely.by, Discord oder einem Offline-Konto an.",
+      "xboxRegion": "Melden Sie sich mit Ely.by, Discord oder einem Offline-Konto an."
     },
     "launcherSession": "Launcher-Sitzung",
     "providerSession": "{{provider}}-Sitzung",

@@ -46,6 +46,7 @@ import {
 } from "./notificationPrefs";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { readOAuthCallback } from "@renderer/features/accounts/authErrors";
 import { formatClock } from "@renderer/utilities/duration";
 import { countFeature } from "@renderer/features/usage/usage";
 
@@ -173,7 +174,7 @@ export function ProfileConnections({
     try {
       const wait = api.auth.startServer(state);
       openExternal(authUrl);
-      const { code } = await wait;
+      const { code } = readOAuthCallback(await wait);
       if (!isCurrent(attempt)) return;
 
       const result = await api.backend.discordLink(accessToken, code);

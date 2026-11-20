@@ -148,7 +148,12 @@
       "network": "Sağlayıcıya ulaşılamadı.",
       "provider": "Sağlayıcı hizmeti hata ile yanıt veriyor.",
       "unknown": "Giriş tamamlanmadı.",
-      "cancelled": "Giriş iptal edildi."
+      "cancelled": "Giriş iptal edildi.",
+      "noMinecraft": "Bu Microsoft hesabında Minecraft: Java Edition yok.",
+      "xboxProfile": "Bu Microsoft hesabının henüz Xbox profili yok.",
+      "childAccount": "Bu bir çocuk Microsoft hesabı; Xbox bir yetişkinin iznini istiyor.",
+      "xboxBanned": "Xbox bu Microsoft hesabını engelledi.",
+      "xboxRegion": "Xbox Live bu hesabın ülkesinde veya bölgesinde kullanılamıyor."
     },
     "authFix": {
       "timeout": "Yeniden başlayın ve girişi tarayıcı penceresinde tamamlayın.",
@@ -157,7 +162,12 @@
       "network": "İnternet bağlantısını, VPN’i ve güvenlik duvarını kontrol edip tekrar deneyin.",
       "provider": "Sorun sağlayıcı tarafında — birkaç dakika sonra tekrar deneyin.",
       "unknown": "Tekrar deneyin; sorun sürerse kodu kopyalayıp desteğe gönderin.",
-      "cancelled": "Hazır olduğunuzda girişi yeniden başlatın."
+      "cancelled": "Hazır olduğunuzda girişi yeniden başlatın.",
+      "noMinecraft": "Microsoft ile giriş yalnızca satın alınmış oyunla çalışır. Oyun yoksa “Hesap ekle” bölümünden Ely.by, Discord veya çevrim dışı hesap seçin. Oyuna sahipseniz doğru Microsoft hesabını seçtiğinizi ve minecraft.net’te bir profil adı belirlediğinizi kontrol edin.",
+      "xboxProfile": "Bu hesapla xbox.com’a giriş yapın, ücretsiz bir profil oluşturun ve tekrar deneyin.",
+      "childAccount": "Bir yetişkinin hesabı bir Microsoft aile grubuna ekleyip oynamaya izin vermesi gerekir; ardından tekrar deneyin. O zamana kadar Ely.by, Discord veya çevrim dışı hesapla giriş yapabilirsiniz.",
+      "xboxBanned": "Başlatıcı engeli kaldıramaz. Başka bir Microsoft hesabıyla, Ely.by, Discord veya çevrim dışı hesapla giriş yapın.",
+      "xboxRegion": "Ely.by, Discord veya çevrim dışı hesapla giriş yapın."
     },
     "launcherSession": "Başlatıcı oturumu",
     "providerSession": "{{provider}} oturumu",

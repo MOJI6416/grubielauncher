@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   AUTH_PROVIDER_UNAVAILABLE,
+  authRefusalCode,
+  authRefusalError,
   classifyRefreshFailure,
   providerOutageError,
 } from "./authRefresh";
@@ -126,5 +128,57 @@ describe("providerOutageError", () => {
       ),
     ).toBeNull();
     expect(providerOutageError(new Error("connect ECONNREFUSED"))).toBeNull();
+  });
+});
+
+describe("authRefusalError", () => {
+  it("carries the api's refusal code across the IPC boundary", () => {
+    const marked = authRefusalError(
+      httpError(400, {
+        statusCode: 400,
+        error: "Bad Request",
+        message: "This Microsoft account has no Minecraft: Java Edition profile",
+        code: "no_minecraft",
+      }),
+    );
+
+    expect(marked?.message).toBe(
+      "auth_refused:no_minecraft: Request failed with status code 400",
+    );
+    expect(
+      authRefusalCode(
+        ipcError("auth:microsoft", `Error: ${marked?.message}`),
+      ),
+    ).toBe("no_minecraft");
+  });
+
+  it("keeps a refused refresh an expired session", () => {
+    const marked = authRefusalError(httpError(400, { code: "no_minecraft" }));
+
+    expect(
+      classifyRefreshFailure(
+        ipcError("auth:microsoft:refresh", `Error: ${marked?.message}`),
+      ),
+    ).toBe("expired");
+  });
+
+  it("leaves an answer from an older api untouched", () => {
+    expect(
+      authRefusalError(
+        httpError(400, {
+          statusCode: 400,
+          error: "Bad Request",
+          message: "Failed to get Mojang profile",
+        }),
+      ),
+    ).toBeNull();
+    expect(authRefusalError(httpError(503, { code: "x" }))).toBeNull();
+    expect(authRefusalError(httpError(400, { code: "<b>no</b>" }))).toBeNull();
+    expect(authRefusalError(new Error("connect ECONNREFUSED"))).toBeNull();
+    expect(
+      authRefusalCode(
+        ipcError("auth:microsoft", "AxiosError: Request failed with status code 400"),
+      ),
+    ).toBeNull();
   });
 });

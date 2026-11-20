@@ -29,6 +29,7 @@ import { accountIdentity, accountSubject, accountUuid } from "./identity";
 import {
   authFailureSide,
   describeAuthFailure,
+  readOAuthCallback,
   type AuthFailureReason,
 } from "./authErrors";
 import { nextSelectionAfterRemoval } from "./list";
@@ -199,7 +200,7 @@ export function useAccountsController() {
 
       try {
         await api.shell.openExternal(authUrl);
-        const callback = await waitForOAuth;
+        const callback = readOAuthCallback(await waitForOAuth);
 
         if (sessionRef.current !== sessionId) return;
         if (

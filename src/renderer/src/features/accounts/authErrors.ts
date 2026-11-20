@@ -1,5 +1,7 @@
 import { classifyError, type FailureSide } from "@/shared/errors";
+import { authRefusalCode } from "@/shared/authRefresh";
 import type { AccountType } from "@/types/Account";
+import type { IOAuthCancelled } from "@/types/Auth";
 
 export type AuthFailureReason =
   | "cancelled"
@@ -8,7 +10,20 @@ export type AuthFailureReason =
   | "rejected"
   | "network"
   | "provider"
+  | "noMinecraft"
+  | "xboxProfile"
+  | "childAccount"
+  | "xboxBanned"
+  | "xboxRegion"
   | "unknown";
+
+const REFUSAL_REASONS = new Map<string, AuthFailureReason>([
+  ["no_minecraft", "noMinecraft"],
+  ["xbox_profile_missing", "xboxProfile"],
+  ["xbox_child_account", "childAccount"],
+  ["xbox_banned", "xboxBanned"],
+  ["xbox_region", "xboxRegion"],
+]);
 
 export interface AuthFailure {
   reason: AuthFailureReason;
@@ -39,6 +54,21 @@ function rawMessage(error: unknown): string {
   return "";
 }
 
+export function readOAuthCallback<T extends object>(
+  result: T | IOAuthCancelled,
+): T {
+  if ((result as Partial<IOAuthCancelled> | null)?.cancelled !== true) {
+    return result as T;
+  }
+
+  const { message } = result as IOAuthCancelled;
+  throw new Error(
+    typeof message === "string" && message
+      ? message
+      : "OAuth sign-in was cancelled.",
+  );
+}
+
 export function describeAuthFailure(
   error: unknown,
   provider: AccountType,
@@ -60,6 +90,11 @@ export function describeAuthFailure(
 
   if (message.includes("eaddrinuse") || message.includes("address already in use")) {
     return { reason: "portBusy", code: info.code, silent: false };
+  }
+
+  const refusal = REFUSAL_REASONS.get(authRefusalCode(error) ?? "");
+  if (refusal) {
+    return { reason: refusal, code: info.code, silent: false };
   }
 
   if (info.cause === "unauthorized" || info.cause === "forbidden") {

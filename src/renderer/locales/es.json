@@ -148,7 +148,12 @@
       "network": "No se pudo conectar con el proveedor.",
       "provider": "El servicio del proveedor responde con un error.",
       "unknown": "El inicio de sesión no se completó.",
-      "cancelled": "Inicio de sesión cancelado."
+      "cancelled": "Inicio de sesión cancelado.",
+      "noMinecraft": "Esta cuenta de Microsoft no tiene Minecraft: Java Edition.",
+      "xboxProfile": "Esta cuenta de Microsoft aún no tiene perfil de Xbox.",
+      "childAccount": "Es una cuenta infantil de Microsoft y Xbox exige el permiso de un adulto.",
+      "xboxBanned": "Xbox bloqueó esta cuenta de Microsoft.",
+      "xboxRegion": "Xbox Live no está disponible en el país o la región de esta cuenta."
     },
     "authFix": {
       "timeout": "Empiece de nuevo y termine el inicio de sesión en la ventana del navegador.",
@@ -157,7 +162,12 @@
       "network": "Revise la conexión a internet, la VPN y el firewall, y vuelva a intentarlo.",
       "provider": "El problema es del proveedor: vuelva a intentarlo en unos minutos.",
       "unknown": "Vuelva a intentarlo; si se repite, copie el código y envíelo a soporte.",
-      "cancelled": "Vuelva a iniciar sesión cuando esté listo."
+      "cancelled": "Vuelva a iniciar sesión cuando esté listo.",
+      "noMinecraft": "El inicio de sesión con Microsoft solo funciona con el juego comprado. Sin él, elija Ely.by, Discord o una cuenta sin conexión en «Agregar cuenta». Si tiene el juego, compruebe que eligió la cuenta de Microsoft correcta y que definió un nombre de perfil en minecraft.net.",
+      "xboxProfile": "Inicie sesión con esta cuenta en xbox.com, cree un perfil gratuito y vuelva a intentarlo.",
+      "childAccount": "Un adulto debe agregar la cuenta a un grupo familiar de Microsoft y permitirle jugar; luego vuelva a intentarlo. Mientras tanto, puede iniciar sesión con Ely.by, Discord o una cuenta sin conexión.",
+      "xboxBanned": "El launcher no puede quitar el bloqueo. Inicie sesión con otra cuenta de Microsoft, con Ely.by, Discord o una cuenta sin conexión.",
+      "xboxRegion": "Inicie sesión con Ely.by, Discord o una cuenta sin conexión."
     },
     "launcherSession": "Sesión del launcher",
     "providerSession": "Sesión de {{provider}}",
