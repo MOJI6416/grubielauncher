@@ -241,6 +241,7 @@ function Cover({
       onError={onFailed}
       className={cn(
         "object-cover select-none transition-transform duration-300 group-hover:scale-[1.03]",
+        card.release && "object-top",
         className,
       )}
     />

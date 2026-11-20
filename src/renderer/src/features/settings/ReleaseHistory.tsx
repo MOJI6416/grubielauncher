@@ -124,7 +124,7 @@ function ReleaseRow({
               loading="lazy"
               draggable={false}
               onError={() => setFailedCover(coverUrl)}
-              className="aspect-[2/1] w-full max-w-sm rounded-lg bg-surface-3 object-cover object-[50%_35%] select-none"
+              className="aspect-[2/1] w-full max-w-sm rounded-lg bg-surface-3 object-cover object-top select-none"
             />
           )}
 

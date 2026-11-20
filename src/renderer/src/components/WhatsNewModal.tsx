@@ -78,7 +78,7 @@ export function WhatsNewModal({
                 aria-hidden
                 draggable={false}
                 onError={() => setFailedCover(coverUrl)}
-                className="absolute inset-0 size-full bg-surface-2 object-cover object-[50%_35%] select-none"
+                className="absolute inset-0 size-full bg-surface-2 object-cover object-top select-none"
               />
               <span
                 aria-hidden
