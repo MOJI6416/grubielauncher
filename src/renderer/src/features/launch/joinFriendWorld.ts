@@ -298,7 +298,7 @@ export async function joinFriendWorld(
                 nickname: params.hostNickname,
               }),
             )
-            .catch(() => false)
+            .catch(ignoreFailure)
         : false;
       if (joinedInGame) {
         toast.success(
