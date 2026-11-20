@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bell, ChevronRight, FolderOpen, MonitorPlay } from "lucide-react";
+import { FolderOpen, MonitorPlay } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { Switch } from "@/components/ui/switch";
 import type { BlessedPathInfo } from "@/types/AllowedPath";
 import type { TSettings } from "@/types/Settings";
-import { navigate } from "@renderer/navigation/navigate";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { showFailureToast } from "@renderer/utilities/failures";
-import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
 import {
   setStreamerMode,
   useRedact,
@@ -70,6 +68,7 @@ export function PrivacySection({
       <SettingsGroup title={t("settings.streamer.title")}>
         {visible("streamerMode") && (
           <SettingRow
+            entry="streamerMode"
             htmlFor="settings-streamer-mode"
             title={t("settings.streamer.enabled")}
             description={t("settings.streamer.enabledDescription")}
@@ -99,6 +98,7 @@ export function PrivacySection({
 
         {visible("streamerModeAuto") && (
           <SettingRow
+            entry="streamerModeAuto"
             htmlFor="settings-streamer-auto"
             title={t("settings.streamer.auto")}
             description={t("settings.streamer.autoDescription")}
@@ -116,47 +116,10 @@ export function PrivacySection({
         )}
       </SettingsGroup>
 
-      {visible("notifications") && (
-        <SettingsGroup title={t("settings.notifications.title")}>
-          <button
-            type="button"
-            onClick={() =>
-              navigate({ name: "profile", userId: OWN_PROFILE_ID })
-            }
-            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-row-hover"
-          >
-            <Bell className="size-3.5 shrink-0 text-faint" />
-            <span className="grid min-w-0 flex-1 gap-0.5">
-              <Hint
-                content={t("settings.notifications.telegram")}
-                variant="text"
-                truncatedOnly
-              >
-                <span className="truncate text-sm text-foreground">
-                  {t("settings.notifications.telegram")}
-                </span>
-              </Hint>
-              <Hint
-                content={t("settings.notifications.telegramDescription")}
-                variant="text"
-                truncatedOnly
-              >
-                <span className="truncate text-xs text-muted-foreground">
-                  {t("settings.notifications.telegramDescription")}
-                </span>
-              </Hint>
-            </span>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {t("settings.notifications.openProfile")}
-            </span>
-            <ChevronRight className="size-3.5 shrink-0 text-faint" />
-          </button>
-        </SettingsGroup>
-      )}
-
       <SettingsGroup title={t("settings.sections.privacy")}>
         {visible("hideServerInRpc") && (
           <SettingRow
+            entry="hideServerInRpc"
             htmlFor="settings-hide-server"
             title={t("settings.hideServerInRpc")}
             description={t("settings.hideServerInRpcDescription")}
@@ -175,6 +138,7 @@ export function PrivacySection({
 
         {visible("directConnect") && (
           <SettingRow
+            entry="directConnect"
             htmlFor="settings-direct-connect"
             title={t("settings.directConnect")}
             description={t("settings.directConnectDescription")}
@@ -193,6 +157,7 @@ export function PrivacySection({
 
         {visible("crashTelemetry") && (
           <SettingRow
+            entry="crashTelemetry"
             htmlFor="settings-crash-telemetry"
             title={t("settings.crashTelemetry")}
             description={t("settings.crashTelemetryDescription")}
@@ -211,6 +176,7 @@ export function PrivacySection({
 
         {visible("usageStats") && (
           <SettingRow
+            entry="usageStats"
             htmlFor="settings-usage-stats"
             title={t("settings.usageStats")}
             description={t("settings.usageStatsDescription")}
@@ -229,6 +195,7 @@ export function PrivacySection({
 
         {visible("packAnalytics") && (
           <SettingRow
+            entry="packAnalytics"
             htmlFor="settings-pack-analytics"
             title={t("settings.packAnalytics")}
             description={t("settings.packAnalyticsDescription")}
@@ -245,44 +212,9 @@ export function PrivacySection({
           />
         )}
 
-        {visible("aiLogAnalysis") && (
-          <SettingRow
-            htmlFor="settings-ai-log"
-            title={t("settings.aiLogAnalysis")}
-            description={t("settings.aiLogAnalysisDescription")}
-            query={query}
-            changed={isChanged("aiLogAnalysis")}
-            onReset={() => reset("aiLogAnalysis")}
-            control={
-              <Switch
-                id="settings-ai-log"
-                checked={settings.aiLogAnalysis}
-                onCheckedChange={(value) => commit({ aiLogAnalysis: value })}
-              />
-            }
-          />
-        )}
-
-        {visible("agentChatSync") && (
-          <SettingRow
-            htmlFor="settings-agent-chat-sync"
-            title={t("settings.agentChatSync")}
-            description={t("settings.agentChatSyncDescription")}
-            query={query}
-            changed={isChanged("agentChatSync")}
-            onReset={() => reset("agentChatSync")}
-            control={
-              <Switch
-                id="settings-agent-chat-sync"
-                checked={settings.agentChatSync}
-                onCheckedChange={(value) => commit({ agentChatSync: value })}
-              />
-            }
-          />
-        )}
-
         {visible("accountSync") && (
           <SettingRow
+            entry="accountSync"
             htmlFor="settings-account-sync"
             title={t("settings.accountSync")}
             description={t("settings.accountSyncDescription")}
@@ -301,7 +233,7 @@ export function PrivacySection({
       </SettingsGroup>
 
       {visible("allowedPaths") && (
-        <SettingsGroup title={t("settings.allowedPaths.title")}>
+        <SettingsGroup entry="allowedPaths" title={t("settings.allowedPaths.title")}>
           <div className="px-3.5 py-2.5">
             <p className="text-xs leading-snug text-muted-foreground">
               {t("settings.allowedPaths.description")}

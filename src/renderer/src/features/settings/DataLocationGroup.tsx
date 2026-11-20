@@ -1,100 +1,27 @@
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAtomValue } from "jotai";
 import { FolderInput, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
-import { isRunningAtom } from "@renderer/stores/atoms";
-import { showFailureToast } from "@renderer/utilities/failures";
-import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
-import { formatBytes } from "@renderer/utilities/file";
-import type { DataLocationInfo, DataLocationPlan } from "@/types/DataLocation";
-import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
+import { LockedNote, SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import { PathRows, PathText } from "../dataLocation/PathRows";
+import { useDataLocationChooser } from "../dataLocation/useDataLocationChooser";
 import { useRedact } from "../streamer/streamerMode";
-import { countFeature } from "@renderer/features/usage/usage";
-
-const api = window.api;
-
-type ReadyPlan = Exclude<DataLocationPlan, { kind: "error" }>;
+import { useGameLock } from "./gameLock";
 
 export function DataLocationGroup({ query }: { query: string }) {
   const { t } = useTranslation();
-  const isRunning = useAtomValue(isRunningAtom);
+  const gameLock = useGameLock();
   const redact = useRedact();
-  const [info, setInfo] = useState<DataLocationInfo | null>(null);
-  const [checking, setChecking] = useState<"pick" | "default" | null>(null);
-  const [plan, setPlan] = useState<ReadyPlan | null>(null);
-  const [applying, setApplying] = useState(false);
+  const { info, checking, plan, applying, choose, apply, cancel, bytes } =
+    useDataLocationChooser();
 
-  const sizes = [
-    t("sizes.0"),
-    t("sizes.1"),
-    t("sizes.2"),
-    t("sizes.3"),
-    t("sizes.4"),
-  ];
-  const bytes = (value: number) => formatBytes(value, sizes, 1);
-
-  useEffect(() => {
-    void api.dataLocation.get().then(setInfo).catch(ignoreFailure);
-  }, []);
-
-  const choose = async (source: "pick" | "default") => {
-    setChecking(source);
-    try {
-      const next =
-        source === "pick"
-          ? await api.dataLocation.pick()
-          : await api.dataLocation.planDefault();
-      if (!next) return;
-
-      if (next.kind === "error") {
-        toast.error(
-          t(`dataLocation.problems.${next.problem}`, {
-            size: bytes(next.bytes ?? 0),
-            free: bytes(next.freeBytes ?? 0),
-          }),
-        );
-        return;
-      }
-
-      setPlan(next);
-    } catch (error) {
-      showFailureToast(t("dataLocation.problems.failed"), error, {
-        channels: ["dataLocation:pick", "dataLocation:planDefault"],
-      });
-    } finally {
-      setChecking(null);
-    }
-  };
-
-  const apply = async () => {
-    if (!plan) return;
-    countFeature("dataLocation.move");
-    setApplying(true);
-
-    try {
-      const result = await api.dataLocation.apply(plan.kind);
-      if (result.ok) return;
-      toast.error(t(`dataLocation.problems.${result.problem}`));
-    } catch (error) {
-      showFailureToast(t("dataLocation.problems.failed"), error, {
-        channels: ["dataLocation:apply"],
-      });
-    }
-
-    setApplying(false);
-    setPlan(null);
-  };
-
-  const busy = checking !== null || applying || isRunning;
+  const busy = checking !== null || applying || gameLock !== null;
 
   return (
     <>
       <SettingsGroup>
         <SettingRow
+          entry="dataLocation"
           title={t("settings.dataLocation.title")}
           description={t("settings.dataLocation.description")}
           query={query}
@@ -141,10 +68,11 @@ export function DataLocationGroup({ query }: { query: string }) {
               )
             )}
           </div>
-          {isRunning && (
-            <p className="mt-1.5 text-2xs leading-snug text-warning">
-              {t("dataLocation.problems.busy")}
-            </p>
+          {gameLock && (
+            <LockedNote
+              reason={t("dataLocation.problems.busy")}
+              className="mt-1.5"
+            />
           )}
         </SettingRow>
       </SettingsGroup>
@@ -156,7 +84,7 @@ export function DataLocationGroup({ query }: { query: string }) {
               ? t("settings.dataLocation.moveTitle")
               : t("settings.dataLocation.adoptQuestion")
           }
-          onClose={() => !applying && setPlan(null)}
+          onClose={() => !applying && cancel()}
           content={
             plan.kind === "move"
               ? [{ text: t("settings.dataLocation.moveDescription") }]
@@ -169,7 +97,7 @@ export function DataLocationGroup({ query }: { query: string }) {
             {
               text: t("common.cancel"),
               color: "secondary",
-              onClick: () => setPlan(null),
+              onClick: cancel,
             },
             {
               text: applying

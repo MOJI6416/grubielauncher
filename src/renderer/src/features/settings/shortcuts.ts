@@ -53,7 +53,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { id: "mark", combos: [["Space"]] },
       { id: "removeContent", combos: [["Delete"]] },
       { id: "removeServer", combos: [["Delete"]] },
-      { id: "moveServer", combos: [["Alt", "↑"], ["Alt", "↓"]] },
+      { id: "moveServer", combos: [[ALT_KEY, "↑"], [ALT_KEY, "↓"]] },
       { id: "tab", combos: [["←"], ["→"]] },
       { id: "tabEdge", combos: [["Home"], ["End"]] },
       { id: "gallery", combos: [["←"], ["→"]] },
@@ -63,7 +63,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     id: "logs",
     items: [
       { id: "nextMatch", combos: [["Enter"]] },
-      { id: "prevMatch", combos: [["Shift", "Enter"]] },
+      { id: "prevMatch", combos: [[SHIFT_KEY, "Enter"]] },
       { id: "clearSearch", combos: [["Esc"]] },
       { id: "history", combos: [["↑"], ["↓"]] },
     ],
@@ -72,7 +72,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     id: "chat",
     items: [
       { id: "send", combos: [["Enter"]] },
-      { id: "newline", combos: [["Shift", "Enter"]] },
+      { id: "newline", combos: [[SHIFT_KEY, "Enter"]] },
       { id: "cancelReply", combos: [["Esc"]] },
       { id: "switchFriend", combos: [["↑"], ["↓"]] },
     ],

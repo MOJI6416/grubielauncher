@@ -1,4 +1,6 @@
 import { getDefaultStore } from "jotai";
+import { toast } from "sonner";
+import i18n from "@renderer/i18n";
 import {
   back,
   canGoBack,
@@ -12,7 +14,7 @@ import {
 } from "./history";
 import { accountAtom } from "@renderer/stores/atoms";
 import { isNavigationBlocked } from "./guards";
-import { isRouteAllowed } from "./access";
+import { routeBlockReason, routeBlockedKey } from "./access";
 import {
   currentRouteAtom,
   historyAtom,
@@ -36,16 +38,26 @@ export function getCurrentRoute(): Route {
   return store().get(currentRouteAtom);
 }
 
-export function isRouteReachable(route: Route): boolean {
-  return isRouteAllowed(route, {
+function blockReasonFor(route: Route) {
+  return routeBlockReason(route, {
     accountType: store().get(accountAtom)?.type ?? null,
   });
+}
+
+export function isRouteReachable(route: Route): boolean {
+  return blockReasonFor(route) === null;
 }
 
 export function navigate(route: Route, options: NavigateOptions = {}): boolean {
   const s = store();
 
-  if (!isRouteReachable(route)) return false;
+  const blocked = blockReasonFor(route);
+  if (blocked) {
+    toast.info(i18n.t(routeBlockedKey(blocked)), {
+      id: `route-blocked-${blocked}`,
+    });
+    return false;
+  }
 
   if (isSameRoute(s.get(currentRouteAtom), route) && !options.reset) {
     return true;

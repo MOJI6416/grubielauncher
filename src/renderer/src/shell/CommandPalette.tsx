@@ -3,14 +3,13 @@ import { Command } from "cmdk";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
-  AtSign,
+  Bell,
   BookUser,
   Boxes,
   ChartArea,
   CornerDownLeft,
   FileCog,
   Folder,
-  Hash,
   Info,
   LayoutTemplate,
   ListPlus,
@@ -26,6 +25,7 @@ import {
   Server,
   ServerCog,
   Settings as LSettings,
+  SlidersHorizontal,
   Sparkles,
   TreePine,
   UserRound,
@@ -50,7 +50,10 @@ import { switchAccount } from "@renderer/features/accounts/switchAccount";
 import {
   SETTINGS_ENTRIES,
   SETTINGS_SECTIONS,
+  isEntryAvailable,
 } from "@renderer/features/settings/catalog";
+import { openSettingsEntry } from "@renderer/features/settings/settingsFocus";
+import { PLATFORM } from "@renderer/utilities/platform";
 import { navigate } from "@renderer/navigation/navigate";
 import {
   agentBlockReason,
@@ -110,23 +113,12 @@ const INSTANCE_TABS: InstanceTab[] = [
   "logs",
 ];
 
-const INSTANCE_TAB_KEYWORDS: Record<InstanceTab, string> = {
-  overview:
-    "overview publish share overview обзор огляд публикация опубликовать поделиться ярлык публікація",
-  modpack:
-    "modpack modrinth curseforge update version модпак обновить версия оновити версія",
-  content:
-    "content mods resourcepacks shaders контент моды модификации ресурспаки шейдеры моди",
-  worlds:
-    "worlds saves backups миры мир сохранения бэкапы резервные копии світи",
-  servers: "servers multiplayer серверы сервер мультиплеер сервери",
-  server: "own server host свой сервер хост власний",
-  configs: "configs kubejs конфиги конфигурация конфіги",
-  settings: "settings memory java настройки память налаштування пам'ять",
-  arguments: "arguments jvm flags аргументы флаги аргументи",
-  statistics: "statistics статистика статистика",
-  logs: "logs console логи консоль журнал",
-};
+const PALETTE_PREFIXES = [
+  { prefix: ">", mode: "actions" },
+  { prefix: "@", mode: "instances" },
+  { prefix: "#", mode: "settings" },
+  { prefix: "?", mode: "help" },
+] as const;
 
 const TAB_ICON: Record<InstanceTab, ReactNode> = {
   overview: <Info className="size-4 text-faint" />,
@@ -196,7 +188,7 @@ export function CommandPalette({
   const streamer = useStreamerState();
   const settings = useAtomValue(settingsAtom);
   const userThemes = useAtomValue(userThemesAtom);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   useFocusReturn(open);
 
@@ -219,12 +211,16 @@ export function CommandPalette({
   const items = useMemo<PaletteItem[]>(() => {
     if (!open) return [];
 
+    const english = i18n.getFixedT("en");
+    const words = (key: string) =>
+      `${t(`shell.palette.keywords.${key}`)} ${english(`shell.palette.keywords.${key}`)}`;
+
     const list: PaletteItem[] = [
       {
         id: "nav:home",
         section: "navigate",
         title: t("nav.play"),
-        keywords: "home instances library главная сборки бібліотека",
+        keywords: words("home"),
         icon: <Play className="size-4 text-faint" />,
         run: () => navigate({ name: "home" }),
       },
@@ -235,7 +231,7 @@ export function CommandPalette({
         hint: agentBlocked
           ? t(blockReasonShortKey(agentBlocked))
           : AGENT_SHORTCUT_LABEL,
-        keywords: "ai assistant ассистент помощник помічник асистент",
+        keywords: words("agent"),
         icon: <Sparkles className="size-4 text-faint" />,
         disabled: isAgentBlocked,
         run: () => openAgent(),
@@ -244,7 +240,7 @@ export function CommandPalette({
         id: "nav:people",
         section: "navigate",
         title: t("shell.nav.people"),
-        keywords: "friends voice groups друзья голос группы друзі",
+        keywords: words("people"),
         hint: onlineHint,
         icon: <BookUser className="size-4 text-faint" />,
         disabled: !account || account.type === "plain",
@@ -254,27 +250,36 @@ export function CommandPalette({
         id: "nav:profile",
         section: "navigate",
         title: t("shell.nav.profile"),
-        keywords: "skins achievements профиль скины ачивки",
+        keywords: words("profile"),
         hint: onlineHint,
         icon: <UserRound className="size-4 text-faint" />,
         disabled: !account || account.type === "plain",
         run: () => navigate({ name: "profile", userId: OWN_PROFILE_ID }),
       },
       {
+        id: "nav:notifications",
+        section: "navigate",
+        title: t("shell.palette.notifications"),
+        keywords: words("notifications"),
+        hint: onlineHint ?? t("shell.palette.inProfile"),
+        icon: <Bell className="size-4 text-faint" />,
+        disabled: !account || account.type === "plain",
+        run: () =>
+          navigate({ name: "profile", userId: OWN_PROFILE_ID, tab: "profile" }),
+      },
+      {
         id: "nav:settings",
         section: "navigate",
         title: t("settings.title"),
-        keywords: "settings налаштування параметры",
-        hint: runningHint,
+        keywords: words("settings"),
         icon: <LSettings className="size-4 text-faint" />,
-        disabled: isRunning,
         run: () => navigate({ name: "settings" }),
       },
       {
         id: "nav:accounts",
         section: "navigate",
         title: t("accounts.manage"),
-        keywords: "accounts аккаунты акаунти",
+        keywords: words("accounts"),
         icon: <Users className="size-4 text-faint" />,
         run: () => navigate({ name: "accounts" }),
       },
@@ -282,7 +287,7 @@ export function CommandPalette({
         id: "action:new-instance",
         section: "actions",
         title: t("shell.nav.newInstance"),
-        keywords: "create import modpack создать импорт сборка",
+        keywords: words("newInstance"),
         hint: runningHint,
         icon: <ListPlus className="size-4 text-faint" />,
         disabled: isRunning,
@@ -292,8 +297,7 @@ export function CommandPalette({
         id: "action:connectivity",
         section: "actions",
         title: t("taskCenter.checkConnection"),
-        keywords:
-          "connection network internet mirror test соединение сеть интернет зеркало проверка з'єднання мережа",
+        keywords: words("connectivity"),
         icon: <Wifi className="size-4 text-faint" />,
         run: () => openConnectivityCheck(),
       },
@@ -303,8 +307,7 @@ export function CommandPalette({
         title: streamer.active
           ? t("streamer.commandOff")
           : t("streamer.commandOn"),
-        keywords:
-          "streamer stream obs twitch privacy стример стрим трансляция приватность стрімер трансляція",
+        keywords: words("streamer"),
         icon: <MonitorPlay className="size-4 text-faint" />,
         run: () => void setStreamerMode(!streamer.active),
       },
@@ -315,8 +318,7 @@ export function CommandPalette({
           ? t("shell.sidebarExpand")
           : t("shell.sidebarCollapse"),
         hint: SIDEBAR_SHORTCUT_LABEL,
-        keywords:
-          "sidebar panel collapse expand сайдбар панель свернуть развернуть бічна згорнути",
+        keywords: words("sidebar"),
         icon: settings.sidebarCollapsed ? (
           <PanelLeftOpen className="size-4 text-faint" />
         ) : (
@@ -328,8 +330,7 @@ export function CommandPalette({
         id: "action:customize-layout",
         section: "actions",
         title: t("layout.customize"),
-        keywords:
-          "layout customize hide reorder расположение настроить скрыть порядок розташування",
+        keywords: words("customizeLayout"),
         icon: <LayoutTemplate className="size-4 text-faint" />,
         run: startLayoutEditing,
       },
@@ -337,9 +338,12 @@ export function CommandPalette({
         id: "action:reset-layout",
         section: "actions",
         title: t("layout.reset"),
-        keywords: "layout reset расположение сбросить розташування скинути",
+        keywords: words("resetLayout"),
         icon: <RotateCcw className="size-4 text-faint" />,
         disabled: !isLayoutCustomized(settings.interface),
+        hint: isLayoutCustomized(settings.interface)
+          ? undefined
+          : t("shell.palette.reasons.layoutDefault"),
         run: resetLayout,
       },
       ...LAYOUT_PRESETS.map((id) => ({
@@ -348,19 +352,26 @@ export function CommandPalette({
         title: t("layout.presets.command", {
           name: t(`layout.presets.${id}.title`),
         }),
-        keywords:
-          "preset layout compact minimal standard набор пресет компактный минимальный стандарт",
+        keywords: words("layoutPreset"),
         icon: <LayoutTemplate className="size-4 text-faint" />,
         disabled: matchPreset(settings) === id,
+        hint:
+          matchPreset(settings) === id
+            ? t("shell.palette.reasons.current")
+            : undefined,
         run: () => applyPreset(id),
       })),
       ...[...BUILT_IN_THEMES, ...userThemes].map((theme) => ({
         id: `action:theme-${theme.id}`,
         section: "actions" as const,
         title: t("theme.command", { name: themeName(theme, t) }),
-        keywords: "theme тема тёмная светлая oled фон оформление dark light",
+        keywords: words("theme"),
         icon: <Paintbrush className="size-4 text-faint" />,
         disabled: settings.themeId === theme.id,
+        hint:
+          settings.themeId === theme.id
+            ? t("shell.palette.reasons.current")
+            : undefined,
         run: () =>
           void patchSettings({ themeId: theme.id }).catch((error) =>
             showFailureToast(t("settings.saveFailed"), error, {
@@ -378,7 +389,7 @@ export function CommandPalette({
         section: "actions",
         title: t("common.openFolder"),
         hint: selected.version.name,
-        keywords: `folder папка ${selected.version.name}`,
+        keywords: `${words("openFolder")} ${selected.version.name}`,
         icon: <Folder className="size-4 text-faint" />,
         run: () => void api.shell.openPath(selected.versionPath),
       });
@@ -390,7 +401,7 @@ export function CommandPalette({
           section: "actions",
           title: t(`shell.tabs.${tab}`),
           hint: selected.version.name,
-          keywords: `${INSTANCE_TAB_KEYWORDS[tab]} ${selected.version.name}`,
+          keywords: `${words(`tabs.${tab}`)} ${selected.version.name}`,
           icon: TAB_ICON[tab],
           run: () => navigate({ name: "instance", id: key, tab }),
         });
@@ -418,7 +429,7 @@ export function CommandPalette({
           section: "actions",
           title: t("versions.playInstance", { name: version.version.name }),
           hint: version.version.version.id,
-          keywords: `play launch запустить играть ${loader.name}`,
+          keywords: `${words("play")} ${loader.name}`,
           icon: <Play className="size-4 text-success" />,
           run: () => void runGame({ version }),
         });
@@ -434,7 +445,7 @@ export function CommandPalette({
         section: "accounts",
         title: entry.nickname,
         hint: providerName(entry.type, t),
-        keywords: `account switch аккаунт ${entry.type}`,
+        keywords: `${words("account")} ${entry.type}`,
         icon: <AccountHead account={entry} size={18} />,
         run: () => void switchAccount(entry),
       });
@@ -445,7 +456,7 @@ export function CommandPalette({
         id: "action:agent-chat",
         section: "agent",
         title: t("agent.newChat"),
-        keywords: "ai ассистент чат помічник",
+        keywords: words("agentChat"),
         icon: <Sparkles className="size-4 text-faint" />,
         run: () => askAgent(),
       });
@@ -465,11 +476,29 @@ export function CommandPalette({
         id: `settings:${section}`,
         section: "settings",
         title: t(`settings.sections.${section}`),
-        keywords: `settings настройки налаштування ${section} ${entryWords}`,
-        hint: runningHint,
+        keywords: `${words("settings")} ${section} ${entryWords}`,
         icon: <LSettings className="size-4 text-faint" />,
-        disabled: isRunning,
         run: () => navigate({ name: "settings", section }),
+      });
+    }
+
+    for (const entry of SETTINGS_ENTRIES) {
+      if (!isEntryAvailable(entry, PLATFORM)) continue;
+      const key = `settings.index.${entry.id}`;
+
+      list.push({
+        id: `setting:${entry.id}`,
+        section: "settings",
+        title: t(`${key}.title`),
+        hint: t(`settings.sections.${entry.section}`),
+        keywords: [
+          t(`${key}.keywords`),
+          t(`${key}.description`),
+          english(`${key}.title`),
+          english(`${key}.keywords`),
+        ].join(" "),
+        icon: <SlidersHorizontal className="size-4 text-faint" />,
+        run: () => void openSettingsEntry(entry.id),
       });
     }
 
@@ -478,6 +507,7 @@ export function CommandPalette({
     account,
     accounts,
     agentBlocked,
+    i18n,
     isAgentBlocked,
     isRunning,
     onlineHint,
@@ -573,16 +603,23 @@ export function CommandPalette({
       <Command.List className="min-h-0 flex-1 overflow-y-auto p-1.5">
         {mode === "help" ? (
           <div className="space-y-1 p-2">
-            {(["actions", "instances", "settings"] as const).map((key) => (
-              <div key={key} className="flex items-center gap-2.5 text-sm">
-                <kbd className="flex size-6 shrink-0 items-center justify-center rounded-md border border-border bg-surface-2 font-mono text-xs text-muted-foreground">
-                  {key === "actions" ? ">" : key === "instances" ? "@" : "#"}
-                </kbd>
-                <span className="text-muted-foreground">
-                  {t(`shell.palette.modes.${key}`)}
-                </span>
-              </div>
-            ))}
+            {PALETTE_PREFIXES.filter((item) => item.mode !== "help").map(
+              ({ prefix, mode: prefixMode }) => (
+                <button
+                  key={prefix}
+                  type="button"
+                  onClick={() => setRaw(prefix)}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-1 py-0.5 text-left text-sm transition-colors hover:bg-row-hover"
+                >
+                  <kbd className="flex size-6 shrink-0 items-center justify-center rounded-md border border-border bg-surface-2 font-mono text-xs text-muted-foreground">
+                    {prefix}
+                  </kbd>
+                  <span className="text-muted-foreground">
+                    {t(`shell.palette.modes.${prefixMode}`)}
+                  </span>
+                </button>
+              ),
+            )}
           </div>
         ) : (
           <>
@@ -643,14 +680,17 @@ export function CommandPalette({
           <CornerDownLeft className="size-3" />
           {t("shell.palette.open")}
         </span>
-        <span className="flex items-center gap-1">
-          <AtSign className="size-3" />
-          {t("shell.palette.modes.instances")}
-        </span>
-        <span className="flex items-center gap-1">
-          <Hash className="size-3" />
-          {t("shell.palette.modes.settings")}
-        </span>
+        {PALETTE_PREFIXES.map(({ prefix, mode: prefixMode }) => (
+          <button
+            key={prefix}
+            type="button"
+            onClick={() => setRaw(prefix)}
+            className="flex items-center gap-1 rounded transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <kbd className="font-mono text-2xs">{prefix}</kbd>
+            {t(`shell.palette.modes.${prefixMode}`)}
+          </button>
+        ))}
         <span className="ml-auto flex items-center gap-1">
           <kbd className="font-mono">Esc</kbd>
           {t("common.close")}

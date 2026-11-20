@@ -39,6 +39,7 @@ import { TrayHost } from "./hosts/TrayHost";
 import { AppUpdateHost } from "./hosts/AppUpdateHost";
 import { SupportHost } from "./hosts/SupportHost";
 import { StreamerModeHost } from "./hosts/StreamerModeHost";
+import { DataMoveHost } from "./hosts/DataMoveHost";
 
 export function AppHosts() {
   return (
@@ -79,6 +80,7 @@ export function AppHosts() {
       <PortHost />
       <CatalogInstallHost />
       <InstanceDeleteHost />
+      <DataMoveHost />
       <PrivacyNotice />
       <LauncherImportOffer />
       <Onboarding />

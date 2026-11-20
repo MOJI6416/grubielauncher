@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -49,6 +49,7 @@ import { classifyAgentError } from "./providerErrors";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
 import { countFeature } from "@renderer/features/usage/usage";
+import { useAgentProviders } from "./useAgentProviders";
 
 const api = window.api;
 
@@ -93,7 +94,7 @@ function hostOf(baseUrl: string): string {
   }
 }
 
-function ProviderRow({
+export function ProviderRow({
   provider,
   isActive,
   tabIndex,
@@ -215,12 +216,27 @@ function ProviderRow({
   );
 }
 
-export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
+export function AgentProvidersModal({
+  onClose,
+  startWith,
+  onSaved,
+}: {
+  onClose: () => void;
+  startWith?: "new" | AiProviderProfile;
+  onSaved?: (state: AiProvidersState) => void;
+}) {
   const { t } = useTranslation();
-  const [state, setState] = useState<AiProvidersState | null>(null);
-  const [form, setForm] = useState<FormState | null>(null);
+  const providers = useAgentProviders();
+  const { state, setState, loadFailed, load } = providers;
+  const [form, setForm] = useState<FormState | null>(() =>
+    startWith === "new"
+      ? emptyForm()
+      : startWith
+        ? formFromProfile(startWith)
+        : null,
+  );
   const [models, setModels] = useState<AiModelInfo[]>([]);
-  const [manualModel, setManualModel] = useState(false);
+  const [manualModel, setManualModel] = useState(startWith === "new");
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
@@ -228,17 +244,6 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
   const [pendingDelete, setPendingDelete] = useState<AiProviderProfile | null>(
     null,
   );
-  const [loadFailed, setLoadFailed] = useState(false);
-
-  const load = useCallback(async () => {
-    const next = await api.agent.providers.list();
-    setLoadFailed(next === null);
-    if (next) setState(next);
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const modelOptions = useMemo<VirtualizedSelectOption[]>(
     () =>
@@ -274,6 +279,10 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
   }
 
   function closeForm() {
+    if (startWith) {
+      onClose();
+      return;
+    }
     setForm(null);
     setModels([]);
     setTestError(null);
@@ -340,6 +349,7 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
       }
 
       setState(next);
+      onSaved?.(next);
       closeForm();
     } catch (error) {
       showFailureToast(t("agent.providers.saveFailed"), error, {
@@ -351,41 +361,11 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
   }
 
   async function handleDelete(id: string) {
-    let next: AiProvidersState | null = null;
-    let failure: unknown;
-    try {
-      next = await api.agent.providers.remove(id);
-    } catch (error) {
-      failure = error;
-    }
-
-    if (!next) {
-      showFailureToast(t("agent.providers.deleteFailed"), failure, {
-        channels: ["agent:providers:delete"],
-      });
-      return;
-    }
-
-    setState(next);
+    await providers.remove(id);
   }
 
   async function handleSelect(id: string) {
-    let next: AiProvidersState | null = null;
-    let failure: unknown;
-    try {
-      next = await api.agent.providers.select(id);
-    } catch (error) {
-      failure = error;
-    }
-
-    if (!next) {
-      showFailureToast(t("agent.providers.selectFailed"), failure, {
-        channels: ["agent:providers:select"],
-      });
-      return;
-    }
-
-    setState(next);
+    await providers.select(id);
   }
 
   const providerIds = state?.providers.map((provider) => provider.id) ?? [];
@@ -451,10 +431,7 @@ export function AgentProvidersModal({ onClose }: { onClose: () => void }) {
                   variant="outline"
                   size="sm"
                   className="mt-1"
-                  onClick={() => {
-                    setLoadFailed(false);
-                    void load();
-                  }}
+                  onClick={() => void load()}
                 >
                   {t("common.retry")}
                 </Button>

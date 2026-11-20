@@ -18,6 +18,7 @@ export function ReleaseHistory({ appVersion }: { appVersion: string }) {
 
   return (
     <SettingsGroup
+      entry="releaseHistory"
       title={t("settings.about.historyTitle")}
       hint={t("settings.about.historyHint")}
     >

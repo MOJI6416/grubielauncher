@@ -8,7 +8,11 @@ import {
   writeDataLocation,
 } from "../utilities/dataRoot";
 import { planDataTarget } from "../utilities/dataMove";
-import { getProtectedDataRoots } from "../windows/dataLocationWindow";
+import {
+  getProtectedDataRoots,
+  wasMovedAcrossDrives,
+} from "../windows/dataLocationWindow";
+import { getFreeBytes } from "../utilities/diskSpace";
 import { HIDDEN_START_FLAG } from "../utilities/launchAtLogin";
 import { gameRuntime } from "../utilities/runtime";
 import { hasRunningServers } from "../game/Server";
@@ -58,10 +62,16 @@ export function registerDataLocationIpc() {
   handleSafe<DataLocationInfo>(
     "dataLocation:get",
     { root: "", defaultRoot: "", isDefault: true },
-    () => {
+    async () => {
       const root = getDataRoot();
       const defaultRoot = getDefaultDataRoot();
-      return { root, defaultRoot, isDefault: isSamePath(root, defaultRoot) };
+      return {
+        root,
+        defaultRoot,
+        isDefault: isSamePath(root, defaultRoot),
+        freeBytes: await getFreeBytes(root),
+        movedAcrossDrives: wasMovedAcrossDrives(),
+      };
     },
   );
 

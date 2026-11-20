@@ -12,7 +12,7 @@ import {
   TriangleAlert,
   UserRound,
 } from "lucide-react";
-import type { ILocalAccount } from "@/types/Account";
+import type { AccountType, ILocalAccount } from "@/types/Account";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { useAtomValue } from "jotai";
@@ -27,6 +27,7 @@ import { SessionIcon, sessionLabel } from "./SessionMark";
 import { accountIdentity } from "./identity";
 import { isNicknameGameSafe } from "./nickname";
 import {
+  PROVIDER_ORDER,
   isProviderAvailable,
   providerCapabilities,
   providerFeatures,
@@ -59,12 +60,14 @@ export function AccountDetail({
   isRunning,
   onRemove,
   onSignInAgain,
+  onAddProvider,
 }: {
   account: ILocalAccount;
   controller: AccountsController;
   isRunning: boolean;
   onRemove: () => void;
   onSignInAgain: () => void;
+  onAddProvider: (provider: AccountType) => void;
 }) {
   const { t } = useTranslation();
   const [now] = useState(() => Date.now());
@@ -92,15 +95,93 @@ export function AccountDetail({
   );
   const nicknameSafe = isNicknameGameSafe(account.nickname);
 
-  return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto">
-      <div className="flex min-w-0 items-center gap-4">
-        <AccountHead account={account} size={88} className="rounded-2xl" />
+  const connectivity = { isInternetOnline, isBackendOnline };
+  const showGameName = account.type !== "plain";
 
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+  const sessionCard = (
+    <section className="grid content-start gap-2 rounded-xl border border-border bg-surface-2 p-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <SessionIcon state={session.state} busy={busy} />
+        <Hint
+          content={sessionLabel(session.state, t)}
+          variant="text"
+          truncatedOnly
+        >
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+            {sessionLabel(session.state, t)}
+          </span>
+        </Hint>
+      </div>
+
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        {t(`accounts.sessionHint.${session.state}`)}
+      </p>
+
+      {(session.launcherExpiresAt !== null ||
+        session.providerExpiresAt !== null) && (
+        <div className="grid gap-1 pt-0.5">
+          {session.launcherExpiresAt !== null && (
+            <ExpiryRow
+              label={t("accounts.launcherSession")}
+              value={session.launcherExpiresAt}
+            />
+          )}
+          {session.providerExpiresAt !== null && (
+            <ExpiryRow
+              label={t("accounts.providerSession", {
+                provider: providerName(account.type, t),
+              })}
+              value={session.providerExpiresAt}
+            />
+          )}
+        </div>
+      )}
+
+      {account.type !== "plain" && (
+        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          {session.canRenew && session.state !== "active" && (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy || !providerReachable}
+              onClick={() => void controller.renewSession(account)}
+            >
+              <RefreshCw className="size-3.5" />
+              {t("accounts.renew")}
+            </Button>
+          )}
+
+          {session.state === "expired" && (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!providerReachable}
+              onClick={onSignInAgain}
+            >
+              <LogIn className="size-3.5" />
+              {t("accounts.signInAgain")}
+            </Button>
+          )}
+
+          {!providerReachable &&
+            ((session.canRenew && session.state !== "active") ||
+              session.state === "expired") && (
+              <span className="text-2xs text-warning">{offlineHint}</span>
+            )}
+        </div>
+      )}
+    </section>
+  );
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto">
+      <div className="flex min-w-0 items-center gap-3.5">
+        <AccountHead account={account} size={64} className="rounded-xl" />
+
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex min-w-0 items-center gap-2">
             <Hint content={account.nickname} variant="text" truncatedOnly>
-              <h2 className="truncate text-2xl leading-tight font-semibold">
+              <h2 className="truncate text-xl leading-tight font-semibold">
                 {account.nickname}
               </h2>
             </Hint>
@@ -128,6 +209,24 @@ export function AccountDetail({
             </Hint>
           </span>
         </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-0.5 self-start">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={isRunning}
+            onClick={onRemove}
+          >
+            <Trash2 className="size-3.5" />
+            {t("accounts.remove")}
+          </Button>
+          {isRunning && (
+            <span className="max-w-48 text-right text-2xs leading-snug text-faint">
+              {t("accounts.removeWhileRunning")}
+            </span>
+          )}
+        </div>
       </div>
 
       {!nicknameSafe && (
@@ -143,161 +242,99 @@ export function AccountDetail({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        {!isActive && (
-          <Button
-            disabled={busy}
-            onClick={() => void controller.useAccount(account)}
-          >
-            {busy ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Check className="size-4" />
-            )}
-            {t("accounts.use")}
-          </Button>
-        )}
-
-        {account.type !== "plain" && (
-          <>
+      {(!isActive || account.type !== "plain") && (
+        <div className="flex flex-wrap items-center gap-2">
+          {!isActive && (
             <Button
-              variant="secondary"
-              disabled={!isActive}
-              onClick={() =>
-                navigate({ name: "profile", userId: OWN_PROFILE_ID })
-              }
+              disabled={busy}
+              onClick={() => void controller.useAccount(account)}
             >
-              <UserRound className="size-4" />
-              {t("accounts.openProfile")}
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Check className="size-4" />
+              )}
+              {t("accounts.use")}
             </Button>
+          )}
 
-            {caps.skins === "managed" && (
+          {account.type !== "plain" && (
+            <>
               <Button
                 variant="secondary"
                 disabled={!isActive}
                 onClick={() =>
-                  navigate({
-                    name: "profile",
-                    userId: OWN_PROFILE_ID,
-                    tab: "skins",
-                  })
+                  navigate({ name: "profile", userId: OWN_PROFILE_ID })
                 }
               >
-                <Shirt className="size-4" />
-                {t("manageSkins.title")}
+                <UserRound className="size-4" />
+                {t("accounts.openProfile")}
               </Button>
-            )}
 
-            {caps.skins === "external" && (
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  void window.api.shell.openExternal("https://ely.by/skins")
-                }
-              >
-                <ExternalLink className="size-4" />
-                {t("manageSkins.title")}
-              </Button>
-            )}
-          </>
-        )}
-      </div>
-
-      {account.type !== "plain" && (
-        <div className="grid gap-0.5 text-xs leading-relaxed text-faint">
-          {!isActive && <p>{t("accounts.needsActive")}</p>}
-          <p>{t("accounts.identityInProfile")}</p>
-        </div>
-      )}
-
-      {account.type !== "plain" && (
-        <GameNameSection
-          account={account}
-          controller={controller}
-          isRunning={isRunning}
-          reachable={isInternetOnline && isBackendOnline}
-          offlineHint={offlineHint}
-        />
-      )}
-
-      <section className="grid gap-2 rounded-xl border border-border bg-surface-2 p-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <SessionIcon state={session.state} busy={busy} />
-          <Hint
-            content={sessionLabel(session.state, t)}
-            variant="text"
-            truncatedOnly
-          >
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">
-              {sessionLabel(session.state, t)}
-            </span>
-          </Hint>
-        </div>
-
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {t(`accounts.sessionHint.${session.state}`)}
-        </p>
-
-        {(session.launcherExpiresAt !== null ||
-          session.providerExpiresAt !== null) && (
-          <div className="grid gap-1 pt-0.5">
-            {session.launcherExpiresAt !== null && (
-              <ExpiryRow
-                label={t("accounts.launcherSession")}
-                value={session.launcherExpiresAt}
-              />
-            )}
-            {session.providerExpiresAt !== null && (
-              <ExpiryRow
-                label={t("accounts.providerSession", {
-                  provider: providerName(account.type, t),
-                })}
-                value={session.providerExpiresAt}
-              />
-            )}
-          </div>
-        )}
-
-        {account.type !== "plain" && (
-          <div className="flex flex-wrap items-center gap-2 pt-0.5">
-            {session.canRenew && session.state !== "active" && (
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={busy || !providerReachable}
-                onClick={() => void controller.renewSession(account)}
-              >
-                <RefreshCw className="size-3.5" />
-                {t("accounts.renew")}
-              </Button>
-            )}
-
-            {session.state === "expired" && (
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={!providerReachable}
-                onClick={onSignInAgain}
-              >
-                <LogIn className="size-3.5" />
-                {t("accounts.signInAgain")}
-              </Button>
-            )}
-
-            {!providerReachable &&
-              ((session.canRenew && session.state !== "active") ||
-                session.state === "expired") && (
-                <span className="text-2xs text-warning">{offlineHint}</span>
+              {caps.skins === "managed" && (
+                <Button
+                  variant="secondary"
+                  disabled={!isActive}
+                  onClick={() =>
+                    navigate({
+                      name: "profile",
+                      userId: OWN_PROFILE_ID,
+                      tab: "skins",
+                    })
+                  }
+                >
+                  <Shirt className="size-4" />
+                  {t("manageSkins.title")}
+                </Button>
               )}
-          </div>
+
+              {caps.skins === "external" && (
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    void window.api.shell.openExternal("https://ely.by/skins")
+                  }
+                >
+                  <ExternalLink className="size-4" />
+                  {t("manageSkins.title")}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {account.type !== "plain" && (
+        <p className="text-xs leading-relaxed text-faint">
+          {!isActive && `${t("accounts.needsActive")} · `}
+          {t("accounts.identityInProfile")}
+        </p>
+      )}
+
+      <div
+        className={
+          showGameName
+            ? "grid grid-cols-2 items-start gap-3"
+            : "grid items-start gap-3"
+        }
+      >
+        {showGameName && (
+          <GameNameSection
+            account={account}
+            controller={controller}
+            isRunning={isRunning}
+            reachable={isInternetOnline && isBackendOnline}
+            offlineHint={offlineHint}
+          />
         )}
-      </section>
+        {sessionCard}
+      </div>
 
       <section className="grid gap-1.5">
         <p className="text-xs font-medium tracking-wide text-faint uppercase">
           {t("accounts.capabilities")}
         </p>
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           {providerFeatures(account.type).map((feature) => (
             <span
               key={feature.key}
@@ -325,33 +362,32 @@ export function AccountDetail({
       </section>
 
       {account.type === "plain" && (
-        <section className="grid gap-1.5">
-          <p className="text-xs font-medium tracking-wide text-faint uppercase">
-            {t("accounts.upgradeTitle")}
-          </p>
-          <p className="rounded-xl border border-border bg-surface-2 p-3 text-xs leading-relaxed text-muted-foreground">
+        <section className="grid gap-2 rounded-xl border border-border bg-surface-2 p-3">
+          <p className="text-sm font-medium">{t("accounts.upgradeTitle")}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
             {t("accounts.upgradeHint")}
           </p>
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            {PROVIDER_ORDER.filter((provider) => provider !== "plain").map(
+              (provider) => (
+                <Button
+                  key={provider}
+                  size="sm"
+                  variant="secondary"
+                  disabled={!isProviderAvailable(provider, connectivity)}
+                  onClick={() => onAddProvider(provider)}
+                >
+                  <ProviderIcon type={provider} size={13} />
+                  {providerName(provider, t)}
+                </Button>
+              ),
+            )}
+            {!isProviderAvailable("discord", connectivity) && (
+              <span className="text-2xs text-warning">{offlineHint}</span>
+            )}
+          </div>
         </section>
       )}
-
-      <div className="mt-auto flex items-center justify-end gap-2 border-t border-border pt-3">
-        {isRunning && (
-          <span className="min-w-0 text-2xs text-faint">
-            {t("accounts.removeWhileRunning")}
-          </span>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-          disabled={isRunning}
-          onClick={onRemove}
-        >
-          <Trash2 className="size-3.5" />
-          {t("accounts.remove")}
-        </Button>
-      </div>
     </div>
   );
 }

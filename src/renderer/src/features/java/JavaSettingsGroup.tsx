@@ -27,6 +27,7 @@ import {
   minecraftRangeKey,
 } from "./javaChoices";
 import { useJavaRuntimes } from "./useJavaRuntimes";
+import { useGameLockReason } from "@renderer/features/settings/gameLock";
 
 const AUTO = "auto";
 
@@ -116,6 +117,7 @@ function RuntimeRow({
 
 export function JavaSettingsGroup({ query }: { query: string }) {
   const { t } = useTranslation();
+  const lockedReason = useGameLockReason();
   const versions = useAtomValue(versionsAtom);
   const { list, scanning, add, remove, setDefault, refresh } = useJavaRuntimes();
 
@@ -139,7 +141,12 @@ export function JavaSettingsGroup({ query }: { query: string }) {
   };
 
   return (
-    <SettingsGroup title={t("java.title")} hint={t("java.hint")}>
+    <SettingsGroup
+      entry="java"
+      title={t("java.title")}
+      hint={t("java.hint")}
+      lockedReason={lockedReason}
+    >
       {majors.map((major) => {
         const chosen = list?.defaults[String(major)] ?? null;
         const chosenRuntime = chosen ? findRuntime(list, chosen) : null;

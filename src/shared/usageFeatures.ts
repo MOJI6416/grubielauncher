@@ -35,6 +35,7 @@ export const USAGE_FEATURES = [
   "settings.layout",
   "settings.system",
   "settings.voice",
+  "settings.assistant",
   "settings.privacy",
   "settings.storage",
   "settings.support",

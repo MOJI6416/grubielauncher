@@ -8,6 +8,7 @@ export type SettingsSectionId =
   | "layout"
   | "system"
   | "voice"
+  | "assistant"
   | "privacy"
   | "storage"
   | "support"
@@ -66,12 +67,12 @@ export type SettingsEntryId =
   | "sharedGameSettings"
   | "streamerMode"
   | "streamerModeAuto"
-  | "notifications"
   | "hideServerInRpc"
   | "directConnect"
   | "crashTelemetry"
   | "usageStats"
   | "packAnalytics"
+  | "agentProviders"
   | "aiLogAnalysis"
   | "agentChatSync"
   | "accountSync"
@@ -105,6 +106,7 @@ export const SETTINGS_SECTIONS: SettingsSectionId[] = [
   "layout",
   "system",
   "voice",
+  "assistant",
   "privacy",
   "storage",
   "support",
@@ -217,26 +219,26 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
     section: "voice",
     keys: ["voiceOverlay", "voiceOverlayCorner", "voiceOverlayDisplay"],
   },
+  { id: "agentProviders", section: "assistant", keys: [] },
+  { id: "agentChatSync", section: "assistant", keys: ["agentChatSync"] },
+  { id: "aiLogAnalysis", section: "assistant", keys: ["aiLogAnalysis"] },
   { id: "streamerMode", section: "privacy", keys: ["streamerMode"] },
   { id: "streamerModeAuto", section: "privacy", keys: ["streamerModeAuto"] },
-  { id: "notifications", section: "privacy", keys: [] },
   { id: "hideServerInRpc", section: "privacy", keys: ["hideServerInRpc"] },
   { id: "directConnect", section: "privacy", keys: ["directConnect"] },
   { id: "crashTelemetry", section: "privacy", keys: ["crashTelemetry"] },
   { id: "usageStats", section: "privacy", keys: ["usageStats"] },
   { id: "packAnalytics", section: "privacy", keys: ["packAnalytics"] },
-  { id: "aiLogAnalysis", section: "privacy", keys: ["aiLogAnalysis"] },
-  { id: "agentChatSync", section: "privacy", keys: ["agentChatSync"] },
   { id: "accountSync", section: "privacy", keys: ["accountSync"] },
   { id: "allowedPaths", section: "privacy", keys: [] },
   { id: "storageUsage", section: "storage", keys: [] },
   { id: "dataLocation", section: "storage", keys: [] },
   { id: "storageCleanup", section: "storage", keys: [] },
+  { id: "folders", section: "storage", keys: [] },
   { id: "supportReport", section: "support", keys: [] },
   { id: "verboseJournal", section: "support", keys: [] },
   { id: "devMode", section: "support", keys: ["devMode"] },
   { id: "systemReport", section: "support", keys: [] },
-  { id: "folders", section: "about", keys: [] },
   { id: "links", section: "about", keys: [] },
   { id: "releaseHistory", section: "about", keys: [] },
 ];

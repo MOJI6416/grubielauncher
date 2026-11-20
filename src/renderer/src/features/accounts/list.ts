@@ -34,17 +34,8 @@ export function isAmbiguousNickname(
   return duplicates.has(account.nickname.trim().toLowerCase());
 }
 
-export function sortAccounts<T extends AccountListItem>(
-  accounts: T[],
-  selectedIdentity?: string | null,
-): T[] {
+export function sortAccounts<T extends AccountListItem>(accounts: T[]): T[] {
   return [...accounts].sort((a, b) => {
-    if (selectedIdentity) {
-      const aSelected = accountIdentity(a) === selectedIdentity;
-      const bSelected = accountIdentity(b) === selectedIdentity;
-      if (aSelected !== bSelected) return aSelected ? -1 : 1;
-    }
-
     const rank = providerRank(a.type) - providerRank(b.type);
     if (rank !== 0) return rank;
 

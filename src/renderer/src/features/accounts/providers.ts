@@ -98,6 +98,7 @@ export function providerFeatures(type: AccountType): ProviderFeature[] {
     { key: "capes", available: caps.capes },
     { key: "friends", available: caps.friends },
     { key: "worksOffline", available: !caps.requiresInternet },
+    { key: "openServers", available: true },
   ];
 }
 

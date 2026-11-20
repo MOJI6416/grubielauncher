@@ -5,6 +5,7 @@ import {
   AppWindow,
   Archive,
   Boxes,
+  ChevronRight,
   CircleCheck,
   Coffee,
   FolderOpen,
@@ -26,11 +27,14 @@ import { Button } from "@/components/ui/button";
 import { Hint } from "@renderer/components/Hint";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
-import { isRunningAtom, pathsAtom } from "@renderer/stores/atoms";
+import { pathsAtom, versionsAtom } from "@renderer/stores/atoms";
+import { navigate } from "@renderer/navigation/navigate";
+import { instanceKey } from "@renderer/features/instances/selectors";
 import { formatBytes } from "@renderer/utilities/file";
 import { showFailureToast } from "@renderer/utilities/failures";
 import type { StorageBreakdown, StorageCategoryId } from "@/types/Storage";
-import { Highlighted, SettingsGroup } from "./SettingsPrimitives";
+import { Highlighted, PathRow, SettingsGroup } from "./SettingsPrimitives";
+import { useGameLock } from "./gameLock";
 import { DataLocationGroup } from "./DataLocationGroup";
 import type { SettingsEntryId } from "./catalog";
 import {
@@ -88,7 +92,8 @@ export function StorageSection({
 }) {
   const { t } = useTranslation();
   const paths = useAtomValue(pathsAtom);
-  const isRunning = useAtomValue(isRunningAtom);
+  const gameLock = useGameLock();
+  const instances = useAtomValue(versionsAtom);
   const [data, setData] = useState<StorageBreakdown | null>(cachedBreakdown);
   const [isScanning, setScanning] = useState(false);
   const [isFailed, setFailed] = useState(false);
@@ -140,7 +145,13 @@ export function StorageSection({
   const offers = cleanupOffers(data);
   const reclaimable = totalReclaimable(data);
   const versions = topVersions(data, VERSION_LIMIT);
-  const locked = isRunning;
+  const locked = gameLock !== null;
+  const instanceByFolder = new Map(
+    instances.map((instance) => [
+      instance.versionPath.split(/[\\/]/).filter(Boolean).pop() ?? "",
+      instanceKey(instance),
+    ]),
+  );
   const showUsage = visible("storageUsage");
   const showCleanup = visible("storageCleanup");
 
@@ -234,7 +245,10 @@ export function StorageSection({
   return (
     <div className="flex flex-col gap-4">
       {showUsage && (
-        <div className="rounded-xl border border-border bg-card p-3.5">
+        <div
+          data-settings-entry="storageUsage"
+          className="scroll-my-3 rounded-xl border border-border bg-card p-3.5 transition-shadow data-[flash]:ring-2 data-[flash]:ring-primary/50"
+        >
           <div className="flex items-end justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs text-faint">
@@ -314,6 +328,30 @@ export function StorageSection({
       )}
 
       {visible("dataLocation") && <DataLocationGroup query={query} />}
+
+      {visible("folders") && (
+        <SettingsGroup
+          entry="folders"
+          title={t("settings.folders.title")}
+          hint={t("settings.folders.description")}
+        >
+          <PathRow
+            label={t("settings.folders.launcher")}
+            path={paths.launcher}
+            onOpen={() => void api.shell.openPath(paths.launcher)}
+          />
+          <PathRow
+            label={t("settings.folders.minecraft")}
+            path={paths.minecraft}
+            onOpen={() => void api.shell.openPath(paths.minecraft)}
+          />
+          <PathRow
+            label={t("settings.folders.java")}
+            path={paths.java}
+            onOpen={() => void api.shell.openPath(paths.java)}
+          />
+        </SettingsGroup>
+      )}
 
       <div
         className={cn(
@@ -395,6 +433,7 @@ export function StorageSection({
         <div className="flex flex-col gap-4">
           {showCleanup && (
             <SettingsGroup
+              entry="storageCleanup"
               title={
                 <Highlighted
                   text={t("settings.storage.reclaimTitle")}
@@ -455,7 +494,7 @@ export function StorageSection({
                           {offer.count > 0 && (
                             <span className="block text-2xs whitespace-nowrap text-faint">
                               {t("settings.storage.offerCount", {
-                                value: offer.count,
+                                count: offer.count,
                               })}
                             </span>
                           )}
@@ -484,30 +523,51 @@ export function StorageSection({
               title={t("settings.storage.byVersion")}
               hint={t("settings.storage.byVersionHint")}
             >
-              {versions.entries.map((version) => (
-                <div key={version.name} className="px-3.5 py-1.5">
-                  <div className="flex items-center gap-2">
-                    <Package className="size-3 shrink-0 text-faint" />
-                    <Hint content={version.name} variant="text" truncatedOnly>
-                      <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                        {version.name}
+              {versions.entries.map((version) => {
+                const key = instanceByFolder.get(version.name);
+                const body = (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Package className="size-3 shrink-0 text-faint" />
+                      <Hint content={version.name} variant="text" truncatedOnly>
+                        <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                          {version.name}
+                        </span>
+                      </Hint>
+                      <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">
+                        {bytes(version.size)}
                       </span>
-                    </Hint>
-                    <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">
-                      {bytes(version.size)}
-                    </span>
+                      {key && (
+                        <ChevronRight className="size-3 shrink-0 text-faint" />
+                      )}
+                    </div>
+                    <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-surface-3">
+                      <span
+                        className="block h-full rounded-full bg-muted-foreground/50"
+                        style={{ width: `${version.percent}%` }}
+                      />
+                    </div>
+                  </>
+                );
+
+                return key ? (
+                  <button
+                    key={version.name}
+                    type="button"
+                    onClick={() => navigate({ name: "instance", id: key })}
+                    className="block w-full px-3.5 py-1.5 text-left transition-colors hover:bg-row-hover"
+                  >
+                    {body}
+                  </button>
+                ) : (
+                  <div key={version.name} className="px-3.5 py-1.5">
+                    {body}
                   </div>
-                  <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-surface-3">
-                    <span
-                      className="block h-full rounded-full bg-muted-foreground/50"
-                      style={{ width: `${version.percent}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {versions.rest > 0 && (
                 <p className="px-3.5 py-1.5 text-2xs text-faint">
-                  {t("settings.storage.restMore", { value: versions.rest })}
+                  {t("settings.storage.restCount", { count: versions.rest })}
                 </p>
               )}
             </SettingsGroup>
@@ -530,7 +590,9 @@ export function StorageSection({
               text:
                 pending === "dedupe"
                   ? t("settings.storage.dedupeConfirm")
-                  : t(`settings.storage.offers.${pending}`),
+                  : pending === "instances"
+                    ? t("settings.storage.cleanupInstancesConfirm")
+                    : t(`settings.storage.offers.${pending}`),
               color: pending === "dedupe" ? "primary" : "danger",
               onClick: () => void run(pending),
             },

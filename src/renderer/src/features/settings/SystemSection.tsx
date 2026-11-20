@@ -97,6 +97,7 @@ export function SystemSection({
     <SettingsGroup title={t("settings.sections.system")}>
       {visible("closeToTray") && (
         <SettingRow
+          entry="closeToTray"
           title={t("settings.system.closeToTray")}
           description={t("settings.system.closeToTrayDescription")}
           query={query}
@@ -129,6 +130,7 @@ export function SystemSection({
 
       {visible("launchAtLogin") && (
         <SettingRow
+          entry="launchAtLogin"
           htmlFor="settings-launch-at-login"
           title={t("settings.system.launchAtLogin")}
           description={
@@ -151,6 +153,7 @@ export function SystemSection({
 
       {visible("startScreen") && (
         <SettingRow
+          entry="startScreen"
           title={t("settings.system.startScreen")}
           description={t("settings.system.startScreenDescription")}
           query={query}
@@ -180,6 +183,7 @@ export function SystemSection({
 
       {visible("gameWindow") && (
         <SettingRow
+          entry="gameWindow"
           title={t("settings.system.gameWindow")}
           description={t("settings.system.gameWindowDescription")}
           query={query}

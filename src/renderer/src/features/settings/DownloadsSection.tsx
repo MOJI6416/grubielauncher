@@ -135,6 +135,7 @@ export function DownloadsSection({
       <SettingsGroup title={t("settings.sections.downloads")}>
         {visible("downloadSource") && (
           <SettingRow
+            entry="downloadSource"
             title={t("settings.downloadSource")}
             description={t("settings.downloads.sourceDescription")}
             query={query}
@@ -183,6 +184,7 @@ export function DownloadsSection({
 
         {visible("downloadLimit") && (
           <SettingRow
+            entry="downloadLimit"
             title={t("settings.downloadLimit")}
             description={t("settings.downloads.limitDescription")}
             query={query}
@@ -219,6 +221,7 @@ export function DownloadsSection({
         <SettingsGroup title={t("settings.downloads.contentTitle")}>
           {visible("modUpdateChannel") && (
             <SettingRow
+              entry="modUpdateChannel"
               title={t("settings.downloads.updateChannel")}
               description={t("settings.downloads.updateChannelDescription")}
               query={query}
@@ -243,6 +246,7 @@ export function DownloadsSection({
 
           {visible("catalogLinks") && (
             <SettingRow
+              entry="catalogLinks"
               htmlFor="settings-catalogLinks"
               title={t("settings.downloads.catalogLinks")}
               description={t("settings.downloads.catalogLinksDescription")}
@@ -281,6 +285,7 @@ export function DownloadsSection({
 
       {visible("mirrorRouting") && (
         <SettingsGroup
+          entry="mirrorRouting"
           title={t("settings.downloads.routingTitle")}
           hint={t("settings.downloads.routingHint")}
         >

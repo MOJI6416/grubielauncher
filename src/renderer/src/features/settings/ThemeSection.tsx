@@ -186,6 +186,7 @@ export function ThemeSection({
       <SettingsGroup title={t("settings.sections.themes")}>
         {visible("theme") && (
           <SettingRow
+            entry="theme accent"
             title={t("theme.title")}
             description={t("theme.description")}
             query={query}
@@ -286,6 +287,7 @@ export function ThemeSection({
 
         {visible("accent") && (tab === "mine" || !!query) && (
           <SettingRow
+            entry="accent"
             title={t("settings.interface.accent")}
             description={
               shown.colors.accent

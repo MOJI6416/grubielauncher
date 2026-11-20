@@ -74,6 +74,7 @@ export function VoiceSection({
     <SettingsGroup title={t("settings.sections.voice")}>
       {visible("voiceDevices") && (
         <SettingRow
+          entry="voiceDevices"
           title={t("settings.voiceDevices")}
           description={t("settings.voice.devicesDescription")}
           query={query}
@@ -97,6 +98,7 @@ export function VoiceSection({
 
       {visible("voicePtt") && (
         <SettingRow
+          entry="voicePtt"
           htmlFor="settings-voice-ptt"
           title={t("settings.voicePtt")}
           description={t("settings.voicePttDescription")}
@@ -155,6 +157,7 @@ export function VoiceSection({
 
       {visible("voiceNoiseSuppression") && (
         <SettingRow
+          entry="voiceNoiseSuppression"
           htmlFor="settings-voice-rnnoise"
           title={t("settings.voiceNoiseSuppression")}
           description={t("settings.voiceNoiseSuppressionDescription")}
@@ -175,6 +178,7 @@ export function VoiceSection({
 
       {visible("voiceGate") && (
         <SettingRow
+          entry="voiceGate"
           htmlFor="settings-voice-gate"
           title={t("settings.voiceGate")}
           description={t("settings.voiceGateDescription")}
@@ -200,6 +204,7 @@ export function VoiceSection({
 
       {visible("voiceOverlay") && (
         <SettingRow
+          entry="voiceOverlay"
           htmlFor="settings-voice-overlay"
           title={t("settings.voiceOverlay")}
           description={t("settings.voiceOverlayDescription")}
@@ -222,6 +227,7 @@ export function VoiceSection({
 
       {visible("voiceAutoGain") && (
         <SettingRow
+          entry="voiceAutoGain"
           htmlFor="settings-voice-agc"
           title={t("settings.voiceAutoGain")}
           description={t("settings.voiceAutoGainDescription")}
@@ -240,6 +246,7 @@ export function VoiceSection({
 
       {visible("voiceEchoCancellation") && (
         <SettingRow
+          entry="voiceEchoCancellation"
           htmlFor="settings-voice-aec"
           title={t("settings.voiceEchoCancellation")}
           description={t("settings.voiceEchoCancellationDescription")}

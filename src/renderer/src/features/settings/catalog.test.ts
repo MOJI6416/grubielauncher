@@ -53,6 +53,16 @@ describe("catalog coverage", () => {
       "sharedGameSettings",
     ]);
   });
+
+  it("keeps the assistant settings together and the folders with storage", () => {
+    expect(sectionEntryIds("assistant")).toEqual([
+      "agentProviders",
+      "agentChatSync",
+      "aiLogAnalysis",
+    ]);
+    expect(entrySection("folders")).toBe("storage");
+    expect(sectionEntryIds("privacy")).not.toContain("aiLogAnalysis");
+  });
 });
 
 describe("isSettingsSection", () => {

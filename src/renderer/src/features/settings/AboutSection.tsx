@@ -4,13 +4,12 @@ import { Gift, Heart, Loader2 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { pathsAtom } from "@renderer/stores/atoms";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { MilestoneBeam } from "@renderer/components/MilestoneBeam";
 import { isMilestoneRelease } from "@renderer/features/whatsNew/milestone";
 import { useCurrentRelease } from "@renderer/features/whatsNew/useCurrentRelease";
 import { whatsNewLoadingAtom } from "@renderer/features/whatsNew/whatsNewStore";
-import { PathRow, SettingRow, SettingsGroup } from "./SettingsPrimitives";
+import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import { ReleaseHistory } from "./ReleaseHistory";
 import { platformName } from "./systemReport";
 import type { SettingsEntryId } from "./catalog";
@@ -35,7 +34,6 @@ export function AboutSection({
 }) {
   const { t, i18n } = useTranslation();
   const isMilestone = isMilestoneRelease(useCurrentRelease());
-  const paths = useAtomValue(pathsAtom);
   const isWhatsNewLoading = useAtomValue(whatsNewLoadingAtom);
 
   const open = (url: string) => {
@@ -96,31 +94,8 @@ export function AboutSection({
         </Button>
       </div>
 
-      {visible("folders") && (
-        <SettingsGroup
-          title={t("settings.folders.title")}
-          hint={t("settings.folders.description")}
-        >
-          <PathRow
-            label={t("settings.folders.launcher")}
-            path={paths.launcher}
-            onOpen={() => void api.shell.openPath(paths.launcher)}
-          />
-          <PathRow
-            label={t("settings.folders.minecraft")}
-            path={paths.minecraft}
-            onOpen={() => void api.shell.openPath(paths.minecraft)}
-          />
-          <PathRow
-            label={t("settings.folders.java")}
-            path={paths.java}
-            onOpen={() => void api.shell.openPath(paths.java)}
-          />
-        </SettingsGroup>
-      )}
-
       {visible("links") && (
-        <SettingsGroup title={t("settings.about.communityTitle")}>
+        <SettingsGroup entry="links" title={t("settings.about.communityTitle")}>
           <SettingRow
             title="Discord"
             description={t("settings.about.discordDescription")}

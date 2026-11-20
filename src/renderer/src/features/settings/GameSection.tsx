@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
-import { SlidersHorizontal } from "lucide-react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -18,6 +19,7 @@ import { normalizeWorldBackupKeep } from "@/types/WorldBackup";
 import type { TSettings } from "@/types/Settings";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import { MemoryControl } from "./MemoryControl";
+import { useGameLockReason } from "./gameLock";
 import type { SettingsEntryId } from "./catalog";
 import { JavaSettingsGroup } from "@renderer/features/java/JavaSettingsGroup";
 import { SharedSettingsGroup } from "@renderer/features/sharedSettings/SharedSettingsGroup";
@@ -31,6 +33,7 @@ import {
 } from "@renderer/features/launch/LaunchSettingsControls";
 
 const KEEP_OPTIONS = [1, 3, 5, 10, 20];
+const OVERRIDES_PREVIEW = 4;
 
 function formatGb(mb: number): string {
   return (mb / 1024).toFixed(mb % 1024 === 0 ? 0 : 1);
@@ -57,19 +60,27 @@ export function GameSection({
   const versions = useAtomValue(versionsAtom);
   const isLinux = PLATFORM === "linux";
   const linuxTools = useLinuxLaunchTools(isLinux);
+  const lockedReason = useGameLockReason();
+  const [showAllOverrides, setShowAllOverrides] = useState(false);
 
   const overriding = versions.filter(
     (version) => countOverrides(version.version.overrides) > 0,
   );
+  const shownOverrides = showAllOverrides
+    ? overriding
+    : overriding.slice(0, OVERRIDES_PREVIEW);
+  const hiddenOverrides = overriding.length - shownOverrides.length;
 
   return (
     <div className="flex flex-col gap-4">
       <SettingsGroup
         title={t("settings.game.launchTitle")}
         hint={t("settings.game.defaultsNote")}
+        lockedReason={lockedReason}
       >
         {visible("memory") && (
           <SettingRow
+            entry="memory"
             title={t("settings.memory")}
             description={t("settings.game.memoryDescription")}
             query={query}
@@ -87,6 +98,7 @@ export function GameSection({
 
         {visible("optimizedJvm") && (
           <SettingRow
+            entry="optimizedJvm"
             htmlFor="settings-optimized-jvm"
             title={t("settings.optimizedJvm")}
             description={t("settings.game.optimizedJvmDescription")}
@@ -107,6 +119,7 @@ export function GameSection({
 
         {visible("highPriority") && PLATFORM === "win32" && (
           <SettingRow
+            entry="highPriority"
             htmlFor="settings-high-priority"
             title={t("settings.highPriority")}
             description={t("settings.highPriorityDescription")}
@@ -146,8 +159,10 @@ export function GameSection({
           visible("launchEnv") ||
           visible("launchHooks")) && (
           <SettingsGroup
+            entry="linuxTools wrapperCommand launchEnv launchHooks"
             title={t("launchSettings.linux.title")}
             hint={t("launchSettings.linux.hint")}
+            lockedReason={lockedReason}
           >
             <div className="px-3.5 py-3">
               <LinuxLaunchFields
@@ -169,6 +184,7 @@ export function GameSection({
         >
           {visible("autoWorldBackup") && (
             <SettingRow
+              entry="autoWorldBackup"
               htmlFor="settings-auto-backup"
               title={t("settings.autoWorldBackup")}
               description={t("settings.autoWorldBackupDescription")}
@@ -187,6 +203,7 @@ export function GameSection({
 
           {visible("worldBackupKeep") && (
             <SettingRow
+              entry="worldBackupKeep"
               title={t("settings.worldBackupKeep")}
               description={t("settings.worldBackupKeepDescription")}
               query={query}
@@ -225,7 +242,7 @@ export function GameSection({
           title={t("settings.game.overridesTitle")}
           hint={t("settings.game.overridesHint")}
         >
-          {overriding.slice(0, 4).map((version) => (
+          {shownOverrides.map((version) => (
             <button
               key={instanceKey(version)}
               type="button"
@@ -251,6 +268,16 @@ export function GameSection({
               </span>
             </button>
           ))}
+          {hiddenOverrides > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAllOverrides(true)}
+              className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-row-hover hover:text-foreground"
+            >
+              <ChevronDown className="size-3.5 shrink-0 text-faint" />
+              {t("settings.game.overridesMore", { count: hiddenOverrides })}
+            </button>
+          )}
         </SettingsGroup>
       )}
     </div>

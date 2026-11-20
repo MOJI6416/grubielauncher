@@ -1,6 +1,6 @@
 import { Children, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { RotateCcw } from "lucide-react";
+import { Lock, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Hint } from "@renderer/components/Hint";
@@ -28,21 +28,51 @@ export function Highlighted({ text, query }: { text: string; query: string }) {
   );
 }
 
+export function LockedNote({
+  reason,
+  className,
+}: {
+  reason: string;
+  className?: string;
+}) {
+  return (
+    <p
+      className={cn(
+        "flex items-start gap-1.5 text-xs leading-snug text-muted-foreground",
+        className,
+      )}
+    >
+      <Lock className="mt-px size-3 shrink-0 text-faint" />
+      <span className="min-w-0">{reason}</span>
+    </p>
+  );
+}
+
 export function SettingsGroup({
   title,
   hint,
+  entry,
+  lockedReason,
   children,
   className,
 }: {
   title?: ReactNode;
   hint?: string;
+  entry?: string;
+  lockedReason?: string;
   children: ReactNode;
   className?: string;
 }) {
   if (Children.toArray(children).length === 0) return null;
 
   return (
-    <section className={cn("min-w-0", className)}>
+    <section
+      data-settings-entry={entry}
+      className={cn(
+        "min-w-0 scroll-my-3 data-[flash]:[&>.settings-card]:ring-2 data-[flash]:[&>.settings-card]:ring-primary/50",
+        className,
+      )}
+    >
       {title && (
         <div className="mb-1.5 flex items-baseline gap-2 px-0.5">
           <h3 className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -55,7 +85,16 @@ export function SettingsGroup({
           )}
         </div>
       )}
-      <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+      {lockedReason && (
+        <LockedNote reason={lockedReason} className="mb-1.5 px-0.5" />
+      )}
+      <div
+        inert={Boolean(lockedReason)}
+        className={cn(
+          "settings-card divide-y divide-border overflow-hidden rounded-xl border border-border bg-card transition-shadow",
+          lockedReason && "opacity-60",
+        )}
+      >
         {children}
       </div>
     </section>
@@ -71,6 +110,8 @@ export function SettingRow({
   onReset,
   query = "",
   disabled,
+  entry,
+  lockedReason,
   children,
 }: {
   title: string;
@@ -81,14 +122,18 @@ export function SettingRow({
   onReset?: () => void;
   query?: string;
   disabled?: boolean;
+  entry?: string;
+  lockedReason?: string;
   children?: ReactNode;
 }) {
   const { t } = useTranslation();
+  const locked = Boolean(lockedReason);
 
   return (
     <div
+      data-settings-entry={entry}
       className={cn(
-        "group/row px-3.5 py-2.5 transition-colors",
+        "group/row scroll-my-3 px-3.5 py-2.5 transition-colors data-[flash]:bg-primary-soft",
         disabled && "opacity-60",
       )}
     >
@@ -129,10 +174,21 @@ export function SettingRow({
               <Highlighted text={description} query={query} />
             </p>
           )}
+          {lockedReason && (
+            <LockedNote reason={lockedReason} className="mt-1" />
+          )}
         </div>
-        {control && <div className="shrink-0">{control}</div>}
+        {control && (
+          <div inert={locked} className={cn("shrink-0", locked && "opacity-50")}>
+            {control}
+          </div>
+        )}
       </div>
-      {children && <div className="mt-2.5">{children}</div>}
+      {children && (
+        <div inert={locked} className={cn("mt-2.5", locked && "opacity-50")}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }

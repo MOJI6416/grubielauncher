@@ -176,6 +176,12 @@ function releaseWindow(): void {
   });
 }
 
+let movedAcrossDrives = false;
+
+export function wasMovedAcrossDrives(): boolean {
+  return movedAcrossDrives;
+}
+
 async function runPendingMove(
   location: DataLocationFile & { move: { from: string; to: string } },
 ): Promise<void> {
@@ -252,6 +258,7 @@ async function runPendingMove(
           ? [...(latest.cleanup ?? []), from]
           : latest.cleanup,
     });
+    movedAcrossDrives = outcome === "copied";
     await fs.remove(path.join(to, MOVE_MARKER)).catch(() => undefined);
     await rebaseShortcutIcons(from, to).catch(() => 0);
   } catch (error) {

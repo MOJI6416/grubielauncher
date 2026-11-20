@@ -75,10 +75,7 @@ export function AccountsPanel() {
     ? accountIdentity(selectedAccount)
     : null;
 
-  const ordered = useMemo(
-    () => sortAccounts(accounts, selectedIdentity),
-    [accounts, selectedIdentity],
-  );
+  const ordered = useMemo(() => sortAccounts(accounts), [accounts]);
   const visible = useMemo(
     () => filterAccounts(ordered, query),
     [ordered, query],
@@ -240,6 +237,7 @@ export function AccountsPanel() {
                       accountIdentity(focusedAccount) === identity;
                     const isActive = selectedIdentity === identity;
                     const session = readAccountSession(account);
+                    const shortcutIndex = ordered.indexOf(account);
 
                     return (
                       <RemovalItem key={identity} itemKey={identity}>
@@ -309,6 +307,14 @@ export function AccountsPanel() {
                             busy={controller.busyIdentity === identity}
                             className="shrink-0"
                           />
+
+                          {accounts.length > 1 &&
+                            shortcutIndex >= 0 &&
+                            shortcutIndex < 9 && (
+                              <kbd className="shrink-0 font-mono text-3xs text-faint">
+                                {MOD_KEY} {shortcutIndex + 1}
+                              </kbd>
+                            )}
 
                           {isActive && (
                             <span
@@ -433,6 +439,7 @@ export function AccountsPanel() {
             isRunning={running.has(accountIdentity(focusedAccount))}
             onRemove={() => setPendingRemoval(focusedAccount)}
             onSignInAgain={() => signInAgain(focusedAccount)}
+            onAddProvider={pickProvider}
           />
         ) : (
           <Empty className="h-full">

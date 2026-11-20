@@ -13,11 +13,13 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { showUndoToast } from "@renderer/utilities/undoToast";
 import { sharedRefOf } from "./SharedSettingsCard";
 import { countFeature } from "@renderer/features/usage/usage";
+import { useGameLockReason } from "@renderer/features/settings/gameLock";
 
 const api = window.api;
 
 export function SharedSettingsGroup({ query }: { query: string }) {
   const { t } = useTranslation();
+  const lockedReason = useGameLockReason();
   const versions = useAtomValue(versionsAtom);
   const [overview, setOverview] = useState<SharedOverview | null>(null);
   const [busy, setBusy] = useState(false);
@@ -125,8 +127,10 @@ export function SharedSettingsGroup({ query }: { query: string }) {
 
   return (
     <SettingsGroup
+      entry="sharedGameSettings"
       title={t("settings.index.sharedGameSettings.title")}
       hint={t("sharedSettings.settingsHint")}
+      lockedReason={lockedReason}
     >
       <SettingRow
         htmlFor="settings-shared-auto"

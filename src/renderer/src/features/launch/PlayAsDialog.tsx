@@ -40,10 +40,7 @@ export function PlayAsDialog({
   const selected = useAtomValue(accountAtom);
   const selectedIdentity = selected ? accountIdentity(selected) : null;
 
-  const ordered = useMemo(
-    () => sortAccounts(accounts, selectedIdentity),
-    [accounts, selectedIdentity],
-  );
+  const ordered = useMemo(() => sortAccounts(accounts), [accounts]);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>

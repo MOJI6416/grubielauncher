@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
   AppWindow,
@@ -16,6 +17,7 @@ import {
   RotateCcw,
   Search,
   Shield,
+  Sparkles,
   TriangleAlert,
   X,
   type LucideIcon,
@@ -34,6 +36,7 @@ import { Hint } from "@renderer/components/Hint";
 import { showUndoToast } from "@renderer/utilities/undoToast";
 import { navigate } from "@renderer/navigation/navigate";
 import { PLATFORM } from "@renderer/utilities/platform";
+import { isMotionReduced } from "@/lib/motionPreference";
 import {
   SETTINGS_ENTRIES,
   SETTINGS_SECTIONS,
@@ -64,6 +67,13 @@ import { PrivacySection } from "@renderer/features/settings/PrivacySection";
 import { StorageSection } from "@renderer/features/settings/StorageSection";
 import { AboutSection } from "@renderer/features/settings/AboutSection";
 import { SupportSection } from "@renderer/features/settings/SupportSection";
+import { AssistantSection } from "@renderer/features/settings/AssistantSection";
+import {
+  FLASH_MS,
+  entrySelector,
+  isFocusFresh,
+  settingsFocusAtom,
+} from "@renderer/features/settings/settingsFocus";
 import { useSlidingIndicator } from "@renderer/utilities/useSlidingIndicator";
 import { SlidingIndicator } from "@renderer/components/SlidingIndicator";
 
@@ -75,6 +85,7 @@ const SECTION_ICON: Record<SettingsSectionId, LucideIcon> = {
   layout: PanelsTopLeft,
   system: AppWindow,
   voice: Headphones,
+  assistant: Sparkles,
   privacy: Shield,
   storage: HardDrive,
   support: LifeBuoy,
@@ -97,6 +108,8 @@ export function SettingsScreen({
   const [onlyChanged, setOnlyChanged] = useState(false);
   const [storageTotal, setStorageTotal] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [focus, setFocus] = useAtom(settingsFocusAtom);
 
   const active: SettingsSectionId = isSettingsSection(section)
     ? section
@@ -165,6 +178,57 @@ export function SettingsScreen({
       { replace: true },
     );
   }, [isFiltering, visibleSections, active]);
+
+  useEffect(() => {
+    if (!focus) return;
+    if (!isFocusFresh(focus)) {
+      setFocus(null);
+      return;
+    }
+    if (entrySection(focus.id) !== active) return;
+    if (isFiltering && !matchedIds.has(focus.id)) {
+      setQuery("");
+      setOnlyChanged(false);
+      return;
+    }
+
+    let frame = 0;
+    let tries = 0;
+    const reveal = () => {
+      const matches = [
+        ...(contentRef.current?.querySelectorAll<HTMLElement>(
+          entrySelector(focus.id),
+        ) ?? []),
+      ];
+      const target =
+        matches.find(
+          (element) =>
+            element.dataset.settingsEntry?.split(" ")[0] === focus.id,
+        ) ?? matches[0];
+      if (!target) {
+        tries += 1;
+        if (tries < 90) frame = requestAnimationFrame(reveal);
+        else setFocus(null);
+        return;
+      }
+
+      target.scrollIntoView({
+        block: "center",
+        behavior: isMotionReduced() ? "auto" : "smooth",
+      });
+      target.setAttribute("data-flash", "");
+      window.setTimeout(() => target.removeAttribute("data-flash"), FLASH_MS);
+      target
+        .querySelector<HTMLElement>(
+          "button:not([disabled]), input:not([disabled]), [role=switch], [role=combobox]",
+        )
+        ?.focus({ preventScroll: true });
+      setFocus(null);
+    };
+
+    frame = requestAnimationFrame(reveal);
+    return () => cancelAnimationFrame(frame);
+  }, [focus, active, isFiltering, matchedIds, setFocus]);
 
   const visible = (id: SettingsEntryId) =>
     !isFiltering || matchedIds.has(id);
@@ -334,7 +398,10 @@ export function SettingsScreen({
           </p>
         </nav>
 
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pr-1 pb-1">
+        <div
+          ref={contentRef}
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto pr-1 pb-1"
+        >
           {!sectionHasVisibleRows && isFiltering ? (
             <EmptySearch query={query} onClear={() => {
               setQuery("");
@@ -351,6 +418,9 @@ export function SettingsScreen({
               {active === "layout" && <LayoutSection {...sectionProps} />}
               {active === "system" && <SystemSection {...sectionProps} />}
               {active === "voice" && <VoiceSection {...sectionProps} />}
+              {active === "assistant" && (
+                <AssistantSection {...sectionProps} />
+              )}
               {active === "privacy" && <PrivacySection {...sectionProps} />}
               {active === "storage" && (
                 <StorageSection

@@ -129,7 +129,8 @@
       "capes": "Pelerinler",
       "friends": "Arkadaşlar ve ses",
       "worksOffline": "İnternet olmadan çalışır",
-      "skinsLittleskin": "Skinler littleskin.cn sitesinde"
+      "skinsLittleskin": "Skinler littleskin.cn sitesinde",
+      "openServers": "LAN ve doğrulamasız sunucular"
     },
     "auth": {
       "waitingTitle": "{{provider}} girişini tamamlayın",
@@ -175,12 +176,12 @@
       "discord": "Skinler ve pelerinler, arkadaşlar ve ses",
       "microsoft": "Resmî sunucular ve Mojang skini",
       "elyby": "ely.by’da skinler, Xbox gerekmez",
-      "plain": "Şifresiz, yalnızca tek oyunculu",
+      "plain": "Şifresiz: tek oyunculu, LAN, lisans denetimi olmayan sunucular",
       "littleskin": "Skinler littleskin.cn sitesinde, Xbox gerekmez"
     },
     "longNicknameOffline": "Kullanıcı adı 16 karakterden uzun ya da desteklenmeyen karakterler içeriyor — oyun bunu kabul etmeyecek. Bu hesabı kaldırıp daha kısa bir kullanıcı adıyla yenisini oluşturun.",
-    "upgradeTitle": "Neler eksik",
-    "upgradeHint": "Çevrim dışı hesabın resmî sunuculara erişimi ve skinleri yoktur. Çevrim içi oynamak için soldan bir Discord, Microsoft, Ely.by veya LittleSkin hesabı ekleyin.",
+    "upgradeTitle": "Tam hesaba geçiş",
+    "upgradeHint": "Çevrim dışı hesap tek oyunculu modda, LAN’da ve lisans denetimi yapmayan sunucularda oynar. Lisans denetimi olan sunucular için Microsoft gerekir; skinler, arkadaşlar ve sesli sohbet bu hesapların hepsinde vardır:",
     "welcomeTitle": "Oynamak için hesap ekleyin",
     "welcomeHint": "Başlatıcının oyunu başlatmak için bir hesaba ihtiyacı var. Nereden giriş yapacağınızı seçin — diğerlerini sonra ekleyebilir ve istediğiniz zaman aralarında geçiş yapabilirsiniz.",
     "openProfile": "Profili aç",
@@ -1611,16 +1612,10 @@
     "usageStatsDescription": "Ekranların günde kaç kez açıldığı ve özelliklerin kaç kez kullanıldığı. Yalnızca toplamlar; kullanıcı adı, mod adları ve yollar olmadan",
     "packAnalytics": "Mod paketi yazarları için istatistik",
     "packAnalyticsDescription": "Grubie hesabınıza bağlıdır. Mod paketinin yazarı yalnızca toplamları görür: kaç kişinin oynadığı, ne kadar süre ve oyunun ne sıklıkla çöktüğü; takma adları asla.",
-    "aiLogAnalysis": "Yapay zekâ ile günlük analizi",
-    "aiLogAnalysisDescription": "Onay adımını atlar: analiz, pencere açılır açılmaz başlar",
+    "aiLogAnalysis": "Çökme günlüklerini sormadan yapay zekâ analizine gönder",
+    "aiLogAnalysisDescription": "Oyun çöktüğünde analiz penceresi temizlenmiş günlüğü (yollar, oyuncu adları ve belirteçler olmadan) hemen Grubie sunucusuna gönderir. Kapalıysa önce sorar.",
     "sounds": "Bildirim sesleri",
     "soundsDescription": "Kurulum bitti, oyun çöktü ve arkadaş davetleri",
-    "notifications": {
-      "title": "Bildirimler",
-      "telegram": "Telegram bildirimleri",
-      "telegramDescription": "Başlatıcı kapalıyken oyun davetleri, arkadaşlık istekleri ve paylaşılan dünyalar",
-      "openProfile": "Profilde"
-    },
     "hideServerInRpc": "Sunucuyu Discord’da gizle",
     "hideServerInRpcDescription": "Sunucu adresini Discord Rich Presence’ta göstermez",
     "streamer": {
@@ -1643,7 +1638,8 @@
       "privacy": "Gizlilik",
       "about": "Hakkında",
       "system": "Başlangıç ve tepsi",
-      "support": "Destek"
+      "support": "Destek",
+      "assistant": "Asistan"
     },
     "support": "Projeyi destekle",
     "voicePtt": "Bas-konuş",
@@ -1725,8 +1721,6 @@
       "categoriesTitle": "Alanı ne kaplıyor",
       "reclaimTitle": "Yer aç",
       "nothingToClean": "Temizlenecek bir şey yok — klasör düzenli",
-      "offerCount": "{{value}} öğe",
-      "restCount": "ve {{value}} kurulum daha",
       "offers": {
         "cache": "Önbelleği temizle",
         "java": "Kullanılmayan Java’yı sil",
@@ -1735,10 +1729,13 @@
         "instances": "Bozuk kurulumları geri dönüşüm kutusuna taşı",
         "dedupe": "Kurulumlardaki aynı dosyaları birleştir"
       },
-      "reclaimBanner": "Kurulumlara, dünyalara veya hesaplara dokunmadan yaklaşık {{size}} boşaltılabilir.",
       "scanning": "Klasör ölçülüyor…",
       "rootHint": "başlatıcının indirdiği her şey",
-      "restMore": "Diğer kurulumlar: {{value}}"
+      "cleanupInstancesConfirm": "Geri dönüşüm kutusuna taşı",
+      "restCount_other": "ve {{count}} kurulum daha",
+      "restCount_one": "ve {{count}} kurulum daha",
+      "offerCount_other": "{{count}} öğe",
+      "offerCount_one": "{{count}} öğe"
     },
     "devModeDescription": "Her arayüz hatası için bir bildirim; kurulum menüsünde ayrıca göreli yollu çalıştırma komutu",
     "voiceMicTestErrorHint": "Mikrofona erişim yok. {{os}} izinlerini ve seçili cihazı kontrol edin.",
@@ -1789,7 +1786,9 @@
       "overridesTitle": "Kendi ayarları olan kurulumlar",
       "overridesHint": "yukarıdaki değerler onlara uygulanmaz",
       "overridesOther": "Java",
-      "freeNow": "Şu anda yalnızca {{free}} GB boş; bu, oyuna ayrılan {{allocated}} GB'tan az. Diğer programları kapatın veya belleği azaltın."
+      "freeNow": "Şu anda yalnızca {{free}} GB boş; bu, oyuna ayrılan {{allocated}} GB'tan az. Diğer programları kapatın veya belleği azaltın.",
+      "overridesMore_other": "{{count}} kurulum daha",
+      "overridesMore_one": "{{count}} kurulum daha"
     },
     "downloads": {
       "mirrorUnknown": "Kaynak kontrol ediliyor…",
@@ -2091,9 +2090,9 @@
         "keywords": "istatistik analiz gizlilik mod paketi yazar süre çökmeler"
       },
       "aiLogAnalysis": {
-        "title": "Yapay zekâ ile günlük analizi",
-        "description": "Analizi önce sormadan başlat",
-        "keywords": "yapay zeka ai analiz çökme günlük log otomatik"
+        "title": "Çökme günlüklerini sormadan yapay zekâ analizine gönder",
+        "description": "Çökme günlükleri onay olmadan yapay zekâ analizine gider",
+        "keywords": "yapay zeka ai analiz çökme günlük log otomatik gönder sunucu onay"
       },
       "devMode": {
         "title": "Hataları göster",
@@ -2154,11 +2153,6 @@
         "title": "Grubie hesabıyla eşitle",
         "description": "Temalar, skinler ve ayarlar başka bir bilgisayarda da sizinle",
         "keywords": "eşitleme hesap bulut tema skin gardırop ayarlar başka bilgisayar"
-      },
-      "notifications": {
-        "title": "Telegram bildirimleri",
-        "description": "Başlatıcı kapalıyken oyun davetleri ve arkadaşlık istekleri",
-        "keywords": "telegram bildirim uyarı davet arkadaş bot profil"
       },
       "accent": {
         "title": "Vurgu rengi",
@@ -2319,6 +2313,11 @@
         "title": "Modrinth ve CurseForge bağlantıları",
         "description": "Mod sitelerindeki Install düğmeleri Grubie’yi açar",
         "keywords": "protokol modrinth:// curseforge:// yükle düğmesi tarayıcı"
+      },
+      "agentProviders": {
+        "title": "Yapay zekâ sağlayıcıları ve API anahtarları",
+        "description": "Asistanın kullandığı model ve kendi anahtarlarınız",
+        "keywords": "asistan yapay zeka ai sağlayıcı api anahtar token model openai anthropic openrouter adres"
       }
     },
     "voicePttCaptureTimeout": "Hiçbir tuşa basılmadı — kısayol değişmedi.",
@@ -2392,7 +2391,13 @@
     },
     "resetAllDone": "Ayarlar varsayılana sıfırlandı",
     "directConnect": "Arkadaşlarla doğrudan bağlantı",
-    "directConnectDescription": "«Birlikte oyna» sen ve arkadaşın arasında Grubie sunucusunu atlayarak doğrudan gider, ping daha düşük olur. Arkadaşın IP adresini öğrenir. Yayıncı modunda ve herkese açık dünyalarda kullanılmaz."
+    "directConnectDescription": "«Birlikte oyna» sen ve arkadaşın arasında Grubie sunucusunu atlayarak doğrudan gider, ping daha düşük olur. Arkadaşın IP adresini öğrenir. Yayıncı modunda ve herkese açık dünyalarda kullanılmaz.",
+    "assistant": {
+      "providersTitle": "Sağlayıcılar ve anahtarlar",
+      "providersHint": "asistanda seçili olan yanıt verir",
+      "keysNote": "Anahtarlar bu bilgisayarda şifreli olarak kalır ve yalnızca sağlayıcının adresine gönderilir.",
+      "dataTitle": "Sohbetler ve çökme analizi"
+    }
   },
   "skinView": {
     "title": "Skin önizlemesi",
@@ -2872,7 +2877,11 @@
       "noAccount": "Bu bölüm bir Grubie hesabına giriş yaptıktan sonra açılır",
       "offlineAccount": "Bu bölüm çevrim dışı hesapta kullanılamaz"
     },
-    "initError": "Başlatıcı başlatılamadı"
+    "initError": "Başlatıcı başlatılamadı",
+    "locked": {
+      "launching": "Oyun başlatılırken kullanılamaz.",
+      "playing": "Oyun çalışırken kullanılamaz: başlatıcı bunları oyuna açılışta iletir. Değiştirmek için oyunu kapatın."
+    }
   },
   "game": {
     "download": "İndir"
@@ -4637,7 +4646,7 @@
   },
   "onboarding": {
     "title": "Grubie Launcher’a hoş geldiniz!",
-    "description": "İki adımda oyundasınız.",
+    "description": "Birkaç adımda oyundasınız.",
     "stepAccount": "Hesap ekleyin",
     "stepAccountDescription": "Microsoft, Ely.by, LittleSkin, Discord veya çevrim dışı bir kullanıcı adı",
     "stepVersion": "İlk kurulumunuzu kurun",
@@ -4645,7 +4654,13 @@
     "go": "Başla",
     "skip": "Atla",
     "stepVersionLocked": "Hesap ekledikten sonra kullanılabilir",
-    "skipHint": "Bunu daha sonra yapabilirsiniz"
+    "skipHint": "Bunu daha sonra yapabilirsiniz",
+    "stepData": "Veri klasörü",
+    "stepDataDescription": "Kurulumlar, Java ve dünyalar burada durur",
+    "stepDataFree": "Bu sürücüde {{free}} boş",
+    "stepDataLow": "Yalnızca {{free}} boş, modlu kurulumlar ise onlarca gigabayt yer kaplar. Başka bir sürücü seçin.",
+    "stepDataChange": "Değiştir",
+    "optional": "isteğe bağlı"
   },
   "privacyNotice": {
     "title": "Başlatıcının bize gönderdikleri",
@@ -5276,8 +5291,7 @@
       "newInstance": "Yeni kurulum",
       "instance": "Kurulum",
       "people": "Kişiler",
-      "profile": "Profil",
-      "settingsLocked": "Oyun çalışırken kullanılamaz"
+      "profile": "Profil"
     },
     "palette": {
       "label": "Arama ve komutlar",
@@ -5299,7 +5313,47 @@
         "settings": "Ayarlar",
         "agent": "Asistan"
       },
-      "blockedRunning": "oyun çalışırken"
+      "blockedRunning": "oyun başlatılırken",
+      "notifications": "Telegram bildirimleri",
+      "inProfile": "profilde",
+      "reasons": {
+        "layoutDefault": "değişiklik yok",
+        "current": "zaten seçili"
+      },
+      "keywords": {
+        "home": "ana sayfa oyna kurulumlar kitaplık",
+        "agent": "yapay zeka asistan yardımcı sohbet",
+        "people": "kişiler arkadaşlar ses gruplar sohbet",
+        "profile": "profil skinler başarımlar pelerin",
+        "notifications": "bildirimler telegram uyarılar bot davetler",
+        "settings": "ayarlar seçenekler",
+        "accounts": "hesaplar giriş oturum",
+        "newInstance": "yeni kurulum oluştur içe aktar modpack",
+        "connectivity": "bağlantı ağ internet ayna test",
+        "streamer": "yayıncı yayın obs twitch gizlilik gizle",
+        "sidebar": "kenar çubuğu daralt genişlet",
+        "customizeLayout": "yerleşim özelleştir gizle sıra",
+        "resetLayout": "yerleşim sıfırla varsayılan",
+        "layoutPreset": "hazır ayar yerleşim kompakt minimal standart",
+        "theme": "tema koyu açık oled arka plan görünüm",
+        "openFolder": "klasör aç gezgin dosyalar",
+        "play": "oyna başlat çalıştır",
+        "account": "hesap değiştir kullan",
+        "agentChat": "yapay zeka asistan yeni sohbet sor",
+        "tabs": {
+          "overview": "genel bakış yayınla paylaş kısayol",
+          "modpack": "modpack güncelle sürüm",
+          "content": "içerik modlar kaynak paketleri gölgelendiriciler",
+          "worlds": "dünyalar kayıtlar yedekler",
+          "servers": "sunucular çok oyunculu",
+          "server": "kendi sunucu host",
+          "configs": "yapılandırma dosyalar kubejs",
+          "settings": "ayarlar bellek java",
+          "arguments": "argümanlar parametreler",
+          "statistics": "istatistikler oynama süresi",
+          "logs": "günlükler konsol"
+        }
+      }
     },
     "tabs": {
       "overview": "Genel bakış",
@@ -6208,6 +6262,12 @@
       "busy": "Bir oyun veya sunucu çalışırken ya da bir kurulum sürerken taşıma yapılamaz.",
       "stale": "Siz onaylarken klasör değişti. Lütfen yeniden seçin.",
       "failed": "Veri klasörü değiştirilemedi."
+    },
+    "dedupeOffer": {
+      "title": "Veriler başka bir sürücüye taşındı",
+      "description": "Kurulumlarınızdaki aynı modlar, kaynak paketleri ve gölgelendiriciler ayrı kopyalara dönüştü. Yeri geri kazanmak için onları yeniden birleştirin.",
+      "action": "Birleştir",
+      "running": "Aynı dosyalar birleştiriliyor…"
     }
   },
   "supportReport": {

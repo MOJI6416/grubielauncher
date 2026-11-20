@@ -61,6 +61,12 @@ describe("shortcut catalog", () => {
     expect(typeof lookup(rows, "voice.ptt")).toBe("string");
   });
 
+  it("spells modifiers through the platform labels so macOS shows ⌥ ⇧ ⌘", () => {
+    const source = readFileSync(resolve(__dirname, "shortcuts.ts"), "utf-8");
+
+    expect(source).not.toMatch(/"(Alt|Shift|Ctrl|Cmd|Option)"/);
+  });
+
   it("keeps every listed combination present in the renderer source", () => {
     const evidence: Record<string, RegExp[]> = {
       "global.palette": [/event\.code === "KeyK"/],

@@ -129,7 +129,8 @@
       "capes": "Capas",
       "friends": "Amigos e voz",
       "worksOffline": "Funciona sem internet",
-      "skinsLittleskin": "Skins no littleskin.cn"
+      "skinsLittleskin": "Skins no littleskin.cn",
+      "openServers": "LAN e servidores sem verificação"
     },
     "auth": {
       "waitingTitle": "Termine de entrar no {{provider}}",
@@ -175,12 +176,12 @@
       "discord": "Skins e capas, amigos e voz",
       "microsoft": "Servidores oficiais e a skin da Mojang",
       "elyby": "Skins no ely.by, sem precisar de Xbox",
-      "plain": "Sem senha, só um jogador",
+      "plain": "Sem senha: um jogador, LAN, servidores sem verificação de licença",
       "littleskin": "Skins no littleskin.cn, sem precisar de Xbox"
     },
     "longNicknameOffline": "O apelido tem mais de 16 caracteres ou usa caracteres não suportados — o jogo vai recusá-lo. Remova esta conta e crie uma nova com um apelido mais curto.",
-    "upgradeTitle": "O que falta",
-    "upgradeHint": "Uma conta offline não tem acesso a servidores oficiais nem a skins. Adicione uma conta Discord, Microsoft, Ely.by ou LittleSkin à esquerda para jogar on-line.",
+    "upgradeTitle": "Como mudar para uma conta completa",
+    "upgradeHint": "Uma conta offline joga em um jogador, por LAN e em servidores que não verificam a licença. Servidores com verificação de licença exigem Microsoft; skins, amigos e voz vêm com qualquer uma destas contas:",
     "welcomeTitle": "Adicione uma conta para jogar",
     "welcomeHint": "O launcher precisa de uma conta para iniciar o jogo. Escolha onde entrar — você pode adicionar as outras depois e alternar entre elas quando quiser.",
     "openProfile": "Abrir perfil",
@@ -1629,16 +1630,10 @@
     "usageStatsDescription": "Quantas vezes por dia telas foram abertas e recursos usados. Só totais, sem nick, nomes de mods ou caminhos",
     "packAnalytics": "Estatísticas para autores de modpacks",
     "packAnalyticsDescription": "Ligadas à sua conta do Grubie. O autor de um modpack vê só totais — quantas pessoas jogam, por quanto tempo e com que frequência o jogo crasha —, nunca nicks.",
-    "aiLogAnalysis": "Análise de logs com IA",
-    "aiLogAnalysisDescription": "Pula a etapa de confirmação: a análise começa assim que a janela abre",
+    "aiLogAnalysis": "Enviar logs de crash para a análise com IA sem perguntar",
+    "aiLogAnalysisDescription": "Quando o jogo trava, a janela de análise envia na hora o log limpo (sem caminhos, nomes de jogadores ou tokens) ao servidor do Grubie. Desativado, ele pergunta antes.",
     "sounds": "Sons de notificação",
     "soundsDescription": "Instalação concluída, crash do jogo e convites de amigos",
-    "notifications": {
-      "title": "Notificações",
-      "telegram": "Notificações no Telegram",
-      "telegramDescription": "Convites para jogar, pedidos de amizade e mundos compartilhados, com o launcher fechado",
-      "openProfile": "No perfil"
-    },
     "hideServerInRpc": "Ocultar servidor no Discord",
     "hideServerInRpcDescription": "Não mostrar o endereço do servidor no Rich Presence do Discord",
     "streamer": {
@@ -1661,7 +1656,8 @@
       "privacy": "Privacidade",
       "about": "Sobre",
       "system": "Início e bandeja",
-      "support": "Suporte"
+      "support": "Suporte",
+      "assistant": "Assistente"
     },
     "support": "Apoiar o projeto",
     "voicePtt": "Apertar para falar",
@@ -1743,8 +1739,6 @@
       "categoriesTitle": "O que ocupa o espaço",
       "reclaimTitle": "Liberar espaço",
       "nothingToClean": "Nada para limpar — a pasta está em ordem",
-      "offerCount": "{{value}} itens",
-      "restCount": "e mais {{value}} instâncias",
       "offers": {
         "cache": "Limpar o cache",
         "java": "Excluir Javas sem uso",
@@ -1753,10 +1747,15 @@
         "instances": "Mover instâncias quebradas para a lixeira",
         "dedupe": "Unir arquivos idênticos das instâncias"
       },
-      "reclaimBanner": "Cerca de {{size}} podem ser liberados sem tocar em instâncias, mundos ou contas.",
       "scanning": "Medindo a pasta…",
       "rootHint": "tudo o que o launcher baixou",
-      "restMore": "Mais instâncias: {{value}}"
+      "cleanupInstancesConfirm": "Para a lixeira",
+      "restCount_one": "e mais {{count}} instância",
+      "restCount_other": "e mais {{count}} instâncias",
+      "restCount_many": "e mais {{count}} instâncias",
+      "offerCount_one": "{{count}} item",
+      "offerCount_other": "{{count}} itens",
+      "offerCount_many": "{{count}} itens"
     },
     "devModeDescription": "Um aviso para cada erro da interface; o menu da instância também oferece o comando de execução com caminhos relativos",
     "voiceMicTestErrorHint": "Sem acesso ao microfone. Confira as permissões do {{os}} e o dispositivo escolhido.",
@@ -1807,7 +1806,10 @@
       "overridesTitle": "Instâncias com configurações próprias",
       "overridesHint": "os valores acima não se aplicam a elas",
       "overridesOther": "Java",
-      "freeNow": "Agora há apenas {{free}} GB livres — menos que os {{allocated}} GB dados ao jogo. Feche outros programas ou diminua a memória."
+      "freeNow": "Agora há apenas {{free}} GB livres — menos que os {{allocated}} GB dados ao jogo. Feche outros programas ou diminua a memória.",
+      "overridesMore_one": "Mais {{count}} instância",
+      "overridesMore_other": "Mais {{count}} instâncias",
+      "overridesMore_many": "Mais {{count}} instâncias"
     },
     "downloads": {
       "mirrorUnknown": "Verificando a fonte…",
@@ -2109,9 +2111,9 @@
         "keywords": "estatísticas análise privacidade modpack autor tempo crashes"
       },
       "aiLogAnalysis": {
-        "title": "Análise de logs com IA",
-        "description": "Começa a análise sem perguntar antes",
-        "keywords": "ia ai análise crash log automático"
+        "title": "Enviar logs de crash para a análise com IA sem perguntar",
+        "description": "Os logs de crash vão para a análise com IA sem confirmação",
+        "keywords": "ia análise crash travamento log automático enviar servidor confirmação"
       },
       "devMode": {
         "title": "Mostrar erros",
@@ -2172,11 +2174,6 @@
         "title": "Sincronizar pela conta Grubie",
         "description": "Temas, skins e configurações seguem você em outro computador",
         "keywords": "sincronizar conta nuvem temas skins guarda-roupa configurações outro computador"
-      },
-      "notifications": {
-        "title": "Notificações no Telegram",
-        "description": "Convites para jogar e pedidos de amizade com o launcher fechado",
-        "keywords": "telegram notificações alertas convites amigos bot perfil"
       },
       "accent": {
         "title": "Cor de destaque",
@@ -2337,6 +2334,11 @@
         "title": "Links do Modrinth e CurseForge",
         "description": "Os botões Install dos sites de mods abrem o Grubie",
         "keywords": "protocolo modrinth:// curseforge:// botão instalar navegador"
+      },
+      "agentProviders": {
+        "title": "Provedores de IA e chaves de API",
+        "description": "Qual modelo o assistente usa e suas próprias chaves",
+        "keywords": "assistente ia provedor chave api token modelo openai anthropic openrouter endereço"
       }
     },
     "voicePttCaptureTimeout": "Nenhuma tecla foi pressionada — o atalho não mudou.",
@@ -2410,7 +2412,13 @@
     },
     "resetAllDone": "Configurações redefinidas para o padrão",
     "directConnect": "Conexão direta com amigos",
-    "directConnectDescription": "O «Jogar juntos» vai direto entre você e seu amigo, sem passar pelo servidor do Grubie, e o ping fica menor. Seu amigo fica sabendo seu endereço IP. Não é usado no modo streamer nem em mundos abertos a todos."
+    "directConnectDescription": "O «Jogar juntos» vai direto entre você e seu amigo, sem passar pelo servidor do Grubie, e o ping fica menor. Seu amigo fica sabendo seu endereço IP. Não é usado no modo streamer nem em mundos abertos a todos.",
+    "assistant": {
+      "providersTitle": "Provedores e chaves",
+      "providersHint": "no assistente responde o selecionado",
+      "keysNote": "As chaves ficam criptografadas neste computador e só vão para o endereço do provedor.",
+      "dataTitle": "Conversas e análise de crashes"
+    }
   },
   "skinView": {
     "title": "Prévia da skin",
@@ -2891,7 +2899,11 @@
       "noAccount": "Esta seção abre depois que você entra em uma conta Grubie",
       "offlineAccount": "Esta seção não está disponível em uma conta offline"
     },
-    "initError": "Falha ao iniciar o launcher"
+    "initError": "Falha ao iniciar o launcher",
+    "locked": {
+      "launching": "Indisponível enquanto o jogo está iniciando.",
+      "playing": "Indisponível enquanto o jogo está aberto: o launcher os passa ao jogo na inicialização. Feche o jogo para alterá-los."
+    }
   },
   "game": {
     "download": "Baixar"
@@ -4675,7 +4687,7 @@
   },
   "onboarding": {
     "title": "Bem-vindo ao Grubie Launcher!",
-    "description": "Dois passos e você está no jogo.",
+    "description": "Alguns passos e você está no jogo.",
     "stepAccount": "Adicione uma conta",
     "stepAccountDescription": "Microsoft, Ely.by, LittleSkin, Discord ou um apelido offline",
     "stepVersion": "Instale sua primeira instância",
@@ -4683,7 +4695,13 @@
     "go": "Ir",
     "skip": "Pular",
     "stepVersionLocked": "Disponível depois que você adicionar uma conta",
-    "skipHint": "Você pode fazer isso depois"
+    "skipHint": "Você pode fazer isso depois",
+    "stepData": "Pasta de dados",
+    "stepDataDescription": "Aqui ficam instâncias, Java e mundos",
+    "stepDataFree": "{{free}} livres nesta unidade",
+    "stepDataLow": "Só {{free}} livres, e instâncias com mods ocupam dezenas de gigabytes. Escolha outra unidade.",
+    "stepDataChange": "Alterar",
+    "optional": "opcional"
   },
   "privacyNotice": {
     "title": "O que o launcher nos envia",
@@ -5319,8 +5337,7 @@
       "newInstance": "Nova instância",
       "instance": "Instância",
       "people": "Pessoas",
-      "profile": "Perfil",
-      "settingsLocked": "Indisponível enquanto o jogo está aberto"
+      "profile": "Perfil"
     },
     "palette": {
       "label": "Busca e comandos",
@@ -5342,7 +5359,47 @@
         "settings": "Configurações",
         "agent": "Assistente"
       },
-      "blockedRunning": "enquanto o jogo está aberto"
+      "blockedRunning": "enquanto o jogo inicia",
+      "notifications": "Notificações no Telegram",
+      "inProfile": "no perfil",
+      "reasons": {
+        "layoutDefault": "sem alterações",
+        "current": "já ativo"
+      },
+      "keywords": {
+        "home": "início jogar instâncias biblioteca",
+        "agent": "ia assistente ajudante chat",
+        "people": "pessoas amigos voz grupos chat",
+        "profile": "perfil skins conquistas capa",
+        "notifications": "notificações telegram alertas bot convites",
+        "settings": "configurações opções",
+        "accounts": "contas entrar login",
+        "newInstance": "nova instância criar importar modpack",
+        "connectivity": "conexão rede internet espelho teste",
+        "streamer": "streamer transmissão obs twitch privacidade ocultar",
+        "sidebar": "barra lateral recolher expandir",
+        "customizeLayout": "layout personalizar ocultar ordem",
+        "resetLayout": "layout redefinir padrão",
+        "layoutPreset": "predefinição layout compacto mínimo padrão",
+        "theme": "tema escuro claro oled fundo aparência",
+        "openFolder": "pasta abrir explorador arquivos",
+        "play": "jogar iniciar executar",
+        "account": "conta trocar usar",
+        "agentChat": "ia assistente nova conversa perguntar",
+        "tabs": {
+          "overview": "visão geral publicar compartilhar atalho",
+          "modpack": "modpack atualizar versão",
+          "content": "conteúdo mods pacotes de recursos shaders",
+          "worlds": "mundos saves backups",
+          "servers": "servidores multijogador",
+          "server": "servidor próprio host",
+          "configs": "configurações arquivos kubejs",
+          "settings": "configurações memória java",
+          "arguments": "argumentos parâmetros",
+          "statistics": "estatísticas tempo de jogo",
+          "logs": "logs console registro"
+        }
+      }
     },
     "tabs": {
       "overview": "Visão geral",
@@ -6261,6 +6318,12 @@
       "busy": "Não é possível mover enquanto um jogo ou servidor estiver rodando ou uma instalação estiver em andamento.",
       "stale": "A pasta mudou enquanto você confirmava. Escolha-a de novo.",
       "failed": "Não foi possível mudar a pasta de dados."
+    },
+    "dedupeOffer": {
+      "title": "Dados movidos para outra unidade",
+      "description": "Mods, pacotes de recursos e shaders idênticos das instâncias viraram cópias separadas. Junte-os de novo para recuperar o espaço.",
+      "action": "Unir",
+      "running": "Juntando arquivos idênticos…"
     }
   },
   "supportReport": {

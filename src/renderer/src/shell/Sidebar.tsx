@@ -30,7 +30,6 @@ import {
   friendsAtom,
   internetAtom,
   isFriendsConnectedAtom,
-  isRunningAtom,
   isShareModalOpenAtom,
   networkAtom,
   shareOwnerAccountKeyAtom,
@@ -50,6 +49,10 @@ import { canUseBackendFeature } from "@renderer/utilities/connectivity";
 import { canCurrentAccountManageShare } from "@renderer/utilities/shareAccount";
 import { currentRouteAtom } from "@renderer/navigation/store";
 import { navigate } from "@renderer/navigation/navigate";
+import {
+  routeBlockReason,
+  routeBlockedKey,
+} from "@renderer/navigation/access";
 import { Route } from "@renderer/navigation/routes";
 import {
   LazyAgentScreen,
@@ -238,7 +241,6 @@ export function Sidebar({
   const selectedAccount = useAtomValue(accountAtom);
   const isInternetOnline = useAtomValue(internetAtom);
   const isBackendOnline = useAtomValue(networkAtom);
-  const isRunning = useAtomValue(isRunningAtom);
   const friends = useAtomValue(friendsAtom);
   const [isErrorLogOpen, setIsErrorLogOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useAtom(isShareModalOpenAtom);
@@ -263,13 +265,18 @@ export function Sidebar({
     [isBackendOnline, isInternetOnline],
   );
   const canUseBackend = canUseBackendFeature(connectivity);
-  const isFriendsDisabled =
-    !selectedAccount || selectedAccount.type === "plain";
-  const friendsHint = !canUseBackend
-    ? t("app.backendUnavailable")
-    : isFriendsConnected
-      ? undefined
-      : t("friends.unavailableHint");
+  const peopleBlocked = routeBlockReason(
+    { name: "people" },
+    { accountType: selectedAccount?.type ?? null },
+  );
+  const isFriendsDisabled = peopleBlocked !== null;
+  const friendsHint = peopleBlocked
+    ? t(routeBlockedKey(peopleBlocked))
+    : !canUseBackend
+      ? t("app.backendUnavailable")
+      : isFriendsConnected
+        ? undefined
+        : t("friends.unavailableHint");
 
   const playingFriends = useMemo(
     () =>
@@ -346,8 +353,6 @@ export function Sidebar({
       icon: <LSettings className="size-4" />,
       label: t("settings.title"),
       current: isRoute(route, "settings"),
-      disabled: isRunning,
-      hint: t("shell.nav.settingsLocked"),
       onPreload: () => preload(LazySettingsScreen.preload),
       onSelect: () => navigate({ name: "settings" }),
     },

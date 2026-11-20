@@ -427,15 +427,13 @@ describe("account list", () => {
     expect(sortAccounts([microsoft, discord])).toHaveLength(2);
   });
 
-  it("pins the selected account and then orders by provider", () => {
-    const sorted = sortAccounts([plain, elyby, microsoft, discord], "e");
+  it("keeps one order whichever account is in use", () => {
+    const sorted = sortAccounts([plain, elyby, microsoft, discord]);
 
-    expect(sorted.map((item) => item.type)).toEqual([
-      "elyby",
-      "discord",
-      "microsoft",
-      "plain",
-    ]);
+    expect(sorted.map((item) => item.type)).toEqual(
+      sortAccounts([discord, microsoft, plain, elyby]).map((item) => item.type),
+    );
+    expect(sorted[0].type).toBe("discord");
   });
 
   it("orders by provider and nickname without a selection", () => {
@@ -601,6 +599,7 @@ describe("provider capabilities", () => {
       "capes",
       "friends",
       "worksOffline",
+      "openServers",
     ]);
     expect(keys("elyby")).toContain("skinsExternal");
     expect(keys("littleskin")).toEqual([
@@ -609,6 +608,7 @@ describe("provider capabilities", () => {
       "capes",
       "friends",
       "worksOffline",
+      "openServers",
     ]);
 
     const plain = Object.fromEntries(
@@ -617,6 +617,7 @@ describe("provider capabilities", () => {
     expect(plain.worksOffline).toBe(true);
     expect(plain.skinsManaged).toBe(false);
     expect(plain.onlineServers).toBe(false);
+    expect(plain.openServers).toBe(true);
 
     const discord = Object.fromEntries(
       providerFeatures("discord").map((f) => [f.key, f.available]),

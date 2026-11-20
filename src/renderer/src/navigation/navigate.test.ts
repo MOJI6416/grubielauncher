@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDefaultStore } from "jotai";
+import { toast } from "sonner";
+import { accountAtom } from "@renderer/stores/atoms";
 import {
   cancelPendingNavigation,
   confirmPendingNavigation,
@@ -22,15 +24,26 @@ import {
 } from "./store";
 import { createHistory } from "./history";
 
+vi.mock("sonner", () => ({ toast: { info: vi.fn() } }));
+
 const store = getDefaultStore();
 
 beforeEach(() => {
   clearNavigationBlockers();
   store.set(historyAtom, createHistory());
   store.set(pendingNavigationAtom, null);
+  store.set(accountAtom, undefined);
+  vi.mocked(toast.info).mockClear();
 });
 
 describe("navigate", () => {
+  it("refuses a route the account cannot open and says why", () => {
+    expect(navigate({ name: "people" })).toBe(false);
+
+    expect(getCurrentRoute()).toEqual({ name: "home" });
+    expect(toast.info).toHaveBeenCalledTimes(1);
+  });
+
   it("moves to a route and back", () => {
     navigate({ name: "settings" });
 

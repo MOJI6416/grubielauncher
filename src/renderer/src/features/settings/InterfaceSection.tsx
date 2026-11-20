@@ -150,6 +150,7 @@ export function InterfaceSection({
       <SettingsGroup title={t("settings.sections.interface")}>
         {visible("language") && (
           <SettingRow
+            entry="language"
             title={t("settings.language")}
             description={t("settings.interface.languageDescription")}
             query={query}
@@ -193,6 +194,7 @@ export function InterfaceSection({
 
         {visible("uiScale") && (
           <SettingRow
+            entry="uiScale"
             title={t("settings.interface.uiScale")}
             description={t("settings.interface.uiScaleDescription")}
             query={query}
@@ -223,6 +225,7 @@ export function InterfaceSection({
 
         {visible("highContrast") && (
           <SettingRow
+            entry="highContrast"
             htmlFor="settings-highContrast"
             title={t("settings.interface.highContrast")}
             description={t("settings.interface.highContrastDescription")}
@@ -243,6 +246,7 @@ export function InterfaceSection({
       <SettingsGroup title={t("settings.interface.groups.effects")}>
         {visible("motion") && (
           <SettingRow
+            entry="motion"
             title={t("settings.interface.motion")}
             description={t("settings.interface.motionDescription")}
             query={query}
@@ -264,6 +268,7 @@ export function InterfaceSection({
 
         {visible("seasonalDecor") && (
           <SettingRow
+            entry="seasonalDecor"
             htmlFor="settings-seasonal-decor"
             title={t("settings.interface.seasonalDecor")}
             description={t(
@@ -287,6 +292,7 @@ export function InterfaceSection({
       <SettingsGroup title={t("settings.interface.groups.soundAndLogs")}>
         {visible("sounds") && (
           <SettingRow
+            entry="sounds"
             htmlFor="settings-sounds"
             title={t("settings.sounds")}
             description={t("settings.soundsDescription")}
@@ -313,6 +319,7 @@ export function InterfaceSection({
 
         {visible("logFontSize") && (
           <SettingRow
+            entry="logFontSize"
             title={t("settings.interface.logFontSize")}
             description={t("settings.interface.logFontSizeDescription")}
             query={query}
@@ -338,6 +345,7 @@ export function InterfaceSection({
           {SHORTCUT_GROUPS.map((group) => (
             <SettingsGroup
               key={group.id}
+              entry={group.id === "global" ? "shortcuts" : undefined}
               title={t(`settings.interface.shortcutGroups.${group.id}`)}
               hint={
                 group.id === "global"

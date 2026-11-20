@@ -144,6 +144,7 @@ export function SupportSection({
         >
           {visible("supportReport") && (
             <SettingRow
+              entry="supportReport"
               title={t("settings.supportSection.send")}
               description={t("settings.supportSection.sendDescription")}
               query={query}
@@ -161,6 +162,7 @@ export function SupportSection({
           )}
           {visible("verboseJournal") && (
             <SettingRow
+              entry="verboseJournal"
               htmlFor="settings-verbose-journal"
               title={t("settings.supportSection.verbose")}
               description={verboseDescription}
@@ -177,6 +179,7 @@ export function SupportSection({
           )}
           {visible("devMode") && (
             <SettingRow
+              entry="devMode"
               htmlFor="settings-dev-mode"
               title={t("settings.devMode")}
               description={t("settings.devModeDescription")}
@@ -194,6 +197,7 @@ export function SupportSection({
           )}
           {visible("verboseJournal") && (
             <SettingRow
+              entry="verboseJournal"
               title={t("settings.supportSection.folder")}
               description={
                 status
@@ -221,7 +225,7 @@ export function SupportSection({
       )}
 
       {visible("supportReport") && replies && replies.length > 0 && (
-        <SettingsGroup title={t("settings.supportSection.repliesTitle")}>
+        <SettingsGroup entry="supportReport" title={t("settings.supportSection.repliesTitle")}>
           {replies.slice(0, HISTORY_SHOWN).map((item) => (
             <div key={item.code} className="grid min-w-0 gap-1.5 px-3.5 py-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -251,7 +255,7 @@ export function SupportSection({
       )}
 
       {visible("supportReport") && history.length > 0 && (
-        <SettingsGroup title={t("settings.supportSection.historyTitle")}>
+        <SettingsGroup entry="supportReport" title={t("settings.supportSection.historyTitle")}>
           {history.slice(0, HISTORY_SHOWN).map((item) => (
             <div
               key={item.code}
@@ -290,7 +294,7 @@ export function SupportSection({
       )}
 
       {visible("systemReport") && (
-        <SettingsGroup title={t("settings.about.supportTitle")}>
+        <SettingsGroup entry="systemReport" title={t("settings.about.supportTitle")}>
           <SettingRow
             title={t("settings.about.copyReport")}
             description={t("settings.about.copyReportDescription")}

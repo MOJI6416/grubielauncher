@@ -58,11 +58,7 @@ export function AccountSwitcher({
     ? accountIdentity(selectedAccount)
     : null;
 
-  const ordered = useMemo(
-    () => sortAccounts(accounts, selectedIdentity),
-    [accounts, selectedIdentity],
-  );
-  const shortcutOrder = useMemo(() => sortAccounts(accounts), [accounts]);
+  const ordered = useMemo(() => sortAccounts(accounts), [accounts]);
   const duplicates = useMemo(() => duplicateNicknames(accounts), [accounts]);
   const broken = useMemo(() => countBrokenSessions(accounts), [accounts]);
 
@@ -95,10 +91,10 @@ export function AccountSwitcher({
     [t],
   );
 
-  const shortcutOrderRef = useRef(shortcutOrder);
+  const shortcutOrderRef = useRef(ordered);
   useEffect(() => {
-    shortcutOrderRef.current = shortcutOrder;
-  }, [shortcutOrder]);
+    shortcutOrderRef.current = ordered;
+  }, [ordered]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -279,13 +275,10 @@ export function AccountSwitcher({
           {t("accounts.accounts")}
         </DropdownMenuLabel>
 
-        {ordered.map((account) => {
+        {ordered.map((account, shortcutIndex) => {
           const identity = accountIdentity(account);
           const session = readAccountSession(account);
           const isActive = identity === selectedIdentity;
-          const shortcutIndex = shortcutOrder.findIndex(
-            (entry) => accountIdentity(entry) === identity,
-          );
 
           return (
             <DropdownMenuItem
@@ -308,7 +301,7 @@ export function AccountSwitcher({
 
               <SessionDot state={session.state} className="ring-popover" />
 
-              {shortcutIndex >= 0 && shortcutIndex < 9 && (
+              {shortcutIndex < 9 && (
                 <kbd className="shrink-0 font-mono text-3xs text-faint">
                   {MOD_KEY} {shortcutIndex + 1}
                 </kbd>
@@ -340,6 +333,11 @@ export function AccountSwitcher({
         >
           <UserPlus />
           {t("accounts.addAccount")}
+          {isRunning && (
+            <span className="ml-auto text-3xs text-faint">
+              {t("shell.palette.blockedRunning")}
+            </span>
+          )}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

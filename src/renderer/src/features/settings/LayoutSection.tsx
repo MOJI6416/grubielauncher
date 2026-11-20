@@ -210,6 +210,7 @@ export function LayoutSection({
       <SettingsGroup title={t("settings.sections.layout")}>
         {visible("layoutPresets") && (
           <SettingRow
+            entry="layoutPresets"
             title={t("layout.presets.title")}
             description={t("layout.presets.description")}
             query={query}
@@ -220,6 +221,7 @@ export function LayoutSection({
 
         {visible("layoutCustomize") && (
           <SettingRow
+            entry="layoutCustomize"
             title={t("layout.customize")}
             description={t("layout.customizeDescription")}
             query={query}
@@ -236,6 +238,7 @@ export function LayoutSection({
 
         {visible("sidebarCollapsed") && (
           <SettingRow
+            entry="sidebarCollapsed"
             htmlFor="settings-sidebarCollapsed"
             title={t("settings.interface.sidebarCollapsed")}
             description={t("settings.interface.sidebarCollapsedDescription")}
@@ -254,6 +257,7 @@ export function LayoutSection({
 
         {visible("ambientTint") && (
           <SettingRow
+            entry="ambientTint"
             htmlFor="settings-ambientTint"
             title={t("settings.interface.ambientTint")}
             description={t("settings.interface.ambientTintDescription")}
@@ -272,6 +276,7 @@ export function LayoutSection({
 
         {visible("backgroundGrain") && (
           <SettingRow
+            entry="backgroundGrain"
             htmlFor="settings-backgroundGrain"
             title={t("settings.interface.backgroundGrain")}
             description={t("settings.interface.backgroundGrainDescription")}
@@ -292,6 +297,7 @@ export function LayoutSection({
       <SettingsGroup title={t("layout.groups.sidebar")}>
         {visible("layoutSidebar") && (
           <SettingRow
+            entry="layoutSidebar"
             title={t("layout.sidebar.title")}
             description={t("layout.sidebar.description")}
             query={query}
@@ -315,6 +321,7 @@ export function LayoutSection({
 
         {visible("layoutDock") && (
           <SettingRow
+            entry="layoutDock"
             title={t("layout.dock.title")}
             description={t("layout.dock.description")}
             query={query}
@@ -368,6 +375,7 @@ export function LayoutSection({
       <SettingsGroup title={t("layout.groups.home")}>
         {visible("instancesView") && (
           <SettingRow
+            entry="instancesView"
             title={t("settings.interface.instancesView")}
             description={t("settings.interface.instancesViewDescription")}
             query={query}
@@ -412,6 +420,7 @@ export function LayoutSection({
 
         {visible("layoutHome") && (
           <SettingRow
+            entry="layoutHome"
             title={t("layout.home.rowTitle")}
             description={t("layout.home.description")}
             query={query}
@@ -432,6 +441,7 @@ export function LayoutSection({
       <SettingsGroup title={t("layout.groups.instance")}>
         {visible("layoutInstanceTab") && (
           <SettingRow
+            entry="layoutInstanceTab"
             title={t("layout.instance.defaultTab")}
             description={t("layout.instance.defaultTabDescription")}
             query={query}
@@ -467,6 +477,7 @@ export function LayoutSection({
 
         {visible("layoutTabs") && (
           <SettingRow
+            entry="layoutTabs"
             title={t("layout.instance.tabs")}
             description={t("layout.instance.tabsDescription")}
             query={query}
@@ -486,6 +497,7 @@ export function LayoutSection({
 
         {visible("layoutOverview") && (
           <SettingRow
+            entry="layoutOverview"
             title={t("layout.instance.overview")}
             description={t("layout.instance.overviewDescription")}
             query={query}

@@ -129,7 +129,8 @@
       "capes": "Capes",
       "friends": "Friends and voice",
       "worksOffline": "Works without the internet",
-      "skinsLittleskin": "Skins on littleskin.cn"
+      "skinsLittleskin": "Skins on littleskin.cn",
+      "openServers": "LAN and no-check servers"
     },
     "auth": {
       "waitingTitle": "Finish signing in to {{provider}}",
@@ -175,12 +176,12 @@
       "discord": "Skins and capes, friends and voice",
       "microsoft": "Official servers and the Mojang skin",
       "elyby": "Skins on ely.by, no Xbox needed",
-      "plain": "No password, singleplayer only",
+      "plain": "No password: singleplayer, LAN, servers without a license check",
       "littleskin": "Skins on littleskin.cn, no Xbox needed"
     },
     "longNicknameOffline": "The nickname is longer than 16 characters or uses unsupported characters — the game will refuse it. Remove this account and create a new one with a shorter nickname.",
-    "upgradeTitle": "What is missing",
-    "upgradeHint": "An offline account has no access to official servers and no skins. Add a Discord, Microsoft, Ely.by or LittleSkin account on the left to play online.",
+    "upgradeTitle": "Switch to a full account",
+    "upgradeHint": "An offline account plays in singleplayer, over LAN and on servers that don’t check the license. Servers with a license check need Microsoft; skins, friends and voice come with any of these accounts:",
     "welcomeTitle": "Add an account to play",
     "welcomeHint": "The launcher needs one account to start the game. Pick where you sign in — you can add the rest later and switch between them at any time.",
     "openProfile": "Open profile",
@@ -1611,16 +1612,10 @@
     "usageStatsDescription": "How many times a day screens were opened and features used. Totals only, without nickname, mod names or paths",
     "packAnalytics": "Statistics for modpack authors",
     "packAnalyticsDescription": "Tied to your Grubie account. A modpack’s author sees only totals — how many people play, for how long and how often the game crashes — never nicknames.",
-    "aiLogAnalysis": "AI log analysis",
-    "aiLogAnalysisDescription": "Skip the confirmation step: the analysis starts as soon as the window opens",
+    "aiLogAnalysis": "Send crash logs for AI analysis without asking",
+    "aiLogAnalysisDescription": "When the game crashes, the analysis window sends the cleaned log (no paths, player names or tokens) to the Grubie server right away. Turned off, it asks first.",
     "sounds": "Notification sounds",
     "soundsDescription": "Install finished, game crash and friend invites",
-    "notifications": {
-      "title": "Notifications",
-      "telegram": "Telegram notifications",
-      "telegramDescription": "Play invites, friend requests and shared worlds, while the launcher is closed",
-      "openProfile": "In the profile"
-    },
     "hideServerInRpc": "Hide server in Discord",
     "hideServerInRpcDescription": "Don't show the server address in Discord Rich Presence",
     "streamer": {
@@ -1643,7 +1638,8 @@
       "privacy": "Privacy",
       "about": "About",
       "system": "Startup and tray",
-      "support": "Support"
+      "support": "Support",
+      "assistant": "Assistant"
     },
     "support": "Support the project",
     "voicePtt": "Push-to-talk",
@@ -1725,8 +1721,6 @@
       "categoriesTitle": "What takes the space",
       "reclaimTitle": "Free up space",
       "nothingToClean": "Nothing to clean up — the folder is tidy",
-      "offerCount": "{{value}} items",
-      "restCount": "and {{value}} more instances",
       "offers": {
         "cache": "Clear cache",
         "java": "Delete unused Java",
@@ -1735,10 +1729,13 @@
         "instances": "Move broken instances to the recycle bin",
         "dedupe": "Merge identical instance files"
       },
-      "reclaimBanner": "About {{size}} can be freed without touching instances, worlds or accounts.",
       "scanning": "Measuring the folder…",
       "rootHint": "everything the launcher downloaded",
-      "restMore": "More instances: {{value}}"
+      "cleanupInstancesConfirm": "Move to recycle bin",
+      "restCount_other": "and {{count}} more instances",
+      "restCount_one": "and {{count}} more instance",
+      "offerCount_other": "{{count}} items",
+      "offerCount_one": "{{count}} item"
     },
     "devModeDescription": "A message for every interface error; the instance menu also gets the run command with relative paths",
     "voiceMicTestErrorHint": "No access to the microphone. Check {{os}} permissions and the selected device.",
@@ -1789,7 +1786,9 @@
       "overridesTitle": "Instances with their own settings",
       "overridesHint": "the values above do not apply to them",
       "overridesOther": "Java",
-      "freeNow": "Only {{free}} GB is free right now — less than the {{allocated}} GB given to the game. Close other programs or lower the memory."
+      "freeNow": "Only {{free}} GB is free right now — less than the {{allocated}} GB given to the game. Close other programs or lower the memory.",
+      "overridesMore_other": "{{count}} more instances",
+      "overridesMore_one": "{{count}} more instance"
     },
     "downloads": {
       "mirrorUnknown": "Checking the source…",
@@ -2091,9 +2090,9 @@
         "keywords": "statistics analytics privacy modpack author playtime crashes"
       },
       "aiLogAnalysis": {
-        "title": "AI log analysis",
-        "description": "Start the analysis without asking first",
-        "keywords": "ai analysis crash log auto"
+        "title": "Send crash logs for AI analysis without asking",
+        "description": "Crash logs go to the AI analysis without a confirmation",
+        "keywords": "ai analysis crash log auto send server confirmation"
       },
       "devMode": {
         "title": "Show errors",
@@ -2154,11 +2153,6 @@
         "title": "Sync through the Grubie account",
         "description": "Themes, skins and settings follow you to another computer",
         "keywords": "sync account cloud themes skins wardrobe settings another computer backup"
-      },
-      "notifications": {
-        "title": "Telegram notifications",
-        "description": "Play invites and friend requests while the launcher is closed",
-        "keywords": "telegram notifications alerts invites friends bot profile"
       },
       "accent": {
         "title": "Accent color",
@@ -2319,6 +2313,11 @@
         "title": "Modrinth and CurseForge links",
         "description": "The Install buttons on mod sites open Grubie",
         "keywords": "protocol modrinth:// curseforge:// install button browser"
+      },
+      "agentProviders": {
+        "title": "AI providers and API keys",
+        "description": "Which model the assistant uses and your own keys",
+        "keywords": "assistant ai provider api key token model openai anthropic openrouter base url"
       }
     },
     "voicePttCaptureTimeout": "No key was pressed — the shortcut is unchanged.",
@@ -2392,7 +2391,13 @@
     },
     "resetAllDone": "Settings reset to defaults",
     "directConnect": "Direct connection with friends",
-    "directConnectDescription": "Play Together goes straight between you and your friend, bypassing the Grubie server, so the ping is lower. Your friend learns your IP address. Not used in streamer mode or in worlds open to everyone."
+    "directConnectDescription": "Play Together goes straight between you and your friend, bypassing the Grubie server, so the ping is lower. Your friend learns your IP address. Not used in streamer mode or in worlds open to everyone.",
+    "assistant": {
+      "providersTitle": "Providers and keys",
+      "providersHint": "the selected one answers in the assistant",
+      "keysNote": "Keys stay on this computer, encrypted by the system, and go only to the provider’s address.",
+      "dataTitle": "Chats and crash analysis"
+    }
   },
   "skinView": {
     "title": "Skin preview",
@@ -2872,7 +2877,11 @@
       "noAccount": "This section opens after you sign in to a Grubie account",
       "offlineAccount": "This section is not available on an offline account"
     },
-    "initError": "Failed to start the launcher"
+    "initError": "Failed to start the launcher",
+    "locked": {
+      "launching": "Unavailable while the game is starting.",
+      "playing": "Unavailable while the game is running: the launcher hands these to the game at launch. Close the game to change them."
+    }
   },
   "game": {
     "download": "Download"
@@ -4637,7 +4646,7 @@
   },
   "onboarding": {
     "title": "Welcome to Grubie Launcher!",
-    "description": "Two steps and you are in the game.",
+    "description": "A few steps and you are in the game.",
     "stepAccount": "Add an account",
     "stepAccountDescription": "Microsoft, Ely.by, LittleSkin, Discord or an offline nickname",
     "stepVersion": "Install your first instance",
@@ -4645,7 +4654,13 @@
     "go": "Go",
     "skip": "Skip",
     "stepVersionLocked": "Available after you add an account",
-    "skipHint": "You can do this later"
+    "skipHint": "You can do this later",
+    "stepData": "Data folder",
+    "stepDataDescription": "Instances, Java and worlds live here",
+    "stepDataFree": "{{free}} free on this drive",
+    "stepDataLow": "Only {{free}} free, and modded instances take tens of gigabytes. Pick another drive.",
+    "stepDataChange": "Change",
+    "optional": "optional"
   },
   "privacyNotice": {
     "title": "What the launcher sends us",
@@ -5276,8 +5291,7 @@
       "newInstance": "New instance",
       "instance": "Instance",
       "people": "People",
-      "profile": "Profile",
-      "settingsLocked": "Unavailable while the game is running"
+      "profile": "Profile"
     },
     "palette": {
       "label": "Search and commands",
@@ -5299,7 +5313,47 @@
         "settings": "Settings",
         "agent": "Assistant"
       },
-      "blockedRunning": "while the game runs"
+      "blockedRunning": "while the game starts",
+      "notifications": "Telegram notifications",
+      "inProfile": "in the profile",
+      "reasons": {
+        "layoutDefault": "nothing changed",
+        "current": "already on"
+      },
+      "keywords": {
+        "home": "home play instances library start",
+        "agent": "ai assistant chat helper",
+        "people": "people friends voice groups chat",
+        "profile": "profile skins achievements cape",
+        "notifications": "notifications telegram alerts bot invites",
+        "settings": "settings preferences options",
+        "accounts": "accounts sign in login",
+        "newInstance": "new instance create import modpack",
+        "connectivity": "connection network internet mirror test",
+        "streamer": "streamer stream obs twitch privacy hide",
+        "sidebar": "sidebar panel collapse expand",
+        "customizeLayout": "layout customize hide reorder",
+        "resetLayout": "layout reset default",
+        "layoutPreset": "preset layout compact minimal standard",
+        "theme": "theme dark light oled background look",
+        "openFolder": "folder open explorer files",
+        "play": "play launch start run",
+        "account": "account switch use",
+        "agentChat": "ai assistant new chat ask",
+        "tabs": {
+          "overview": "overview publish share shortcut",
+          "modpack": "modpack modrinth curseforge update version",
+          "content": "content mods resource packs shaders",
+          "worlds": "worlds saves backups",
+          "servers": "servers multiplayer",
+          "server": "own server host",
+          "configs": "configs config kubejs files",
+          "settings": "settings memory java",
+          "arguments": "arguments jvm flags",
+          "statistics": "statistics playtime stats",
+          "logs": "logs console journal"
+        }
+      }
     },
     "tabs": {
       "overview": "Overview",
@@ -6208,6 +6262,12 @@
       "busy": "Moving is unavailable while a game or server is running or an installation is in progress.",
       "stale": "The folder changed while you were confirming. Please choose it again.",
       "failed": "Couldn't change the data folder."
+    },
+    "dedupeOffer": {
+      "title": "Data moved to another drive",
+      "description": "Identical mods, resource packs and shaders of your instances became separate copies. Merge them again to win the space back.",
+      "action": "Merge",
+      "running": "Merging identical files…"
     }
   },
   "supportReport": {
