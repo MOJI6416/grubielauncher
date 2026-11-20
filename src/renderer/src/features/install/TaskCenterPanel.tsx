@@ -31,12 +31,9 @@ import { navigate } from "@renderer/navigation/navigate";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { getLoaderInfo } from "@renderer/components/Loaders";
 import { Hint } from "@renderer/components/Hint";
+import { formatNumber } from "@renderer/utilities/numbers";
 import { FailuresView } from "./FailuresView";
-import {
-  cancelActiveInstall,
-  cancelQueuedInstall,
-  toggleInstallPause,
-} from "./installActions";
+import { cancelQueuedInstall, toggleInstallPause } from "./installActions";
 import type { VersionInstallOperation } from "@/types/InstallationProgress";
 import {
   buildDownloadStats,
@@ -52,6 +49,7 @@ import { TaskOutcome, TaskRecord, taskDuration } from "./taskHistory";
 import { usePacedStageLog } from "./usePacedStageLog";
 import { useInstallFormatters } from "./useInstallFormatters";
 import {
+  askCancelActiveInstall,
   closeTaskCenter,
   downloaderInfoAtom,
   installCancellingAtom,
@@ -185,7 +183,16 @@ function ActiveTask() {
     ? t(sub.titleKey || `installationProgress.subProgress.${sub.kind}.title`)
     : "";
 
-  const fileName = stripGroupPrefix(downloader?.currentFileName);
+  const checking = downloader?.checking;
+  const checkingText = checking
+    ? t("installationProgress.checkingFiles", {
+        done: formatNumber(checking.done),
+        total: formatNumber(checking.total),
+      })
+    : "";
+  const fileName = checking
+    ? undefined
+    : stripGroupPrefix(downloader?.currentFileName);
   const groupLabel = downloader?.currentGroup
     ? t(`downloadProgress.groups.${downloader.currentGroup}`, {
         defaultValue: downloader.currentGroup,
@@ -256,11 +263,15 @@ function ActiveTask() {
             {groupLabel}
           </span>
         )}
-        <Hint content={fileName || details} variant="text" truncatedOnly>
+        <Hint
+          content={checkingText || fileName || details}
+          variant="text"
+          truncatedOnly
+        >
           <span
-            className={`min-w-0 flex-1 truncate text-2xs text-faint ${fileName ? "font-mono" : ""}`}
+            className={`min-w-0 flex-1 truncate text-2xs text-faint ${fileName ? "font-mono" : "tabular-nums"}`}
           >
-            {fileName || details || ""}
+            {checkingText || fileName || details || ""}
           </span>
         </Hint>
       </p>
@@ -334,7 +345,7 @@ function ActiveTask() {
             size="sm"
             className="ml-auto text-destructive hover:text-destructive"
             disabled={isCancelling}
-            onClick={() => void cancelActiveInstall()}
+            onClick={askCancelActiveInstall}
           >
             {isCancelling ? (
               <Loader2 className="size-3.5 animate-spin" />

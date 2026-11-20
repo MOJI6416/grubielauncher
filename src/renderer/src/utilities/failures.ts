@@ -33,6 +33,7 @@ export function consumeRecentFailure(options?: {
   const maxAge = options?.maxAgeMs ?? DEFAULT_MAX_AGE_MS;
   const now = Date.now();
   const channels = options?.channels;
+  if (!channels || channels.length === 0) return null;
 
   const entry = buffer.find((item) => {
     if (item.consumed) return false;
@@ -40,7 +41,6 @@ export function consumeRecentFailure(options?: {
     if (options?.status !== undefined && item.info.status !== options.status) {
       return false;
     }
-    if (!channels || channels.length === 0) return true;
     return channels.some(
       (channel) =>
         item.info.channel === channel ||

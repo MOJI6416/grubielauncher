@@ -45,8 +45,7 @@ import { openConnectivityCheck } from "@renderer/features/install/installUi";
 import { pendingInteraction } from "@renderer/features/agent/timelineGroups";
 import type { AgentErrorRecovery } from "@renderer/features/agent/providerErrors";
 import {
-  readRailPreference,
-  writeRailPreference,
+  useRailPreference,
 } from "@renderer/features/agent/railPreference";
 import { AgentTimeline } from "@renderer/features/agent/AgentTimeline";
 import { AgentComposer } from "@renderer/features/agent/AgentComposer";
@@ -77,7 +76,7 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
   const [draft, setDraft] = useState("");
   const [isProvidersOpen, setIsProvidersOpen] = useState(false);
   const [providersFailed, setProvidersFailed] = useState(false);
-  const [isRailOpen, setIsRailOpen] = useState(readRailPreference);
+  const [isRailOpen, toggleRail] = useRailPreference();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const openedRef = useRef<string | null>(null);
 
@@ -214,14 +213,6 @@ export function AgentScreen({ chatId }: { chatId?: string }) {
     },
     [active, chat.timeline, model, newChat],
   );
-
-  const toggleRail = () => {
-    setIsRailOpen((value) => {
-      const next = !value;
-      writeRailPreference(next);
-      return next;
-    });
-  };
 
   if (!providers) {
     if (providersFailed) {

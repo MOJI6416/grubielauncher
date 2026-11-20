@@ -29,6 +29,8 @@ function model(overrides: Partial<TrayModel> = {}): TrayModel {
   return {
     lang: "ru",
     accent: "violet",
+    themeId: "grubie",
+    installing: false,
     closeToTray: true,
     askOnClose: false,
     instances: [],
@@ -116,6 +118,15 @@ describe("update in the tray", () => {
       "Обновить до 2.0.5",
       "Выйти",
     ]);
+  });
+
+  it("keeps the update unavailable while a game runs or an install is going", () => {
+    expect(
+      outline(buildTrayMenu(model({ updateVersion: "2.0.5", installing: true }))),
+    ).toContain("(Обновить до 2.0.5)");
+    expect(
+      outline(buildTrayMenu(model({ updateVersion: "2.0.5", playing: ["Survival"] }))),
+    ).toContain("(Обновить до 2.0.5)");
   });
 });
 

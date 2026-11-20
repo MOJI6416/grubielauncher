@@ -1191,7 +1191,7 @@ export class Version {
 
     this.sendInstallProgress("files", FILES_STAGE_START_PERCENT, true);
     this.downloader.onInfo = (info) => {
-      if (!info) return;
+      if (!info || info.checking) return;
 
       const percent = Math.max(0, Math.min(100, info.progressPercent));
       this.sendInstallProgress(

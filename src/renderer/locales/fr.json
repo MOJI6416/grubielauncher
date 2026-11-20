@@ -1650,7 +1650,8 @@
         "mirrorDown": "Le miroir est injoignable. Passez sur « Auto » ou « Officielle ».",
         "fail": "Les téléchargements sont indisponibles : ni les serveurs officiels ni le miroir ne répondent. Changez de DNS (1.1.1.1) ou utilisez un VPN."
       },
-      "heading": "Vérification de la connexion"
+      "heading": "Vérification de la connexion",
+      "switchTo": "Passer à « {{source}} »"
     },
     "crashTelemetry": "Diagnostics de plantage",
     "crashTelemetryDescription": "Le code du diagnostic et la ligne d’erreur, ou le texte de l’erreur si le launcher lui-même plante. Sans pseudo ni journaux",
@@ -1993,8 +1994,6 @@
     "about": {
       "whatsNew": "Nouveautés",
       "supportTitle": "En cas de problème",
-      "copyReport": "Copier les infos système",
-      "copyReportDescription": "Version, OS, mémoire et chemins en un seul bloc — collez-le dans un rapport de bug",
       "statusDescription": "Disponibilité en direct des services du launcher",
       "communityTitle": "Communauté",
       "discordDescription": "Support, rapports de bugs et annonces des versions",
@@ -2167,11 +2166,6 @@
         "title": "Dossiers",
         "description": "Emplacements du launcher, de Minecraft et de Java",
         "keywords": "dossier chemin répertoire ouvrir explorateur finder"
-      },
-      "systemReport": {
-        "title": "Infos système",
-        "description": "Un bloc de faits pour un rapport de bug",
-        "keywords": "support rapport copier diagnostic version"
       },
       "links": {
         "title": "Communauté et support",
@@ -2372,6 +2366,16 @@
         "title": "Notifications par-dessus le jeu",
         "description": "Messages et invitations dans le coin de l’overlay",
         "keywords": "overlay notification invitation message appel touche accepter jeu"
+      },
+      "errorLog": {
+        "title": "Journal des erreurs",
+        "description": "Ce qui a fait trébucher le launcher : téléchargements, fichiers et services",
+        "keywords": "erreurs journal échec problème diagnostic"
+      },
+      "connectivityCheck": {
+        "title": "Vérifier la connexion",
+        "description": "Accessibilité des serveurs du launcher, de Mojang, du miroir et des mods, état des services",
+        "keywords": "connexion réseau internet miroir vérifier état services"
       }
     },
     "voicePttCaptureTimeout": "Aucune touche n’a été pressée — le raccourci reste inchangé.",
@@ -2441,7 +2445,9 @@
       "folderDescription": "Fichiers : {{files}} · {{size}} sur cet ordinateur",
       "folderDescriptionEmpty": "Stockés sur cet ordinateur",
       "historyTitle": "Rapports envoyés",
-      "repliesTitle": "Réponses du support"
+      "repliesTitle": "Réponses du support",
+      "errorLogCount": "Entrées : {{n}} · dernière {{time}}",
+      "errorLogEmpty": "Vide — ce qui fait trébucher le launcher lui-même apparaîtra ici"
     },
     "resetAllDone": "Paramètres réinitialisés par défaut",
     "directConnect": "Connexion directe avec les amis",
@@ -3848,7 +3854,10 @@
     "offlineDescription": "La liste complète des changements apparaîtra quand Internet sera disponible ou que la version sera publiée.",
     "highlights": "Points forts",
     "fixes": "Corrigé",
-    "discordCta": "Plus d’actualités sur Discord"
+    "discordCta": "Plus d’actualités sur Discord",
+    "skipped_one": "{{count}} autre version est sortie depuis le dernier lancement — historique des versions",
+    "skipped_many": "{{count}} autres versions sont sorties depuis le dernier lancement — historique des versions",
+    "skipped_other": "{{count}} autres versions sont sorties depuis le dernier lancement — historique des versions"
   },
   "updater": {
     "checking": "Recherche de mises à jour",
@@ -4717,7 +4726,8 @@
     "pausing": "Mise en pause — fin de l’étape en cours",
     "overallLabel": "Total",
     "nowDownloading": "En cours de téléchargement",
-    "loaderTitle": "Changement de version du chargeur"
+    "loaderTitle": "Changement de version du chargeur",
+    "checkingFiles": "Vérification des fichiers… {{done}} sur {{total}}"
   },
   "sizes": [
     "o",
@@ -4775,7 +4785,7 @@
   "crash": {
     "title": "Le jeu a planté : {{version}}",
     "culprits": "Coupable probable",
-    "openReport": "Ouvrir le rapport"
+    "openReport": "Ouvrir le rapport de plantage"
   },
   "aiCrash": {
     "title": "Analyse du plantage par IA",
@@ -5534,7 +5544,8 @@
           "statistics": "statistiques temps de jeu",
           "logs": "journaux console"
         },
-        "screenshots": "captures images photos f2 galerie screenshots"
+        "screenshots": "captures images photos f2 galerie screenshots",
+        "errorLog": "erreurs journal échec"
       }
     },
     "tabs": {
@@ -5924,7 +5935,12 @@
     "closeHint": "Fermer le launcher interrompra l’installation — les fichiers déjà téléchargés resteront inachevés et l’instance devra être réinstallée.",
     "closeHintNamed": "Fermer le launcher interrompra l’installation de « {{name}} » — les fichiers déjà téléchargés resteront inachevés et l’instance devra être réinstallée.",
     "closeStopAndQuit": "Interrompre et fermer",
-    "closeQuestion": "Interrompre l’installation et fermer le launcher \u0001"
+    "closeQuestion": "Interrompre l’installation et fermer le launcher \u0001",
+    "cancelInstallTitle": "Annuler l’installation de « {{name}} » ?",
+    "cancelTaskTitle": "Interrompre la tâche pour « {{name}} » ?",
+    "cancelTaskBody": "La tâche s’arrête à l’étape en cours. Relancez-la pour la terminer.",
+    "cancelKeep": "Continuer",
+    "cancelTask": "Interrompre"
   },
   "skinStage": {
     "animation": "Animation",
@@ -6009,7 +6025,6 @@
     "openFolder": "Dossier des journaux",
     "more": "Actions sur le journal",
     "copyLog": "Copier le journal",
-    "copyReport": "Copier pour le support",
     "readFailedTitle": "Impossible de lire {{name}}",
     "readFailedHint": "Le fichier est sur le disque, mais le launcher n’a pas pu le lire : il est peut-être verrouillé par un autre programme ou endommagé.",
     "emptyTitle": "Pas encore de journaux",
@@ -6049,20 +6064,6 @@
       "report": "Le fichier crash-reports écrit par le jeu au moment du plantage.",
       "debug": "debug.log — le journal détaillé, uniquement si le jeu a été configuré pour le tenir.",
       "native": "{{name}} — la machine Java a planté, voici son dump."
-    },
-    "report": {
-      "launcher": "Launcher",
-      "os": "Système",
-      "instance": "Instance",
-      "minecraft": "Minecraft",
-      "loader": "Chargeur",
-      "mods": "Mods",
-      "memory": "Mémoire",
-      "started": "Démarré",
-      "duration": "Durée",
-      "server": "Serveur",
-      "diagnosis": "Diagnostic",
-      "log": "Journal"
     },
     "levels": {
       "all": "Tout",
@@ -6432,6 +6433,22 @@
     "blocked": {
       "game": "Fermez d’abord le jeu — la mise à jour redémarre le launcher.",
       "install": "Attendez la fin de l’installation dans le Centre des tâches."
+    },
+    "check": {
+      "action": "Rechercher des mises à jour",
+      "upToDate": "Vous avez la dernière version",
+      "downloading": "Téléchargement de la version {{version}} — « Mettre à jour » apparaîtra ici une fois terminé",
+      "unsupported": "Cette version du launcher ne se met pas à jour toute seule — téléchargez la nouvelle sur grubielauncher.com",
+      "rejected": "La version {{version}} n’a pas passé la vérification de signature et n’a pas été installée"
+    },
+    "whatsNew": "Nouveautés de la {{version}}",
+    "notesUnavailable": "La liste des changements est indisponible",
+    "notesUnavailableHint": "Les notes de cette version ne sont pas encore publiées ou le serveur Grubie n’a pas répondu. Vous pouvez quand même installer la mise à jour.",
+    "errors": {
+      "unknown": "La mise à jour n’a pas pu être téléchargée. Le launcher reste sur la version actuelle et réessaiera plus tard.",
+      "startAnyway": "Le launcher démarre avec la version actuelle.",
+      "target": "Serveur de mises à jour",
+      "later": "Le launcher réessaiera plus tard."
     }
   },
   "trayPopup": {
@@ -6533,7 +6550,7 @@
     "saveToFile": "Enregistrer dans un fichier",
     "saved": "Rapport enregistré — joignez le fichier à votre message au support",
     "saveHint": "Si l’envoi échoue sans cesse, enregistrez le rapport dans un fichier et joignez-le à votre message au support.",
-    "openAction": "Envoyer un rapport au support",
+    "openAction": "Rapport pour le support",
     "failed": {
       "prepare": "Impossible de rassembler le rapport. Réessayez ; si cela se reproduit, ouvrez le dossier du journal dans Paramètres → Support.",
       "expired": "Le rapport rassemblé est périmé. Rassemblez-le à nouveau.",

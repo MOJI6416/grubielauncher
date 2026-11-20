@@ -3,7 +3,6 @@ import {
   Suspense,
   useEffect,
   useMemo,
-  useState,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtom, useAtomValue } from "jotai";
@@ -35,7 +34,6 @@ import {
   versionsLoadedAtom,
 } from "@renderer/stores/atoms";
 import { AccountSwitcher } from "@renderer/features/accounts/AccountSwitcher";
-import { ErrorLog } from "@renderer/components/ErrorLog";
 import { Hint } from "@renderer/components/Hint";
 import { LazyDialogFallback } from "@renderer/components/LazyDialogFallback";
 import {
@@ -236,7 +234,6 @@ export function Sidebar({
   const isInternetOnline = useAtomValue(internetAtom);
   const isBackendOnline = useAtomValue(networkAtom);
   const friends = useAtomValue(friendsAtom);
-  const [isErrorLogOpen, setIsErrorLogOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useAtom(isShareModalOpenAtom);
   const isFriendsConnected = useAtomValue(isFriendsConnectedAtom);
   const shareState = useAtomValue(shareStateAtom);
@@ -385,7 +382,7 @@ export function Sidebar({
           {(editing || isDockVisible) && <InstanceDock runGame={runGame} />}
 
           {(editing || isNowVisible) && (
-            <NowBlock onOpenErrors={() => setIsErrorLogOpen(true)} />
+            <NowBlock />
           )}
         </div>
 
@@ -403,7 +400,6 @@ export function Sidebar({
           />
         </Suspense>
       )}
-      {isErrorLogOpen && <ErrorLog onClose={() => setIsErrorLogOpen(false)} />}
     </>
   );
 }

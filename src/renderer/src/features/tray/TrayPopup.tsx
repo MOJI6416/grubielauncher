@@ -24,6 +24,7 @@ import { InstanceArt } from "@renderer/features/instances/InstanceArt";
 import { getLoaderInfo, LoaderIcon } from "@renderer/components/Loaders";
 import { Hint } from "@renderer/components/Hint";
 import { formatClock } from "@renderer/utilities/duration";
+import { updateBlock } from "@renderer/features/appUpdate/appUpdate";
 
 const api = window.api;
 
@@ -144,7 +145,7 @@ export function TrayPopup() {
 
   useEffect(() => {
     void applyWindowAppearance();
-  }, [model?.accent, shownCount]);
+  }, [model?.accent, model?.themeId, shownCount]);
 
   useEffect(() => {
     if (model?.lang) void changeAppLanguage(model.lang);
@@ -168,6 +169,15 @@ export function TrayPopup() {
   if (!model) return null;
 
   const playing = model.playing[0];
+  const updateBlocked = updateBlock({
+    isGameRunning: model.playing.length > 0,
+    isInstallActive: model.installing,
+  });
+  const updateNote = updateBlocked
+    ? t(`appUpdate.blocked.${updateBlocked}`)
+    : model.voice
+      ? t("appUpdate.callWarning")
+      : "";
 
   return (
     <div ref={rootRef} className="p-2 select-none">
@@ -380,15 +390,20 @@ export function TrayPopup() {
                   {t("trayPopup.updateReady", { version: model.updateVersion })}
                 </span>
               </Hint>
-              {model.playing.length > 0 && (
-                <span className="mt-0.5 block text-2xs leading-snug text-muted-foreground">
-                  {t("appUpdate.blocked.game")}
+              {updateNote && (
+                <span
+                  className={cn(
+                    "mt-0.5 block text-2xs leading-snug",
+                    updateBlocked ? "text-muted-foreground" : "text-warning",
+                  )}
+                >
+                  {updateNote}
                 </span>
               )}
             </span>
             <button
               type="button"
-              disabled={model.playing.length > 0}
+              disabled={Boolean(updateBlocked)}
               onClick={() => run({ type: "installUpdate" })}
               className="h-7 shrink-0 rounded-lg bg-secondary px-2.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-surface-3 disabled:opacity-50"
             >

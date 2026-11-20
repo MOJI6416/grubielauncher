@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { ExternalLink, Gift, MessageCircle, Wrench } from "lucide-react";
+import {
+  BadgePlus,
+  ChevronRight,
+  ExternalLink,
+  History,
+  MessageCircle,
+  Wrench,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import { Button } from "@/components/ui/button";
@@ -15,6 +22,7 @@ import { Hint } from "@renderer/components/Hint";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { cn } from "@/lib/utils";
 import { formatDay } from "@renderer/utilities/date";
+import { openSettingsEntry } from "@renderer/features/settings/settingsFocus";
 import { MilestoneBeam } from "./MilestoneBeam";
 
 const api = window.api;
@@ -23,10 +31,12 @@ const DEFAULT_DISCORD_URL = "https://discord.gg/URrKha9hk7";
 export function WhatsNewModal({
   release,
   version,
+  skipped = 0,
   onClose,
 }: {
   release: ILauncherReleaseNote | null;
   version: string;
+  skipped?: number;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -89,7 +99,7 @@ export function WhatsNewModal({
 
           <div className="relative grid gap-1.5">
             <span className="flex min-w-0 items-center gap-2 text-2xs text-faint">
-              <Gift className="size-3.5 shrink-0 text-info" />
+              <BadgePlus className="size-3.5 shrink-0 text-info" />
               <span className="font-mono tracking-[0.09em] tabular-nums">
                 v{version}
               </span>
@@ -165,6 +175,23 @@ export function WhatsNewModal({
                 <p className="rounded-lg bg-surface-2 px-3 py-2 text-xs leading-4 text-muted-foreground">
                   {t("whatsNew.offlineDescription")}
                 </p>
+              )}
+
+              {skipped > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    openSettingsEntry("releaseHistory");
+                  }}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-row-hover hover:text-foreground"
+                >
+                  <History className="size-3.5 shrink-0 text-faint" />
+                  <span className="min-w-0 flex-1">
+                    {t("whatsNew.skipped", { count: skipped })}
+                  </span>
+                  <ChevronRight className="size-3.5 shrink-0 text-faint" />
+                </button>
               )}
             </div>
           </ScrollArea>

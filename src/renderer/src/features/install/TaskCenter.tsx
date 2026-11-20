@@ -75,10 +75,21 @@ export function TaskCenter() {
     progress && !progress.isIndeterminate
       ? clampPercent(progress.progressPercent)
       : null;
+  const failuresLabel = t("taskCenter.failures", {
+    count: failures?.failedItems ?? 0,
+  });
+  const triggerLabel = progress
+    ? `${t("taskCenter.open")}: ${progress.versionName} · ${
+        percent === null ? "…" : `${percent}%`
+      }`
+    : hasUnseenFailures
+      ? `${t("taskCenter.open")}: ${failuresLabel}`
+      : t("taskCenter.open");
 
   const trigger = progress ? (
     <button
       type="button"
+      aria-label={triggerLabel}
       className="flex h-7 min-w-0 max-w-52 items-center gap-2 rounded-lg border border-border bg-surface-2 px-2.5 transition-colors hover:border-input"
     >
       {isPaused ? (
@@ -103,10 +114,11 @@ export function TaskCenter() {
   ) : hasUnseenFailures ? (
     <button
       type="button"
+      aria-label={triggerLabel}
       className="flex h-7 items-center gap-1.5 rounded-lg border border-destructive/40 bg-surface-2 px-2.5 text-destructive transition-colors hover:border-destructive/70"
     >
       <AlertTriangle className="size-3.5 shrink-0" />
-      <span className="font-mono text-xs tabular-nums">
+      <span aria-hidden className="font-mono text-xs tabular-nums">
         {failures?.failedItems ?? 0}
       </span>
     </button>
@@ -114,7 +126,7 @@ export function TaskCenter() {
     <button
       type="button"
       className="flex size-7 items-center justify-center rounded-lg border border-border bg-surface-2 text-faint transition-colors hover:border-input hover:text-muted-foreground"
-      aria-label={t("taskCenter.open")}
+      aria-label={triggerLabel}
     >
       <HardDriveDownload className="size-3.5" />
     </button>
@@ -128,7 +140,10 @@ export function TaskCenter() {
         if (next) setView(hasUnseenFailures ? "failures" : "tasks");
       }}
     >
-      <Hint content={t("taskCenter.open")} side="bottom">
+      <Hint
+        content={hasUnseenFailures && !progress ? failuresLabel : t("taskCenter.open")}
+        side="bottom"
+      >
         <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       </Hint>
       <PopoverContent

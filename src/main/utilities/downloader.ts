@@ -151,7 +151,10 @@ export interface DownloaderInfo {
   estimatedTimeRemaining?: number;
   totalBytes: number;
   downloadedBytes: number;
+  checking?: { done: number; total: number };
 }
+
+const CHECKING_NOTICE_MS = 400;
 
 type DownloadFailure = {
   item: DownloadItem;
@@ -1132,6 +1135,21 @@ export class Downloader {
   ): Promise<Set<DownloadItem>> => {
     const limit = pLimit(16);
     const present = new Set<DownloadItem>();
+    const startedAt = Date.now();
+    let checked = 0;
+
+    const reportChecking = () => {
+      if (Date.now() - startedAt < CHECKING_NOTICE_MS) return;
+      this.sendInfo({
+        totalItems: items.length,
+        completedItems: 0,
+        failedItems: 0,
+        progressPercent: 0,
+        totalBytes: 0,
+        downloadedBytes: 0,
+        checking: { done: checked, total: items.length },
+      });
+    };
 
     await Promise.all(
       items.map((item) =>
@@ -1154,6 +1172,8 @@ export class Downloader {
           ) {
             present.add(item);
           }
+          checked++;
+          reportChecking();
         }),
       ),
     );

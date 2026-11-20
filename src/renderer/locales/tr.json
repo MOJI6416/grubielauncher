@@ -1629,7 +1629,8 @@
         "mirrorDown": "Aynaya ulaşılamıyor. “Otomatik” veya “Resmî” seçeneğine geçin.",
         "fail": "İndirmeler kullanılamıyor: ne resmî sunucular ne de ayna yanıt veriyor. DNS’i değiştirin (1.1.1.1) veya VPN kullanın."
       },
-      "heading": "Bağlantı kontrolü"
+      "heading": "Bağlantı kontrolü",
+      "switchTo": "“{{source}}” kaynağına geç"
     },
     "crashTelemetry": "Çökme teşhisleri",
     "crashTelemetryDescription": "Teşhis kodu ve hata satırı; başlatıcının kendisi çökerse hata metni. Kullanıcı adı ve günlük olmadan",
@@ -1969,8 +1970,6 @@
     "about": {
       "whatsNew": "Yenilikler",
       "supportTitle": "Bir şey bozulursa",
-      "copyReport": "Sistem bilgisini kopyala",
-      "copyReportDescription": "Sürüm, işletim sistemi, bellek ve yollar tek blokta — hata bildirimine yapıştırın",
       "statusDescription": "Başlatıcı hizmetlerinin anlık erişilebilirliği",
       "communityTitle": "Topluluk",
       "discordDescription": "Destek, hata bildirimleri ve sürüm duyuruları",
@@ -2143,11 +2142,6 @@
         "title": "Klasörler",
         "description": "Başlatıcı, Minecraft ve Java konumları",
         "keywords": "klasör yol dizin aç gezgin finder"
-      },
-      "systemReport": {
-        "title": "Sistem bilgisi",
-        "description": "Hata bildirimi için tek blokta bilgiler",
-        "keywords": "destek rapor kopyala tanılama sürüm"
       },
       "links": {
         "title": "Topluluk ve destek",
@@ -2348,6 +2342,16 @@
         "title": "Oyun üstünde bildirimler",
         "description": "Kaplama köşesinde mesajlar ve davetler",
         "keywords": "kaplama overlay bildirim davet mesaj arama tuş kabul oyun"
+      },
+      "errorLog": {
+        "title": "Hata günlüğü",
+        "description": "Başlatıcının takıldığı yerler: indirmeler, dosyalar ve hizmetler",
+        "keywords": "hata günlük arıza sorun tanılama"
+      },
+      "connectivityCheck": {
+        "title": "Bağlantıyı kontrol et",
+        "description": "Başlatıcı sunucularına, Mojang’a, aynaya ve mod sitelerine erişim, hizmet durumu",
+        "keywords": "bağlantı ağ internet ayna kontrol durum hizmetler"
       }
     },
     "voicePttCaptureTimeout": "Hiçbir tuşa basılmadı — kısayol değişmedi.",
@@ -2417,7 +2421,9 @@
       "folderDescription": "Dosyalar: {{files}} · bu bilgisayarda {{size}}",
       "folderDescriptionEmpty": "Bu bilgisayarda saklanır",
       "historyTitle": "Gönderilen raporlar",
-      "repliesTitle": "Destek yanıtları"
+      "repliesTitle": "Destek yanıtları",
+      "errorLogCount": "Kayıt: {{n}} · sonuncusu {{time}}",
+      "errorLogEmpty": "Boş — başlatıcının takıldığı her şey burada görünür"
     },
     "resetAllDone": "Ayarlar varsayılana sıfırlandı",
     "directConnect": "Arkadaşlarla doğrudan bağlantı",
@@ -3814,7 +3820,9 @@
     "offlineDescription": "Tam değişiklik listesi internet bağlantısı olunca veya sürüm yayımlanınca görünecek.",
     "highlights": "Öne çıkanlar",
     "fixes": "Düzeltildi",
-    "discordCta": "Daha fazla haber Discord’da"
+    "discordCta": "Daha fazla haber Discord’da",
+    "skipped_one": "Son açılıştan bu yana {{count}} sürüm daha çıktı — sürüm geçmişi",
+    "skipped_other": "Son açılıştan bu yana {{count}} sürüm daha çıktı — sürüm geçmişi"
   },
   "updater": {
     "checking": "Güncellemeler denetleniyor",
@@ -4672,7 +4680,8 @@
     "pausing": "Duraklatılıyor — mevcut adım bekleniyor",
     "overallLabel": "Toplam",
     "nowDownloading": "Şu anda indiriliyor",
-    "loaderTitle": "Yükleyici sürümü değiştiriliyor"
+    "loaderTitle": "Yükleyici sürümü değiştiriliyor",
+    "checkingFiles": "Dosyalar denetleniyor… {{done}}/{{total}}"
   },
   "sizes": [
     "B",
@@ -4730,7 +4739,7 @@
   "crash": {
     "title": "Oyun çöktü: {{version}}",
     "culprits": "Olası suçlu",
-    "openReport": "Raporu aç"
+    "openReport": "Çökme raporunu aç"
   },
   "aiCrash": {
     "title": "Yapay zekâ ile çökme analizi",
@@ -5484,7 +5493,8 @@
           "statistics": "istatistikler oynama süresi",
           "logs": "günlükler konsol"
         },
-        "screenshots": "ekran görüntüleri fotoğraflar f2 galeri screenshots"
+        "screenshots": "ekran görüntüleri fotoğraflar f2 galeri screenshots",
+        "errorLog": "hata günlük arıza"
       }
     },
     "tabs": {
@@ -5867,7 +5877,12 @@
     "closeHint": "Başlatıcıyı kapatmak kurulumu yarıda keser — indirilen dosyalar tamamlanmamış kalır ve kurulumun yeniden yapılması gerekir.",
     "closeHintNamed": "Başlatıcıyı kapatmak «{{name}}» kurulumunu yarıda keser — indirilen dosyalar tamamlanmamış kalır ve kurulumun yeniden yapılması gerekir.",
     "closeStopAndQuit": "Yarıda kes ve kapat",
-    "closeQuestion": "Kurulum durdurulup başlatıcı kapatılsın mı?"
+    "closeQuestion": "Kurulum durdurulup başlatıcı kapatılsın mı?",
+    "cancelInstallTitle": "“{{name}}” kurulumu iptal edilsin mi?",
+    "cancelTaskTitle": "“{{name}}” görevi durdurulsun mu?",
+    "cancelTaskBody": "Görev şu anki adımda durur. Bitirmek için yeniden başlatın.",
+    "cancelKeep": "Devam et",
+    "cancelTask": "Durdur"
   },
   "skinStage": {
     "animation": "Animasyon",
@@ -5948,7 +5963,6 @@
     "openFolder": "logs klasörü",
     "more": "Günlük işlemleri",
     "copyLog": "Günlüğü kopyala",
-    "copyReport": "Destek için kopyala",
     "readFailedTitle": "{{name}} okunamadı",
     "readFailedHint": "Dosya diskte, ancak başlatıcı onu okuyamadı: başka bir program tarafından kilitlenmiş veya hasarlı olabilir.",
     "emptyTitle": "Henüz günlük yok",
@@ -5988,20 +6002,6 @@
       "report": "Oyunun çöktüğünde yazdığı crash-reports dosyası.",
       "debug": "debug.log — ayrıntılı günlük, yalnızca oyuna tutması söylendiyse.",
       "native": "{{name}} — Java sanal makinesi çöktü, bu onun dökümü."
-    },
-    "report": {
-      "launcher": "Başlatıcı",
-      "os": "Sistem",
-      "instance": "Kurulum",
-      "minecraft": "Minecraft",
-      "loader": "Yükleyici",
-      "mods": "Modlar",
-      "memory": "Bellek",
-      "started": "Başlangıç",
-      "duration": "Süre",
-      "server": "Sunucu",
-      "diagnosis": "Teşhis",
-      "log": "Günlük"
     },
     "levels": {
       "all": "Tümü",
@@ -6367,6 +6367,22 @@
     "blocked": {
       "game": "Önce oyunu kapatın — güncelleme başlatıcıyı yeniden başlatır.",
       "install": "Görev merkezindeki kurulumun bitmesini bekleyin."
+    },
+    "check": {
+      "action": "Güncellemeleri denetle",
+      "upToDate": "En son sürümü kullanıyorsunuz",
+      "downloading": "{{version}} sürümü indiriliyor — bitince burada “Güncelle” görünecek",
+      "unsupported": "Bu başlatıcı derlemesi kendini güncellemez — yeni sürümü grubielauncher.com’dan indirin",
+      "rejected": "{{version}} sürümü imza denetimini geçemedi ve kurulmadı"
+    },
+    "whatsNew": "{{version}} sürümünde neler yeni",
+    "notesUnavailable": "Değişiklik listesi kullanılamıyor",
+    "notesUnavailableHint": "Bu sürümün notları henüz yayımlanmadı ya da Grubie sunucusu yanıt vermedi. Güncellemeyi yine de kurabilirsiniz.",
+    "errors": {
+      "unknown": "Güncelleme indirilemedi. Başlatıcı mevcut sürümle çalışmaya devam ediyor ve daha sonra yeniden deneyecek.",
+      "startAnyway": "Başlatıcı mevcut sürümle açılacak.",
+      "target": "Güncelleme sunucusu",
+      "later": "Başlatıcı daha sonra yeniden deneyecek."
     }
   },
   "trayPopup": {
@@ -6468,7 +6484,7 @@
     "saveToFile": "Dosyaya kaydet",
     "saved": "Rapor kaydedildi — dosyayı desteğe yazdığınız mesaja ekleyin",
     "saveHint": "Yükleme sürekli başarısız olursa raporu bir dosyaya kaydedip desteğe yazdığınız mesaja ekleyin.",
-    "openAction": "Desteğe rapor gönder",
+    "openAction": "Destek için rapor",
     "failed": {
       "prepare": "Rapor toplanamadı. Tekrar deneyin; tekrarlarsa Ayarlar → Destek’ten kayıt klasörünü açın.",
       "expired": "Toplanan rapor eskimiş. Yeniden toplayın.",

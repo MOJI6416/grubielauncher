@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getDownloadVerdict } from "./connectivityVerdict";
+import { getDownloadVerdict, switchSourceTargets } from "./connectivityVerdict";
 import { ConnectivityCheckResult } from "@/types/Connectivity";
 
 function res(
@@ -56,5 +56,33 @@ describe("getDownloadVerdict", () => {
       mirrorOk: false,
       downloadsOk: false,
     });
+  });
+});
+
+describe("switchSourceTargets", () => {
+  it("offers a working source when the chosen one is down", () => {
+    expect(
+      switchSourceTargets(
+        getDownloadVerdict([...official(false), ...mirror(true)], "official"),
+      ),
+    ).toEqual(["auto", "mirror"]);
+    expect(
+      switchSourceTargets(
+        getDownloadVerdict([...official(true), ...mirror(false)], "mirror"),
+      ),
+    ).toEqual(["auto", "official"]);
+  });
+
+  it("offers nothing when switching would not help or is not needed", () => {
+    expect(
+      switchSourceTargets(
+        getDownloadVerdict([...official(false), ...mirror(false)], "official"),
+      ),
+    ).toEqual([]);
+    expect(
+      switchSourceTargets(
+        getDownloadVerdict([...official(false), ...mirror(true)], "auto"),
+      ),
+    ).toEqual([]);
   });
 });

@@ -19,6 +19,7 @@ import {
   consolesAtom,
   friendSocketAtom,
   groupsAtom,
+  installActiveAtom,
   settingsAtom,
   versionsAtom,
   voiceCallAtom,
@@ -96,6 +97,7 @@ export function TrayHost() {
   const groups = useAtomValue(groupsAtom);
   const settings = useAtomValue(settingsAtom);
   const updateVersion = readyVersion(useAtomValue(appUpdateAtom));
+  const isInstallActive = useAtomValue(installActiveAtom);
   const lastPushed = useRef("");
 
   const labels = useMemo<TrayLabels>(
@@ -126,6 +128,8 @@ export function TrayHost() {
       buildTrayModel({
         lang: i18n.language,
         accent: settings.accent,
+        themeId: settings.themeId,
+        installing: isInstallActive,
         instances: versions.map((item) => ({
           name: item.version.name,
           installed: item.hasManifest,
@@ -153,6 +157,8 @@ export function TrayHost() {
       labels,
       session,
       settings.accent,
+      settings.themeId,
+      isInstallActive,
       settings.closeToTray,
       updateVersion,
       versions,

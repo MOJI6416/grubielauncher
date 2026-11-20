@@ -23,6 +23,7 @@ export function WhatsNewHost() {
       <LazyWhatsNewModal
         release={whatsNew.release}
         version={whatsNew.version}
+        skipped={whatsNew.skipped ?? 0}
         onClose={() => void dismissWhatsNew()}
       />
     </Suspense>

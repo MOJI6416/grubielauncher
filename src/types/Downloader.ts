@@ -30,6 +30,7 @@ export interface DownloaderInfo {
   estimatedTimeRemaining?: number;
   totalBytes: number;
   downloadedBytes: number;
+  checking?: { done: number; total: number };
 }
 
 export interface DownloaderFailureItem {

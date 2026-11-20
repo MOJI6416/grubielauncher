@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
-import { Gift, Heart, Loader2 } from "lucide-react";
+import { BadgePlus, Heart, Loader2 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +12,12 @@ import { useCurrentRelease } from "@renderer/features/whatsNew/useCurrentRelease
 import { whatsNewLoadingAtom } from "@renderer/features/whatsNew/whatsNewStore";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import { ReleaseHistory } from "./ReleaseHistory";
-import { platformName } from "./systemReport";
+import {
+  AppUpdateButton,
+  AppUpdateStatusLine,
+} from "@renderer/features/appUpdate/AppUpdateStatus";
+import type { AppUpdateCheckResult } from "@/types/AppUpdate";
+import { platformName } from "@renderer/utilities/platform";
 import type { SettingsEntryId } from "./catalog";
 import { countFeature } from "@renderer/features/usage/usage";
 
@@ -35,6 +41,9 @@ export function AboutSection({
   const { t, i18n } = useTranslation();
   const isMilestone = isMilestoneRelease(useCurrentRelease());
   const isWhatsNewLoading = useAtomValue(whatsNewLoadingAtom);
+  const [checkResult, setCheckResult] = useState<AppUpdateCheckResult | null>(
+    null,
+  );
 
   const open = (url: string) => {
     void api.shell.openExternal(url).catch((error) =>
@@ -74,7 +83,9 @@ export function AboutSection({
               </>
             )}
           </p>
+          <AppUpdateStatusLine result={checkResult} />
         </div>
+        <AppUpdateButton onResult={setCheckResult} />
         <Button
           variant="outline"
           size="sm"
@@ -88,7 +99,7 @@ export function AboutSection({
           {isWhatsNewLoading ? (
             <Loader2 className="size-3.5 animate-spin" />
           ) : (
-            <Gift className="size-3.5" />
+            <BadgePlus className="size-3.5" />
           )}
           {t("settings.about.whatsNew")}
         </Button>

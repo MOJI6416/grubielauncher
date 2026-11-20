@@ -1,49 +1,37 @@
-import { useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { ArrowUpCircle, Loader2 } from "lucide-react";
+import { ArrowUpCircle, BadgePlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  consolesMetaAtom,
-  installActiveAtom,
-  voiceSessionMetaAtom,
-} from "@renderer/stores/atoms";
-import { isVoiceLive } from "@renderer/features/voice/roomModel";
 import { showFailureToast } from "@renderer/utilities/failures";
-import { appUpdateAtom, readyVersion, updateBlock } from "./appUpdate";
-
-const api = window.api;
+import {
+  openReleaseNotesFor,
+  whatsNewLoadingAtom,
+} from "@renderer/features/whatsNew/whatsNewStore";
+import { useAppUpdateInstall } from "./useAppUpdateInstall";
 
 export function UpdatePill() {
   const { t } = useTranslation();
-  const state = useAtomValue(appUpdateAtom);
-  const consoles = useAtomValue(consolesMetaAtom);
-  const isInstallActive = useAtomValue(installActiveAtom);
-  const voice = useAtomValue(voiceSessionMetaAtom);
-  const [isInstalling, setIsInstalling] = useState(false);
+  const { version, block, inCall, isInstalling, install } =
+    useAppUpdateInstall();
+  const isNotesLoading = useAtomValue(whatsNewLoadingAtom);
 
-  const version = readyVersion(state);
   if (!version) return null;
 
-  const block = updateBlock({
-    isGameRunning: consoles.some((console) => console.status === "running"),
-    isInstallActive,
-  });
-  const inCall = isVoiceLive(voice.state);
-
-  const install = async () => {
-    setIsInstalling(true);
+  const showNotes = async () => {
     try {
-      if (!(await api.appUpdate.install())) throw new Error("update refused");
+      if (await openReleaseNotesFor(version)) return;
+      showFailureToast(t("appUpdate.notesUnavailable"), undefined, {
+        channels: ["backend:getWhatsNew"],
+        fallbackDescription: t("appUpdate.notesUnavailableHint"),
+      });
     } catch (error) {
-      setIsInstalling(false);
-      showFailureToast(t("appUpdate.failed"), error, {
-        channels: ["appUpdate:install"],
+      showFailureToast(t("appUpdate.notesUnavailable"), error, {
+        channels: ["backend:getWhatsNew"],
       });
     }
   };
@@ -66,8 +54,22 @@ export function UpdatePill() {
         <p className="mt-1 text-xs leading-snug text-muted-foreground">
           {t("appUpdate.description")}
         </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-1.5 -ml-2 h-7 px-2 text-xs text-muted-foreground"
+          disabled={isNotesLoading}
+          onClick={() => void showNotes()}
+        >
+          {isNotesLoading ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <BadgePlus className="size-3.5" />
+          )}
+          {t("appUpdate.whatsNew", { version })}
+        </Button>
         {(block || inCall) && (
-          <p className="mt-2 text-xs leading-snug text-warning">
+          <p className="mt-1 text-xs leading-snug text-warning">
             {block ? t(`appUpdate.blocked.${block}`) : t("appUpdate.callWarning")}
           </p>
         )}

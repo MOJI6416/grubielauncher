@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   compareLauncherVersions,
+  countSkippedReleases,
   getWhatsNewDecision,
   hasReleaseNotes,
   markWhatsNewSeen,
@@ -94,5 +95,22 @@ describe("hasReleaseNotes", () => {
     expect(hasReleaseNotes(null)).toBe(false);
     expect(hasReleaseNotes(undefined)).toBe(false);
     expect(hasReleaseNotes(release)).toBe(false);
+  });
+});
+
+describe("countSkippedReleases", () => {
+  it("counts the releases between the last seen and the current version", () => {
+    expect(
+      countSkippedReleases(
+        ["2.2.6", "2.2.5", "2.2.4", "2.2.3", "2.2.2"],
+        "2.2.3",
+        "2.2.6",
+      ),
+    ).toBe(2);
+  });
+
+  it("is zero after a one-step update or when the list is empty", () => {
+    expect(countSkippedReleases(["2.2.6", "2.2.5"], "2.2.5", "2.2.6")).toBe(0);
+    expect(countSkippedReleases([], "2.0.0", "2.2.6")).toBe(0);
   });
 });

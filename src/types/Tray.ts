@@ -35,6 +35,8 @@ export interface TrayVoice {
 export interface TrayModel {
   lang: string;
   accent: string;
+  themeId: string;
+  installing: boolean;
   closeToTray: boolean;
   askOnClose: boolean;
   instances: TrayInstance[];

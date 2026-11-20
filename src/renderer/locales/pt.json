@@ -1650,7 +1650,8 @@
         "mirrorDown": "O espelho está inacessível. Mude para “Automático” ou “Oficial”.",
         "fail": "Os downloads estão indisponíveis: nem os servidores oficiais nem o espelho respondem. Troque o DNS (1.1.1.1) ou use uma VPN."
       },
-      "heading": "Verificação de conexão"
+      "heading": "Verificação de conexão",
+      "switchTo": "Mudar para “{{source}}”"
     },
     "crashTelemetry": "Diagnósticos de crash",
     "crashTelemetryDescription": "O código do diagnóstico e a linha do erro, ou o texto do erro se o próprio launcher falhar. Sem nick e sem logs",
@@ -1993,8 +1994,6 @@
     "about": {
       "whatsNew": "Novidades",
       "supportTitle": "Se algo quebrar",
-      "copyReport": "Copiar informações do sistema",
-      "copyReportDescription": "Versão, SO, memória e caminhos em um bloco — cole num relato de bug",
       "statusDescription": "Disponibilidade dos serviços do launcher ao vivo",
       "communityTitle": "Comunidade",
       "discordDescription": "Suporte, relatos de bugs e anúncios de versões",
@@ -2167,11 +2166,6 @@
         "title": "Pastas",
         "description": "Locais do launcher, do Minecraft e do Java",
         "keywords": "pasta caminho diretório abrir explorador finder"
-      },
-      "systemReport": {
-        "title": "Informações do sistema",
-        "description": "Um bloco de dados para um relato de bug",
-        "keywords": "suporte relatório copiar diagnóstico versão"
       },
       "links": {
         "title": "Comunidade e suporte",
@@ -2372,6 +2366,16 @@
         "title": "Notificações sobre o jogo",
         "description": "Mensagens e convites no canto do overlay",
         "keywords": "overlay notificação convite mensagem chamada tecla aceitar jogo"
+      },
+      "errorLog": {
+        "title": "Registro de erros",
+        "description": "Em que o próprio launcher tropeçou: downloads, arquivos e serviços",
+        "keywords": "erros registro falha problema diagnóstico"
+      },
+      "connectivityCheck": {
+        "title": "Verificar conexão",
+        "description": "Disponibilidade dos servidores do launcher, Mojang, espelho e mods, status dos serviços",
+        "keywords": "conexão rede internet espelho verificar status serviços"
       }
     },
     "voicePttCaptureTimeout": "Nenhuma tecla foi pressionada — o atalho não mudou.",
@@ -2441,7 +2445,9 @@
       "folderDescription": "Arquivos: {{files}} · {{size}} neste computador",
       "folderDescriptionEmpty": "Guardado neste computador",
       "historyTitle": "Relatórios enviados",
-      "repliesTitle": "Respostas do suporte"
+      "repliesTitle": "Respostas do suporte",
+      "errorLogCount": "Entradas: {{n}} · a última {{time}}",
+      "errorLogEmpty": "Vazio — aqui aparece aquilo em que o próprio launcher tropeçar"
     },
     "resetAllDone": "Configurações redefinidas para o padrão",
     "directConnect": "Conexão direta com amigos",
@@ -3848,7 +3854,10 @@
     "offlineDescription": "A lista completa de mudanças vai aparecer quando houver internet ou quando a versão for publicada.",
     "highlights": "Destaques",
     "fixes": "Correções",
-    "discordCta": "Mais novidades no Discord"
+    "discordCta": "Mais novidades no Discord",
+    "skipped_one": "Desde a última abertura saiu mais {{count}} versão — histórico de versões",
+    "skipped_many": "Desde a última abertura saíram mais {{count}} versões — histórico de versões",
+    "skipped_other": "Desde a última abertura saíram mais {{count}} versões — histórico de versões"
   },
   "updater": {
     "checking": "Procurando atualizações",
@@ -4717,7 +4726,8 @@
     "pausing": "Pausando — esperando a etapa atual",
     "overallLabel": "Total",
     "nowDownloading": "Baixando agora",
-    "loaderTitle": "Mudando a versão do loader"
+    "loaderTitle": "Mudando a versão do loader",
+    "checkingFiles": "Verificando arquivos… {{done}} de {{total}}"
   },
   "sizes": [
     "B",
@@ -4775,7 +4785,7 @@
   "crash": {
     "title": "O jogo crashou: {{version}}",
     "culprits": "Provável culpado",
-    "openReport": "Abrir relatório"
+    "openReport": "Abrir relatório de crash"
   },
   "aiCrash": {
     "title": "Análise de crash com IA",
@@ -5534,7 +5544,8 @@
           "statistics": "estatísticas tempo de jogo",
           "logs": "logs console registro"
         },
-        "screenshots": "capturas imagens fotos f2 galeria screenshots"
+        "screenshots": "capturas imagens fotos f2 galeria screenshots",
+        "errorLog": "erros registro falha"
       }
     },
     "tabs": {
@@ -5920,7 +5931,12 @@
     "closeHint": "Fechar o launcher vai interromper a instalação — os arquivos já baixados ficam incompletos e a instância vai precisar ser instalada de novo.",
     "closeHintNamed": "Fechar o launcher vai interromper a instalação de “{{name}}” — os arquivos já baixados ficam incompletos e a instância vai precisar ser instalada de novo.",
     "closeStopAndQuit": "Interromper e fechar",
-    "closeQuestion": "Interromper a instalação e fechar o launcher?"
+    "closeQuestion": "Interromper a instalação e fechar o launcher?",
+    "cancelInstallTitle": "Cancelar a instalação de “{{name}}”?",
+    "cancelTaskTitle": "Interromper a tarefa de “{{name}}”?",
+    "cancelTaskBody": "A tarefa para na etapa atual. Para concluí-la, execute-a de novo.",
+    "cancelKeep": "Continuar",
+    "cancelTask": "Interromper"
   },
   "skinStage": {
     "animation": "Animação",
@@ -6005,7 +6021,6 @@
     "openFolder": "Pasta de logs",
     "more": "Ações do log",
     "copyLog": "Copiar o log",
-    "copyReport": "Copiar para o suporte",
     "readFailedTitle": "Não foi possível ler {{name}}",
     "readFailedHint": "O arquivo está no disco, mas o launcher não conseguiu lê-lo: ele pode estar bloqueado por outro programa ou danificado.",
     "emptyTitle": "Ainda não há logs",
@@ -6045,20 +6060,6 @@
       "report": "O arquivo de crash-reports que o jogo gravou quando caiu.",
       "debug": "debug.log — o log detalhado, só se o jogo foi configurado para mantê-lo.",
       "native": "{{name}} — a máquina Java travou, este é o dump dela."
-    },
-    "report": {
-      "launcher": "Launcher",
-      "os": "Sistema",
-      "instance": "Instância",
-      "minecraft": "Minecraft",
-      "loader": "Loader",
-      "mods": "Mods",
-      "memory": "Memória",
-      "started": "Início",
-      "duration": "Duração",
-      "server": "Servidor",
-      "diagnosis": "Diagnóstico",
-      "log": "Log"
     },
     "levels": {
       "all": "Tudo",
@@ -6428,6 +6429,22 @@
     "blocked": {
       "game": "Feche o jogo primeiro — atualizar reinicia o launcher.",
       "install": "Espere terminar a instalação na Central de tarefas."
+    },
+    "check": {
+      "action": "Verificar atualizações",
+      "upToDate": "Você está na versão mais recente",
+      "downloading": "Baixando a versão {{version}} — quando terminar, “Atualizar” aparecerá aqui",
+      "unsupported": "Esta versão do launcher não se atualiza sozinha — baixe a nova em grubielauncher.com",
+      "rejected": "A versão {{version}} não passou na verificação de assinatura e não foi instalada"
+    },
+    "whatsNew": "Novidades da {{version}}",
+    "notesUnavailable": "A lista de mudanças está indisponível",
+    "notesUnavailableHint": "As notas desta versão ainda não foram publicadas ou o servidor Grubie não respondeu. Você pode instalar a atualização mesmo assim.",
+    "errors": {
+      "unknown": "Não foi possível baixar a atualização. O launcher continua na versão atual e tentará de novo mais tarde.",
+      "startAnyway": "O launcher vai abrir na versão atual.",
+      "target": "Servidor de atualizações",
+      "later": "O launcher tentará de novo mais tarde."
     }
   },
   "trayPopup": {
@@ -6529,7 +6546,7 @@
     "saveToFile": "Salvar em arquivo",
     "saved": "Relatório salvo — anexe o arquivo à sua mensagem para o suporte",
     "saveHint": "Se o envio continuar falhando, salve o relatório em um arquivo e anexe-o à sua mensagem para o suporte.",
-    "openAction": "Enviar um relatório ao suporte",
+    "openAction": "Relatório para o suporte",
     "failed": {
       "prepare": "Não foi possível reunir o relatório. Tente de novo; se repetir, abra a pasta do diário em Configurações → Suporte.",
       "expired": "O relatório reunido está desatualizado. Reúna-o de novo.",

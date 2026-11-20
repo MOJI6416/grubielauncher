@@ -78,6 +78,29 @@ describe("showFailureToast", () => {
     );
   });
 
+  it("does not borrow an unrelated buffered failure when neither an error nor channels are given", () => {
+    shown.length = 0;
+    pushIpcFailure({
+      code: "DISK-DENIED",
+      side: "disk",
+      cause: "forbidden",
+      channel: "fs:writeJSON",
+      message: "EPERM: operation not permitted, open 'settings.json'",
+      time: Date.now(),
+    });
+
+    const info = showFailureToast("Could not copy", undefined, {
+      fallbackDescription: "Try again",
+    });
+
+    expect(info).toBeNull();
+    expect(shown[0]?.[1]).toBe("Try again");
+    expect(consumeRecentFailure({})).toBeNull();
+    expect(consumeRecentFailure({ channels: ["fs:"] })?.code).toBe(
+      "DISK-DENIED",
+    );
+  });
+
   it("shows the given description even when the error looks like a known cause", () => {
     shown.length = 0;
 

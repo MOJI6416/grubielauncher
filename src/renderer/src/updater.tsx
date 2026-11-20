@@ -12,6 +12,7 @@ import { installMotionPreference } from "@/lib/motionPreference";
 import { Hint, HintProvider } from "./components/Hint";
 import { applyWindowAppearance } from "./features/theme/windowAppearance";
 import { formatBytes } from "./utilities/file";
+import { describeUpdateError } from "./features/appUpdate/updateError";
 
 const api = window.api;
 
@@ -124,7 +125,9 @@ const App = () => {
   const bytes = (value: number) => formatBytes(value, sizes, 1);
 
   const detail = (() => {
-    if (status === "error") return errorMessage;
+    if (status === "error") {
+      return describeUpdateError(errorMessage, t, { short: true });
+    }
     if (status === "checking") return t("updater.preparing");
     const percentText = t("updater.percent", { percent: percent.toFixed(0) });
     if (status !== "downloading" || progress.total <= 0) return percentText;

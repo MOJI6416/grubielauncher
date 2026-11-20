@@ -1629,7 +1629,8 @@
         "mirrorDown": "Der Mirror ist nicht erreichbar. Wechseln Sie zu „Automatisch“ oder „Offiziell“.",
         "fail": "Downloads sind nicht verfügbar: Weder die offiziellen Server noch der Mirror antworten. Ändern Sie den DNS (1.1.1.1) oder verwenden Sie ein VPN."
       },
-      "heading": "Verbindungsprüfung"
+      "heading": "Verbindungsprüfung",
+      "switchTo": "Auf „{{source}}“ umstellen"
     },
     "crashTelemetry": "Absturzdiagnosen",
     "crashTelemetryDescription": "Diagnosecode und Fehlerzeile, bei einem Fehler des Launchers selbst der Fehlertext. Ohne Nickname und Logs",
@@ -1969,8 +1970,6 @@
     "about": {
       "whatsNew": "Was ist neu",
       "supportTitle": "Wenn etwas kaputtgeht",
-      "copyReport": "Systeminfo kopieren",
-      "copyReportDescription": "Version, Betriebssystem, Speicher und Pfade in einem Block – fügen Sie ihn in einen Fehlerbericht ein",
       "statusDescription": "Aktuelle Verfügbarkeit der Launcher-Dienste",
       "communityTitle": "Community",
       "discordDescription": "Support, Fehlerberichte und Release-Ankündigungen",
@@ -2143,11 +2142,6 @@
         "title": "Ordner",
         "description": "Speicherorte von Launcher, Minecraft und Java",
         "keywords": "ordner pfad verzeichnis öffnen explorer finder"
-      },
-      "systemReport": {
-        "title": "Systeminfo",
-        "description": "Ein Block mit Fakten für einen Fehlerbericht",
-        "keywords": "support bericht kopieren diagnose version"
       },
       "links": {
         "title": "Community und Support",
@@ -2348,6 +2342,16 @@
         "title": "Benachrichtigungen über dem Spiel",
         "description": "Nachrichten und Einladungen in der Overlay-Ecke",
         "keywords": "overlay benachrichtigung einladung nachricht anruf taste annehmen spiel"
+      },
+      "errorLog": {
+        "title": "Fehlerprotokoll",
+        "description": "Woran der Launcher selbst gescheitert ist: Downloads, Dateien und Dienste",
+        "keywords": "Fehler Protokoll Absturz Problem Diagnose"
+      },
+      "connectivityCheck": {
+        "title": "Verbindung prüfen",
+        "description": "Erreichbarkeit der Launcher-Server, von Mojang, dem Mirror und Mod-Seiten, Dienststatus",
+        "keywords": "Verbindung Netzwerk Internet Mirror Prüfung Status Dienste"
       }
     },
     "voicePttCaptureTimeout": "Es wurde keine Taste gedrückt – das Tastenkürzel bleibt unverändert.",
@@ -2417,7 +2421,9 @@
       "folderDescription": "Dateien: {{files}} · {{size}} auf diesem Computer",
       "folderDescriptionEmpty": "Auf diesem Computer gespeichert",
       "historyTitle": "Gesendete Berichte",
-      "repliesTitle": "Antworten des Supports"
+      "repliesTitle": "Antworten des Supports",
+      "errorLogCount": "Einträge: {{n}} · zuletzt {{time}}",
+      "errorLogEmpty": "Leer – hier erscheint, woran der Launcher selbst scheitert"
     },
     "resetAllDone": "Einstellungen auf Standard zurückgesetzt",
     "directConnect": "Direkte Verbindung mit Freunden",
@@ -3814,7 +3820,9 @@
     "offlineDescription": "Die vollständige Änderungsliste erscheint, sobald Internet verfügbar ist oder das Release veröffentlicht wird.",
     "highlights": "Höhepunkte",
     "fixes": "Behoben",
-    "discordCta": "Weitere Neuigkeiten auf Discord"
+    "discordCta": "Weitere Neuigkeiten auf Discord",
+    "skipped_one": "Seit dem letzten Start ist noch {{count}} weitere Version erschienen – Versionsverlauf",
+    "skipped_other": "Seit dem letzten Start sind noch {{count}} weitere Versionen erschienen – Versionsverlauf"
   },
   "updater": {
     "checking": "Suche nach Updates",
@@ -4672,7 +4680,8 @@
     "pausing": "Wird pausiert – der aktuelle Schritt wird abgewartet",
     "overallLabel": "Gesamt",
     "nowDownloading": "Wird gerade heruntergeladen",
-    "loaderTitle": "Loader-Version wird gewechselt"
+    "loaderTitle": "Loader-Version wird gewechselt",
+    "checkingFiles": "Dateien werden geprüft… {{done}} von {{total}}"
   },
   "sizes": [
     "B",
@@ -4730,7 +4739,7 @@
   "crash": {
     "title": "Spiel abgestürzt: {{version}}",
     "culprits": "Wahrscheinliche Ursache",
-    "openReport": "Bericht öffnen"
+    "openReport": "Absturzbericht öffnen"
   },
   "aiCrash": {
     "title": "KI-Absturzanalyse",
@@ -5484,7 +5493,8 @@
           "statistics": "statistik spielzeit",
           "logs": "logs konsole protokoll"
         },
-        "screenshots": "screenshots bilder fotos f2 galerie"
+        "screenshots": "screenshots bilder fotos f2 galerie",
+        "errorLog": "Fehler Protokoll"
       }
     },
     "tabs": {
@@ -5867,7 +5877,12 @@
     "closeHint": "Das Schließen des Launchers unterbricht die Installation – bereits heruntergeladene Dateien bleiben unfertig, und die Instanz muss erneut installiert werden.",
     "closeHintNamed": "Das Schließen des Launchers unterbricht die Installation von „{{name}}“ – bereits heruntergeladene Dateien bleiben unfertig, und die Instanz muss erneut installiert werden.",
     "closeStopAndQuit": "Unterbrechen und schließen",
-    "closeQuestion": "Installation abbrechen und Launcher schließen?"
+    "closeQuestion": "Installation abbrechen und Launcher schließen?",
+    "cancelInstallTitle": "Installation von „{{name}}“ abbrechen?",
+    "cancelTaskTitle": "Aufgabe für „{{name}}“ abbrechen?",
+    "cancelTaskBody": "Die Aufgabe stoppt beim aktuellen Schritt. Starten Sie sie erneut, um sie abzuschließen.",
+    "cancelKeep": "Weitermachen",
+    "cancelTask": "Abbrechen"
   },
   "skinStage": {
     "animation": "Animation",
@@ -5948,7 +5963,6 @@
     "openFolder": "Ordner logs",
     "more": "Log-Aktionen",
     "copyLog": "Log kopieren",
-    "copyReport": "Für den Support kopieren",
     "readFailedTitle": "{{name}} konnte nicht gelesen werden",
     "readFailedHint": "Die Datei liegt auf der Festplatte, aber der Launcher konnte sie nicht lesen: Sie ist womöglich von einem anderen Programm gesperrt oder beschädigt.",
     "emptyTitle": "Noch keine Logs",
@@ -5988,20 +6002,6 @@
       "report": "Die Datei aus crash-reports, die das Spiel beim Absturz geschrieben hat.",
       "debug": "debug.log – das ausführliche Log, nur wenn das Spiel angewiesen wurde, eines zu führen.",
       "native": "{{name}} – die Java-Maschine ist abgestürzt, das ist ihr Dump."
-    },
-    "report": {
-      "launcher": "Launcher",
-      "os": "System",
-      "instance": "Instanz",
-      "minecraft": "Minecraft",
-      "loader": "Loader",
-      "mods": "Mods",
-      "memory": "Speicher",
-      "started": "Gestartet",
-      "duration": "Dauer",
-      "server": "Server",
-      "diagnosis": "Diagnose",
-      "log": "Log"
     },
     "levels": {
       "all": "Alle",
@@ -6367,6 +6367,22 @@
     "blocked": {
       "game": "Schließen Sie zuerst das Spiel – das Update startet den Launcher neu.",
       "install": "Warten Sie, bis die Installation in der Aufgabenzentrale abgeschlossen ist."
+    },
+    "check": {
+      "action": "Nach Updates suchen",
+      "upToDate": "Sie haben die neueste Version",
+      "downloading": "Version {{version}} wird heruntergeladen – danach erscheint hier „Aktualisieren“",
+      "unsupported": "Dieser Launcher-Build aktualisiert sich nicht selbst – die neue Version gibt es auf grubielauncher.com",
+      "rejected": "Version {{version}} hat die Signaturprüfung nicht bestanden und wurde nicht installiert"
+    },
+    "whatsNew": "Was ist neu in {{version}}",
+    "notesUnavailable": "Änderungsliste nicht verfügbar",
+    "notesUnavailableHint": "Die Beschreibung ist noch nicht veröffentlicht oder der Grubie-Server hat nicht geantwortet. Das Update lässt sich trotzdem installieren.",
+    "errors": {
+      "unknown": "Das Update konnte nicht heruntergeladen werden. Der Launcher läuft mit der aktuellen Version weiter und versucht es später erneut.",
+      "startAnyway": "Der Launcher startet mit der aktuellen Version.",
+      "target": "Update-Server",
+      "later": "Der Launcher versucht es später erneut."
     }
   },
   "trayPopup": {
@@ -6468,7 +6484,7 @@
     "saveToFile": "In Datei speichern",
     "saved": "Bericht gespeichert – hängen Sie die Datei an Ihre Nachricht an den Support an",
     "saveHint": "Wenn das Hochladen weiterhin fehlschlägt, speichern Sie den Bericht in einer Datei und hängen Sie sie an Ihre Nachricht an den Support an.",
-    "openAction": "Bericht an den Support senden",
+    "openAction": "Bericht für den Support",
     "failed": {
       "prepare": "Der Bericht konnte nicht gesammelt werden. Versuchen Sie es erneut; wenn es sich wiederholt, öffnen Sie den Journal-Ordner unter Einstellungen → Support.",
       "expired": "Der gesammelte Bericht ist veraltet. Sammeln Sie ihn erneut.",

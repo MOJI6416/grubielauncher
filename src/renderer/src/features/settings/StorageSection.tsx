@@ -82,11 +82,9 @@ const ACTION_ICON: Record<CleanupAction, LucideIcon> = {
 };
 
 export function StorageSection({
-  onTotalChange,
   visible,
   query,
 }: {
-  onTotalChange?: (total: string) => void;
   visible: (id: SettingsEntryId) => boolean;
   query: string;
 }) {
@@ -133,11 +131,6 @@ export function StorageSection({
       mounted.current = false;
     };
   }, [load]);
-
-  useEffect(() => {
-    if (data) onTotalChange?.(bytes(data.total));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
 
   const isLoading = isScanning && !data;
   const rootPath = data?.rootPath || paths.launcher;

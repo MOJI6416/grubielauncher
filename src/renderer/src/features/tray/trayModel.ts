@@ -20,6 +20,8 @@ function launchedAt(value: Date | string | null | undefined): number {
 export function buildTrayModel({
   lang,
   accent,
+  themeId,
+  installing = false,
   instances,
   running,
   session,
@@ -32,6 +34,8 @@ export function buildTrayModel({
 }: {
   lang: string;
   accent: string;
+  themeId: string;
+  installing?: boolean;
   instances: TrayInstanceSource[];
   running: string[];
   session: Pick<
@@ -85,6 +89,8 @@ export function buildTrayModel({
   return {
     lang,
     accent,
+    themeId,
+    installing,
     closeToTray,
     askOnClose,
     instances: recent,

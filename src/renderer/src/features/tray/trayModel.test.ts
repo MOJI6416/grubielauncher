@@ -18,6 +18,7 @@ const idle = {
 const base = {
   lang: "ru",
   accent: "violet",
+  themeId: "grubie",
   instances: [],
   running: [],
   session: idle,

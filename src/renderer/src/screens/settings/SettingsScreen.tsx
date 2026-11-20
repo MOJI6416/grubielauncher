@@ -108,7 +108,6 @@ export function SettingsScreen({
 
   const [query, setQuery] = useState("");
   const [onlyChanged, setOnlyChanged] = useState(false);
-  const [storageTotal, setStorageTotal] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [focus, setFocus] = useAtom(settingsFocusAtom);
@@ -426,7 +425,6 @@ export function SettingsScreen({
               {active === "privacy" && <PrivacySection {...sectionProps} />}
               {active === "storage" && (
                 <StorageSection
-                  onTotalChange={setStorageTotal}
                   visible={visible}
                   query={result.query}
                 />
@@ -434,9 +432,7 @@ export function SettingsScreen({
               {active === "support" && (
                 <SupportSection
                   settings={settings}
-                  appVersion={appVersion}
-                  totalMemoryMb={totalMemoryMb}
-                  storageTotal={storageTotal}
+                  view={view}
                   visible={visible}
                   query={result.query}
                   commit={sectionProps.commit}

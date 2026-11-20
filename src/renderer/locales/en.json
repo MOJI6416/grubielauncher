@@ -1629,7 +1629,8 @@
         "mirrorDown": "The mirror is unreachable. Switch to \"Auto\" or \"Official\".",
         "fail": "Downloads are unavailable: neither the official servers nor the mirror respond. Change DNS (1.1.1.1) or use a VPN."
       },
-      "heading": "Connection check"
+      "heading": "Connection check",
+      "switchTo": "Switch to “{{source}}”"
     },
     "crashTelemetry": "Crash diagnoses",
     "crashTelemetryDescription": "The diagnosis code and the error line, or the error text if the launcher itself fails. No nickname, no logs",
@@ -1969,8 +1970,6 @@
     "about": {
       "whatsNew": "What's new",
       "supportTitle": "If something breaks",
-      "copyReport": "Copy system info",
-      "copyReportDescription": "Version, OS, memory and paths in one block — paste it into a bug report",
       "statusDescription": "Live availability of the launcher services",
       "communityTitle": "Community",
       "discordDescription": "Support, bug reports and release announcements",
@@ -2143,11 +2142,6 @@
         "title": "Folders",
         "description": "Launcher, Minecraft and Java locations",
         "keywords": "folder path directory open explorer finder"
-      },
-      "systemReport": {
-        "title": "System info",
-        "description": "One block of facts for a bug report",
-        "keywords": "support report copy diagnostics version"
       },
       "links": {
         "title": "Community and support",
@@ -2348,6 +2342,16 @@
         "title": "Notifications over the game",
         "description": "Messages and invites in the overlay corner",
         "keywords": "overlay toast notification invite message call hotkey accept game"
+      },
+      "errorLog": {
+        "title": "Error log",
+        "description": "What the launcher itself tripped over: failed downloads, files and services",
+        "keywords": "errors log failure problem diagnostics"
+      },
+      "connectivityCheck": {
+        "title": "Check connection",
+        "description": "Reachability of the launcher servers, Mojang, the mirror and mod sites, service status",
+        "keywords": "connection network internet mirror check status services"
       }
     },
     "voicePttCaptureTimeout": "No key was pressed — the shortcut is unchanged.",
@@ -2417,7 +2421,9 @@
       "folderDescription": "Files: {{files}} · {{size}} on this computer",
       "folderDescriptionEmpty": "Stored on this computer",
       "historyTitle": "Sent reports",
-      "repliesTitle": "Support replies"
+      "repliesTitle": "Support replies",
+      "errorLogCount": "Entries: {{n}} · latest {{time}}",
+      "errorLogEmpty": "Empty — anything the launcher itself trips over will show up here"
     },
     "resetAllDone": "Settings reset to defaults",
     "directConnect": "Direct connection with friends",
@@ -3814,7 +3820,9 @@
     "offlineDescription": "The full change list will appear when internet is available or the release is published.",
     "highlights": "Highlights",
     "fixes": "Fixed",
-    "discordCta": "More news in Discord"
+    "discordCta": "More news in Discord",
+    "skipped_one": "{{count}} more release came out since your last launch — version history",
+    "skipped_other": "{{count}} more releases came out since your last launch — version history"
   },
   "updater": {
     "checking": "Checking for updates",
@@ -4672,7 +4680,8 @@
     "pausing": "Pausing — waiting for the current step",
     "overallLabel": "Total",
     "nowDownloading": "Downloading now",
-    "loaderTitle": "Changing loader version"
+    "loaderTitle": "Changing loader version",
+    "checkingFiles": "Checking files… {{done}} of {{total}}"
   },
   "sizes": [
     "B",
@@ -4730,7 +4739,7 @@
   "crash": {
     "title": "Game crashed: {{version}}",
     "culprits": "Likely culprit",
-    "openReport": "Open report"
+    "openReport": "Open crash report"
   },
   "aiCrash": {
     "title": "AI crash analysis",
@@ -5484,7 +5493,8 @@
           "statistics": "statistics playtime stats",
           "logs": "logs console journal"
         },
-        "screenshots": "screenshots shots pictures f2 gallery feed"
+        "screenshots": "screenshots shots pictures f2 gallery feed",
+        "errorLog": "errors log failure"
       }
     },
     "tabs": {
@@ -5867,7 +5877,12 @@
     "closeHint": "Closing the launcher will interrupt the installation — already downloaded files stay unfinished and the build will need to be installed again.",
     "closeHintNamed": "Closing the launcher will interrupt the installation of «{{name}}» — already downloaded files stay unfinished and the build will need to be installed again.",
     "closeStopAndQuit": "Interrupt and close",
-    "closeQuestion": "Stop the installation and close the launcher?"
+    "closeQuestion": "Stop the installation and close the launcher?",
+    "cancelInstallTitle": "Cancel installing “{{name}}”?",
+    "cancelTaskTitle": "Stop the task for “{{name}}”?",
+    "cancelTaskBody": "The task stops at its current step. Run it again to finish.",
+    "cancelKeep": "Keep going",
+    "cancelTask": "Stop"
   },
   "skinStage": {
     "animation": "Animation",
@@ -5948,7 +5963,6 @@
     "openFolder": "Logs folder",
     "more": "Log actions",
     "copyLog": "Copy the log",
-    "copyReport": "Copy for support",
     "readFailedTitle": "Could not read {{name}}",
     "readFailedHint": "The file is on disk but the launcher could not read it: it may be locked by another program or damaged.",
     "emptyTitle": "No logs yet",
@@ -5988,20 +6002,6 @@
       "report": "The crash-reports file the game wrote when it fell over.",
       "debug": "debug.log — the verbose log, only if the game was told to keep one.",
       "native": "{{name}} — the Java machine crashed, this is its dump."
-    },
-    "report": {
-      "launcher": "Launcher",
-      "os": "System",
-      "instance": "Instance",
-      "minecraft": "Minecraft",
-      "loader": "Loader",
-      "mods": "Mods",
-      "memory": "Memory",
-      "started": "Started",
-      "duration": "Duration",
-      "server": "Server",
-      "diagnosis": "Diagnosis",
-      "log": "Log"
     },
     "levels": {
       "all": "All",
@@ -6367,6 +6367,22 @@
     "blocked": {
       "game": "Close the game first — updating restarts the launcher.",
       "install": "Wait for the install in the Task Center to finish."
+    },
+    "check": {
+      "action": "Check for updates",
+      "upToDate": "You have the latest version",
+      "downloading": "Downloading version {{version}} — “Update” will appear here when it is done",
+      "unsupported": "This launcher build does not update itself — get the new version at grubielauncher.com",
+      "rejected": "Version {{version}} failed the signature check and was not installed"
+    },
+    "whatsNew": "What's new in {{version}}",
+    "notesUnavailable": "Release notes are unavailable",
+    "notesUnavailableHint": "The notes for this version are not published yet or the Grubie server did not answer. You can still install the update.",
+    "errors": {
+      "unknown": "The update could not be downloaded. The launcher keeps running on the current version and will try again later.",
+      "startAnyway": "The launcher will start on the current version.",
+      "target": "Update server",
+      "later": "The launcher will try again later."
     }
   },
   "trayPopup": {
@@ -6468,7 +6484,7 @@
     "saveToFile": "Save to file",
     "saved": "Report saved — attach the file to your message to support",
     "saveHint": "If the upload keeps failing, save the report to a file and attach it to your message to support.",
-    "openAction": "Send a report to support",
+    "openAction": "Report for support",
     "failed": {
       "prepare": "Could not collect the report. Try again; if it repeats, open the journal folder in Settings → Support.",
       "expired": "The collected report is outdated. Collect it again.",

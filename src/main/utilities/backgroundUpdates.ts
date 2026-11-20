@@ -1,5 +1,5 @@
 import { app } from "electron";
-import { AppUpdateState } from "@/types/AppUpdate";
+import { AppUpdateCheckResult, AppUpdateState } from "@/types/AppUpdate";
 import { mainWindow } from "../windows/mainWindow";
 import { scheduleUpdateInstall } from "./updateInstall";
 import { gameRuntime } from "./runtime";
@@ -105,6 +105,29 @@ export function startBackgroundUpdateChecks(options: {
     if (timer) clearTimeout(timer);
     timer = null;
   });
+}
+
+export async function checkForAppUpdateNow(): Promise<AppUpdateCheckResult> {
+  if (!started || stopping) return { status: "unsupported" };
+  if (state.status === "ready") return { status: "ready", version: state.version };
+  if (rejectedVersion) return { status: "rejected", version: rejectedVersion };
+
+  try {
+    const autoUpdater = await loadAutoUpdater();
+    const result = await autoUpdater.checkForUpdates();
+    if (!result?.isUpdateAvailable) return { status: "upToDate" };
+    const version = result.updateInfo.version;
+    if (state.status === "idle") publish({ status: "downloading", version });
+    return getAppUpdateState().status === "ready"
+      ? { status: "ready", version }
+      : { status: "downloading", version };
+  } catch (error) {
+    if (state.status === "downloading") publish({ status: "idle" });
+    return {
+      status: "failed",
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export async function installDownloadedUpdate(): Promise<boolean> {

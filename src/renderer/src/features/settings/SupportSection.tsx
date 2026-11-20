@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
-  ClipboardCopy,
+  ChevronRight,
   Copy,
   ExternalLink,
   FolderOpen,
   LifeBuoy,
+  TriangleAlert,
   Wifi,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,24 +18,23 @@ import type {
   SupportReportHistoryItem,
 } from "@/types/Journal";
 import type { TSettings } from "@/types/Settings";
-import { pathsAtom, versionsAtom } from "@renderer/stores/atoms";
-import {
-  mirrorModeAtom,
-  openConnectivityCheck,
-} from "@renderer/features/install/installUi";
+import { errorLogAtom } from "@renderer/stores/atoms";
+import { openConnectivityCheck } from "@renderer/features/install/installUi";
 import {
   formatReportBytes,
   openSupportReport,
   supportDialogAtom,
   supportRepliesAtom,
 } from "@renderer/features/support/supportReport";
+import { openErrorLog } from "@renderer/features/logs/openErrorLog";
+import { ErrorLogActions, ErrorLogView } from "@renderer/components/ErrorLog";
+import { navigate } from "@renderer/navigation/navigate";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { Hint } from "@renderer/components/Hint";
 import { formatRelative } from "@renderer/utilities/date";
-import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
-import { buildSystemReport } from "./systemReport";
+import { SettingRow, SettingsGroup, SubViewHeader } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 
 const api = window.api;
@@ -44,9 +44,7 @@ const HISTORY_SHOWN = 5;
 
 export function SupportSection({
   settings,
-  appVersion,
-  totalMemoryMb,
-  storageTotal,
+  view,
   visible,
   query,
   commit,
@@ -54,9 +52,7 @@ export function SupportSection({
   reset,
 }: {
   settings: TSettings;
-  appVersion: string;
-  totalMemoryMb: number;
-  storageTotal: string;
+  view?: string;
   visible: (id: SettingsEntryId) => boolean;
   query: string;
   commit: (patch: Partial<TSettings>) => void;
@@ -64,9 +60,7 @@ export function SupportSection({
   reset: (id: SettingsEntryId) => void;
 }) {
   const { t, i18n } = useTranslation();
-  const paths = useAtomValue(pathsAtom);
-  const versions = useAtomValue(versionsAtom);
-  const mirrorMode = useAtomValue(mirrorModeAtom);
+  const errorLog = useAtomValue(errorLogAtom);
   const dialogRequest = useAtomValue(supportDialogAtom);
   const replies = useAtomValue(supportRepliesAtom);
 
@@ -103,24 +97,27 @@ export function SupportSection({
     await copyWithFeedback(text);
   };
 
-  const copySystemFacts = () =>
-    copy(
-      buildSystemReport({
-        appVersion,
-        platform: api.platform,
-        totalMemoryMb,
-        xmx: settings.xmx,
-        optimizedJvm: settings.optimizedJvm,
-        downloadSource: settings.downloadSource,
-        mirrorMode,
-        language: settings.lang,
-        instanceCount: versions.length,
-        launcherPath: paths.launcher,
-        minecraftPath: paths.minecraft,
-        javaPath: paths.java,
-        storageTotal,
-      }),
+  const latestError = errorLog[0]?.time;
+  const errorLogDescription = latestError
+    ? t("settings.supportSection.errorLogCount", {
+        n: errorLog.length,
+        time: formatRelative(new Date(latestError)),
+      })
+    : t("settings.supportSection.errorLogEmpty");
+
+  if (view === "errors" && !query) {
+    return (
+      <div className="flex flex-col">
+        <SubViewHeader
+          parent={t("settings.sections.support")}
+          title={t("errorLog.title")}
+          onBack={() => navigate({ name: "settings", section: "support" })}
+          aside={<ErrorLogActions />}
+        />
+        <ErrorLogView />
+      </div>
     );
+  }
 
   const verboseDescription = verboseUntil
     ? t("settings.supportSection.verboseUntil", {
@@ -293,59 +290,67 @@ export function SupportSection({
         </SettingsGroup>
       )}
 
-      {visible("systemReport") && (
-        <SettingsGroup entry="systemReport" title={t("settings.about.supportTitle")}>
-          <SettingRow
-            title={t("settings.about.copyReport")}
-            description={t("settings.about.copyReportDescription")}
-            query={query}
-            control={
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void copySystemFacts()}
-              >
-                <ClipboardCopy className="size-3.5" />
-                {t("common.copy")}
-              </Button>
-            }
-          />
-          <SettingRow
-            title={t("settings.connectivity.heading")}
-            description={t("settings.connectivity.description")}
-            query={query}
-            control={
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openConnectivityCheck()}
-              >
-                <Wifi className="size-3.5" />
-                {t("settings.connectivity.run")}
-              </Button>
-            }
-          />
-          <SettingRow
-            title={t("settings.connectivity.statusPage")}
-            description={t("settings.about.statusDescription")}
-            query={query}
-            control={
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  void api.shell.openExternal(STATUS_URL).catch((error) =>
-                    showFailureToast(t("settings.about.openLinkFailed"), error, {
-                      channels: ["shell:openExternal"],
-                    }),
-                  )
-                }
-              >
-                <ExternalLink className="size-3.5" />
-                {t("settings.about.openLink")}
-              </Button>
-            }
-          />
+      {(visible("errorLog") || visible("connectivityCheck")) && (
+        <SettingsGroup title={t("settings.about.supportTitle")}>
+          {visible("errorLog") && (
+            <SettingRow
+              entry="errorLog"
+              title={t("errorLog.title")}
+              description={errorLogDescription}
+              query={query}
+              control={
+                <Button variant="ghost" size="sm" onClick={() => openErrorLog()}>
+                  <TriangleAlert
+                    className={latestError ? "text-destructive" : "text-faint"}
+                  />
+                  {t("settings.about.openLink")}
+                  <ChevronRight className="text-faint" />
+                </Button>
+              }
+            />
+          )}
+          {visible("connectivityCheck") && (
+            <SettingRow
+              entry="connectivityCheck"
+              title={t("settings.connectivity.heading")}
+              description={t("settings.connectivity.description")}
+              query={query}
+              control={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openConnectivityCheck()}
+                >
+                  <Wifi className="size-3.5" />
+                  {t("taskCenter.checkConnection")}
+                </Button>
+              }
+            />
+          )}
+          {visible("connectivityCheck") && (
+            <SettingRow
+              entry="connectivityCheck"
+              title={t("settings.connectivity.statusPage")}
+              description={t("settings.about.statusDescription")}
+              query={query}
+              control={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    void api.shell.openExternal(STATUS_URL).catch((error) =>
+                      showFailureToast(t("settings.about.openLinkFailed"), error, {
+                        channels: ["shell:openExternal"],
+                      }),
+                    )
+                  }
+                >
+                  <ExternalLink className="size-3.5" />
+                  {t("settings.about.openLink")}
+                </Button>
+              }
+            />
+          )}
         </SettingsGroup>
       )}
     </div>

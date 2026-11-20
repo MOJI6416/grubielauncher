@@ -1671,7 +1671,8 @@
         "mirrorDown": "Mirror jest nieosiągalny. Przełącz na „Auto” lub „Oficjalne”.",
         "fail": "Pobieranie jest niedostępne: nie odpowiadają ani oficjalne serwery, ani mirror. Zmień DNS (1.1.1.1) lub użyj VPN."
       },
-      "heading": "Sprawdzanie połączenia"
+      "heading": "Sprawdzanie połączenia",
+      "switchTo": "Przełącz na „{{source}}”"
     },
     "crashTelemetry": "Diagnozy awarii",
     "crashTelemetryDescription": "Kod diagnozy i wiersz błędu, a gdy zawiedzie sam launcher — treść błędu. Bez nicku i logów",
@@ -2014,8 +2015,6 @@
     "about": {
       "whatsNew": "Co nowego",
       "supportTitle": "Jeśli coś się zepsuje",
-      "copyReport": "Kopiuj informacje o systemie",
-      "copyReportDescription": "Wersja, system, pamięć i ścieżki w jednym bloku — wklej go do zgłoszenia błędu",
       "statusDescription": "Bieżąca dostępność usług launchera",
       "communityTitle": "Społeczność",
       "discordDescription": "Pomoc, zgłoszenia błędów i zapowiedzi wydań",
@@ -2188,11 +2187,6 @@
         "title": "Foldery",
         "description": "Lokalizacje launchera, Minecrafta i Javy",
         "keywords": "folder ścieżka katalog otwórz eksplorator finder"
-      },
-      "systemReport": {
-        "title": "Informacje o systemie",
-        "description": "Jeden blok faktów do zgłoszenia błędu",
-        "keywords": "pomoc raport kopiuj diagnostyka wersja"
       },
       "links": {
         "title": "Społeczność i pomoc",
@@ -2393,6 +2387,16 @@
         "title": "Powiadomienia nad grą",
         "description": "Wiadomości i zaproszenia w rogu nakładki",
         "keywords": "nakładka overlay powiadomienie zaproszenie wiadomość połączenie klawisz akceptuj gra"
+      },
+      "errorLog": {
+        "title": "Dziennik błędów",
+        "description": "Na czym potknął się sam launcher: pobieranie, pliki i usługi",
+        "keywords": "błędy dziennik awaria log problem diagnostyka"
+      },
+      "connectivityCheck": {
+        "title": "Sprawdź połączenie",
+        "description": "Dostępność serwerów launchera, Mojang, mirrora i modów, status usług",
+        "keywords": "połączenie sieć internet mirror sprawdzenie status usługi"
       }
     },
     "voicePttCaptureTimeout": "Nie naciśnięto żadnego klawisza — skrót się nie zmienił.",
@@ -2462,7 +2466,9 @@
       "folderDescription": "Pliki: {{files}} · {{size}} na tym komputerze",
       "folderDescriptionEmpty": "Przechowywane na tym komputerze",
       "historyTitle": "Wysłane raporty",
-      "repliesTitle": "Odpowiedzi pomocy technicznej"
+      "repliesTitle": "Odpowiedzi pomocy technicznej",
+      "errorLogCount": "Wpisy: {{n}} · ostatni {{time}}",
+      "errorLogEmpty": "Pusto — pojawi się tu to, na czym potknął się sam launcher"
     },
     "resetAllDone": "Przywrócono ustawienia domyślne",
     "directConnect": "Bezpośrednie połączenie ze znajomymi",
@@ -3879,7 +3885,11 @@
     "offlineDescription": "Pełna lista zmian pojawi się, gdy będzie dostępny internet lub wydanie zostanie opublikowane.",
     "highlights": "Najważniejsze",
     "fixes": "Poprawiono",
-    "discordCta": "Więcej nowości na Discordzie"
+    "discordCta": "Więcej nowości na Discordzie",
+    "skipped_one": "Od ostatniego uruchomienia wyszło jeszcze {{count}} wydanie — historia wersji",
+    "skipped_few": "Od ostatniego uruchomienia wyszły jeszcze {{count}} wydania — historia wersji",
+    "skipped_many": "Od ostatniego uruchomienia wyszło jeszcze {{count}} wydań — historia wersji",
+    "skipped_other": "Od ostatniego uruchomienia wyszło jeszcze {{count}} wydania — historia wersji"
   },
   "updater": {
     "checking": "Sprawdzanie aktualizacji",
@@ -4759,7 +4769,8 @@
     "pausing": "Wstrzymywanie — oczekiwanie na bieżący krok",
     "overallLabel": "Łącznie",
     "nowDownloading": "Teraz pobierane",
-    "loaderTitle": "Zmiana wersji loadera"
+    "loaderTitle": "Zmiana wersji loadera",
+    "checkingFiles": "Sprawdzamy pliki… {{done}} z {{total}}"
   },
   "sizes": [
     "B",
@@ -4817,7 +4828,7 @@
   "crash": {
     "title": "Gra uległa awarii: {{version}}",
     "culprits": "Prawdopodobny winowajca",
-    "openReport": "Otwórz raport"
+    "openReport": "Otwórz raport awarii"
   },
   "aiCrash": {
     "title": "Analiza awarii przez AI",
@@ -5581,7 +5592,8 @@
           "statistics": "statystyki czas gry",
           "logs": "logi konsola dziennik"
         },
-        "screenshots": "zrzuty ekranu zdjęcia f2 galeria screenshots"
+        "screenshots": "zrzuty ekranu zdjęcia f2 galeria screenshots",
+        "errorLog": "błędy dziennik awaria"
       }
     },
     "tabs": {
@@ -5978,7 +5990,12 @@
     "closeHint": "Zamknięcie launchera przerwie instalację — pobrane pliki pozostaną niedokończone, a instancję trzeba będzie zainstalować ponownie.",
     "closeHintNamed": "Zamknięcie launchera przerwie instalację „{{name}}” — pobrane pliki pozostaną niedokończone, a instancję trzeba będzie zainstalować ponownie.",
     "closeStopAndQuit": "Przerwij i zamknij",
-    "closeQuestion": "Przerwać instalację i zamknąć launcher?"
+    "closeQuestion": "Przerwać instalację i zamknąć launcher?",
+    "cancelInstallTitle": "Anulować instalację „{{name}}”?",
+    "cancelTaskTitle": "Przerwać zadanie dla „{{name}}”?",
+    "cancelTaskBody": "Zadanie zatrzyma się na bieżącym kroku. Aby je dokończyć, uruchom je ponownie.",
+    "cancelKeep": "Kontynuuj",
+    "cancelTask": "Przerwij"
   },
   "skinStage": {
     "animation": "Animacja",
@@ -6067,7 +6084,6 @@
     "openFolder": "Folder logów",
     "more": "Czynności logu",
     "copyLog": "Kopiuj log",
-    "copyReport": "Kopiuj do zgłoszenia",
     "readFailedTitle": "Nie udało się odczytać {{name}}",
     "readFailedHint": "Plik jest na dysku, ale launcher nie mógł go odczytać: może być zablokowany przez inny program lub uszkodzony.",
     "emptyTitle": "Brak logów",
@@ -6107,20 +6123,6 @@
       "report": "Plik z crash-reports, który gra zapisała przy awarii.",
       "debug": "debug.log — szczegółowy log, tylko jeśli grze kazano go prowadzić.",
       "native": "{{name}} — maszyna Javy uległa awarii, to jej zrzut."
-    },
-    "report": {
-      "launcher": "Launcher",
-      "os": "System",
-      "instance": "Instancja",
-      "minecraft": "Minecraft",
-      "loader": "Loader",
-      "mods": "Mody",
-      "memory": "Pamięć",
-      "started": "Uruchomiono",
-      "duration": "Czas trwania",
-      "server": "Serwer",
-      "diagnosis": "Diagnoza",
-      "log": "Log"
     },
     "levels": {
       "all": "Wszystko",
@@ -6494,6 +6496,22 @@
     "blocked": {
       "game": "Najpierw zamknij grę — aktualizacja uruchamia launcher ponownie.",
       "install": "Poczekaj na zakończenie instalacji w centrum zadań."
+    },
+    "check": {
+      "action": "Sprawdź aktualizacje",
+      "upToDate": "Masz najnowszą wersję",
+      "downloading": "Pobieramy wersję {{version}} — po zakończeniu pojawi się tu „Aktualizuj”",
+      "unsupported": "Ta kompilacja launchera nie aktualizuje się sama — nową wersję pobierzesz z grubielauncher.com",
+      "rejected": "Wersja {{version}} nie przeszła weryfikacji podpisu i nie została zainstalowana"
+    },
+    "whatsNew": "Co nowego w {{version}}",
+    "notesUnavailable": "Lista zmian jest niedostępna",
+    "notesUnavailableHint": "Opis wersji nie został jeszcze opublikowany lub serwer Grubie nie odpowiedział. Aktualizację można zainstalować i bez niego.",
+    "errors": {
+      "unknown": "Nie udało się pobrać aktualizacji. Launcher działa na obecnej wersji i spróbuje ponownie później.",
+      "startAnyway": "Launcher uruchomi się w obecnej wersji.",
+      "target": "Serwer aktualizacji",
+      "later": "Launcher spróbuje ponownie później."
     }
   },
   "trayPopup": {
@@ -6595,7 +6613,7 @@
     "saveToFile": "Zapisz do pliku",
     "saved": "Zapisano raport — dołącz plik do wiadomości dla pomocy technicznej",
     "saveHint": "Jeśli wysyłanie ciągle się nie udaje, zapisz raport do pliku i dołącz go do wiadomości dla pomocy technicznej.",
-    "openAction": "Wyślij raport do pomocy technicznej",
+    "openAction": "Raport dla pomocy technicznej",
     "failed": {
       "prepare": "Nie udało się zebrać raportu. Spróbuj ponownie; jeśli to się powtórzy, otwórz folder dziennika w Ustawienia → Pomoc.",
       "expired": "Zebrany raport jest nieaktualny. Zbierz go ponownie.",

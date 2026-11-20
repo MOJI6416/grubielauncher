@@ -56,3 +56,13 @@ export function getDownloadVerdict(
   }
   return { officialOk, mirrorOk, downloadsOk: false, messageKey: "fail" };
 }
+
+export function switchSourceTargets(verdict: DownloadVerdict): DownloadSource[] {
+  if (verdict.messageKey === "officialDown" && verdict.mirrorOk) {
+    return ["auto", "mirror"];
+  }
+  if (verdict.messageKey === "mirrorDown" && verdict.officialOk) {
+    return ["auto", "official"];
+  }
+  return [];
+}

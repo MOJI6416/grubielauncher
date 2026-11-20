@@ -12,6 +12,7 @@ export type InstallPauseState = "off" | "pending" | "held";
 export const taskCenterOpenAtom = atom(false);
 export const taskCenterViewAtom = atom<TaskCenterView>("tasks");
 export const connectivityCheckOpenAtom = atom(false);
+export const cancelInstallAskedAtom = atom(false);
 
 export const installProgressAtom = atom<VersionInstallProgress | null>(null);
 export const installingVersionAtom = atom(
@@ -42,4 +43,8 @@ export function closeTaskCenter(): void {
 
 export function openConnectivityCheck(): void {
   getDefaultStore().set(connectivityCheckOpenAtom, true);
+}
+
+export function askCancelActiveInstall(): void {
+  getDefaultStore().set(cancelInstallAskedAtom, true);
 }

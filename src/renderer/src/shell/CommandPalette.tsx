@@ -34,6 +34,7 @@ import {
   Wifi,
   SquareTerminal,
   SquareSplitHorizontal,
+  TriangleAlert,
 } from "lucide-react";
 import {
   accountAtom,
@@ -66,6 +67,7 @@ import { Hint } from "@renderer/components/Hint";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { openNewInstance } from "@renderer/features/instances/newInstance";
 import { openConnectivityCheck } from "@renderer/features/install/installUi";
+import { openErrorLog } from "@renderer/features/logs/openErrorLog";
 import { OWN_PROFILE_ID } from "@renderer/features/profile/loadProfileUser";
 import { instanceKey } from "@renderer/features/instances/selectors";
 import { getLoaderInfo } from "@renderer/components/Loaders";
@@ -311,6 +313,14 @@ export function CommandPalette({
         keywords: words("connectivity"),
         icon: <Wifi className="size-4 text-faint" />,
         run: () => openConnectivityCheck(),
+      },
+      {
+        id: "action:error-log",
+        section: "actions",
+        title: t("errorLog.title"),
+        keywords: words("errorLog"),
+        icon: <TriangleAlert className="size-4 text-faint" />,
+        run: () => openErrorLog(),
       },
       {
         id: "action:streamer-mode",

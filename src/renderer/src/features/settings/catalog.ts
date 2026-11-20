@@ -83,7 +83,8 @@ export type SettingsEntryId =
   | "dataLocation"
   | "storageCleanup"
   | "folders"
-  | "systemReport"
+  | "errorLog"
+  | "connectivityCheck"
   | "supportReport"
   | "verboseJournal"
   | "links"
@@ -244,7 +245,8 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "supportReport", section: "support", keys: [] },
   { id: "verboseJournal", section: "support", keys: [] },
   { id: "devMode", section: "support", keys: ["devMode"] },
-  { id: "systemReport", section: "support", keys: [] },
+  { id: "errorLog", section: "support", keys: [] },
+  { id: "connectivityCheck", section: "support", keys: [] },
   { id: "links", section: "about", keys: [] },
   { id: "releaseHistory", section: "about", keys: [] },
 ];

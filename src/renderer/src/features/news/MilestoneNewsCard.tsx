@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
-import { ArrowUpRight, Gift, Loader2 } from "lucide-react";
+import { ArrowUpRight, BadgePlus, Loader2 } from "lucide-react";
 import type { ILauncherReleaseNote } from "@/types/LauncherRelease";
 import { Hint } from "@renderer/components/Hint";
 import { MilestoneBeam } from "@renderer/components/MilestoneBeam";
@@ -31,7 +31,7 @@ export function MilestoneNewsCard({
       <MilestoneBeam />
 
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-info/15 text-info">
-        <Gift className="size-4" />
+        <BadgePlus className="size-4" />
       </span>
 
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">

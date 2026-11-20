@@ -44,7 +44,6 @@ import {
   AiProvidersState,
 } from "@/types/Agent";
 import { Hint } from "@renderer/components/Hint";
-import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { classifyAgentError } from "./providerErrors";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
@@ -244,6 +243,7 @@ export function AgentProvidersModal({
   const [pendingDelete, setPendingDelete] = useState<AiProviderProfile | null>(
     null,
   );
+  const [deleting, setDeleting] = useState(false);
 
   const modelOptions = useMemo<VirtualizedSelectOption[]>(
     () =>
@@ -360,8 +360,14 @@ export function AgentProvidersModal({
     }
   }
 
-  async function handleDelete(id: string) {
-    await providers.remove(id);
+  async function confirmDelete(id: string) {
+    setDeleting(true);
+    try {
+      await providers.remove(id);
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function handleSelect(id: string) {
@@ -395,6 +401,11 @@ export function AgentProvidersModal({
         showCloseButton={false}
         className="flex max-h-[86vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
         onOpenAutoFocus={(event) => event.preventDefault()}
+        onEscapeKeyDown={(event) => {
+          if (!pendingDelete) return;
+          event.preventDefault();
+          setPendingDelete(null);
+        }}
       >
         <DialogHeader className="shrink-0 flex-row items-start gap-3 px-4 pt-4 pb-3 text-left">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-muted-foreground">
@@ -402,16 +413,22 @@ export function AgentProvidersModal({
           </span>
           <div className="grid min-w-0 gap-1">
             <DialogTitle className="text-sm leading-5">
-              {form
-                ? form.id
-                  ? t("agent.providers.editTitle")
-                  : t("agent.providers.addTitle")
-                : t("agent.providers.title")}
+              {pendingDelete
+                ? t("agent.providers.deleteConfirm", {
+                    name: pendingDelete.label,
+                  })
+                : form
+                  ? form.id
+                    ? t("agent.providers.editTitle")
+                    : t("agent.providers.addTitle")
+                  : t("agent.providers.title")}
             </DialogTitle>
             <DialogDescription className="text-xs leading-4.5 text-muted-foreground">
-              {form
-                ? t("agent.providers.formDescription")
-                : t("agent.providers.listDescription")}
+              {pendingDelete
+                ? t("agent.providers.deleteHint")
+                : form
+                  ? t("agent.providers.formDescription")
+                  : t("agent.providers.listDescription")}
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -442,6 +459,29 @@ export function AgentProvidersModal({
                 <Skeleton className="h-14 w-full rounded-lg" />
               </div>
             )
+          ) : pendingDelete ? (
+            <div className="grid min-w-0 gap-2.5">
+              <div className="grid min-w-0 gap-0.5 rounded-lg bg-surface-2 px-3 py-2.5">
+                <Hint content={pendingDelete.label} variant="text" truncatedOnly>
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {pendingDelete.label}
+                  </span>
+                </Hint>
+                <Hint
+                  content={pendingDelete.model || pendingDelete.baseUrl}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="truncate font-mono text-2xs text-faint">
+                    {pendingDelete.model || pendingDelete.baseUrl}
+                  </span>
+                </Hint>
+              </div>
+              <p className="flex items-center gap-1.5 text-2xs text-destructive">
+                <TriangleAlert className="size-3 shrink-0" />
+                {t("common.irreversible")}
+              </p>
+            </div>
           ) : form ? (
             <div className="grid min-w-0 gap-3">
               <div className="grid min-w-0 gap-1.5">
@@ -682,7 +722,28 @@ export function AgentProvidersModal({
         </div>
 
         <DialogFooter className="m-0 shrink-0 gap-2 border-t border-border bg-surface-2 px-4 py-3 sm:justify-between">
-          {form ? (
+          {pendingDelete ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                autoFocus
+                onClick={() => setPendingDelete(null)}
+              >
+                <ArrowLeft />
+                {t("common.cancel")}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={deleting}
+                onClick={() => void confirmDelete(pendingDelete.id)}
+              >
+                {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                {t("common.delete")}
+              </Button>
+            </>
+          ) : form ? (
             <>
               <Button variant="ghost" size="sm" onClick={closeForm}>
                 <ArrowLeft />
@@ -719,32 +780,6 @@ export function AgentProvidersModal({
         </DialogFooter>
       </DialogContent>
 
-      {pendingDelete && (
-        <Confirmation
-          title={t("agent.providers.deleteConfirm", {
-            name: pendingDelete.label,
-          })}
-          onClose={() => setPendingDelete(null)}
-          reversible={false}
-          content={[{ text: t("agent.providers.deleteHint") }]}
-          buttons={[
-            {
-              text: t("common.cancel"),
-              color: "secondary",
-              onClick: () => setPendingDelete(null),
-            },
-            {
-              text: t("common.delete"),
-              color: "danger",
-              onClick: async () => {
-                const id = pendingDelete.id;
-                setPendingDelete(null);
-                await handleDelete(id);
-              },
-            },
-          ]}
-        />
-      )}
     </Dialog>
   );
 }

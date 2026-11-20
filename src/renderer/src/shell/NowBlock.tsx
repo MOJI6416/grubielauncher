@@ -2,12 +2,12 @@ import { ReactNode, useMemo } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
-  Bell,
   HardDriveDownload,
   Radio,
   Server as ServerIcon,
   Sparkles,
   SquareChevronRight,
+  TriangleAlert,
 } from "lucide-react";
 import { Collapse } from "@/components/ui/collapse";
 import { Hint } from "@renderer/components/Hint";
@@ -41,6 +41,7 @@ import {
 } from "@renderer/features/layout/useLayout";
 import { SlotToggle } from "@renderer/features/layout/SlotToggle";
 import { clampPercent } from "@renderer/features/install/progressModel";
+import { openErrorLog } from "@renderer/features/logs/openErrorLog";
 import {
   installProgressAtom,
   openTaskCenter,
@@ -122,7 +123,7 @@ function NowRow({
   );
 }
 
-export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
+export function NowBlock() {
   const collapsed = useSidebarCollapsed();
   const editing = useLayoutEditing();
   const isSectionHidden = isSlotHidden(useLayout(), slotId.section("now"));
@@ -263,12 +264,12 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
       <NowRow
         key="errors"
         tone={unseenErrors > 0 ? "text-destructive" : "text-faint"}
-        icon={<Bell className="size-4" />}
+        icon={<TriangleAlert className="size-4" />}
         label={t("errorLog.title")}
         detail={unseenErrors > 0 ? String(unseenErrors) : undefined}
         onClick={() => {
           setErrorLogSeen(errorLog[0]?.time ?? Date.now());
-          onOpenErrors();
+          openErrorLog();
         }}
       />,
     );

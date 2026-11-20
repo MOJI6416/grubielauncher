@@ -292,7 +292,7 @@ import type {
 } from "@/types/LauncherImport";
 import { BlessedPathInfo } from "@/types/AllowedPath";
 import type { TrayAction, TrayCommand, TrayModel } from "@/types/Tray";
-import type { AppUpdateState } from "@/types/AppUpdate";
+import type { AppUpdateCheckResult, AppUpdateState } from "@/types/AppUpdate";
 import type {
   DataLocationApplyResult,
   DataLocationInfo,
@@ -1119,6 +1119,7 @@ export interface IElectronAPI {
   };
   appUpdate: {
     getState: () => Promise<AppUpdateState>;
+    check: () => Promise<AppUpdateCheckResult>;
     install: () => Promise<boolean>;
     onState: (callback: (state: AppUpdateState) => void) => () => void;
   };
@@ -2503,6 +2504,7 @@ export const api: IElectronAPI = {
   },
   appUpdate: {
     getState: () => invoke("appUpdate:getState"),
+    check: () => invoke("appUpdate:check"),
     install: () => invoke("appUpdate:install"),
     onState: (callback: (state: AppUpdateState) => void) => {
       const listener = (

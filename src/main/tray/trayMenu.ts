@@ -105,6 +105,7 @@ export function buildTrayMenu(model: TrayModel): TrayMenuEntry[] {
     entries.push({
       kind: "item",
       label: labels.installUpdate,
+      enabled: model.playing.length === 0 && !model.installing,
       command: { type: "installUpdate" },
     });
   }
@@ -183,6 +184,8 @@ export function sanitizeTrayModel(value: unknown): TrayModel | null {
   return {
     lang: text(raw.lang, 10),
     accent: text(raw.accent, 20),
+    themeId: text(raw.themeId, 64),
+    installing: raw.installing === true,
     closeToTray: raw.closeToTray === true,
     askOnClose: raw.askOnClose === true,
     instances: (Array.isArray(raw.instances) ? raw.instances : [])

@@ -16,6 +16,7 @@ import { motionTransition } from "@/lib/motion";
 import { getLoaderInfo } from "@renderer/components/Loaders";
 import { Hint } from "@renderer/components/Hint";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
+import { formatNumber } from "@renderer/utilities/numbers";
 import {
   cancelActiveInstall,
   toggleInstallPause,
@@ -123,9 +124,17 @@ export function InstallView({
           })
         : progress.details;
 
-  const fileName = isQueuedBehind
-    ? undefined
-    : stripGroupPrefix(downloader?.currentFileName);
+  const checking = isQueuedBehind ? undefined : downloader?.checking;
+  const checkingText = checking
+    ? t("installationProgress.checkingFiles", {
+        done: formatNumber(checking.done),
+        total: formatNumber(checking.total),
+      })
+    : "";
+  const fileName =
+    isQueuedBehind || checking
+      ? undefined
+      : stripGroupPrefix(downloader?.currentFileName);
   const sub = isQueuedBehind ? undefined : progress?.subProgress;
   const subDetails = sub?.detailsKey
     ? t(sub.detailsKey, {
@@ -219,12 +228,17 @@ export function InstallView({
               </span>
             )}
             <Hint
-              content={fileName || subDetails || details}
+              content={checkingText || fileName || subDetails || details}
               variant="text"
               truncatedOnly
             >
-              <span className="min-w-0 flex-1 truncate font-mono text-2xs text-faint">
-                {fileName || subDetails || details || ""}
+              <span
+                className={cn(
+                  "min-w-0 flex-1 truncate text-2xs text-faint",
+                  checkingText ? "tabular-nums" : "font-mono",
+                )}
+              >
+                {checkingText || fileName || subDetails || details || ""}
               </span>
             </Hint>
           </p>

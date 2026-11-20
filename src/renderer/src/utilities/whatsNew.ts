@@ -135,3 +135,17 @@ export function hasReleaseNotes(
         (release.fixes?.length ?? 0) > 0),
   );
 }
+
+export function countSkippedReleases(
+  versions: string[],
+  lastSeenVersion: string,
+  currentVersion: string,
+): number {
+  return new Set(
+    versions.filter(
+      (version) =>
+        compareLauncherVersions(version, lastSeenVersion) > 0 &&
+        compareLauncherVersions(version, currentVersion) < 0,
+    ),
+  ).size;
+}

@@ -14,6 +14,7 @@ import {
   showFailureToast,
 } from "@renderer/utilities/failures";
 import { playSound } from "@renderer/utilities/sounds";
+import { describeUpdateError } from "@renderer/features/appUpdate/updateError";
 import { useLatestRef } from "@renderer/utilities/useLatestRef";
 import { unexpectedQuarantine } from "@renderer/features/mods/expectedQuarantine";
 
@@ -99,7 +100,10 @@ export function SystemEventsHost() {
           return;
         }
         showFailureToast(tRef.current("app.updateFailed"), payload?.message, {
-          fallbackDescription: payload?.message,
+          fallbackDescription: describeUpdateError(
+            payload?.message,
+            tRef.current,
+          ),
         });
       }, 0);
     });

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowRightLeft,
   Check,
   ClipboardCopy,
   ExternalLink,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import type { DownloadSource } from "@/types/Settings";
 import { Hint } from "@renderer/components/Hint";
 import { STATUS_URL } from "@/shared/config";
 import {
@@ -27,7 +29,12 @@ import type {
   ConnectivityCheckResult,
 } from "@/types/Connectivity";
 import { settingsAtom } from "@renderer/stores/atoms";
-import { getDownloadVerdict } from "@renderer/utilities/connectivityVerdict";
+import {
+  getDownloadVerdict,
+  switchSourceTargets,
+} from "@renderer/utilities/connectivityVerdict";
+import { useSettingsWriter } from "@renderer/features/settings/useSettingsWriter";
+import { countFeature } from "@renderer/features/usage/usage";
 import {
   buildConnectivityReport,
   groupConnectivity,
@@ -54,6 +61,7 @@ export function ConnectivityModal({
 }) {
   const { t } = useTranslation();
   const settings = useAtomValue(settingsAtom);
+  const { commit } = useSettingsWriter();
   const [results, setResults] = useState(initialResults);
   const [plan, setPlan] = useState<ConnectivityCheckPlanEntry[]>([]);
   const [isTesting, setTesting] = useState(false);
@@ -96,6 +104,7 @@ export function ConnectivityModal({
   }, []);
 
   const verdict = getDownloadVerdict(results, settings.downloadSource);
+  const switchTargets = isTesting ? [] : switchSourceTargets(verdict);
   const groups = groupConnectivity(results, plan);
   const okCount = results.filter((result) => result.ok).length;
   const verdictText = isTesting
@@ -109,6 +118,11 @@ export function ConnectivityModal({
     await copyWithFeedback(
       buildConnectivityReport(results, settings.downloadSource),
     );
+  };
+
+  const switchSource = async (source: DownloadSource) => {
+    countFeature("connectivity.switchSource");
+    await commit({ downloadSource: source });
   };
 
   return (
@@ -129,61 +143,80 @@ export function ConnectivityModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface-2 px-5 py-3">
-          <div className="min-w-0 flex-1">
-            <Hint
-              content={`${t("settings.downloadSource")}: ${t(`settings.downloadSourceOptions.${settings.downloadSource}`)}`}
-              variant="text"
-              truncatedOnly
-            >
-              <p className="truncate text-xs text-faint">
-                {t("settings.downloadSource")}:{" "}
-                <span className="text-muted-foreground">
-                  {t(
-                    `settings.downloadSourceOptions.${settings.downloadSource}`,
-                  )}
-                </span>
-              </p>
-            </Hint>
-            <Hint content={verdictText} variant="text" truncatedOnly>
-              <p
-                className={`truncate text-sm ${
-                  isTesting
-                    ? "text-muted-foreground"
-                    : results.length === 0
-                      ? "text-warning"
-                      : verdict.downloadsOk
-                        ? "text-success"
-                        : "text-destructive"
-                }`}
+        <div className="shrink-0 border-b border-border bg-surface-2 px-5 py-3">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <Hint
+                content={`${t("settings.downloadSource")}: ${t(`settings.downloadSourceOptions.${settings.downloadSource}`)}`}
+                variant="text"
+                truncatedOnly
               >
-                {verdictText}
-              </p>
-            </Hint>
+                <p className="truncate text-xs text-faint">
+                  {t("settings.downloadSource")}:{" "}
+                  <span className="text-muted-foreground">
+                    {t(
+                      `settings.downloadSourceOptions.${settings.downloadSource}`,
+                    )}
+                  </span>
+                </p>
+              </Hint>
+              <Hint content={verdictText} variant="text" truncatedOnly>
+                <p
+                  className={`line-clamp-2 text-sm ${
+                    isTesting
+                      ? "text-muted-foreground"
+                      : results.length === 0
+                        ? "text-warning"
+                        : verdict.downloadsOk
+                          ? "text-success"
+                          : "text-destructive"
+                  }`}
+                >
+                  {verdictText}
+                </p>
+              </Hint>
+            </div>
+            {total > 0 && (
+              <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
+                {okCount}/{total}
+              </span>
+            )}
+            {isTesting && (
+              <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() =>
+                void api.shell.openExternal(STATUS_URL).catch((error) =>
+                  showFailureToast(t("settings.about.openLinkFailed"), error, {
+                    channels: ["shell:openExternal"],
+                  }),
+                )
+              }
+            >
+              <ExternalLink className="size-3.5" />
+              {t("settings.connectivity.statusPage")}
+            </Button>
           </div>
-          {total > 0 && (
-            <span className="shrink-0 font-mono text-xs tabular-nums text-faint">
-              {okCount}/{total}
-            </span>
+          {switchTargets.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {switchTargets.map((source) => (
+                <Button
+                  key={source}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void switchSource(source)}
+                >
+                  <ArrowRightLeft className="size-3.5" />
+                  {t("settings.connectivity.switchTo", {
+                    source: t(`settings.downloadSourceOptions.${source}`),
+                  })}
+                </Button>
+              ))}
+            </div>
           )}
-          {isTesting && (
-            <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="shrink-0"
-            onClick={() =>
-              void api.shell.openExternal(STATUS_URL).catch((error) =>
-                showFailureToast(t("settings.about.openLinkFailed"), error, {
-                  channels: ["shell:openExternal"],
-                }),
-              )
-            }
-          >
-            <ExternalLink className="size-3.5" />
-            {t("settings.connectivity.statusPage")}
-          </Button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">

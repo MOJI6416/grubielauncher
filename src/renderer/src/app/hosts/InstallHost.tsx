@@ -10,6 +10,8 @@ import { resolveMirrorMode } from "@/shared/mirrorMode";
 import { consolesMetaAtom, installActiveAtom } from "@renderer/stores/atoms";
 import { playSound } from "@renderer/utilities/sounds";
 import { ConnectivityModal } from "@renderer/components/ConnectivityModal";
+import { Confirmation } from "@renderer/components/Modals/Confirmation";
+import { cancelActiveInstall } from "@renderer/features/install/installActions";
 import { installQueue } from "@renderer/features/install/installQueue";
 import { mergeFailures } from "@renderer/features/install/failureGroups";
 import {
@@ -29,6 +31,7 @@ import {
   shouldCelebrate,
 } from "@renderer/features/install/taskHistory";
 import {
+  cancelInstallAskedAtom,
   connectivityCheckOpenAtom,
   downloaderInfoAtom,
   installCancellingAtom,
@@ -68,6 +71,8 @@ export function InstallHost() {
   const consoles = useAtomValue(consolesMetaAtom);
   const isConnectivityOpen = useAtomValue(connectivityCheckOpenAtom);
   const setConnectivityOpen = useSetAtom(connectivityCheckOpenAtom);
+  const isCancelAsked = useAtomValue(cancelInstallAskedAtom);
+  const setCancelAsked = useSetAtom(cancelInstallAskedAtom);
   const progress = useAtomValue(installProgressAtom);
   const isPaused = useAtomValue(installPausedAtom);
   const setInstallActive = useSetAtom(installActiveAtom);
@@ -327,7 +332,54 @@ export function InstallHost() {
     };
   }, [isInstalling, store]);
 
-  if (!isConnectivityOpen) return null;
+  const closeCancelAsk = () => setCancelAsked(false);
+  const isNewInstall = progress?.operation === "install";
 
-  return <ConnectivityModal onClose={() => setConnectivityOpen(false)} />;
+  return (
+    <>
+      {isConnectivityOpen && (
+        <ConnectivityModal onClose={() => setConnectivityOpen(false)} />
+      )}
+      {isCancelAsked && progress && (
+        <Confirmation
+          title={t(
+            isNewInstall
+              ? "taskCenter.cancelInstallTitle"
+              : "taskCenter.cancelTaskTitle",
+            { name: progress.versionName },
+          )}
+          reversible={isNewInstall ? false : undefined}
+          content={[
+            {
+              text: t(
+                isNewInstall
+                  ? "newInstance.cancelConfirmBody"
+                  : "taskCenter.cancelTaskBody",
+              ),
+            },
+          ]}
+          buttons={[
+            {
+              text: t("taskCenter.cancelKeep"),
+              color: "secondary",
+              onClick: closeCancelAsk,
+            },
+            {
+              text: t(
+                isNewInstall
+                  ? "newInstance.cancelInstall"
+                  : "taskCenter.cancelTask",
+              ),
+              color: "danger",
+              onClick: async () => {
+                closeCancelAsk();
+                await cancelActiveInstall();
+              },
+            },
+          ]}
+          onClose={closeCancelAsk}
+        />
+      )}
+    </>
+  );
 }

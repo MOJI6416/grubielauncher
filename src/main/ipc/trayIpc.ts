@@ -1,6 +1,7 @@
 import { TrayCommand, TrayModel } from "@/types/Tray";
-import { AppUpdateState } from "@/types/AppUpdate";
+import { AppUpdateCheckResult, AppUpdateState } from "@/types/AppUpdate";
 import {
+  checkForAppUpdateNow,
   getAppUpdateState,
   installDownloadedUpdate,
 } from "../utilities/backgroundUpdates";
@@ -70,6 +71,12 @@ export function registerTrayIpc() {
     "appUpdate:getState",
     { status: "idle" },
     async () => getAppUpdateState(),
+  );
+
+  handleSafe<AppUpdateCheckResult>(
+    "appUpdate:check",
+    { status: "failed", message: "" },
+    async () => await checkForAppUpdateNow(),
   );
 
   handleSafe<boolean>(

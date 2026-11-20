@@ -7,11 +7,14 @@ import {
   writeLauncherState,
 } from "@renderer/utilities/launcherState";
 import { consumeRecentFailure } from "@renderer/utilities/failures";
+import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import {
+  countSkippedReleases,
   getWhatsNewDecision,
   hasReleaseNotes,
   markWhatsNewSeen,
 } from "@renderer/utilities/whatsNew";
+import { LAUNCHER_RELEASES_SIZE } from "@/shared/config";
 
 const api = window.api;
 
@@ -19,6 +22,7 @@ export interface WhatsNewView {
   version: string;
   release: ILauncherReleaseNote | null;
   persist: boolean;
+  skipped?: number;
 }
 
 export const whatsNewAtom = atom<WhatsNewView | null>(null);
@@ -56,6 +60,7 @@ export async function openWhatsNew(options?: {
   launcherPath?: string;
   locale?: string;
   requireNotes?: boolean;
+  since?: string;
 }): Promise<void> {
   const store = getDefaultStore();
   const launcherPath = options?.launcherPath || store.get(pathsAtom).launcher;
@@ -69,7 +74,15 @@ export async function openWhatsNew(options?: {
     if (!currentVersion) return;
 
     const locale = options?.locale || currentLocale();
-    const release = await api.backend.getWhatsNew(currentVersion, locale);
+    const since = options?.since;
+    const [release, history] = await Promise.all([
+      api.backend.getWhatsNew(currentVersion, locale),
+      since
+        ? api.backend
+            .getLauncherReleases(locale, LAUNCHER_RELEASES_SIZE)
+            .catch(ignoreFailure)
+        : null,
+    ]);
     const failed =
       !release &&
       Boolean(consumeRecentFailure({ channels: ["backend:getWhatsNew"] }));
@@ -82,7 +95,30 @@ export async function openWhatsNew(options?: {
       version: currentVersion,
       release,
       persist: !failed,
+      skipped:
+        since && history
+          ? countSkippedReleases(
+              history.items.map((item) => item.version),
+              since,
+              currentVersion,
+            )
+          : 0,
     });
+  } finally {
+    store.set(whatsNewLoadingAtom, false);
+  }
+}
+
+export async function openReleaseNotesFor(version: string): Promise<boolean> {
+  const store = getDefaultStore();
+  if (store.get(whatsNewLoadingAtom)) return false;
+  store.set(whatsNewLoadingAtom, true);
+
+  try {
+    const release = await api.backend.getWhatsNew(version, currentLocale());
+    if (!hasReleaseNotes(release)) return false;
+    store.set(whatsNewAtom, { version, release, persist: false });
+    return true;
   } finally {
     store.set(whatsNewLoadingAtom, false);
   }
@@ -127,6 +163,11 @@ export async function checkWhatsNewAfterInit(
   }
 
   if (decision.shouldShow) {
-    await openWhatsNew({ launcherPath, locale, requireNotes: true });
+    await openWhatsNew({
+      launcherPath,
+      locale,
+      requireNotes: true,
+      since: state?.whatsNew?.lastSeenVersion,
+    });
   }
 }
