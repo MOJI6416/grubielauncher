@@ -39,6 +39,7 @@ import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { Hint } from "@renderer/components/Hint";
 import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import { SortMenu } from "@renderer/components/SortMenu";
+import { AuthorLink } from "@renderer/features/profile/AuthorLink";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { formatDay } from "@renderer/utilities/date";
 import { SkinHead } from "./SkinHead";
@@ -743,28 +744,46 @@ export function CatalogPanel({
                     </p>
                   </Hint>
                   <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
-                    <Hint
-                      content={`${
-                        selected.model === "slim"
-                          ? t("manageSkins.slim")
-                          : t("manageSkins.classic")
-                      }${
-                        !isMine && selected.authorName
-                          ? ` · ${selected.authorName}`
-                          : ""
-                      }`}
-                      variant="text"
-                      truncatedOnly
-                    >
-                      <span className="min-w-0 truncate">
-                        {selected.model === "slim"
-                          ? t("manageSkins.slim")
-                          : t("manageSkins.classic")}
-                        {!isMine && selected.authorName
-                          ? ` · ${selected.authorName}`
-                          : ""}
-                      </span>
-                    </Hint>
+                    {!isMine && selected.authorId && selected.authorName ? (
+                      <>
+                        <span className="shrink-0">
+                          {selected.model === "slim"
+                            ? t("manageSkins.slim")
+                            : t("manageSkins.classic")}
+                        </span>
+                        <span className="shrink-0">·</span>
+                        <AuthorLink
+                          author={{
+                            id: selected.authorId,
+                            nickname: selected.authorName,
+                          }}
+                          headClassName="rounded-[3px]"
+                        />
+                      </>
+                    ) : (
+                      <Hint
+                        content={`${
+                          selected.model === "slim"
+                            ? t("manageSkins.slim")
+                            : t("manageSkins.classic")
+                        }${
+                          !isMine && selected.authorName
+                            ? ` · ${selected.authorName}`
+                            : ""
+                        }`}
+                        variant="text"
+                        truncatedOnly
+                      >
+                        <span className="min-w-0 truncate">
+                          {selected.model === "slim"
+                            ? t("manageSkins.slim")
+                            : t("manageSkins.classic")}
+                          {!isMine && selected.authorName
+                            ? ` · ${selected.authorName}`
+                            : ""}
+                        </span>
+                      </Hint>
+                    )}
                     <span className="shrink-0">·</span>
                     <span className="inline-flex shrink-0 items-center gap-0.5 tabular-nums">
                       <Download className="size-3" />

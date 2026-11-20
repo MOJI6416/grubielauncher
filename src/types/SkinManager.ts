@@ -69,6 +69,7 @@ export interface ICatalogSkin {
   tags: string[]
   source: CatalogSkinSource
   authorName: string | null
+  authorId?: string | null
   skinUrl: string | null
   capeUrl?: string | null
   previewUrl?: string | null

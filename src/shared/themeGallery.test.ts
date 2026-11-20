@@ -33,6 +33,13 @@ describe("normalizeGalleryTheme", () => {
     });
   });
 
+  it("keeps the author id only when it is a player id", () => {
+    const authorId = "64f000000000000000000001";
+    expect(normalizeGalleryTheme({ ...RAW, authorId })?.authorId).toBe(authorId);
+    expect(normalizeGalleryTheme(RAW)?.authorId).toBeNull();
+    expect(normalizeGalleryTheme({ ...RAW, authorId: "../profile" })?.authorId).toBeNull();
+  });
+
   it("refuses ids and colours that did not come from the gallery", () => {
     expect(normalizeGalleryTheme({ ...RAW, id: "../../etc" })).toBeNull();
     expect(

@@ -33,6 +33,7 @@ import {
 } from "@/shared/themeGallery";
 import { Hint } from "@renderer/components/Hint";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
+import { AuthorLink } from "@renderer/features/profile/AuthorLink";
 import { accountAtom } from "@renderer/stores/atoms";
 import {
   consumeRecentFailure,
@@ -110,9 +111,16 @@ function GalleryCard({
           </div>
         </Hint>
         <div className="flex items-center gap-1.5 text-xs text-faint">
-          <Hint content={item.authorName ?? ""} variant="text" truncatedOnly>
-            <span className="truncate">{item.authorName ?? t("theme.gallery.unknownAuthor")}</span>
-          </Hint>
+          {item.authorId && item.authorName ? (
+            <AuthorLink
+              author={{ id: item.authorId, nickname: item.authorName }}
+              headClassName="rounded-[3px]"
+            />
+          ) : (
+            <Hint content={item.authorName ?? ""} variant="text" truncatedOnly>
+              <span className="truncate">{item.authorName ?? t("theme.gallery.unknownAuthor")}</span>
+            </Hint>
+          )}
           <span className="inline-flex shrink-0 items-center gap-0.5 font-mono tabular-nums">
             <Download className="size-3" />
             {formatCompactNumber(item.downloads) ?? "0"}
