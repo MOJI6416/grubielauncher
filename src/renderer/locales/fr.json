@@ -2378,7 +2378,8 @@
       "folder": "Fichiers du journal",
       "folderDescription": "Fichiers : {{files}} · {{size}} sur cet ordinateur",
       "folderDescriptionEmpty": "Stockés sur cet ordinateur",
-      "historyTitle": "Rapports envoyés"
+      "historyTitle": "Rapports envoyés",
+      "repliesTitle": "Réponses du support"
     },
     "resetAllDone": "Paramètres réinitialisés par défaut",
     "directConnect": "Connexion directe avec les amis",
@@ -6191,6 +6192,13 @@
     "noInstance": "Ne concerne pas une instance",
     "comment": "Ce qui s’est passé",
     "commentPlaceholder": "Par exemple : j’appuie sur Jouer, le minuteur tourne, mais le jeu ne s’ouvre jamais",
+    "contact": "Où vous répondre",
+    "contactPlaceholder": "Discord, @pseudo Telegram ou e-mail",
+    "contactRequired": "Vous n’êtes connecté à aucun compte Grubie : sans contact, nous ne pourrons pas vous répondre.",
+    "contactOptional": "Vous pouvez laisser vide — la réponse arrivera ici, dans le launcher, pour {{nickname}}.",
+    "contactNeeded": "Indiquez où vous répondre",
+    "replyToContact": "Nous vous répondrons ici : {{contact}}.",
+    "replyToAccount": "La réponse arrivera ici, dans le launcher.",
     "connectivity": "Vérifier la connexion aux services",
     "connectivityHint": "Prend jusqu’à 20 secondes et montre ce qui est bloqué sur votre réseau",
     "includedTitle": "Le rapport contient",
@@ -6226,6 +6234,10 @@
       "rejected": "Le serveur n’a pas accepté le rapport. Enregistrez-le dans un fichier et envoyez-le au support."
     },
     "saveFailed": "Impossible d'enregistrer le rapport dans un fichier"
+  },
+  "supportReply": {
+    "title": "Le support a répondu à {{code}}",
+    "open": "Ouvrir"
   },
   "launchStage": {
     "stages": {

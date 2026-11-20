@@ -2396,7 +2396,8 @@
       "folder": "Pliki dziennika",
       "folderDescription": "Pliki: {{files}} · {{size}} na tym komputerze",
       "folderDescriptionEmpty": "Przechowywane na tym komputerze",
-      "historyTitle": "Wysłane raporty"
+      "historyTitle": "Wysłane raporty",
+      "repliesTitle": "Odpowiedzi pomocy technicznej"
     },
     "resetAllDone": "Przywrócono ustawienia domyślne",
     "directConnect": "Bezpośrednie połączenie ze znajomymi",
@@ -6248,6 +6249,13 @@
     "noInstance": "Nie dotyczy instancji",
     "comment": "Co się stało",
     "commentPlaceholder": "Na przykład: naciskam „Graj”, licznik czasu leci, ale gra się nie otwiera",
+    "contact": "Gdzie mamy odpowiedzieć",
+    "contactPlaceholder": "Discord, @nazwa w Telegramie lub e-mail",
+    "contactRequired": "Nie zalogowano się na konto Grubie, więc bez kontaktu nie będziemy mieli gdzie odpowiedzieć.",
+    "contactOptional": "Można zostawić puste — odpowiedź przyjdzie tutaj, do launchera, na konto {{nickname}}.",
+    "contactNeeded": "Podaj, gdzie odpowiedzieć",
+    "replyToContact": "Odpowiemy tutaj: {{contact}}.",
+    "replyToAccount": "Odpowiedź przyjdzie tutaj, do launchera.",
     "connectivity": "Sprawdź połączenie z usługami",
     "connectivityHint": "Trwa do 20 sekund i pokazuje, co jest blokowane w Twojej sieci",
     "includedTitle": "Raport zawiera",
@@ -6283,6 +6291,10 @@
       "rejected": "Serwer nie przyjął raportu. Zapisz go do pliku i wyślij pomocy technicznej."
     },
     "saveFailed": "Nie udało się zapisać raportu do pliku"
+  },
+  "supportReply": {
+    "title": "Pomoc techniczna odpowiedziała na {{code}}",
+    "open": "Otwórz"
   },
   "launchStage": {
     "stages": {

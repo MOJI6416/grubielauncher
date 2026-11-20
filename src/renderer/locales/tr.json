@@ -2360,7 +2360,8 @@
       "folder": "Kayıt dosyaları",
       "folderDescription": "Dosyalar: {{files}} · bu bilgisayarda {{size}}",
       "folderDescriptionEmpty": "Bu bilgisayarda saklanır",
-      "historyTitle": "Gönderilen raporlar"
+      "historyTitle": "Gönderilen raporlar",
+      "repliesTitle": "Destek yanıtları"
     },
     "resetAllDone": "Ayarlar varsayılana sıfırlandı",
     "directConnect": "Arkadaşlarla doğrudan bağlantı",
@@ -6134,6 +6135,13 @@
     "noInstance": "Bir kurulumla ilgili değil",
     "comment": "Ne oldu",
     "commentPlaceholder": "Örneğin: Oyna’ya basıyorum, sayaç çalışıyor ama oyun hiç açılmıyor",
+    "contact": "Size nereden yanıt verelim",
+    "contactPlaceholder": "Discord, Telegram @kullanıcı adı veya e-posta",
+    "contactRequired": "Bir Grubie hesabına giriş yapmadınız; iletişim bilgisi olmadan size yanıt veremeyiz.",
+    "contactOptional": "Boş bırakabilirsiniz — yanıt buraya, başlatıcıya, {{nickname}} hesabına gelir.",
+    "contactNeeded": "Nereden yanıt vereceğimizi belirtin",
+    "replyToContact": "Buradan yanıt vereceğiz: {{contact}}.",
+    "replyToAccount": "Yanıt buraya, başlatıcıya gelecek.",
     "connectivity": "Hizmetlere bağlantıyı kontrol et",
     "connectivityHint": "20 saniyeye kadar sürer ve ağınızda neyin engellendiğini gösterir",
     "includedTitle": "Raporun içeriği",
@@ -6169,6 +6177,10 @@
       "rejected": "Sunucu raporu kabul etmedi. Bir dosyaya kaydedip desteğe gönderin."
     },
     "saveFailed": "Rapor dosyaya kaydedilemedi"
+  },
+  "supportReply": {
+    "title": "Destek {{code}} raporunuza yanıt verdi",
+    "open": "Aç"
   },
   "launchStage": {
     "stages": {

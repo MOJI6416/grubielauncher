@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -37,6 +38,7 @@ import type {
 } from "@/types/Journal";
 import {
   accountAtom,
+  authDataAtom,
   selectedVersionAtom,
   versionsAtom,
 } from "@renderer/stores/atoms";
@@ -55,6 +57,7 @@ const api = window.api;
 
 const NO_INSTANCE = "__none__";
 const COMMENT_LIMIT = 2000;
+const CONTACT_LIMIT = 200;
 const INCLUDED = [
   "journal",
   "system",
@@ -69,7 +72,12 @@ type Stage =
   | { kind: "form" }
   | { kind: "preparing" }
   | { kind: "sending"; prepared: SupportReportPrepared }
-  | { kind: "done"; code: string; expiresAt: string }
+  | {
+      kind: "done";
+      code: string;
+      expiresAt: string;
+      replyTo: { contact: string } | { account: true } | null;
+    }
   | {
       kind: "failed";
       reason: SupportReportFailureReason | "prepare";
@@ -87,9 +95,11 @@ export function SupportReportDialog({
   const versions = useAtomValue(versionsAtom);
   const selectedVersion = useAtomValue(selectedVersionAtom);
   const account = useAtomValue(accountAtom);
+  const authData = useAtomValue(authDataAtom);
 
   const [stage, setStage] = useState<Stage>({ kind: "form" });
   const [comment, setComment] = useState("");
+  const [contact, setContact] = useState("");
   const [checkConnectivity, setCheckConnectivity] = useState(true);
   const [versionName, setVersionName] = useState<string>(
     request.versionName ?? selectedVersion?.version.name ?? NO_INSTANCE,
@@ -101,12 +111,16 @@ export function SupportReportDialog({
   );
 
   const busy = stage.kind === "preparing" || stage.kind === "sending";
+  const token =
+    account && account.type !== "plain" ? account.accessToken || null : null;
+  const signedIn = Boolean(token && authData);
+  const replyContact = contact.trim();
+  const contactMissing = !signedIn && replyContact.length === 0;
 
   const send = async (prepared: SupportReportPrepared) => {
     setStage({ kind: "sending", prepared });
-    const token = account && account.type !== "plain" ? account.accessToken : null;
     const result = await api.support
-      .send(prepared.id, token ?? null)
+      .send(prepared.id, token, replyContact || null)
       .catch(ignoreFailure);
 
     if (!result) {
@@ -115,8 +129,21 @@ export function SupportReportDialog({
     }
 
     if (result.ok) {
-      uiJournal.info("support", "report sent", { code: result.code });
-      setStage({ kind: "done", code: result.code, expiresAt: result.expiresAt });
+      uiJournal.info("support", "report sent", {
+        code: result.code,
+        contactSaved: result.contactSaved,
+      });
+      setStage({
+        kind: "done",
+        code: result.code,
+        expiresAt: result.expiresAt,
+        replyTo:
+          result.contactSaved === true
+            ? { contact: replyContact }
+            : result.contactSaved === false && signedIn
+              ? { account: true }
+              : null,
+      });
       return;
     }
 
@@ -129,6 +156,7 @@ export function SupportReportDialog({
   };
 
   const start = async () => {
+    if (contactMissing) return;
     setStage({ kind: "preparing" });
     const prepared = await api.support
       .prepare({
@@ -242,6 +270,32 @@ export function SupportReportDialog({
                 />
               </div>
 
+              <div className="grid gap-1.5">
+                <Label
+                  htmlFor="support-report-contact"
+                  className="text-xs text-muted-foreground"
+                >
+                  {t("supportReport.contact")}
+                </Label>
+                <Input
+                  id="support-report-contact"
+                  value={contact}
+                  maxLength={CONTACT_LIMIT}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder={t("supportReport.contactPlaceholder")}
+                  onChange={(event) => setContact(event.target.value)}
+                  className="h-8 text-sm"
+                />
+                <p className="text-xs text-faint">
+                  {signedIn
+                    ? t("supportReport.contactOptional", {
+                        nickname: authData?.nickname ?? account?.nickname ?? "",
+                      })
+                    : t("supportReport.contactRequired")}
+                </p>
+              </div>
+
               <label className="flex items-start gap-2.5 text-sm">
                 <Checkbox
                   checked={checkConnectivity}
@@ -309,6 +363,15 @@ export function SupportReportDialog({
               <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
                 {t("supportReport.codeHint", { date: expiresLabel })}
               </p>
+              {stage.replyTo && (
+                <p className="max-w-sm text-xs leading-relaxed break-words text-muted-foreground">
+                  {"contact" in stage.replyTo
+                    ? t("supportReport.replyToContact", {
+                        contact: stage.replyTo.contact,
+                      })
+                    : t("supportReport.replyToAccount")}
+                </p>
+              )}
             </div>
           )}
 
@@ -332,10 +395,15 @@ export function SupportReportDialog({
         <DialogFooter className="m-0 shrink-0 gap-2 border-t border-border bg-surface-2 px-4 py-3">
           {stage.kind === "form" && (
             <>
+              {contactMissing && (
+                <p className="self-center text-xs text-faint sm:mr-auto">
+                  {t("supportReport.contactNeeded")}
+                </p>
+              )}
               <Button variant="ghost" onClick={onClose}>
                 {t("common.cancel")}
               </Button>
-              <Button onClick={() => void start()}>
+              <Button disabled={contactMissing} onClick={() => void start()}>
                 <LifeBuoy className="size-4" />
                 {t("supportReport.send")}
               </Button>

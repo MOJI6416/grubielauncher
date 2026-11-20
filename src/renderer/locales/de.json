@@ -2360,7 +2360,8 @@
       "folder": "Journal-Dateien",
       "folderDescription": "Dateien: {{files}} · {{size}} auf diesem Computer",
       "folderDescriptionEmpty": "Auf diesem Computer gespeichert",
-      "historyTitle": "Gesendete Berichte"
+      "historyTitle": "Gesendete Berichte",
+      "repliesTitle": "Antworten des Supports"
     },
     "resetAllDone": "Einstellungen auf Standard zurückgesetzt",
     "directConnect": "Direkte Verbindung mit Freunden",
@@ -6134,6 +6135,13 @@
     "noInstance": "Betrifft keine Instanz",
     "comment": "Was ist passiert",
     "commentPlaceholder": "Zum Beispiel: Ich drücke „Spielen“, der Timer läuft, aber das Spiel öffnet sich nie",
+    "contact": "Wohin sollen wir antworten",
+    "contactPlaceholder": "Discord, Telegram-@Name oder E-Mail",
+    "contactRequired": "Sie sind bei keinem Grubie-Konto angemeldet – ohne Kontakt können wir Ihnen nicht antworten.",
+    "contactOptional": "Kann leer bleiben – die Antwort kommt hier im Launcher an, für {{nickname}}.",
+    "contactNeeded": "Geben Sie an, wohin wir antworten sollen",
+    "replyToContact": "Wir antworten hier: {{contact}}.",
+    "replyToAccount": "Die Antwort kommt hier im Launcher an.",
     "connectivity": "Verbindung zu den Diensten prüfen",
     "connectivityHint": "Dauert bis zu 20 Sekunden und zeigt, was in Ihrem Netzwerk blockiert ist",
     "includedTitle": "Der Bericht enthält",
@@ -6169,6 +6177,10 @@
       "rejected": "Der Server hat den Bericht nicht angenommen. Speichern Sie ihn in einer Datei und senden Sie sie an den Support."
     },
     "saveFailed": "Der Bericht konnte nicht als Datei gespeichert werden"
+  },
+  "supportReply": {
+    "title": "Der Support hat auf {{code}} geantwortet",
+    "open": "Öffnen"
   },
   "launchStage": {
     "stages": {

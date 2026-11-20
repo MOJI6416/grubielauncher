@@ -2360,7 +2360,8 @@
       "folder": "Journal files",
       "folderDescription": "Files: {{files}} · {{size}} on this computer",
       "folderDescriptionEmpty": "Stored on this computer",
-      "historyTitle": "Sent reports"
+      "historyTitle": "Sent reports",
+      "repliesTitle": "Support replies"
     },
     "resetAllDone": "Settings reset to defaults",
     "directConnect": "Direct connection with friends",
@@ -6134,6 +6135,13 @@
     "noInstance": "Not about an instance",
     "comment": "What happened",
     "commentPlaceholder": "For example: I press Play, the timer runs, but the game never opens",
+    "contact": "Where should we reply",
+    "contactPlaceholder": "Discord, Telegram @username or email",
+    "contactRequired": "You are not signed in to a Grubie account, so without a contact we have nowhere to reply.",
+    "contactOptional": "You can leave it empty — the reply will come here, to the launcher, for {{nickname}}.",
+    "contactNeeded": "Tell us where to reply",
+    "replyToContact": "We will reply here: {{contact}}.",
+    "replyToAccount": "The reply will come here, to the launcher.",
     "connectivity": "Check the connection to services",
     "connectivityHint": "Takes up to 20 seconds and shows what is blocked on your network",
     "includedTitle": "The report contains",
@@ -6169,6 +6177,10 @@
       "rejected": "The server did not accept the report. Save it to a file and send it to support."
     },
     "saveFailed": "Couldn't save the report to a file"
+  },
+  "supportReply": {
+    "title": "Support replied to {{code}}",
+    "open": "Open"
   },
   "launchStage": {
     "stages": {

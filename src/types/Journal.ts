@@ -98,7 +98,7 @@ export type SupportReportFailureReason =
   | "rejected";
 
 export type SupportReportSendResult =
-  | { ok: true; code: string; expiresAt: string }
+  | { ok: true; code: string; expiresAt: string; contactSaved?: boolean }
   | { ok: false; reason: SupportReportFailureReason; status?: number };
 
 export interface SupportReportHistoryItem {
@@ -107,6 +107,15 @@ export interface SupportReportHistoryItem {
   expiresAt: string;
   trigger: SupportReportTrigger;
   versionName?: string;
+}
+
+export interface SupportReply {
+  code: string;
+  instanceName: string;
+  createdAt: string;
+  reply: string;
+  repliedAt: string;
+  seen: boolean;
 }
 
 export interface SupportBundleAttachment {

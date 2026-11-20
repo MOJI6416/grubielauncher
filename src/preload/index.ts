@@ -6,6 +6,7 @@ import type {
   JournalStatus,
   JournalUiEntry,
   LaunchStalledPayload,
+  SupportReply,
   SupportReportHistoryItem,
   SupportReportPrepared,
   SupportReportRequest,
@@ -876,9 +877,12 @@ export interface IElectronAPI {
     send: (
       id: string,
       accessToken?: string | null,
+      contact?: string | null,
     ) => Promise<SupportReportSendResult>;
     save: (id: string) => Promise<string | null>;
     history: () => Promise<SupportReportHistoryItem[]>;
+    replies: (accessToken: string) => Promise<SupportReply[] | null>;
+    replySeen: (accessToken: string, code: string) => Promise<boolean>;
   };
   logs: {
     list: (versionPath: string) => Promise<IGameLogFile[]>;
@@ -2147,10 +2151,13 @@ export const api: IElectronAPI = {
   support: {
     prepare: (request: SupportReportRequest) =>
       invoke("support:prepare", request),
-    send: (id: string, accessToken?: string | null) =>
-      invoke("support:send", id, accessToken ?? null),
+    send: (id: string, accessToken?: string | null, contact?: string | null) =>
+      invoke("support:send", id, accessToken ?? null, contact ?? null),
     save: (id: string) => invoke("support:save", id),
     history: () => invoke("support:history"),
+    replies: (accessToken: string) => invoke("support:replies", accessToken),
+    replySeen: (accessToken: string, code: string) =>
+      invoke("support:replySeen", accessToken, code),
   },
   logs: {
     list: (versionPath: string) => invoke("logs:list", versionPath),

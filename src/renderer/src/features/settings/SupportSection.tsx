@@ -26,6 +26,7 @@ import {
   formatReportBytes,
   openSupportReport,
   supportDialogAtom,
+  supportRepliesAtom,
 } from "@renderer/features/support/supportReport";
 import { copyWithFeedback } from "@renderer/utilities/copyFeedback";
 import { showFailureToast } from "@renderer/utilities/failures";
@@ -67,6 +68,7 @@ export function SupportSection({
   const versions = useAtomValue(versionsAtom);
   const mirrorMode = useAtomValue(mirrorModeAtom);
   const dialogRequest = useAtomValue(supportDialogAtom);
+  const replies = useAtomValue(supportRepliesAtom);
 
   const [status, setStatus] = useState<JournalStatus | null>(null);
   const [history, setHistory] = useState<SupportReportHistoryItem[]>([]);
@@ -215,6 +217,36 @@ export function SupportSection({
               }
             />
           )}
+        </SettingsGroup>
+      )}
+
+      {visible("supportReport") && replies && replies.length > 0 && (
+        <SettingsGroup title={t("settings.supportSection.repliesTitle")}>
+          {replies.slice(0, HISTORY_SHOWN).map((item) => (
+            <div key={item.code} className="grid min-w-0 gap-1.5 px-3.5 py-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="font-mono text-sm tracking-wider text-foreground tabular-nums">
+                  {item.code}
+                </span>
+                <Hint
+                  content={[formatRelative(new Date(item.repliedAt)), item.instanceName]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  variant="text"
+                  truncatedOnly
+                >
+                  <span className="min-w-0 flex-1 truncate text-xs text-faint">
+                    {[formatRelative(new Date(item.repliedAt)), item.instanceName]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </Hint>
+              </div>
+              <p className="max-h-40 overflow-y-auto text-sm leading-relaxed break-words whitespace-pre-wrap text-muted-foreground">
+                {item.reply}
+              </p>
+            </div>
+          ))}
         </SettingsGroup>
       )}
 

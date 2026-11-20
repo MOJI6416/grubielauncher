@@ -15,10 +15,15 @@ import {
   prepareSupportReport,
   takePreparedReport,
 } from "../journal/supportReport";
+import {
+  normalizeSupportContact,
+  toSupportReplies,
+} from "../journal/supportReplies";
 import type {
   JournalLevel,
   JournalStatus,
   JournalUiEntry,
+  SupportReply,
   SupportReportHistoryItem,
   SupportReportPrepared,
   SupportReportRequest,
@@ -47,6 +52,10 @@ const uploadClient = attachApiHostFallback(
     maxBodyLength: Infinity,
     maxContentLength: 1024 * 1024,
   }),
+);
+
+const repliesClient = attachApiHostFallback(
+  axios.create({ timeout: 15_000, maxContentLength: 1024 * 1024 }),
 );
 
 function historyPath(): string {
@@ -117,34 +126,42 @@ function normalizeRequest(raw: Record<string, unknown>): SupportReportRequest {
 export async function uploadPreparedReport(
   id: string,
   accessToken?: string,
+  contact?: string,
 ): Promise<SupportReportSendResult> {
   const report = takePreparedReport(id);
   if (!report) return { ok: false, reason: "expired" };
 
+  const replyTo = normalizeSupportContact(contact);
   const span = journal.span("support", "upload report", {
     bytes: report.gz.byteLength,
     trigger: report.trigger,
     withAccount: Boolean(accessToken),
+    withContact: Boolean(replyTo),
   });
 
   try {
-    const response = await uploadClient.post<{ code?: unknown; expiresAt?: unknown }>(
-      "/support-reports",
-      report.gz,
-      {
-        headers: {
-          "Content-Type": "application/gzip",
-          "X-Launcher-Version": app.getVersion(),
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
+    const response = await uploadClient.post<{
+      code?: unknown;
+      expiresAt?: unknown;
+      contactSaved?: unknown;
+    }>("/support-reports", report.gz, {
+      headers: {
+        "Content-Type": "application/gzip",
+        "X-Launcher-Version": app.getVersion(),
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...(replyTo ? { "X-Support-Contact": encodeURIComponent(replyTo) } : {}),
       },
-    );
+    });
 
     const code = response.data?.code;
     const expiresAt = response.data?.expiresAt;
     if (typeof code !== "string" || typeof expiresAt !== "string") {
       throw new Error("The server answered without a report code");
     }
+    const contactSaved =
+      typeof response.data?.contactSaved === "boolean"
+        ? response.data.contactSaved
+        : undefined;
 
     forgetPreparedReport(id);
     await appendHistory({
@@ -154,9 +171,9 @@ export async function uploadPreparedReport(
       trigger: report.trigger,
       versionName: report.summary.versionName,
     });
-    span.ok({ code });
+    span.ok({ code, contactSaved });
 
-    return { ok: true, code, expiresAt };
+    return { ok: true, code, expiresAt, contactSaved };
   } catch (error) {
     span.fail(error);
 
@@ -167,6 +184,41 @@ export async function uploadPreparedReport(
       return { ok: false, reason: "rejected", status };
     }
     return { ok: false, reason: "network", status };
+  }
+}
+
+async function fetchSupportReplies(accessToken: string): Promise<SupportReply[] | null> {
+  try {
+    const response = await repliesClient.get("/support-reports/mine", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    return toSupportReplies(response.data);
+  } catch (error) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    if (status !== 404 && status !== 401) {
+      journal.warn("support", "support replies unavailable", {
+        status,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return null;
+  }
+}
+
+async function markSupportReplySeen(accessToken: string, code: string): Promise<boolean> {
+  try {
+    await repliesClient.post(
+      `/support-reports/mine/${encodeURIComponent(code)}/seen`,
+      {},
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    return true;
+  } catch (error) {
+    journal.warn("support", "support reply not marked seen", {
+      code,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
   }
 }
 
@@ -234,9 +286,28 @@ export function registerSupportIpc() {
   handleSafe<SupportReportSendResult>(
     "support:send",
     { ok: false, reason: "network" },
-    [check.nonEmptyString(64), check.optional(check.string(8192))],
-    async (_, id: string, accessToken?: string | null) =>
-      uploadPreparedReport(id, accessToken || undefined),
+    [
+      check.nonEmptyString(64),
+      check.optional(check.string(8192)),
+      check.optional(check.string(1000)),
+    ],
+    async (_, id: string, accessToken?: string | null, contact?: string | null) =>
+      uploadPreparedReport(id, accessToken || undefined, contact || undefined),
+  );
+
+  handleSafe<SupportReply[] | null>(
+    "support:replies",
+    null,
+    [check.nonEmptyString(8192)],
+    async (_, accessToken: string) => fetchSupportReplies(accessToken),
+  );
+
+  handleSafe<boolean>(
+    "support:replySeen",
+    false,
+    [check.nonEmptyString(8192), check.nonEmptyString(64)],
+    async (_, accessToken: string, code: string) =>
+      markSupportReplySeen(accessToken, code),
   );
 
   handleSafe<string | null>(

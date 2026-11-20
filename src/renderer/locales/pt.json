@@ -2378,7 +2378,8 @@
       "folder": "Arquivos do diário",
       "folderDescription": "Arquivos: {{files}} · {{size}} neste computador",
       "folderDescriptionEmpty": "Guardado neste computador",
-      "historyTitle": "Relatórios enviados"
+      "historyTitle": "Relatórios enviados",
+      "repliesTitle": "Respostas do suporte"
     },
     "resetAllDone": "Configurações redefinidas para o padrão",
     "directConnect": "Conexão direta com amigos",
@@ -6187,6 +6188,13 @@
     "noInstance": "Não é sobre uma instância",
     "comment": "O que aconteceu",
     "commentPlaceholder": "Por exemplo: clico em Jogar, o cronômetro corre, mas o jogo nunca abre",
+    "contact": "Onde devemos responder",
+    "contactPlaceholder": "Discord, @usuário do Telegram ou e-mail",
+    "contactRequired": "Você não entrou em uma conta Grubie, então sem um contato não teremos onde responder.",
+    "contactOptional": "Pode deixar em branco — a resposta chegará aqui, no launcher, para {{nickname}}.",
+    "contactNeeded": "Informe onde responder",
+    "replyToContact": "Responderemos aqui: {{contact}}.",
+    "replyToAccount": "A resposta chegará aqui, no launcher.",
     "connectivity": "Verificar a conexão com os serviços",
     "connectivityHint": "Leva até 20 segundos e mostra o que está bloqueado na sua rede",
     "includedTitle": "O relatório contém",
@@ -6222,6 +6230,10 @@
       "rejected": "O servidor não aceitou o relatório. Salve-o em um arquivo e envie ao suporte."
     },
     "saveFailed": "Não foi possível salvar o relatório em arquivo"
+  },
+  "supportReply": {
+    "title": "O suporte respondeu a {{code}}",
+    "open": "Abrir"
   },
   "launchStage": {
     "stages": {

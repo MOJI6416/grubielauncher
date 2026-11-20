@@ -1,5 +1,6 @@
 import { atom, getDefaultStore } from "jotai";
 import type {
+  SupportReply,
   SupportReportTrigger,
   SupportReportUiState,
 } from "@/types/Journal";
@@ -20,6 +21,45 @@ export interface SupportDialogRequest {
 }
 
 export const supportDialogAtom = atom<SupportDialogRequest | null>(null);
+
+export const supportRepliesAtom = atom<SupportReply[] | null>(null);
+
+export function mergeSupportReply(
+  current: SupportReply[] | null,
+  reply: SupportReply,
+): SupportReply[] {
+  return [reply, ...(current ?? []).filter((item) => item.code !== reply.code)];
+}
+
+export function markSupportReplySeen(
+  current: SupportReply[] | null,
+  code: string,
+): SupportReply[] | null {
+  return current
+    ? current.map((item) => (item.code === code ? { ...item, seen: true } : item))
+    : current;
+}
+
+export function toLiveSupportReply(payload: unknown): SupportReply | null {
+  if (!payload || typeof payload !== "object") return null;
+  const data = payload as Record<string, unknown>;
+  if (
+    typeof data.code !== "string" ||
+    typeof data.reply !== "string" ||
+    !data.reply ||
+    typeof data.repliedAt !== "string"
+  ) {
+    return null;
+  }
+  return {
+    code: data.code,
+    instanceName: "",
+    createdAt: data.repliedAt,
+    reply: data.reply.slice(0, 4000),
+    repliedAt: data.repliedAt,
+    seen: false,
+  };
+}
 
 export function openSupportReport(
   trigger: SupportReportTrigger,
