@@ -77,6 +77,7 @@ import { journal } from "../journal/journal";
 import { assertSafeFileSegment } from "../game/serverScriptSafety";
 import { getDataRoot } from "../utilities/dataRoot";
 import type { OrnitheModsCheck } from "@/shared/profileLoaders";
+import { registerOptiFineIpc } from "./optifineIpc";
 
 const fallbackVersionInit: IVersionClassData = {
   failed: true,
@@ -281,6 +282,7 @@ export async function runLoaderChangeWithLock(
 
 export function registerVersionIpc() {
   setInstallActiveProbe(isInstallOperationActive);
+  registerOptiFineIpc();
 
   handleSafe(
     "version:init",

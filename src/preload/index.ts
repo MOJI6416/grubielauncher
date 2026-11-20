@@ -1,6 +1,8 @@
 /// <reference lib="dom" />
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createPathUtils } from "./path";
+import type { OptiFineBuild, OptiFineChoice } from "@/shared/optifine";
+import type { OptiFineImportResult } from "@/types/OptiFine";
 import { IServer } from "@/types/ServersList";
 import type {
   JournalStatus,
@@ -553,6 +555,19 @@ export interface IElectronAPI {
       versionId: string,
     ) => Promise<ModrinthServerPack | null>;
     discoverGallery: (projectId: string) => Promise<ModrinthServerImage[] | null>;
+  };
+  optifine: {
+    builds: (
+      minecraft: string,
+      force?: boolean,
+    ) => Promise<OptiFineBuild[] | null>;
+    isStored: (choice: OptiFineChoice) => Promise<boolean>;
+    obtain: (choice: OptiFineChoice) => Promise<OptiFineChoice | null>;
+    closeDownload: () => Promise<boolean>;
+    import: (
+      filePath: string,
+      minecraft: string,
+    ) => Promise<OptiFineImportResult>;
   };
   version: {
     import: (filePath: string, tempPath: string) => Promise<IImportModpack>;
@@ -1956,6 +1971,15 @@ export const api: IElectronAPI = {
       invoke("servers:discoverGallery", projectId),
     compare: (servers1: IServer[], servers2: IServer[]) =>
       invoke("servers:compare", servers1, servers2),
+  },
+  optifine: {
+    builds: (minecraft: string, force?: boolean) =>
+      invoke("optifine:builds", minecraft, force),
+    isStored: (choice: OptiFineChoice) => invoke("optifine:isStored", choice),
+    obtain: (choice: OptiFineChoice) => invoke("optifine:obtain", choice),
+    closeDownload: () => invoke("optifine:closeDownload"),
+    import: (filePath: string, minecraft: string) =>
+      invoke("optifine:import", filePath, minecraft),
   },
   version: {
     import: (filePath: string, tempPath: string) =>

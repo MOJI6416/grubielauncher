@@ -7739,5 +7739,88 @@
     "unlistedHint_many": "У файлах {{files}} знайдено відомий шкідливий код. Файли видалено із сервера — замініть моди й опублікуйте збірку знову.",
     "unlistedHint_other": "У файлах {{files}} знайдено відомий шкідливий код. Файли видалено із сервера — замініть моди й опублікуйте збірку знову.",
     "open": "Відкрити збірку"
+  },
+  "optifine": {
+    "title": "OptiFine",
+    "progress": {
+      "patching": "OptiFine: патч гри офіційним установником",
+      "copying": "OptiFine: копіювання до теки модів"
+    },
+    "row": {
+      "none": "не встановлено",
+      "add": "Встановити",
+      "change": "Змінити",
+      "sodiumAction": "Збірка з Sodium + Iris"
+    },
+    "sodium": {
+      "better": "на цій версії краще Sodium + Iris",
+      "why": "OptiFine для нових версій закритий і погано уживається з модами. Sodium швидший, а Iris завантажує шейдери у форматі OptiFine."
+    },
+    "list": {
+      "title": "Версії OptiFine",
+      "loading": "Завантажуємо список з optifine.net",
+      "siteFailed": "Сайт OptiFine недоступний",
+      "empty": "Для Minecraft {{version}} на сайті OptiFine немає збірок",
+      "emptyForge": "Для Minecraft {{version}} немає збірок OptiFine з підтримкою Forge",
+      "installed": "встановлено",
+      "needsForge": "потрібен Forge {{version}}"
+    },
+    "facts": {
+      "source": "Джерело",
+      "sourceValue": "optifine.net — офіційний сайт",
+      "file": "Файл",
+      "fileStored": "уже завантажено",
+      "fileDownload": "завантажиться під час встановлення",
+      "method": "Встановлення",
+      "methodForge": "у теку mods, як радить автор",
+      "methodVanilla": "патч гри офіційним установником OptiFine",
+      "forgeOk": "підходить (потрібен {{required}})",
+      "forgeOlder": "потрібен {{required}}, у вас {{current}}"
+    },
+    "notes": {
+      "terms": "Файл завантажується з офіційного сайту optifine.net і зберігається лише на цьому комп’ютері — ми його не поширюємо. Якщо завантажити не вийде, відкриється сторінка OptiFine: натисніть на ній Download.",
+      "forgeOlder": "Цій версії OptiFine потрібен Forge не нижче {{version}}. Оновіть Forge у картці завантажувача або виберіть старішу версію OptiFine.",
+      "shaders": "Шейдери вмикаються в грі: Налаштування → Налаштування графіки → Шейдери. Шейдерпаки кладіть у теку shaderpacks."
+    },
+    "actions": {
+      "download": "Завантажити й встановити {{edition}}",
+      "install": "Встановити {{edition}}",
+      "installed": "Встановлено",
+      "pick": "Виберіть версію",
+      "downloading": "Завантажуємо…",
+      "installing": "Встановлюємо…",
+      "remove": "Прибрати",
+      "pickFile": "Вибрати файл…"
+    },
+    "blocked": {
+      "noAccount": "Потрібен акаунт: увійдіть, щоб ставити OptiFine",
+      "busy": "Дочекайтеся завершення іншого встановлення"
+    },
+    "toast": {
+      "installed": "OptiFine {{edition}} встановлено",
+      "removed": "OptiFine прибрано",
+      "failed": "Не вдалося встановити OptiFine",
+      "removeFailed": "Не вдалося прибрати OptiFine",
+      "cancelled": "Встановлення OptiFine скасовано",
+      "closed": "OptiFine не завантажено: сторінку закрито",
+      "downloadFailed": "Не вдалося завантажити OptiFine з optifine.net",
+      "wrongVersion": "Цей файл OptiFine не для Minecraft {{version}}",
+      "invalidFile": "Це не файл OptiFine",
+      "importFailed": "Не вдалося прочитати файл OptiFine"
+    },
+    "errors": {
+      "fileMissing": "Файл OptiFine зник з комп’ютера — встановіть OptiFine заново в налаштуваннях збірки.",
+      "patchFailed": "Офіційний установник OptiFine не зміг пропатчити гру. Перевірте цілісність збірки та спробуйте знову.",
+      "invalidFile": "Файл OptiFine пошкоджено — завантажте його заново."
+    },
+    "create": {
+      "none": "Не ставити",
+      "stored": "Файл уже завантажено",
+      "willDownload": "Завантажиться з офіційного сайту optifine.net під час створення",
+      "skipped": "Збірку створено без OptiFine: файл не завантажено. Поставити його можна в налаштуваннях збірки.",
+      "sodiumAction": "Fabric + Sodium + Iris",
+      "sodiumAdded": "Sodium та Iris буде встановлено",
+      "sodiumFailed": "Не вдалося підібрати Sodium та Iris для цієї версії"
+    }
   }
 }

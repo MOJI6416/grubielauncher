@@ -5,6 +5,13 @@ import type { ModrinthServer } from "@/types/ModrinthServers";
 import { navigate } from "@renderer/navigation/navigate";
 import { rememberFocusOrigin } from "@renderer/navigation/focusReturn";
 import type { NewInstanceSource } from "@renderer/features/newInstance/state";
+import type { Loader } from "@/types/Loader";
+
+export type NewInstancePreset = {
+  loader: Loader;
+  minecraft: string;
+  sodiumIris?: boolean;
+};
 
 export type NewInstanceRequest = {
   importFilePath?: string;
@@ -12,6 +19,7 @@ export type NewInstanceRequest = {
   catalogPack?: { project: IProject; version: IProjectVersion };
   modrinthServer?: ModrinthServer;
   source?: NewInstanceSource;
+  preset?: NewInstancePreset;
   onSuccess?: () => void;
 };
 
@@ -29,6 +37,13 @@ export function setNewInstanceImport(importFilePath: string): void {
     ...store.get(newInstanceRequestAtom),
     importFilePath,
   });
+}
+
+export function takeNewInstancePreset(): NewInstancePreset | undefined {
+  const store = getDefaultStore();
+  const { preset, ...rest } = store.get(newInstanceRequestAtom);
+  if (preset) store.set(newInstanceRequestAtom, rest);
+  return preset;
 }
 
 export function clearNewInstanceRequest(): void {

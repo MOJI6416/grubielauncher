@@ -99,6 +99,8 @@ import {
   JarModsRow,
 } from "@renderer/features/instances/InstanceJarCard";
 import { JarModsPanel } from "@renderer/features/instances/JarModsPanel";
+import { OptiFinePanel } from "@renderer/features/optifine/OptiFinePanel";
+import { OptiFineSettingsRow } from "@renderer/features/optifine/OptiFineSettingsRow";
 import { showsJarModsCard } from "@renderer/features/instances/jarMods";
 import { isModdedLoader } from "@/shared/loaderCompat";
 import { useSyncGuard } from "@renderer/features/instances/useSyncGuard";
@@ -153,6 +155,7 @@ export function InstanceScreen({
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [isLoaderPanelOpen, setIsLoaderPanelOpen] = useState(false);
   const [isJarPanelOpen, setIsJarPanelOpen] = useState(false);
+  const [isOptiFinePanelOpen, setIsOptiFinePanelOpen] = useState(false);
   const [isTagsOpen, setIsTagsOpen] = useState(false);
 
   const routeTab =
@@ -163,6 +166,7 @@ export function InstanceScreen({
     if (tab !== "settings") {
       setIsLoaderPanelOpen(false);
       setIsJarPanelOpen(false);
+      setIsOptiFinePanelOpen(false);
     }
 
     navigate({
@@ -250,6 +254,7 @@ export function InstanceScreen({
 
   const openLoaderPanel = () => {
     setIsJarPanelOpen(false);
+    setIsOptiFinePanelOpen(false);
     setIsLoaderPanelOpen(true);
     setActiveTab("settings");
   };
@@ -684,6 +689,18 @@ export function InstanceScreen({
                 (isLaunching ? t("packAuthor.channel.launching") : undefined)
               }
             />
+          ) : activeTab === "settings" && version && isOptiFinePanelOpen ? (
+            <OptiFinePanel
+              instance={version}
+              lockedReason={
+                isForeignInstance
+                  ? readOnlyHint
+                  : isVersionRunning
+                    ? t("instanceSettings.runningHint")
+                    : undefined
+              }
+              onClose={() => setIsOptiFinePanelOpen(false)}
+            />
           ) : activeTab === "settings" && version && isJarPanelOpen ? (
             <JarModsPanel
               instance={version}
@@ -757,20 +774,38 @@ export function InstanceScreen({
                     isChanging={isLoading && loadingType === "loader"}
                     onOpen={() => setIsLoaderPanelOpen(true)}
                     footer={
-                      showsJarModsCard(version.version) ? (
-                        <JarModsRow
+                      <>
+                        {showsJarModsCard(version.version) && (
+                          <JarModsRow
+                            conf={version.version}
+                            onOpen={() => setIsJarPanelOpen(true)}
+                          />
+                        )}
+                        <OptiFineSettingsRow
                           conf={version.version}
-                          onOpen={() => setIsJarPanelOpen(true)}
+                          onOpen={() => setIsOptiFinePanelOpen(true)}
                         />
-                      ) : undefined
+                      </>
                     }
                   />
                 ) : showsJarModsCard(version.version) ? (
                   <InstanceJarCard
                     conf={version.version}
                     onOpen={() => setIsJarPanelOpen(true)}
+                    footer={
+                      <OptiFineSettingsRow
+                        conf={version.version}
+                        onOpen={() => setIsOptiFinePanelOpen(true)}
+                      />
+                    }
                   />
-                ) : undefined
+                ) : (
+                  <OptiFineSettingsRow
+                    conf={version.version}
+                    variant="card"
+                    onOpen={() => setIsOptiFinePanelOpen(true)}
+                  />
+                )
               }
               languageRow={
                 canTranslateMods(

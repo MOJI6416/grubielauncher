@@ -98,6 +98,8 @@ export const USAGE_FEATURES = [
   "manage.loaderVersion",
   "manage.integrity",
   "manage.copyCommand",
+  "optifine.install",
+  "optifine.sodium",
   "java.pick",
   "java.add",
   "configs.translate",

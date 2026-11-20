@@ -1032,6 +1032,7 @@ export function NewInstancePanel({
           quickServer: state.quickServer,
           pack: state.pack,
           blockedMods: resolvedBlocked,
+          optifine: state.optifine,
           signal: controller.signal,
         });
 

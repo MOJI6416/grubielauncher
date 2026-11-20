@@ -6,6 +6,7 @@ import { InstanceSettingsOverrides } from '../shared/instanceSettings'
 import type { IModpackSource } from './ModpackSource'
 import type { ResolvedJava } from '../shared/javaRuntime'
 import type { UpdateChannel } from '../shared/updateChannel'
+import type { OptiFineChoice } from '../shared/optifine'
 
 export interface IVersion {
   id: string
@@ -56,6 +57,7 @@ export interface IVersionConf {
   launchOverride?: ILaunchOverride
   modpack?: IModpackSource
   updateChannel?: UpdateChannel
+  optifine?: OptiFineChoice
 }
 
 export interface VersionDeleteResult {

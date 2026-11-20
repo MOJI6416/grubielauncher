@@ -7739,5 +7739,88 @@
     "unlistedHint_many": "В файлах {{files}} найден известный вредоносный код. Файлы удалены с сервера — замените моды и опубликуйте сборку снова.",
     "unlistedHint_other": "В файлах {{files}} найден известный вредоносный код. Файлы удалены с сервера — замените моды и опубликуйте сборку снова.",
     "open": "Открыть сборку"
+  },
+  "optifine": {
+    "title": "OptiFine",
+    "progress": {
+      "patching": "OptiFine: патч игры официальным установщиком",
+      "copying": "OptiFine: копирование в папку модов"
+    },
+    "row": {
+      "none": "не установлен",
+      "add": "Установить",
+      "change": "Изменить",
+      "sodiumAction": "Сборка с Sodium + Iris"
+    },
+    "sodium": {
+      "better": "на этой версии лучше Sodium + Iris",
+      "why": "OptiFine для новых версий закрыт и плохо уживается с модами. Sodium быстрее, а Iris загружает шейдеры в формате OptiFine."
+    },
+    "list": {
+      "title": "Версии OptiFine",
+      "loading": "Загружаем список с optifine.net",
+      "siteFailed": "Сайт OptiFine недоступен",
+      "empty": "Для Minecraft {{version}} на сайте OptiFine нет сборок",
+      "emptyForge": "Для Minecraft {{version}} нет сборок OptiFine с поддержкой Forge",
+      "installed": "установлен",
+      "needsForge": "нужен Forge {{version}}"
+    },
+    "facts": {
+      "source": "Источник",
+      "sourceValue": "optifine.net — официальный сайт",
+      "file": "Файл",
+      "fileStored": "уже скачан",
+      "fileDownload": "скачается при установке",
+      "method": "Установка",
+      "methodForge": "в папку mods, как советует автор",
+      "methodVanilla": "патч игры официальным установщиком OptiFine",
+      "forgeOk": "подходит (нужен {{required}})",
+      "forgeOlder": "нужен {{required}}, у вас {{current}}"
+    },
+    "notes": {
+      "terms": "Файл скачивается с официального сайта optifine.net и хранится только на этом компьютере — мы его не раздаём. Если скачать не выйдет, откроется страница OptiFine: нажмите на ней Download.",
+      "forgeOlder": "Этой версии OptiFine нужен Forge не ниже {{version}}. Обновите Forge в карточке загрузчика или выберите версию OptiFine постарше.",
+      "shaders": "Шейдеры включаются в игре: Настройки → Настройки графики → Шейдеры. Шейдерпаки кладите в папку shaderpacks."
+    },
+    "actions": {
+      "download": "Скачать и установить {{edition}}",
+      "install": "Установить {{edition}}",
+      "installed": "Установлен",
+      "pick": "Выберите версию",
+      "downloading": "Скачиваем…",
+      "installing": "Устанавливаем…",
+      "remove": "Убрать",
+      "pickFile": "Выбрать файл…"
+    },
+    "blocked": {
+      "noAccount": "Нужен аккаунт: войдите, чтобы ставить OptiFine",
+      "busy": "Дождитесь окончания другой установки"
+    },
+    "toast": {
+      "installed": "OptiFine {{edition}} установлен",
+      "removed": "OptiFine убран",
+      "failed": "Не удалось установить OptiFine",
+      "removeFailed": "Не удалось убрать OptiFine",
+      "cancelled": "Установка OptiFine отменена",
+      "closed": "OptiFine не скачан: страница закрыта",
+      "downloadFailed": "Не удалось скачать OptiFine с optifine.net",
+      "wrongVersion": "Этот файл OptiFine не для Minecraft {{version}}",
+      "invalidFile": "Это не файл OptiFine",
+      "importFailed": "Не удалось прочитать файл OptiFine"
+    },
+    "errors": {
+      "fileMissing": "Файл OptiFine пропал с компьютера — установите OptiFine заново в настройках сборки.",
+      "patchFailed": "Официальный установщик OptiFine не смог пропатчить игру. Проверьте целостность сборки и попробуйте снова.",
+      "invalidFile": "Файл OptiFine повреждён — скачайте его заново."
+    },
+    "create": {
+      "none": "Не ставить",
+      "stored": "Файл уже скачан",
+      "willDownload": "Скачается с официального сайта optifine.net при создании",
+      "skipped": "Сборка создана без OptiFine: файл не скачан. Поставить его можно в настройках сборки.",
+      "sodiumAction": "Fabric + Sodium + Iris",
+      "sodiumAdded": "Sodium и Iris будут установлены",
+      "sodiumFailed": "Не удалось подобрать Sodium и Iris для этой версии"
+    }
   }
 }

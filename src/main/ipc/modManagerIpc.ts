@@ -23,6 +23,7 @@ import {
 import { check, handleSafe } from "../utilities/ipc";
 import { assertReadablePath, assertWritablePath } from "../utilities/safePath";
 import { ManagedFiles, readManagedFiles } from "../game/managedFiles";
+import { placedOptiFineMod } from "../game/optifine";
 import { moveFilesToTrash } from "../game/trash";
 import path from "path";
 import fs from "fs-extra";
@@ -281,7 +282,13 @@ export function registerModManagerIpc() {
     [isPath],
     async (_, versionPath: string) => {
       assertReadablePath(versionPath, "modManager:managedFiles");
-      return await readManagedFiles(versionPath);
+      const managed = await readManagedFiles(versionPath);
+      const optifine = await placedOptiFineMod(versionPath);
+      if (!managed || !optifine) return managed;
+      return {
+        ...managed,
+        [ProjectType.MOD]: [...(managed[ProjectType.MOD] ?? []), optifine],
+      };
     },
   );
 

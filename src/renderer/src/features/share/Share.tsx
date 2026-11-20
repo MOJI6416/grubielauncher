@@ -1281,7 +1281,10 @@ export function Share({
       const shareCode = await api.backend.shareModpack(account.accessToken!, {
         isPublic: isCatalogPublic,
         conf: {
-          ...withoutOverrides(selectedVersion.version),
+          ...withoutOverrides({
+            ...selectedVersion.version,
+            optifine: undefined,
+          }),
           description: nextDescription,
           loader: {
             ...selectedVersion.version.loader,

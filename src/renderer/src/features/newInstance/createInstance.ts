@@ -46,6 +46,10 @@ import {
 import { downloadImage } from "@renderer/utilities/imageDownload";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { contentBytes, ensureDiskRoom } from "@renderer/utilities/diskRoom";
+import { toast } from "sonner";
+import i18n from "@renderer/i18n";
+import type { OptiFineChoice } from "@/shared/optifine";
+import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
@@ -74,11 +78,31 @@ export interface CreateInstanceRequest {
   pack: AppliedPack | null;
   blockedMods: IBlockedMod[];
   overrides?: InstanceSettingsOverrides;
+  optifine?: OptiFineChoice | null;
   signal?: AbortSignal;
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) throw new Error(VERSION_INSTALL_CANCELLED);
+}
+
+async function obtainOptiFine(
+  choice: OptiFineChoice,
+  signal?: AbortSignal,
+): Promise<OptiFineChoice | null> {
+  const close = () => void api.optifine.closeDownload().catch(ignoreFailure);
+  signal?.addEventListener("abort", close, { once: true });
+
+  try {
+    const obtained = await api.optifine.obtain(choice);
+    if (!obtained) toast.warning(i18n.t("optifine.create.skipped"));
+    return obtained;
+  } catch {
+    toast.warning(i18n.t("optifine.create.skipped"));
+    return null;
+  } finally {
+    signal?.removeEventListener("abort", close);
+  }
 }
 
 function assertWritten(done: boolean): void {
@@ -351,6 +375,7 @@ export async function createInstance(
         : {}),
       ...(importModpack?.source ? { modpack: importModpack.source } : {}),
       ...(request.overrides ? { overrides: request.overrides } : {}),
+      optifine: undefined,
       ...(pack?.shareVersion
         ? { owner: base.owner, ownerId: base.ownerId }
         : ownerRecordFor(account)),
@@ -421,6 +446,12 @@ export async function createInstance(
 
     throwIfAborted(signal);
 
+    if (request.optifine) {
+      conf.optifine =
+        (await obtainOptiFine(request.optifine, signal)) ?? undefined;
+      throwIfAborted(signal);
+    }
+
     instance = new Version(conf);
     await instance.init();
 
@@ -447,6 +478,7 @@ export async function createInstance(
     throwIfAborted(signal);
 
     assertWritten(await instance.save());
+    if (conf.optifine) countFeature("optifine.install");
 
     if (!skipContentDownload) {
       const hasBlockedPaths = applyBlockedModFilePaths(

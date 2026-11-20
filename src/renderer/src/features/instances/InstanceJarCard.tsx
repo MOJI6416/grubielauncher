@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { FileArchive, Replace } from "lucide-react";
 import type { IVersionConf } from "@/types/IVersion";
@@ -9,9 +10,11 @@ import { summarizeJarMods } from "./jarMods";
 export function InstanceJarCard({
   conf,
   onOpen,
+  footer,
 }: {
   conf: IVersionConf;
   onOpen: () => void;
+  footer?: ReactNode;
 }) {
   const { t } = useTranslation();
   const { total, active, replacement } = summarizeJarMods(conf);
@@ -24,46 +27,52 @@ export function InstanceJarCard({
       title={t("jarMods.title")}
       icon={FileArchive}
       className="shrink-0"
-      bodyClassName="flex items-center gap-3 px-3 py-2.5"
+      bodyClassName="flex flex-col"
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2">
-        {replacement ? (
-          <Replace className="size-4 text-warning" />
-        ) : (
-          <FileArchive className="size-4 text-faint" />
-        )}
-      </span>
+      <div className="flex items-center gap-3 px-3 py-2.5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2">
+          {replacement ? (
+            <Replace className="size-4 text-warning" />
+          ) : (
+            <FileArchive className="size-4 text-faint" />
+          )}
+        </span>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <Hint content={title} variant="text" truncatedOnly>
-          <span className="min-w-0 truncate text-sm font-medium">{title}</span>
-        </Hint>
-        <Hint
-          content={
-            total > 0
-              ? t("jarMods.card.count", { active, total })
-              : t("jarMods.card.none")
-          }
-          variant="text"
-          truncatedOnly
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <Hint content={title} variant="text" truncatedOnly>
+            <span className="min-w-0 truncate text-sm font-medium">
+              {title}
+            </span>
+          </Hint>
+          <Hint
+            content={
+              total > 0
+                ? t("jarMods.card.count", { active, total })
+                : t("jarMods.card.none")
+            }
+            variant="text"
+            truncatedOnly
+          >
+            <span className="truncate text-2xs text-muted-foreground">
+              {total > 0
+                ? t("jarMods.card.count", { active, total })
+                : t("jarMods.card.none")}
+            </span>
+          </Hint>
+        </div>
+
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="shrink-0"
+          onClick={onOpen}
         >
-          <span className="truncate text-2xs text-muted-foreground">
-            {total > 0
-              ? t("jarMods.card.count", { active, total })
-              : t("jarMods.card.none")}
-          </span>
-        </Hint>
+          {t("jarMods.card.open")}
+        </Button>
       </div>
 
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="shrink-0"
-        onClick={onOpen}
-      >
-        {t("jarMods.card.open")}
-      </Button>
+      {footer}
     </SectionCard>
   );
 }

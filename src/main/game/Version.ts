@@ -171,6 +171,14 @@ import {
   nativeFileName,
   readCleanroomInstaller,
 } from "./cleanroom";
+import {
+  applyOptiFineLayer,
+  materializeOptiFine,
+  optifineLayerMatches,
+  requireStoredOptiFine,
+  stripOptiFineLayer,
+  vanillaOptiFine,
+} from "./optifine";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -1134,6 +1142,16 @@ export class Version {
       await this.writeManifest();
     }
 
+    if (!optifineLayerMatches(this.manifest, this.version)) {
+      const optifine = vanillaOptiFine(this.version);
+      stripOptiFineLayer(this.manifest);
+      if (optifine) {
+        const { info } = await requireStoredOptiFine(optifine);
+        applyOptiFineLayer(this.manifest, optifine, info.launchwrapper);
+      }
+      await this.writeManifest();
+    }
+
     const libraries = this.getLibraries(account);
 
     downloadItems.push(...libraries.downloadItems);
@@ -1198,6 +1216,27 @@ export class Version {
     if (pendingJava) {
       await pendingJava.finalizeInstall();
       await this.resolveJavaRuntime();
+    }
+
+    if (!this.versionPathOverride) {
+      await materializeOptiFine({
+        conf: this.version,
+        versionPath: this.versionPath,
+        launchVersionPath: await this.resolveLaunchVersionPath(),
+        librariesPath: path.join(this.minecraftPath, "libraries"),
+        javaPath: this.javaPath,
+        manifest: this.manifest,
+        signal: downloadSignal,
+        onStep: (step) =>
+          this.sendInstallProgress(
+            "files",
+            FILES_STAGE_END_PERCENT,
+            true,
+            undefined,
+            `optifine.progress.${step}`,
+          ),
+      });
+      await this.installCheckpoint();
     }
 
     await this.prepareLegacyAssets(this.versionPath);

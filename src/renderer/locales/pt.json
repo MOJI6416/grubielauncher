@@ -7669,5 +7669,88 @@
     "unlistedHint_many": "Foi encontrado código malicioso conhecido em {{files}}. Os arquivos foram excluídos do servidor — substitua os mods e publique a instância de novo.",
     "unlistedHint_other": "Foi encontrado código malicioso conhecido em {{files}}. Os arquivos foram excluídos do servidor — substitua os mods e publique a instância de novo.",
     "open": "Abrir a instância"
+  },
+  "optifine": {
+    "title": "OptiFine",
+    "progress": {
+      "patching": "OptiFine: aplicando o patch no jogo com o instalador oficial",
+      "copying": "OptiFine: copiando para a pasta de mods"
+    },
+    "row": {
+      "none": "não instalado",
+      "add": "Instalar",
+      "change": "Alterar",
+      "sodiumAction": "Instância com Sodium + Iris"
+    },
+    "sodium": {
+      "better": "nesta versão, Sodium + Iris funcionam melhor",
+      "why": "O OptiFine para versões novas tem código fechado e se dá mal com mods. O Sodium é mais rápido, e o Iris carrega shaders no formato do OptiFine."
+    },
+    "list": {
+      "title": "Versões do OptiFine",
+      "loading": "Carregando a lista do optifine.net",
+      "siteFailed": "O site do OptiFine está indisponível",
+      "empty": "O site do OptiFine não tem versões para o Minecraft {{version}}",
+      "emptyForge": "Não há versões do OptiFine com suporte ao Forge para o Minecraft {{version}}",
+      "installed": "instalado",
+      "needsForge": "requer Forge {{version}}"
+    },
+    "facts": {
+      "source": "Origem",
+      "sourceValue": "optifine.net — o site oficial",
+      "file": "Arquivo",
+      "fileStored": "já baixado",
+      "fileDownload": "baixado durante a instalação",
+      "method": "Instalação",
+      "methodForge": "na pasta mods, como o autor recomenda",
+      "methodVanilla": "o jogo recebe o patch do instalador oficial do OptiFine",
+      "forgeOk": "compatível (requer {{required}})",
+      "forgeOlder": "requer {{required}}, você tem {{current}}"
+    },
+    "notes": {
+      "terms": "O arquivo é baixado do site oficial optifine.net e fica só neste computador — não o distribuímos. Se o download falhar, a página do OptiFine será aberta: clique em Download nela.",
+      "forgeOlder": "Esta versão do OptiFine requer Forge {{version}} ou mais recente. Atualize o Forge no cartão do loader ou escolha uma versão mais antiga do OptiFine.",
+      "shaders": "Os shaders são ativados no jogo: Opções → Configurações de vídeo → Shaders. Coloque os pacotes de shaders na pasta shaderpacks."
+    },
+    "actions": {
+      "download": "Baixar e instalar {{edition}}",
+      "install": "Instalar {{edition}}",
+      "installed": "Instalado",
+      "pick": "Escolha uma versão",
+      "downloading": "Baixando…",
+      "installing": "Instalando…",
+      "remove": "Remover",
+      "pickFile": "Escolher arquivo…"
+    },
+    "blocked": {
+      "noAccount": "É preciso uma conta: entre para instalar o OptiFine",
+      "busy": "Aguarde o fim da outra instalação"
+    },
+    "toast": {
+      "installed": "OptiFine {{edition}} instalado",
+      "removed": "OptiFine removido",
+      "failed": "Não foi possível instalar o OptiFine",
+      "removeFailed": "Não foi possível remover o OptiFine",
+      "cancelled": "Instalação do OptiFine cancelada",
+      "closed": "O OptiFine não foi baixado: a página foi fechada",
+      "downloadFailed": "Não foi possível baixar o OptiFine do optifine.net",
+      "wrongVersion": "Este arquivo do OptiFine não é para o Minecraft {{version}}",
+      "invalidFile": "Este não é um arquivo do OptiFine",
+      "importFailed": "Não foi possível ler o arquivo do OptiFine"
+    },
+    "errors": {
+      "fileMissing": "O arquivo do OptiFine sumiu deste computador — instale o OptiFine de novo nas configurações da instância.",
+      "patchFailed": "O instalador oficial do OptiFine não conseguiu aplicar o patch no jogo. Verifique os arquivos da instância e tente de novo.",
+      "invalidFile": "O arquivo do OptiFine está danificado — baixe-o de novo."
+    },
+    "create": {
+      "none": "Não instalar",
+      "stored": "Arquivo já baixado",
+      "willDownload": "Será baixado do site oficial optifine.net ao criar a instância",
+      "skipped": "A instância foi criada sem o OptiFine: o arquivo não foi baixado. Você pode adicioná-lo nas configurações da instância.",
+      "sodiumAction": "Fabric + Sodium + Iris",
+      "sodiumAdded": "Sodium e Iris serão instalados",
+      "sodiumFailed": "Não foi possível encontrar Sodium e Iris para esta versão"
+    }
   }
 }

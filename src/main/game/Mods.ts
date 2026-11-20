@@ -28,6 +28,7 @@ import {
 import { extractWorldArchive, getWorldName } from "../utilities/worlds";
 import { isVersionRunning } from "../utilities/worldBackups";
 import { toSafeFileName } from "./serverScriptSafety";
+import { forgeOptiFine } from "./optifine";
 import {
   VERSION_INSTALL_CANCELLED,
   VersionInstallOperation,
@@ -423,6 +424,11 @@ export class Mods {
           });
         }
       }
+    }
+
+    const optifineMod = forgeOptiFine(this.version.version);
+    if (optifineMod) {
+      this.files.push({ filename: optifineMod.file, type: ProjectType.MOD });
     }
 
     this.lastFailures = null;

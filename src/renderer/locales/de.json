@@ -7578,5 +7578,88 @@
     "unlistedHint_one": "In {{files}} wurde bekannter Schadcode gefunden. Die Datei wurde vom Server gelöscht – ersetzen Sie den Mod und veröffentlichen Sie die Instanz erneut.",
     "unlistedHint_other": "In {{files}} wurde bekannter Schadcode gefunden. Die Dateien wurden vom Server gelöscht – ersetzen Sie die Mods und veröffentlichen Sie die Instanz erneut.",
     "open": "Instanz öffnen"
+  },
+  "optifine": {
+    "title": "OptiFine",
+    "progress": {
+      "patching": "OptiFine: Spiel wird mit dem offiziellen Installer gepatcht",
+      "copying": "OptiFine: wird in den Mods-Ordner kopiert"
+    },
+    "row": {
+      "none": "nicht installiert",
+      "add": "Installieren",
+      "change": "Ändern",
+      "sodiumAction": "Instanz mit Sodium + Iris"
+    },
+    "sodium": {
+      "better": "auf dieser Version besser Sodium + Iris",
+      "why": "OptiFine ist für neue Versionen nicht quelloffen und verträgt sich schlecht mit Mods. Sodium ist schneller, und Iris lädt Shader im OptiFine-Format."
+    },
+    "list": {
+      "title": "OptiFine-Versionen",
+      "loading": "Liste wird von optifine.net geladen",
+      "siteFailed": "Die OptiFine-Website ist nicht erreichbar",
+      "empty": "Auf der OptiFine-Website gibt es keine Builds für Minecraft {{version}}",
+      "emptyForge": "Für Minecraft {{version}} gibt es keine OptiFine-Builds mit Forge-Unterstützung",
+      "installed": "installiert",
+      "needsForge": "benötigt Forge {{version}}"
+    },
+    "facts": {
+      "source": "Quelle",
+      "sourceValue": "optifine.net – die offizielle Website",
+      "file": "Datei",
+      "fileStored": "bereits heruntergeladen",
+      "fileDownload": "wird bei der Installation heruntergeladen",
+      "method": "Installation",
+      "methodForge": "in den Ordner mods, wie vom Autor empfohlen",
+      "methodVanilla": "Spiel wird mit dem offiziellen OptiFine-Installer gepatcht",
+      "forgeOk": "passt (benötigt {{required}})",
+      "forgeOlder": "benötigt {{required}}, Sie haben {{current}}"
+    },
+    "notes": {
+      "terms": "Die Datei wird von der offiziellen Website optifine.net heruntergeladen und nur auf diesem Computer gespeichert – wir verbreiten sie nicht. Klappt der Download nicht, öffnet sich die OptiFine-Seite: Klicken Sie dort auf Download.",
+      "forgeOlder": "Diese OptiFine-Version benötigt Forge {{version}} oder neuer. Aktualisieren Sie Forge in der Loader-Karte oder wählen Sie eine ältere OptiFine-Version.",
+      "shaders": "Shader schalten Sie im Spiel ein: Optionen → Grafikeinstellungen → Shader. Shaderpacks gehören in den Ordner shaderpacks."
+    },
+    "actions": {
+      "download": "{{edition}} herunterladen und installieren",
+      "install": "{{edition}} installieren",
+      "installed": "Installiert",
+      "pick": "Version wählen",
+      "downloading": "Wird heruntergeladen…",
+      "installing": "Wird installiert…",
+      "remove": "Entfernen",
+      "pickFile": "Datei wählen…"
+    },
+    "blocked": {
+      "noAccount": "Ein Konto ist nötig: Melden Sie sich an, um OptiFine zu installieren",
+      "busy": "Warten Sie, bis die andere Installation fertig ist"
+    },
+    "toast": {
+      "installed": "OptiFine {{edition}} installiert",
+      "removed": "OptiFine entfernt",
+      "failed": "OptiFine konnte nicht installiert werden",
+      "removeFailed": "OptiFine konnte nicht entfernt werden",
+      "cancelled": "OptiFine-Installation abgebrochen",
+      "closed": "OptiFine wurde nicht heruntergeladen: Die Seite wurde geschlossen",
+      "downloadFailed": "OptiFine konnte nicht von optifine.net heruntergeladen werden",
+      "wrongVersion": "Diese OptiFine-Datei ist nicht für Minecraft {{version}}",
+      "invalidFile": "Das ist keine OptiFine-Datei",
+      "importFailed": "Die OptiFine-Datei konnte nicht gelesen werden"
+    },
+    "errors": {
+      "fileMissing": "Die OptiFine-Datei ist nicht mehr auf diesem Computer – installieren Sie OptiFine in den Instanzeinstellungen erneut.",
+      "patchFailed": "Der offizielle OptiFine-Installer konnte das Spiel nicht patchen. Prüfen Sie die Dateien der Instanz und versuchen Sie es erneut.",
+      "invalidFile": "Die OptiFine-Datei ist beschädigt – laden Sie sie erneut herunter."
+    },
+    "create": {
+      "none": "Nicht installieren",
+      "stored": "Datei bereits heruntergeladen",
+      "willDownload": "Wird beim Erstellen von der offiziellen Website optifine.net heruntergeladen",
+      "skipped": "Die Instanz wurde ohne OptiFine erstellt: Die Datei wurde nicht heruntergeladen. Sie können es in den Instanzeinstellungen hinzufügen.",
+      "sodiumAction": "Fabric + Sodium + Iris",
+      "sodiumAdded": "Sodium und Iris werden installiert",
+      "sodiumFailed": "Sodium und Iris wurden für diese Version nicht gefunden"
+    }
   }
 }

@@ -29,6 +29,10 @@ import type { NewInstanceAction, NewInstanceState } from "./state";
 import type { VersionCatalogState } from "./useVersionCatalog";
 import { useRedact } from "@renderer/features/streamer/streamerMode";
 import { ModSetPicker } from "@renderer/features/modSets/ModSetPicker";
+import {
+  OptiFineCreateRow,
+  useNewInstancePreset,
+} from "@renderer/features/optifine/OptiFineCreateRow";
 
 const KIND_FILTERS: VersionKind[] = ["release", "snapshot", "old"];
 
@@ -65,6 +69,7 @@ export function CustomForm({
   const [versionQuery, setVersionQuery] = useState("");
   const [loaderQuery, setLoaderQuery] = useState("");
   const [kinds, setKinds] = useState<VersionKind[]>(KIND_FILTERS);
+  useNewInstancePreset(dispatch);
 
   const entries = useMemo(
     () => toVersionEntries(state.versions),
@@ -320,8 +325,10 @@ export function CustomForm({
             title={t("addVersion.preview.title")}
             rows={summaryRows}
             warnings={warnings}
-            className={isModded ? "shrink-0" : "min-h-0 flex-1"}
+            className={isModded ? "max-h-[60%] shrink-0" : "min-h-0 flex-1"}
           >
+            <OptiFineCreateRow state={state} dispatch={dispatch} />
+
             {isModded && (
               <ModSetPicker
                 minecraftVersion={selected?.id}

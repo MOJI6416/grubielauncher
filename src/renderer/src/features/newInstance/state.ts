@@ -12,6 +12,7 @@ import type { ImportPart } from "@/types/LauncherImport";
 import type { LoaderVersion } from "@/types/VersionsService";
 import type { ServerTarget } from "./serverTarget";
 import { pickDefaultVersion, toVersionEntries } from "./versionCatalog";
+import type { OptiFineChoice } from "@/shared/optifine";
 
 export type NewInstanceSource =
   | "custom"
@@ -89,6 +90,7 @@ export interface NewInstanceState {
   serverVersions: string[];
   loaderVersionIssue: LoaderVersionIssue;
   packVersionIssue: PackVersionIssue;
+  optifine: OptiFineChoice | null;
 }
 
 export type NewInstanceAction =
@@ -134,7 +136,9 @@ export type NewInstanceAction =
       logo?: string;
       gameVersions?: string[];
     }
-  | { type: "clearServer" };
+  | { type: "clearServer" }
+  | { type: "setOptiFine"; value: OptiFineChoice | null }
+  | { type: "applyLoaderPreset"; loader: Loader; minecraft: string };
 
 export interface PackContent {
   name: string;
@@ -176,6 +180,7 @@ export function createInitialState(
     serverVersions: [],
     loaderVersionIssue: null,
     packVersionIssue: null,
+    optifine: null,
   };
 }
 
@@ -237,8 +242,32 @@ export function newInstanceReducer(
         minecraftVersion: undefined,
         loaderVersion: undefined,
         loaderVersionIssue: null,
+        optifine: null,
       };
     }
+
+    case "applyLoaderPreset": {
+      if (isPackLocked(state)) return state;
+
+      return {
+        ...state,
+        loader: action.loader,
+        versions: [],
+        loaderVersions: [],
+        minecraftVersion: {
+          id: action.minecraft,
+          type: "release",
+          url: "",
+          serverManager: false,
+        },
+        loaderVersion: undefined,
+        loaderVersionIssue: null,
+        optifine: null,
+      };
+    }
+
+    case "setOptiFine":
+      return { ...state, optifine: action.value };
 
     case "setSnapshots": {
       if (action.value === state.showSnapshots) return state;
@@ -275,6 +304,7 @@ export function newInstanceReducer(
         loaderVersions: [],
         loaderVersion: undefined,
         loaderVersionIssue: null,
+        optifine: null,
       };
     }
 
@@ -318,6 +348,7 @@ export function newInstanceReducer(
         quickServer: action.content.quickServer,
         loaderVersionIssue: null,
         packVersionIssue: action.versionIssue ?? null,
+        optifine: null,
       };
 
     case "packVersionsResolved":

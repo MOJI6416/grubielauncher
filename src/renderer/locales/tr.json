@@ -7578,5 +7578,88 @@
     "unlistedHint_one": "{{files}} içinde bilinen kötü amaçlı kod bulundu. Dosya sunucudan silindi — modu değiştirip kurulumu yeniden yayımlayın.",
     "unlistedHint_other": "{{files}} içinde bilinen kötü amaçlı kod bulundu. Dosyalar sunucudan silindi — modları değiştirip kurulumu yeniden yayımlayın.",
     "open": "Kurulumu aç"
+  },
+  "optifine": {
+    "title": "OptiFine",
+    "progress": {
+      "patching": "OptiFine: oyun resmi yükleyiciyle yamalanıyor",
+      "copying": "OptiFine: mods klasörüne kopyalanıyor"
+    },
+    "row": {
+      "none": "kurulu değil",
+      "add": "Kur",
+      "change": "Değiştir",
+      "sodiumAction": "Sodium + Iris ile kurulum"
+    },
+    "sodium": {
+      "better": "bu sürümde Sodium + Iris daha iyi",
+      "why": "Yeni sürümler için OptiFine kapalı kaynaklıdır ve modlarla iyi geçinmez. Sodium daha hızlıdır, Iris ise OptiFine biçimindeki gölgelendiricileri yükler."
+    },
+    "list": {
+      "title": "OptiFine sürümleri",
+      "loading": "Liste optifine.net’ten yükleniyor",
+      "siteFailed": "OptiFine sitesine ulaşılamıyor",
+      "empty": "OptiFine sitesinde Minecraft {{version}} için sürüm yok",
+      "emptyForge": "Minecraft {{version}} için Forge destekli OptiFine sürümü yok",
+      "installed": "kurulu",
+      "needsForge": "Forge {{version}} gerekir"
+    },
+    "facts": {
+      "source": "Kaynak",
+      "sourceValue": "optifine.net — resmi site",
+      "file": "Dosya",
+      "fileStored": "zaten indirildi",
+      "fileDownload": "kurulum sırasında indirilecek",
+      "method": "Kurulum",
+      "methodForge": "yazarın önerdiği gibi mods klasörüne",
+      "methodVanilla": "oyun resmi OptiFine yükleyicisiyle yamalanır",
+      "forgeOk": "uyumlu ({{required}} gerekir)",
+      "forgeOlder": "{{required}} gerekir, sizdeki {{current}}"
+    },
+    "notes": {
+      "terms": "Dosya resmi optifine.net sitesinden indirilir ve yalnızca bu bilgisayarda saklanır; biz onu dağıtmıyoruz. İndirme başarısız olursa OptiFine sayfası açılır: oradaki Download düğmesine tıklayın.",
+      "forgeOlder": "Bu OptiFine sürümü Forge {{version}} veya daha yenisini gerektirir. Forge’u yükleyici kartından güncelleyin ya da daha eski bir OptiFine sürümü seçin.",
+      "shaders": "Gölgelendiriciler oyunda açılır: Seçenekler → Görüntü Ayarları → Shaders. Gölgelendirici paketlerini shaderpacks klasörüne koyun."
+    },
+    "actions": {
+      "download": "{{edition}} indir ve kur",
+      "install": "{{edition}} kur",
+      "installed": "Kurulu",
+      "pick": "Bir sürüm seçin",
+      "downloading": "İndiriliyor…",
+      "installing": "Kuruluyor…",
+      "remove": "Kaldır",
+      "pickFile": "Dosya seç…"
+    },
+    "blocked": {
+      "noAccount": "Hesap gerekli: OptiFine kurmak için giriş yapın",
+      "busy": "Diğer kurulumun bitmesini bekleyin"
+    },
+    "toast": {
+      "installed": "OptiFine {{edition}} kuruldu",
+      "removed": "OptiFine kaldırıldı",
+      "failed": "OptiFine kurulamadı",
+      "removeFailed": "OptiFine kaldırılamadı",
+      "cancelled": "OptiFine kurulumu iptal edildi",
+      "closed": "OptiFine indirilmedi: sayfa kapatıldı",
+      "downloadFailed": "OptiFine optifine.net’ten indirilemedi",
+      "wrongVersion": "Bu OptiFine dosyası Minecraft {{version}} için değil",
+      "invalidFile": "Bu bir OptiFine dosyası değil",
+      "importFailed": "OptiFine dosyası okunamadı"
+    },
+    "errors": {
+      "fileMissing": "OptiFine dosyası bu bilgisayarda yok; OptiFine’ı kurulum ayarlarından yeniden kurun.",
+      "patchFailed": "Resmi OptiFine yükleyicisi oyunu yamalayamadı. Kurulumun dosyalarını denetleyip yeniden deneyin.",
+      "invalidFile": "OptiFine dosyası bozuk; yeniden indirin."
+    },
+    "create": {
+      "none": "Kurma",
+      "stored": "Dosya zaten indirildi",
+      "willDownload": "Kurulum oluşturulurken resmi optifine.net sitesinden indirilecek",
+      "skipped": "Kurulum OptiFine olmadan oluşturuldu: dosya indirilmedi. Kurulum ayarlarından ekleyebilirsiniz.",
+      "sodiumAction": "Fabric + Sodium + Iris",
+      "sodiumAdded": "Sodium ve Iris kurulacak",
+      "sodiumFailed": "Bu sürüm için Sodium ve Iris bulunamadı"
+    }
   }
 }
