@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { DEFAULT_SETTINGS, type TSettings } from "@/types/Settings";
+import { DEFAULT_SETTINGS } from "@/types/Settings";
 import { navigate } from "@renderer/navigation/navigate";
 import { pathsAtom, settingsAtom } from "@renderer/stores/atoms";
 import { patchSettings } from "@renderer/utilities/persistSettings";
@@ -13,13 +13,13 @@ import {
   readLauncherState,
   writeLauncherState,
 } from "@renderer/utilities/launcherState";
-
-type PrivacyKey = "crashTelemetry" | "usageStats";
-
-const ROWS: { key: PrivacyKey; id: string }[] = [
-  { key: "crashTelemetry", id: "privacy-notice-crashes" },
-  { key: "usageStats", id: "privacy-notice-usage" },
-];
+import {
+  PRIVACY_NOTICE_ROWS,
+  markPrivacyNoticeSeen,
+  privacyNoticePatch,
+  shouldShowPrivacyNotice,
+  type PrivacyNoticeKey,
+} from "./noticeVersion";
 
 function isModalOpen(): boolean {
   return (
@@ -56,7 +56,7 @@ export function PrivacyNotice() {
 
     let cancelled = false;
     void readLauncherState(paths.launcher).then((state) => {
-      if (!cancelled) setSeen(state?.privacyNoticeSeen === true);
+      if (!cancelled) setSeen(!shouldShowPrivacyNotice(state));
     });
 
     return () => {
@@ -73,15 +73,12 @@ export function PrivacyNotice() {
     const launcherPath = paths.launcher;
     if (!launcherPath) return;
     void readLauncherState(launcherPath).then((state) =>
-      writeLauncherState(launcherPath, {
-        ...(state || {}),
-        privacyNoticeSeen: true,
-      }),
+      writeLauncherState(launcherPath, markPrivacyNoticeSeen(state)),
     );
   };
 
-  const toggle = (patch: Partial<TSettings>) =>
-    void patchSettings(patch).catch((error) =>
+  const toggle = (key: PrivacyNoticeKey, value: boolean) =>
+    void patchSettings(privacyNoticePatch(key, value)).catch((error) =>
       showFailureToast(t("settings.saveFailed"), error, {
         channels: ["fs:writeJSON"],
       }),
@@ -107,7 +104,7 @@ export function PrivacyNotice() {
       </div>
 
       <div className="grid gap-1 px-2 pb-2">
-        {ROWS.map((row) => (
+        {PRIVACY_NOTICE_ROWS.map((row) => (
           <label
             key={row.key}
             htmlFor={row.id}
@@ -124,7 +121,7 @@ export function PrivacyNotice() {
             <Switch
               id={row.id}
               checked={settings[row.key]}
-              onCheckedChange={(value) => toggle({ [row.key]: value })}
+              onCheckedChange={(value) => toggle(row.key, value)}
             />
           </label>
         ))}

@@ -1610,7 +1610,7 @@
     "usageStats": "Özellik sayaçları",
     "usageStatsDescription": "Ekranların günde kaç kez açıldığı ve özelliklerin kaç kez kullanıldığı. Yalnızca toplamlar; kullanıcı adı, mod adları ve yollar olmadan",
     "packAnalytics": "Mod paketi yazarları için istatistik",
-    "packAnalyticsDescription": "Grubie’den bir mod paketi oynadığınızda yazarı toplam sayıları görür: kaç kişinin oynadığını, ne kadar süre oynandığını ve oyunun ne sıklıkla çöktüğünü. Yazar takma adınızı görmez.",
+    "packAnalyticsDescription": "Grubie hesabınıza bağlıdır. Mod paketinin yazarı yalnızca toplamları görür: kaç kişinin oynadığı, ne kadar süre ve oyunun ne sıklıkla çöktüğü; takma adları asla.",
     "aiLogAnalysis": "Yapay zekâ ile günlük analizi",
     "aiLogAnalysisDescription": "Onay adımını atlar: analiz, pencere açılır açılmaz başlar",
     "sounds": "Bildirim sesleri",
@@ -4649,7 +4649,7 @@
   },
   "privacyNotice": {
     "title": "Başlatıcının bize gönderdikleri",
-    "description": "Anonim olarak: kullanıcı adınız, hesabınız ve dosyalarınız olmadan. Çökmeleri düzeltmemize ve hangi özelliklerin gerekli olduğunu görmemize yardımcı olur. Tek tıkla kapatılır.",
+    "description": "Çökme teşhisleri ve özellik sayaçları anonimdir: kullanıcı adınız, hesabınız ve dosyalarınız olmadan. Mod paketi yazarları için istatistik Grubie hesabınıza bağlıdır, ancak yazarlar yalnızca toplamları görür. Her biri tek tıkla kapatılır.",
     "settings": "Gizlilik ayarları",
     "done": "Anladım"
   },

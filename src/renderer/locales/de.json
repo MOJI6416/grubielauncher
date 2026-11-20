@@ -1610,7 +1610,7 @@
     "usageStats": "Funktionszähler",
     "usageStatsDescription": "Wie oft am Tag Bildschirme geöffnet und Funktionen genutzt wurden. Nur Summen, ohne Nickname, Modnamen und Pfade",
     "packAnalytics": "Statistik für Modpack-Autoren",
-    "packAnalyticsDescription": "Wenn Sie ein Modpack aus Grubie spielen, sieht dessen Autor Gesamtzahlen: wie viele Leute spielen, wie lange und wie oft das Spiel abstürzt. Ihren Nickname sieht der Autor nicht.",
+    "packAnalyticsDescription": "Hängt an Ihrem Grubie-Konto. Der Autor eines Modpacks sieht nur Gesamtzahlen – wie viele spielen, wie lange und wie oft das Spiel abstürzt – nie Nicknames.",
     "aiLogAnalysis": "KI-Loganalyse",
     "aiLogAnalysisDescription": "Bestätigung überspringen: Die Analyse startet, sobald sich das Fenster öffnet",
     "sounds": "Benachrichtigungstöne",
@@ -4649,7 +4649,7 @@
   },
   "privacyNotice": {
     "title": "Was der Launcher an uns sendet",
-    "description": "Anonym: ohne Nickname, Konto und Ihre Dateien. Das hilft uns, Abstürze zu beheben und zu sehen, welche Funktionen gebraucht werden. Mit einem Klick abschaltbar.",
+    "description": "Absturzdiagnosen und Funktionszähler sind anonym: ohne Nickname, Konto und Ihre Dateien. Die Statistik für Modpack-Autoren hängt an Ihrem Grubie-Konto, Autoren sehen aber nur Gesamtzahlen. Jeder Punkt ist mit einem Klick abschaltbar.",
     "settings": "Datenschutz-Einstellungen",
     "done": "Verstanden"
   },

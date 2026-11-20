@@ -1628,7 +1628,7 @@
     "usageStats": "Contadores de funciones",
     "usageStatsDescription": "Cuántas veces al día se abrieron pantallas y se usaron funciones. Solo totales, sin nombre de usuario, nombres de mods ni rutas",
     "packAnalytics": "Estadísticas para autores de modpacks",
-    "packAnalyticsDescription": "Cuando juega un modpack de Grubie, su autor ve totales: cuántas personas juegan, cuánto tiempo y con qué frecuencia falla el juego. El autor no ve su nombre de usuario.",
+    "packAnalyticsDescription": "Ligada a su cuenta de Grubie. El autor de un modpack solo ve totales —cuántas personas juegan, cuánto tiempo y con qué frecuencia falla el juego—, nunca nombres de usuario.",
     "aiLogAnalysis": "Análisis del registro con IA",
     "aiLogAnalysisDescription": "Omite la confirmación: el análisis empieza en cuanto se abre la ventana",
     "sounds": "Sonidos de notificación",
@@ -4687,7 +4687,7 @@
   },
   "privacyNotice": {
     "title": "Lo que el launcher nos envía",
-    "description": "De forma anónima: sin su nombre de usuario, su cuenta ni sus archivos. Nos ayuda a corregir fallos y a saber qué funciones se usan. Se desactiva con un clic.",
+    "description": "Los diagnósticos de fallos y los contadores de funciones son anónimos: sin su nombre de usuario, su cuenta ni sus archivos. Las estadísticas para autores de modpacks están ligadas a su cuenta de Grubie, pero los autores solo ven totales. Cada opción se desactiva con un clic.",
     "settings": "Configuración de privacidad",
     "done": "Entendido"
   },

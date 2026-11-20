@@ -1610,7 +1610,7 @@
     "usageStats": "Feature counters",
     "usageStatsDescription": "How many times a day screens were opened and features used. Totals only, without nickname, mod names or paths",
     "packAnalytics": "Statistics for modpack authors",
-    "packAnalyticsDescription": "When you play a modpack from Grubie, its author sees totals: how many people play, for how long and how often the game crashes. The author does not see your nickname.",
+    "packAnalyticsDescription": "Tied to your Grubie account. A modpack’s author sees only totals — how many people play, for how long and how often the game crashes — never nicknames.",
     "aiLogAnalysis": "AI log analysis",
     "aiLogAnalysisDescription": "Skip the confirmation step: the analysis starts as soon as the window opens",
     "sounds": "Notification sounds",
@@ -4649,7 +4649,7 @@
   },
   "privacyNotice": {
     "title": "What the launcher sends us",
-    "description": "Anonymously: no nickname, account or files of yours. It helps us fix crashes and see which features matter. One click turns it off.",
+    "description": "Crash diagnoses and feature counters are anonymous: no nickname, account or files of yours. Statistics for modpack authors is tied to your Grubie account, but authors only see totals. Each one turns off in one click.",
     "settings": "Privacy settings",
     "done": "Got it"
   },

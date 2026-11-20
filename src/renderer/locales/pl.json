@@ -1646,7 +1646,7 @@
     "usageStats": "Liczniki funkcji",
     "usageStatsDescription": "Ile razy dziennie otwierano ekrany i używano funkcji. Tylko sumy, bez nicku, nazw modów i ścieżek",
     "packAnalytics": "Statystyki dla autorów modpacków",
-    "packAnalyticsDescription": "Gdy grasz w modpack z Grubie, jego autor widzi łączne liczby: ile osób gra, jak długo i jak często gra ulega awarii. Autor nie widzi Twojego nicku.",
+    "packAnalyticsDescription": "Powiązane z kontem Grubie. Autor modpacka widzi tylko łączne liczby — ile osób gra, jak długo i jak często gra ulega awarii — bez nicków.",
     "aiLogAnalysis": "Analiza logów przez AI",
     "aiLogAnalysisDescription": "Pomija potwierdzenie: analiza zaczyna się od razu po otwarciu okna",
     "sounds": "Dźwięki powiadomień",
@@ -4725,7 +4725,7 @@
   },
   "privacyNotice": {
     "title": "Co launcher do nas wysyła",
-    "description": "Anonimowo: bez nicku, konta i Twoich plików. Pomaga nam naprawiać awarie i widzieć, które funkcje są potrzebne. Wyłączysz to jednym kliknięciem.",
+    "description": "Diagnozy awarii i liczniki funkcji są anonimowe: bez nicku, konta i Twoich plików. Statystyki dla autorów modpacków są powiązane z kontem Grubie, ale autorzy widzą tylko łączne liczby. Każdą opcję wyłączysz jednym kliknięciem.",
     "settings": "Ustawienia prywatności",
     "done": "Rozumiem"
   },

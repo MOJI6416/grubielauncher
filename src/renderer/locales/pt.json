@@ -1628,7 +1628,7 @@
     "usageStats": "Contadores de recursos",
     "usageStatsDescription": "Quantas vezes por dia telas foram abertas e recursos usados. Só totais, sem nick, nomes de mods ou caminhos",
     "packAnalytics": "Estatísticas para autores de modpacks",
-    "packAnalyticsDescription": "Quando você joga um modpack do Grubie, o autor vê totais: quantas pessoas jogam, por quanto tempo e com que frequência o jogo crasha. O autor não vê o seu nick.",
+    "packAnalyticsDescription": "Ligadas à sua conta do Grubie. O autor de um modpack vê só totais — quantas pessoas jogam, por quanto tempo e com que frequência o jogo crasha —, nunca nicks.",
     "aiLogAnalysis": "Análise de logs com IA",
     "aiLogAnalysisDescription": "Pula a etapa de confirmação: a análise começa assim que a janela abre",
     "sounds": "Sons de notificação",
@@ -4687,7 +4687,7 @@
   },
   "privacyNotice": {
     "title": "O que o launcher nos envia",
-    "description": "De forma anônima: sem nick, conta ou arquivos seus. Isso nos ajuda a corrigir crashes e a entender quais recursos importam. Dá para desativar com um clique.",
+    "description": "Os diagnósticos de crash e os contadores de recursos são anônimos: sem nick, conta ou arquivos seus. As estatísticas para autores de modpacks estão ligadas à sua conta do Grubie, mas os autores só veem totais. Dá para desativar cada item com um clique.",
     "settings": "Configurações de privacidade",
     "done": "Entendi"
   },

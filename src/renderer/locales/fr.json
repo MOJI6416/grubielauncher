@@ -1628,7 +1628,7 @@
     "usageStats": "Compteurs de fonctions",
     "usageStatsDescription": "Combien de fois par jour les écrans ont été ouverts et les fonctions utilisées. Totaux uniquement, sans pseudo, noms de mods ni chemins",
     "packAnalytics": "Statistiques pour les auteurs de modpacks",
-    "packAnalyticsDescription": "Quand vous jouez à un modpack de Grubie, son auteur voit des totaux : combien de personnes y jouent, combien de temps et à quelle fréquence le jeu plante. L’auteur ne voit pas votre pseudo.",
+    "packAnalyticsDescription": "Liées à votre compte Grubie. L’auteur d’un modpack ne voit que des totaux — combien de personnes jouent, combien de temps et à quelle fréquence le jeu plante —, jamais les pseudos.",
     "aiLogAnalysis": "Analyse du journal par IA",
     "aiLogAnalysisDescription": "Sauter l’étape de confirmation : l’analyse démarre dès l’ouverture de la fenêtre",
     "sounds": "Sons des notifications",
@@ -4687,7 +4687,7 @@
   },
   "privacyNotice": {
     "title": "Ce que le launcher nous envoie",
-    "description": "Anonymement : sans pseudo, compte ni fichiers personnels. Cela nous aide à corriger les plantages et à voir quelles fonctions servent. Un clic suffit pour désactiver.",
+    "description": "Les diagnostics de plantage et les compteurs de fonctions sont anonymes : sans pseudo, compte ni fichiers personnels. Les statistiques pour les auteurs de modpacks sont liées à votre compte Grubie, mais les auteurs ne voient que des totaux. Un clic suffit pour désactiver chacun.",
     "settings": "Paramètres de confidentialité",
     "done": "Compris"
   },
