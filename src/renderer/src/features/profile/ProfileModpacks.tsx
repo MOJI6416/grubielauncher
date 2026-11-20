@@ -161,7 +161,7 @@ export function ProfileModpacks({ user }: { user: IUser }) {
           </div>
         )}
 
-        <section className="flex min-h-0 flex-auto flex-col gap-2.5 rounded-xl border border-border bg-card p-3">
+        <section className="flex shrink-0 flex-col gap-2.5 rounded-xl border border-border bg-card p-3">
           <header className="flex shrink-0 items-center gap-2.5">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-1 text-muted-foreground">
               <Boxes className="size-4" />
@@ -209,7 +209,7 @@ export function ProfileModpacks({ user }: { user: IUser }) {
             </Hint>
           </header>
 
-          <div className="-mr-1 min-h-0 overflow-y-auto pr-1">
+          <div className="-mr-1 max-h-52 min-h-0 overflow-y-auto pr-1">
             {isLoading ? (
               <ListSkeleton
                 rows={3}
