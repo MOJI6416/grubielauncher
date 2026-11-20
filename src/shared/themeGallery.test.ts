@@ -87,11 +87,12 @@ describe("galleryThemeToDefinition", () => {
   it("carries the picture placement and panel colours both ways", () => {
     const raw = {
       ...RAW,
-      colors: { ...RAW.colors, sidebar: "#2A1B4D", topbar: "nope" },
+      colors: { ...RAW.colors, sidebar: "#2A1B4D", topbar: "nope", info: "#F2B84B" },
       backdrop: { ...RAW.backdrop, fit: "contain", focusX: 20, focusY: 80 },
     };
     const item = normalizeGalleryTheme(raw)!;
     expect(item.colors.sidebar).toBe("#2a1b4d");
+    expect(item.colors.info).toBe("#f2b84b");
     expect(item.colors).not.toHaveProperty("topbar");
 
     const theme = galleryThemeToDefinition(item, "custom-2", "C:/y.webp")!;

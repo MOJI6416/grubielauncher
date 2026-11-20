@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getDefaultStore, useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Check, ClipboardPaste, FolderOpen, Pencil, Plus } from "lucide-react";
+import { Check, ChevronRight, ClipboardPaste, FolderOpen, Images, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ACCENT_IDS, ACCENTS, DEFAULT_ACCENT, isAccentId } from "@/shared/accents";
@@ -20,18 +20,21 @@ import { patchSettings } from "@renderer/utilities/persistSettings";
 import { showFailureToast } from "@renderer/utilities/failures";
 import { showUndoToast } from "@renderer/utilities/undoToast";
 import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
-import { SegmentedControl } from "@renderer/components/SegmentedControl";
+import { isMotionReduced } from "@/lib/motionPreference";
 import { registerNavigationBlocker } from "@renderer/navigation/guards";
-import { pendingNavigationAtom } from "@renderer/navigation/store";
+import { historyAtom, pendingNavigationAtom } from "@renderer/navigation/store";
+import { isSameRoute, type Route } from "@renderer/navigation/routes";
 import {
   cancelPendingNavigation,
   confirmPendingNavigation,
+  goBack,
+  navigate,
 } from "@renderer/navigation/navigate";
 import { ThemeCard, themeName } from "@renderer/features/theme/ThemeCard";
 import { ThemeEditor } from "@renderer/features/theme/ThemeEditor";
 import { ThemeCodeDialog } from "@renderer/features/theme/ThemeCodeDialog";
 import { ThemeGallery } from "@renderer/features/theme/ThemeGallery";
-import { galleryFocusAtom, publishTheme } from "@renderer/features/theme/gallery";
+import { publishTheme } from "@renderer/features/theme/gallery";
 import {
   copyThemeCode,
   exportThemeToFile,
@@ -43,9 +46,19 @@ import {
   themeDraftAtom,
   userThemesAtom,
 } from "@renderer/features/theme/themesStore";
-import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
+import { SettingRow, SettingsGroup, SubViewHeader } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 import { countFeature } from "@renderer/features/usage/usage";
+
+const THEMES_ROUTE: Route = { name: "settings", section: "themes" };
+const GALLERY_ROUTE: Route = { name: "settings", section: "themes", view: "gallery" };
+
+function backToThemes(): void {
+  const history = getDefaultStore().get(historyAtom);
+  const previous = history.entries[history.index - 1]?.route;
+  if (previous && isSameRoute(previous, THEMES_ROUTE)) goBack();
+  else navigate(THEMES_ROUTE, { replace: true });
+}
 
 export function ThemeSection({
   settings,
@@ -54,6 +67,7 @@ export function ThemeSection({
   query,
   isChanged,
   reset,
+  view,
 }: {
   settings: TSettings;
   commit: (patch: Partial<TSettings>) => void;
@@ -61,18 +75,18 @@ export function ThemeSection({
   query: string;
   isChanged: (id: SettingsEntryId) => boolean;
   reset: (id: SettingsEntryId) => void;
+  view?: string;
 }) {
   const { t } = useTranslation();
   const userThemes = useAtomValue(userThemesAtom);
   const [draft, setDraft] = useAtom(themeDraftAtom);
   const [pendingPublish, setPendingPublish] = useState<ThemeDefinition | null>(null);
   const [isCodeOpen, setCodeOpen] = useState(false);
-  const galleryFocus = useAtomValue(galleryFocusAtom);
-  const [tab, setTab] = useState<"mine" | "gallery">(galleryFocus ? "gallery" : "mine");
+  const [isClosing, setClosing] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const accentId = isAccentId(settings.accent) ? settings.accent : DEFAULT_ACCENT;
   const accent = ACCENTS[accentId].primary;
   const active = findTheme(settings.themeId, userThemes);
-  const shown = draft ?? active;
   const savedDraft = draft ? userThemes.find((theme) => theme.id === draft.id) : undefined;
   const isEditingExisting = !!savedDraft;
   const isDraftDirty =
@@ -80,11 +94,11 @@ export function ThemeSection({
   const pendingNavigation = useAtomValue(pendingNavigationAtom);
   const allThemes = [...BUILT_IN_THEMES, ...userThemes];
   const accentFocus = radioFocusIndex(ACCENT_IDS, accentId);
-  const checkedId = draft ? draft.id : active.id;
   const themeFocus = radioFocusIndex(
     allThemes.map((theme) => theme.id),
-    checkedId,
+    active.id,
   );
+  const mode = draft ? "editor" : view === "gallery" && !query ? "gallery" : "list";
 
   useEffect(() => () => getDefaultStore().set(themeDraftAtom, null), []);
 
@@ -92,15 +106,21 @@ export function ThemeSection({
     () =>
       registerNavigationBlocker(
         "theme-draft",
-        (target) =>
-          isDraftDirty && !(target?.name === "settings" && target.section === "themes"),
+        (target) => isDraftDirty && !(target && isSameRoute(target, THEMES_ROUTE)),
       ),
     [isDraftDirty],
   );
 
   useEffect(() => {
-    if (galleryFocus) setTab("gallery");
-  }, [galleryFocus]);
+    if (view === "gallery") setDraft(null);
+  }, [view, setDraft]);
+
+  useEffect(() => {
+    rootRef.current?.scrollIntoView({
+      block: "start",
+      behavior: isMotionReduced() ? "auto" : "smooth",
+    });
+  }, [mode]);
 
   const startFrom = (base: ThemeDefinition, name: string) => {
     if (userThemes.length >= MAX_USER_THEMES) {
@@ -118,7 +138,6 @@ export function ThemeSection({
   };
 
   const select = (theme: ThemeDefinition) => {
-    if (draft) setDraft(null);
     if (theme.id !== settings.themeId) {
       countFeature("theme.select");
       commit({ themeId: theme.id });
@@ -181,199 +200,210 @@ export function ThemeSection({
     });
   };
 
-  return (
-    <div className="flex flex-col gap-4">
-      <SettingsGroup title={t("settings.sections.themes")}>
-        {visible("theme") && (
-          <SettingRow
-            entry="theme accent"
-            title={t("theme.title")}
-            description={t("theme.description")}
-            query={query}
-            changed={isChanged("theme")}
-            onReset={() => {
-              setDraft(null);
-              reset("theme");
-            }}
-            control={
-              <SegmentedControl
-                value={tab}
-                ariaLabel={t("theme.gallery.tabs")}
-                onChange={(next) => {
-                  if (next === "gallery") setDraft(null);
-                  setTab(next);
-                }}
-                options={[
-                  { value: "mine", label: t("theme.gallery.tabMine") },
-                  { value: "gallery", label: t("theme.gallery.tab") },
-                ]}
-              />
-            }
-          >
-            {tab === "gallery" ? (
-              <div className="mt-2.5">
-                <ThemeGallery accent={accent} activeId={active.id} userThemes={userThemes} />
-              </div>
-            ) : (
-            <>
-            <div
-              role="radiogroup"
-              aria-label={t("theme.title")}
-              onKeyDown={(event) =>
-                onRadioKeyDown(event, allThemes, allThemes.find((theme) => theme.id === checkedId), select)
-              }
-              className="mt-2.5 grid grid-cols-4 gap-2"
-            >
-              {allThemes.map((theme, index) => {
-                const isBuiltIn = BUILT_IN_THEMES.includes(theme);
-                return (
-                  <ThemeCard
-                    key={theme.id}
-                    theme={theme}
-                    accent={accent}
-                    active={checkedId === theme.id}
-                    isBuiltIn={isBuiltIn}
-                    tabIndex={index === themeFocus ? 0 : -1}
-                    onSelect={() => select(theme)}
-                    onEdit={() => setDraft({ ...theme, colors: { ...theme.colors } })}
-                    onDuplicate={() =>
-                      startFrom(theme, t("theme.copyName", { name: themeName(theme, t) }))
-                    }
-                    onDelete={() => void remove(theme.id)}
-                    onExport={() => void exportThemeToFile(theme)}
-                    onCopyCode={() => void copyThemeCode(theme)}
-                    onPublish={() => setPendingPublish(theme)}
-                  />
-                );
-              })}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => startFrom(active, t("theme.newName"))}
-              >
-                <Plus />
-                {t("theme.newTheme")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setDraft(null);
-                  void importThemeFromFile();
-                }}
-              >
-                <FolderOpen />
-                {t("theme.transfer.openFile")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setDraft(null);
-                  setCodeOpen(true);
-                }}
-              >
-                <ClipboardPaste />
-                {t("theme.transfer.pasteCode")}
-              </Button>
-              <span className="text-xs text-faint">{t("theme.transfer.dropHint")}</span>
-            </div>
-            </>
-            )}
-          </SettingRow>
-        )}
+  const closeEditor = () => {
+    if (isDraftDirty) setClosing(true);
+    else setDraft(null);
+  };
 
-        {visible("accent") && (tab === "mine" || !!query) && (
-          <SettingRow
-            entry="accent"
-            title={t("settings.interface.accent")}
-            description={
-              shown.colors.accent
-                ? t("theme.accentByTheme", { name: draft ? draft.name : themeName(active, t) })
-                : t("settings.interface.accentDescription")
+  const isLeaving = isDraftDirty && (isClosing || !!pendingNavigation);
+
+  const keepEditing = () => {
+    setClosing(false);
+    if (pendingNavigation) cancelPendingNavigation();
+  };
+
+  const discardDraft = () => {
+    setClosing(false);
+    setDraft(null);
+    if (pendingNavigation) confirmPendingNavigation();
+  };
+
+  return (
+    <div ref={rootRef} className="flex scroll-mt-1 flex-col gap-4">
+      {mode === "editor" && draft && (
+        <div>
+          <SubViewHeader
+            parent={t("settings.sections.themes")}
+            title={isEditingExisting ? draft.name.trim() || themeName(draft, t) : t("theme.newTheme")}
+            onBack={closeEditor}
+            aside={
+              <Hint content={t("theme.editor.livePreview")} variant="text" truncatedOnly>
+                <span className="truncate text-xs text-faint">
+                  {t("theme.editor.livePreview")}
+                </span>
+              </Hint>
             }
-            query={query}
-            changed={isChanged("accent")}
-            onReset={() => reset("accent")}
-            control={
-              shown.colors.accent ? (
-                <div className="flex items-center gap-2">
-                  {!draft && !BUILT_IN_THEMES.includes(active) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setTab("mine");
-                        setDraft({ ...active, colors: { ...active.colors } });
-                      }}
-                    >
-                      <Pencil />
-                      {t("theme.edit")}
-                    </Button>
-                  )}
-                  <Hint content={t("theme.card.ownAccent")}>
-                    <span
-                      role="img"
-                      aria-label={t("theme.card.ownAccent")}
-                      className="size-4 shrink-0 rounded-full ring-1 ring-border"
-                      style={{ backgroundColor: shown.colors.accent }}
-                    />
-                  </Hint>
-                </div>
-              ) : (
+          />
+          <ThemeEditor
+            draft={draft}
+            accent={accent}
+            isNew={!isEditingExisting}
+            isDirty={isDraftDirty}
+            onChange={setDraft}
+            onSave={() => void save()}
+            onCancel={() => setDraft(null)}
+            onDelete={() => void remove(draft.id)}
+          />
+        </div>
+      )}
+
+      {mode === "gallery" && (
+        <div>
+          <SubViewHeader
+            parent={t("settings.sections.themes")}
+            title={t("theme.gallery.tab")}
+            onBack={backToThemes}
+          />
+          <ThemeGallery accent={accent} activeId={active.id} userThemes={userThemes} />
+        </div>
+      )}
+
+      {mode === "list" && (
+        <SettingsGroup title={t("settings.sections.themes")}>
+          {visible("theme") && (
+            <SettingRow
+              entry="theme accent"
+              title={t("theme.title")}
+              description={t("theme.description")}
+              query={query}
+              changed={isChanged("theme")}
+              onReset={() => reset("theme")}
+              control={
+                <Button variant="ghost" size="sm" onClick={() => navigate(GALLERY_ROUTE)}>
+                  <Images />
+                  {t("theme.gallery.open")}
+                  <ChevronRight className="text-faint" />
+                </Button>
+              }
+            >
               <div
                 role="radiogroup"
-                aria-label={t("settings.interface.accent")}
+                aria-label={t("theme.title")}
                 onKeyDown={(event) =>
-                  onRadioKeyDown(event, ACCENT_IDS, accentId, (id) =>
-                    commit({ accent: id }),
-                  )
+                  onRadioKeyDown(event, allThemes, active, select)
                 }
-                className="flex items-center gap-1.5"
+                className="grid grid-cols-4 gap-2"
               >
-                {ACCENT_IDS.map((id, index) => {
-                  const isActive = settings.accent === id;
+                {allThemes.map((theme, index) => {
+                  const isBuiltIn = BUILT_IN_THEMES.includes(theme);
                   return (
-                    <Hint key={id} content={t(`settings.interface.accents.${id}`)}>
-                      <button
-                        type="button"
-                        role="radio"
-                        aria-checked={isActive}
-                        tabIndex={index === accentFocus ? 0 : -1}
-                        aria-label={t(`settings.interface.accents.${id}`)}
-                        onClick={() => commit({ accent: id })}
-                        style={{ backgroundColor: ACCENTS[id].primary }}
-                        className="flex size-7 items-center justify-center rounded-full ring-offset-2 ring-offset-surface-2 transition-shadow hover:ring-2 hover:ring-border aria-checked:ring-2 aria-checked:ring-foreground/70 focus-visible:ring-2 focus-visible:ring-foreground focus-visible:outline-none"
-                      >
-                        {isActive && (
-                          <Check
-                            className="size-3.5"
-                            style={{ color: ACCENTS[id].foreground }}
-                          />
-                        )}
-                      </button>
-                    </Hint>
+                    <ThemeCard
+                      key={theme.id}
+                      theme={theme}
+                      accent={accent}
+                      active={active.id === theme.id}
+                      isBuiltIn={isBuiltIn}
+                      tabIndex={index === themeFocus ? 0 : -1}
+                      onSelect={() => select(theme)}
+                      onEdit={() => setDraft({ ...theme, colors: { ...theme.colors } })}
+                      onDuplicate={() =>
+                        startFrom(theme, t("theme.copyName", { name: themeName(theme, t) }))
+                      }
+                      onDelete={() => void remove(theme.id)}
+                      onExport={() => void exportThemeToFile(theme)}
+                      onCopyCode={() => void copyThemeCode(theme)}
+                      onPublish={() => setPendingPublish(theme)}
+                    />
                   );
                 })}
               </div>
-              )
-            }
-          />
-        )}
-      </SettingsGroup>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => startFrom(active, t("theme.newName"))}
+                >
+                  <Plus />
+                  {t("theme.newTheme")}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => void importThemeFromFile()}>
+                  <FolderOpen />
+                  {t("theme.transfer.openFile")}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setCodeOpen(true)}>
+                  <ClipboardPaste />
+                  {t("theme.transfer.pasteCode")}
+                </Button>
+                <span className="text-xs text-faint">{t("theme.transfer.dropHint")}</span>
+              </div>
+            </SettingRow>
+          )}
 
-      {draft && (
-        <ThemeEditor
-          draft={draft}
-          accent={accent}
-          isNew={!isEditingExisting}
-          onChange={setDraft}
-          onSave={() => void save()}
-          onCancel={() => setDraft(null)}
-          onDelete={() => void remove(draft.id)}
-        />
+          {visible("accent") && (
+            <SettingRow
+              entry="accent"
+              title={t("settings.interface.accent")}
+              description={
+                active.colors.accent
+                  ? t("theme.accentByTheme", { name: themeName(active, t) })
+                  : t("settings.interface.accentDescription")
+              }
+              query={query}
+              changed={isChanged("accent")}
+              onReset={() => reset("accent")}
+              control={
+                active.colors.accent ? (
+                  <div className="flex items-center gap-2">
+                    {!BUILT_IN_THEMES.includes(active) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDraft({ ...active, colors: { ...active.colors } })}
+                      >
+                        <Pencil />
+                        {t("theme.edit")}
+                      </Button>
+                    )}
+                    <span className="flex items-center gap-1.5 text-xs text-faint">
+                      <span
+                        aria-hidden
+                        className="size-3 shrink-0 rounded-sm ring-1 ring-border"
+                        style={{ backgroundColor: active.colors.accent }}
+                      />
+                      <span className="font-mono uppercase">{active.colors.accent}</span>
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    role="radiogroup"
+                    aria-label={t("settings.interface.accent")}
+                    onKeyDown={(event) =>
+                      onRadioKeyDown(event, ACCENT_IDS, accentId, (id) =>
+                        commit({ accent: id }),
+                      )
+                    }
+                    className="flex items-center gap-1.5"
+                  >
+                    {ACCENT_IDS.map((id, index) => {
+                      const isActive = settings.accent === id;
+                      return (
+                        <Hint key={id} content={t(`settings.interface.accents.${id}`)}>
+                          <button
+                            type="button"
+                            role="radio"
+                            aria-checked={isActive}
+                            tabIndex={index === accentFocus ? 0 : -1}
+                            aria-label={t(`settings.interface.accents.${id}`)}
+                            onClick={() => commit({ accent: id })}
+                            style={{ backgroundColor: ACCENTS[id].primary }}
+                            className="flex size-7 items-center justify-center rounded-full ring-offset-2 ring-offset-surface-2 transition-shadow hover:ring-2 hover:ring-border aria-checked:ring-2 aria-checked:ring-foreground/70 focus-visible:ring-2 focus-visible:ring-foreground focus-visible:outline-none"
+                          >
+                            {isActive && (
+                              <Check
+                                className="size-3.5"
+                                style={{ color: ACCENTS[id].foreground }}
+                              />
+                            )}
+                          </button>
+                        </Hint>
+                      );
+                    })}
+                  </div>
+                )
+              }
+            />
+          )}
+        </SettingsGroup>
       )}
 
       {isCodeOpen && <ThemeCodeDialog onClose={() => setCodeOpen(false)} />}
@@ -403,10 +433,10 @@ export function ThemeSection({
         />
       )}
 
-      {pendingNavigation && isDraftDirty && draft && (
+      {isLeaving && draft && (
         <Confirmation
           title={t("versions.notSavedAsk")}
-          onClose={cancelPendingNavigation}
+          onClose={keepEditing}
           reversible={false}
           content={[
             {
@@ -418,15 +448,12 @@ export function ThemeSection({
             {
               text: t("versions.willReturn"),
               color: "secondary",
-              onClick: cancelPendingNavigation,
+              onClick: keepEditing,
             },
             {
               text: t("versions.discardChanges"),
               color: "danger",
-              onClick: () => {
-                setDraft(null);
-                confirmPendingNavigation();
-              },
+              onClick: discardDraft,
             },
           ]}
         />

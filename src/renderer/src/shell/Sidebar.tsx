@@ -1,10 +1,8 @@
 import {
-  DragEvent,
   ReactNode,
   Suspense,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,7 +10,6 @@ import { useAtom, useAtomValue } from "jotai";
 import {
   BookUser,
   EyeOff,
-  GripVertical,
   LayoutTemplate,
   Lock,
   Camera,
@@ -75,20 +72,18 @@ import {
   isNavFixed,
   isSlotHidden,
   orderedNav,
-  placeNav,
   slotId,
   visibleNav,
   type NavSlot,
 } from "@renderer/features/layout/layout";
 import {
+  setSlotVisible,
   startLayoutEditing,
-  toggleSlot,
-  updateLayout,
   useLayout,
   useLayoutEditing,
 } from "@renderer/features/layout/useLayout";
 import { SlotToggle } from "@renderer/features/layout/SlotToggle";
-import { showUndoToast } from "@renderer/utilities/undoToast";
+import { ReorderHandle, useNavDrag } from "@renderer/features/layout/ReorderHandle";
 
 const loadLanShareModal = () =>
   import("@renderer/features/share/SharePanel").then((module) => ({
@@ -114,11 +109,15 @@ type NavConfig = {
 function NavRow({
   slot,
   config,
+  index,
+  count,
   dragProps,
 }: {
   slot: NavSlot;
   config: NavConfig;
-  dragProps: (slot: NavSlot) => Record<string, unknown>;
+  index: number;
+  count: number;
+  dragProps: ReturnType<typeof useNavDrag>;
 }) {
   const { t } = useTranslation();
   const collapsed = useSidebarCollapsed();
@@ -141,12 +140,12 @@ function NavRow({
       <div
         className={cn(
           NAV_CLASS,
-          "cursor-grab pr-1 active:cursor-grabbing",
+          "pr-1 pl-0.5 data-[drop-target]:bg-row-selected",
           hidden && "opacity-45",
         )}
         {...dragProps(slot)}
       >
-        <GripVertical className="-ml-1 size-3.5 shrink-0 text-faint" />
+        <ReorderHandle slot={slot} label={label} index={index} count={count} />
         <span className="relative shrink-0 text-faint">{icon}</span>
         <Hint content={label} variant="text" side="right" truncatedOnly>
           <span className="min-w-0 flex-1 truncate text-left">{label}</span>
@@ -161,20 +160,14 @@ function NavRow({
           <SlotToggle
             hidden={hidden}
             label={label}
-            onToggle={() => toggleSlot(slotId.nav(slot), !hidden)}
+            onToggle={() => setSlotVisible(slotId.nav(slot), label, hidden)}
           />
         )}
       </div>
     );
   }
 
-  const hide = () => {
-    const id = slotId.nav(slot);
-    toggleSlot(id, true);
-    showUndoToast(t("layout.hiddenDone", { name: label }), () =>
-      toggleSlot(id, false),
-    );
-  };
+  const hide = () => setSlotVisible(slotId.nav(slot), label, false);
 
   const row = (
     <button
@@ -259,7 +252,7 @@ export function Sidebar({
   const isDockVisible = !isSlotHidden(layout, slotId.section("dock"));
   const isNowVisible = !isSlotHidden(layout, slotId.section("now"));
   const navSlots = editing ? orderedNav(layout) : visibleNav(layout);
-  const draggedNav = useRef<NavSlot | null>(null);
+  const navDragProps = useNavDrag();
 
   const connectivity = useMemo(
     () => ({ isInternetOnline, isBackendOnline }),
@@ -296,32 +289,6 @@ export function Sidebar({
   useEffect(() => {
     if (!shouldShowShareButton) setIsShareOpen(false);
   }, [shouldShowShareButton]);
-
-  const navDragProps = (slot: NavSlot) => ({
-    draggable: true,
-    onDragStart: (event: DragEvent<HTMLElement>) => {
-      draggedNav.current = slot;
-      event.dataTransfer.effectAllowed = "move";
-      try {
-        event.dataTransfer.setData("text/plain", slot);
-      } catch {}
-    },
-    onDragOver: (event: DragEvent<HTMLElement>) => {
-      if (!draggedNav.current) return;
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-    },
-    onDrop: (event: DragEvent<HTMLElement>) => {
-      const dragged = draggedNav.current;
-      draggedNav.current = null;
-      if (!dragged || dragged === slot) return;
-      event.preventDefault();
-      updateLayout((current) => placeNav(current, dragged, slot));
-    },
-    onDragEnd: () => {
-      draggedNav.current = null;
-    },
-  });
 
   const navConfigs: Record<NavSlot, NavConfig> = {
     play: {
@@ -403,11 +370,13 @@ export function Sidebar({
               variant="fill"
               className="rounded-lg bg-row-selected"
             />
-            {navSlots.map((slot) => (
+            {navSlots.map((slot, index) => (
               <NavRow
                 key={slot}
                 slot={slot}
                 config={navConfigs[slot]}
+                index={index}
+                count={navSlots.length}
                 dragProps={navDragProps}
               />
             ))}

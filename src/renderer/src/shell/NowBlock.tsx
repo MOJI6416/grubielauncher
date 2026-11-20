@@ -35,7 +35,7 @@ import { useSidebarCollapsed } from "./sidebarCollapse";
 import { cn } from "@/lib/utils";
 import { isSlotHidden, slotId } from "@renderer/features/layout/layout";
 import {
-  toggleSlot,
+  setSlotVisible,
   useLayout,
   useLayoutEditing,
 } from "@renderer/features/layout/useLayout";
@@ -290,7 +290,7 @@ export function NowBlock({ onOpenErrors }: { onOpenErrors: () => void }) {
             hidden={isSectionHidden}
             label={t("shell.now")}
             onToggle={() =>
-              toggleSlot(slotId.section("now"), !isSectionHidden)
+              setSlotVisible(slotId.section("now"), t("shell.now"), isSectionHidden)
             }
             className="ml-auto"
           />

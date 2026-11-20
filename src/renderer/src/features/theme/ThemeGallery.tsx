@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import { useTranslation } from "react-i18next";
-import { Check, Download, Loader2, Palette, RefreshCw, Search, Trash2 } from "lucide-react";
+import {
+  Check,
+  Download,
+  Loader2,
+  Palette,
+  RefreshCw,
+  Search,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +24,7 @@ import {
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import type { ThemeDefinition, ThemeMode } from "@/shared/themes";
+import { classifyError } from "@/shared/errors";
 import {
   GALLERY_PAGE_SIZE,
   type GallerySort,
@@ -24,7 +34,12 @@ import {
 import { Hint } from "@renderer/components/Hint";
 import { Confirmation } from "@renderer/components/Modals/Confirmation";
 import { accountAtom } from "@renderer/stores/atoms";
-import { showFailureToast } from "@renderer/utilities/failures";
+import {
+  consumeRecentFailure,
+  describeFailure,
+  showFailureToast,
+} from "@renderer/utilities/failures";
+import { showErrorToast } from "@renderer/utilities/errorToast";
 import { formatCompactNumber } from "@renderer/utilities/numbers";
 import { SegmentedControl } from "@renderer/components/SegmentedControl";
 import { SortMenu } from "@renderer/components/SortMenu";
@@ -64,14 +79,12 @@ function GalleryCard({
   item,
   accent,
   state,
-  busy,
   installing,
   onInstall,
 }: {
   item: GalleryTheme;
   accent: string;
   state: "new" | "installed" | "active";
-  busy: boolean;
   installing: boolean;
   onInstall: () => void;
 }) {
@@ -110,13 +123,14 @@ function GalleryCard({
       <Button
         variant="secondary"
         size="sm"
-        disabled={busy || state === "active"}
+        disabled={installing || state === "active"}
+        aria-busy={installing || undefined}
         onClick={onInstall}
       >
         {installing ? (
           <>
             <Loader2 className="animate-spin" />
-            {t("theme.gallery.install")}
+            {t("theme.gallery.installing")}
           </>
         ) : state === "active" ? (
           <>
@@ -136,30 +150,46 @@ function GalleryCard({
   );
 }
 
+const STATUS_TONE: Record<PublishedTheme["status"], string> = {
+  approved: "bg-success",
+  pending: "bg-warning",
+  rejected: "bg-destructive",
+};
+
+function failureReason(channel: string): string | null {
+  const info = consumeRecentFailure({ channels: [channel] });
+  return info ? describeFailure(info).reason : null;
+}
+
 function MyPublications({ token }: { token: string }) {
   const { t } = useTranslation();
   const version = useAtomValue(myPublicationsVersionAtom);
   const [items, setItems] = useState<PublishedTheme[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [pendingRemove, setPendingRemove] = useState<PublishedTheme | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void api.theme
+    setError(null);
+    api.theme
       .mine(token)
       .then((result) => {
-        if (!cancelled) setItems(result ?? []);
-      })
-      .catch((error) => {
         if (cancelled) return;
-        setItems([]);
-        showFailureToast(t("theme.gallery.errors.mineFailed"), error, {
-          channels: ["theme:mine"],
-        });
+        if (result) {
+          setItems(result);
+          return;
+        }
+        setError(failureReason("theme:mine") ?? t("theme.gallery.errors.mineFailed"));
+      })
+      .catch((reason: unknown) => {
+        if (cancelled) return;
+        setError(describeFailure(classifyError(reason, { channel: "theme:mine" })).reason);
       });
     return () => {
       cancelled = true;
     };
-  }, [token, version, t]);
+  }, [token, version, attempt, t]);
 
   const remove = async (item: PublishedTheme) => {
     setPendingRemove(null);
@@ -174,46 +204,68 @@ function MyPublications({ token }: { token: string }) {
     }
   };
 
-  if (!items || items.length === 0) return null;
+  if (!error && (!items || items.length === 0)) return null;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="text-xs font-medium text-muted-foreground">{t("theme.gallery.mine")}</div>
-      {items.map((item) => (
+    <section className="flex flex-col gap-1.5" aria-label={t("theme.gallery.mine")}>
+      <div className="flex items-baseline gap-2 px-0.5">
+        <h4 className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+          {t("theme.gallery.mine")}
+        </h4>
+        {items && items.length > 0 && (
+          <span className="font-mono text-3xs tabular-nums text-faint">{items.length}</span>
+        )}
+      </div>
+
+      {error && (
         <div
-          key={item.id}
+          role="alert"
           className="flex min-h-10 items-center gap-3 rounded-lg bg-surface-2 px-3 py-1.5"
         >
-          <Hint content={item.name} variant="text" truncatedOnly>
-            <span className="min-w-0 flex-1 truncate text-sm text-foreground">{item.name}</span>
-          </Hint>
-          <span
-            className={cn(
-              "shrink-0 text-xs",
-              item.status === "approved" && "text-success",
-              item.status === "pending" && "text-warning",
-              item.status === "rejected" && "text-destructive",
+          <TriangleAlert className="size-3.5 shrink-0 text-destructive" />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm text-foreground">{t("theme.gallery.errors.mineFailed")}</div>
+            {error !== t("theme.gallery.errors.mineFailed") && (
+              <div className="text-xs text-muted-foreground">{error}</div>
             )}
-          >
-            {t(`theme.gallery.status.${item.status}`)}
-          </span>
-          {item.status === "rejected" && item.rejectionReason && (
-            <Hint content={item.rejectionReason} variant="text" truncatedOnly>
-              <span className="max-w-60 truncate text-xs text-faint">{item.rejectionReason}</span>
-            </Hint>
-          )}
-          <Hint content={`${t("theme.gallery.unpublish")} — ${item.name}`}>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`${t("theme.gallery.unpublish")} — ${item.name}`}
-              onClick={() => setPendingRemove(item)}
-            >
-              <Trash2 />
-            </Button>
-          </Hint>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setAttempt((value) => value + 1)}>
+            <RefreshCw />
+            {t("common.retry")}
+          </Button>
         </div>
-      ))}
+      )}
+
+      {!error &&
+        items?.map((item) => (
+          <div
+            key={item.id}
+            className="flex min-h-10 items-center gap-3 rounded-lg bg-surface-2 px-3 py-1.5"
+          >
+            <Hint content={item.name} variant="text" truncatedOnly>
+              <span className="min-w-0 flex-1 truncate text-sm text-foreground">{item.name}</span>
+            </Hint>
+            {item.status === "rejected" && item.rejectionReason && (
+              <Hint content={item.rejectionReason} variant="text" truncatedOnly>
+                <span className="max-w-60 truncate text-xs text-faint">{item.rejectionReason}</span>
+              </Hint>
+            )}
+            <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+              <span aria-hidden className={cn("size-1.5 rounded-full", STATUS_TONE[item.status])} />
+              {t(`theme.gallery.status.${item.status}`)}
+            </span>
+            <Hint content={`${t("theme.gallery.unpublish")} — ${item.name}`}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`${t("theme.gallery.unpublish")} — ${item.name}`}
+                onClick={() => setPendingRemove(item)}
+              >
+                <Trash2 />
+              </Button>
+            </Hint>
+          </div>
+        ))}
 
       {pendingRemove && (
         <Confirmation
@@ -235,7 +287,7 @@ function MyPublications({ token }: { token: string }) {
           ]}
         />
       )}
-    </div>
+    </section>
   );
 }
 
@@ -253,24 +305,41 @@ function FocusedTheme({
 
   useEffect(() => {
     let cancelled = false;
-    void api.theme
+    const fail = (error?: unknown) => {
+      if (cancelled) return;
+      const info = error
+        ? classifyError(error, { channel: "theme:galleryGet" })
+        : consumeRecentFailure({ channels: ["theme:galleryGet"] });
+      if (info && info.cause !== "notFound") {
+        const described = describeFailure(info);
+        showErrorToast(
+          t("theme.gallery.errors.load"),
+          described.text,
+          t("common.copy"),
+          undefined,
+          described.technical,
+        );
+      } else {
+        toast.error(t("theme.gallery.errors.notFound"));
+      }
+      setItem(null);
+    };
+    api.theme
       .galleryGet(id)
       .then((result) => {
-        if (!cancelled) setItem(result);
+        if (cancelled) return;
+        if (result) setItem(result);
+        else fail();
       })
-      .catch(() => {
-        if (!cancelled) setItem(null);
-      });
+      .catch(fail);
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
-    if (item !== null) return;
-    toast.error(t("theme.gallery.errors.notFound"));
-    onClose();
-  }, [item, onClose, t]);
+    if (item === null) onClose();
+  }, [item, onClose]);
 
   if (!item) return null;
 
@@ -326,7 +395,8 @@ export function ThemeGallery({
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [installing, setInstalling] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [installing, setInstalling] = useState<ReadonlySet<string>>(new Set());
   const request = useRef(0);
 
   useEffect(() => {
@@ -338,6 +408,7 @@ export function ThemeGallery({
     async (nextPage: number) => {
       const id = ++request.current;
       setStatus("loading");
+      setLoadError(null);
       try {
         const result = await api.theme.galleryList({
           search,
@@ -346,13 +417,19 @@ export function ThemeGallery({
           page: nextPage,
         });
         if (id !== request.current) return;
-        if (!result) throw new Error("gallery");
+        if (!result) {
+          setLoadError(failureReason("theme:galleryList"));
+          setStatus("error");
+          return;
+        }
         setItems((current) => (nextPage === 1 ? result.items : [...current, ...result.items]));
         setTotal(result.total);
         setPage(nextPage);
         setStatus("ready");
-      } catch {
-        if (id === request.current) setStatus("error");
+      } catch (error) {
+        if (id !== request.current) return;
+        setLoadError(describeFailure(classifyError(error, { channel: "theme:galleryList" })).reason);
+        setStatus("error");
       }
     },
     [mode, search, sort],
@@ -363,9 +440,13 @@ export function ThemeGallery({
   }, [load]);
 
   const install = async (item: GalleryTheme) => {
-    setInstalling(item.id);
+    setInstalling((current) => new Set(current).add(item.id));
     await installGalleryTheme(item);
-    setInstalling(null);
+    setInstalling((current) => {
+      const next = new Set(current);
+      next.delete(item.id);
+      return next;
+    });
   };
 
   const stateOf = (item: GalleryTheme): "new" | "installed" | "active" => {
@@ -415,8 +496,9 @@ export function ThemeGallery({
       </div>
 
       {status === "error" && items.length === 0 ? (
-        <div className="flex flex-col items-start gap-2 rounded-lg bg-surface-2 px-4 py-3.5">
+        <div role="alert" className="flex flex-col items-start gap-2 rounded-lg bg-surface-2 px-4 py-3.5">
           <div className="text-sm text-foreground">{t("theme.gallery.errors.loadFailed")}</div>
+          {loadError && <div className="text-xs text-muted-foreground">{loadError}</div>}
           <Button variant="secondary" size="sm" onClick={() => void load(1)}>
             <RefreshCw />
             {t("common.retry")}
@@ -453,12 +535,17 @@ export function ThemeGallery({
                 item={item}
                 accent={accent}
                 state={stateOf(item)}
-                busy={installing !== null}
-                installing={installing === item.id}
+                installing={installing.has(item.id)}
                 onInstall={() => void install(item)}
               />
             ))}
           </div>
+          {status === "error" && (
+            <div role="alert" className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <TriangleAlert className="size-3.5 shrink-0 text-destructive" />
+              {loadError ?? t("theme.gallery.errors.loadFailed")}
+            </div>
+          )}
           {hasMore && (
             <Button
               variant="ghost"
@@ -467,7 +554,10 @@ export function ThemeGallery({
               disabled={status === "loading"}
               onClick={() => void load(page + 1)}
             >
-              {t("theme.gallery.more", { count: Math.min(GALLERY_PAGE_SIZE, total - items.length) })}
+              {status === "loading" && <Loader2 className="animate-spin" />}
+              {status === "error"
+                ? t("common.retry")
+                : t("theme.gallery.more", { count: Math.min(GALLERY_PAGE_SIZE, total - items.length) })}
             </Button>
           )}
         </>

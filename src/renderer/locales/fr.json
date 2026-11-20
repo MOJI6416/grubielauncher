@@ -6774,7 +6774,7 @@
     "customize": "Personnaliser l’interface",
     "customizeAction": "Personnaliser",
     "customizeDescription": "Déplacez les éléments de la barre latérale et masquez le superflu directement à l’écran",
-    "editHint": "Déplacez les éléments de la barre latérale, l’œil masque le superflu. Les blocs d’accueil sont sur « Jouer ».",
+    "editHint": "Déplacez les éléments de la barre latérale par glisser ou avec ↑ ↓, l’œil masque le superflu. Échap annule.",
     "moreSettings": "Plus de réglages",
     "reset": "Réinitialiser la disposition",
     "done": "Terminé",
@@ -6783,8 +6783,6 @@
     "dockMore": "{{count}} de plus",
     "dockMoreHint": "Toutes les instances sont sur « Jouer »",
     "nowHint": "Les téléchargements, erreurs et partages de monde apparaissent ici",
-    "moveUp": "Monter « {{name}} »",
-    "moveDown": "Descendre « {{name}} »",
     "groups": {
       "sidebar": "Barre latérale",
       "home": "Écran « Jouer »",
@@ -6801,7 +6799,8 @@
       "description": "Les épinglées restent visibles, les autres par dernier lancement",
       "all": "Toutes",
       "hiddenCount": "Masquées de la barre : {{count}}",
-      "showAll": "Tout afficher"
+      "showAll": "Tout afficher",
+      "shownAll": "Toutes les instances sont de retour dans la barre latérale"
     },
     "home": {
       "title": "Écran « Jouer »",
@@ -6809,7 +6808,8 @@
       "description": "La carte de la dernière instance au-dessus de la liste",
       "hero": "Carte d’instance",
       "stats": "Statistiques",
-      "continue": "« Continuer »"
+      "continue": "« Continuer »",
+      "needsHero": "Ce bloc fait partie de la carte d’instance. Affichez d’abord la carte"
     },
     "instance": {
       "defaultTab": "Onglet à l’ouverture",
@@ -6845,7 +6845,11 @@
       }
     },
     "resetDone": "Disposition réinitialisée",
-    "hiddenDone": "Masqué : « {{name}} »"
+    "hiddenDone": "Masqué : « {{name}} »",
+    "restore": "Rétablir",
+    "reorder": "Déplacer « {{name}} » : faites-le glisser ou appuyez sur ↑ ↓",
+    "cancelHint": "Tout remettre comme avant · Échap",
+    "resetPart": "Réinitialisé : « {{name}} »"
   },
   "theme": {
     "title": "Thème de l’interface",
@@ -6858,7 +6862,7 @@
     "delete": "Supprimer le thème",
     "saved": "Thème « {{name}} » enregistré",
     "limit": "Vous pouvez garder jusqu’à {{count}} thèmes",
-    "accentByTheme": "Le thème « {{name}} » définit l’accent. Pour choisir une couleur ici, désactivez « Couleur d’accent propre » dans l’éditeur du thème",
+    "accentByTheme": "Le thème « {{name}} » définit l’accent. Pour choisir une couleur ici, décochez « Accent » dans l’éditeur du thème",
     "command": "Thème : {{name}}",
     "builtIn": {
       "grubie": "Grubie",
@@ -6869,7 +6873,6 @@
       "ownAccent": "Couleur d’accent propre au thème"
     },
     "editor": {
-      "title": "Éditeur de thème",
       "livePreview": "les changements s’affichent tout de suite dans le launcher, jusqu’à l’enregistrement ou l’annulation",
       "name": "Nom",
       "mode": "Base",
@@ -6883,7 +6886,6 @@
       "surface": "Panneaux",
       "foreground": "Texte",
       "accent": "Accent",
-      "ownAccent": "Couleur d’accent propre",
       "picture": "Image de fond",
       "pictureDescription": "PNG, JPG ou WEBP. L’image reste sur cet ordinateur",
       "pick": "Choisir une image",
@@ -6910,13 +6912,15 @@
       "framing": "Partie visible de l'image",
       "framingHint": "Faites glisser pour choisir la partie visible",
       "framingCenter": "Centrer",
-      "zones": "Couleurs des panneaux",
-      "zonesDescription": "La barre latérale et la barre du haut peuvent avoir leur propre couleur. La couleur du texte s'adapte toute seule",
       "zone": {
         "sidebar": "Barre latérale",
         "topbar": "Barre du haut"
       },
-      "zoneOwn": "Couleur propre"
+      "info": "Repères",
+      "ownColors": "Couleurs propres",
+      "ownColorsDescription": "Cochez pour choisir la couleur vous-même, sinon elle vient de la base. Les repères signalent le nouveau, le non-lu et le modifié",
+      "ownColor": "Couleur propre : {{name}}",
+      "unsaved": "Modifications non enregistrées"
     },
     "checks": {
       "text": "Texte sur les panneaux",
@@ -6926,7 +6930,8 @@
       "accent": "Accent sur les panneaux",
       "accentText": "Texte du bouton",
       "sidebar": "Texte de la barre latérale",
-      "topbar": "Texte de la barre du haut"
+      "topbar": "Texte de la barre du haut",
+      "info": "Repères sur les panneaux"
     },
     "transfer": {
       "export": "Enregistrer dans un fichier",
@@ -6946,8 +6951,6 @@
       "codeNoPicture": "L’image de fond n’est pas dans le code. Enregistrez le thème dans un fichier pour la partager"
     },
     "gallery": {
-      "tabs": "Source des thèmes",
-      "tabMine": "Mes thèmes",
       "tab": "Galerie",
       "publish": "Publier dans la galerie",
       "publishTitle": "Publier « {{name}} » ?",
@@ -6956,7 +6959,7 @@
       "publishAction": "Publier",
       "signIn": "Connectez-vous pour publier des thèmes dans la galerie",
       "published": "« {{name}} » envoyé pour vérification",
-      "publishedHint": "Son statut s’affiche dans l’onglet Galerie",
+      "publishedHint": "Son statut s’affiche dans la galerie de thèmes, sous « Mes publications »",
       "search": "Rechercher un thème",
       "modeLabel": "Base",
       "sortLabel": "Tri",
@@ -7006,9 +7009,12 @@
         "load": "La galerie ne s’est pas chargée. Vérifiez votre connexion",
         "notFound": "Thème introuvable : l’auteur l’a peut-être supprimé",
         "mineFailed": "Le serveur Grubie n'a pas renvoyé vos publications",
-        "loadFailed": "Le serveur Grubie ne répond pas — la galerie de thèmes n'a pas chargé"
+        "loadFailed": "Le serveur Grubie ne répond pas — la galerie de thèmes n'a pas chargé",
+        "installBroken": "Le thème est arrivé incomplet ou avec une image au mauvais format"
       },
-      "unpublishQuestion": "Retirer « {{name}} » de la galerie ?"
+      "unpublishQuestion": "Retirer « {{name}} » de la galerie ?",
+      "open": "Galerie de thèmes",
+      "installing": "Installation…"
     },
     "deleted": "Thème « {{name}} » supprimé",
     "unsavedHint": "Le thème « {{name}} » n'est pas enregistré. Si vous partez, vos modifications seront perdues."

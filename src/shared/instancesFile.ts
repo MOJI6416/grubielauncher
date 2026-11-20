@@ -108,6 +108,14 @@ function withList(
   return next;
 }
 
+export function withDockLists(
+  file: InstancesFile,
+  pinned: string[],
+  dockHidden: string[],
+): InstancesFile {
+  return withList(withList(file, "pinned", pinned), "dockHidden", dockHidden);
+}
+
 export function setInstancePinned(
   file: InstancesFile,
   key: string,

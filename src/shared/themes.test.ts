@@ -236,6 +236,37 @@ describe("panel colours", () => {
   });
 });
 
+describe("info colour", () => {
+  it("keeps the base info colour when the theme has none", () => {
+    expect(themeVariables(custom(), VIOLET)).not.toHaveProperty("--info");
+    expect(contrastReport(custom(), VIOLET).map((check) => check.id)).not.toContain("info");
+  });
+
+  it("paints notes, counters and overrides in the theme's own info colour", () => {
+    const theme = normalizeTheme({ ...custom(), colors: { ...custom().colors, info: "#F2B84B" } })!;
+    expect(theme.colors.info).toBe("#f2b84b");
+    const vars = themeVariables(theme, VIOLET);
+    expect(vars["--info"]).toBe("#f2b84b");
+    expect(contrastRatio(vars["--info-foreground"], "#f2b84b")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastReport(theme, VIOLET).find((check) => check.id === "info")?.level).toBe("ok");
+  });
+
+  it("wins over the light base and reaches a painted panel", () => {
+    const theme = custom({
+      mode: "light",
+      colors: { background: "#eceef2", surface: "#ffffff", foreground: "#15161a", accent: null, info: "#0b6e4f", sidebar: "#20242a" },
+    });
+    expect(themeVariables(theme, VIOLET)["--info"]).toBe("#0b6e4f");
+    expect(zoneVariables(theme, "sidebar", VIOLET)?.["--info"]).toBe("#0b6e4f");
+  });
+
+  it("blocks an info colour that disappears on the panels", () => {
+    const theme = custom({ colors: { ...custom().colors, info: "#1a2026" } });
+    expect(contrastReport(theme, VIOLET).find((check) => check.id === "info")?.level).toBe("fail");
+    expect(isThemeReadable(theme, VIOLET)).toBe(false);
+  });
+});
+
 describe("titleBarColors", () => {
   it("keeps the window buttons of Grubie exactly as before", () => {
     expect(titleBarColors(findTheme(DEFAULT_THEME_ID, []))).toEqual({

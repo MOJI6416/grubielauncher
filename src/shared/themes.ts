@@ -7,6 +7,10 @@ export type ThemeZone = "sidebar" | "topbar";
 
 export const THEME_ZONES: ThemeZone[] = ["sidebar", "topbar"];
 
+export type ThemeOptionalColor = ThemeZone | "info";
+
+export const THEME_OPTIONAL_COLORS: ThemeOptionalColor[] = [...THEME_ZONES, "info"];
+
 export interface ThemeColors {
   background: string;
   surface: string;
@@ -14,7 +18,13 @@ export interface ThemeColors {
   accent: string | null;
   sidebar?: string;
   topbar?: string;
+  info?: string;
 }
+
+export const DEFAULT_INFO: Record<ThemeMode, string> = {
+  dark: "#65b2f1",
+  light: "#1b71bc",
+};
 
 export type BackdropFit = "cover" | "contain" | "stretch";
 
@@ -124,13 +134,15 @@ export function normalizeBackdropFrame(raw: Record<string, unknown>): BackdropFr
   };
 }
 
-function normalizeZoneColors(raw: Record<string, unknown>): Pick<ThemeColors, ThemeZone> {
-  const zones: Pick<ThemeColors, ThemeZone> = {};
-  for (const zone of THEME_ZONES) {
-    const value = raw[zone];
-    if (isHexColor(value)) zones[zone] = value.toLowerCase();
+export function normalizeOptionalColors(
+  raw: Record<string, unknown>,
+): Pick<ThemeColors, ThemeOptionalColor> {
+  const colors: Pick<ThemeColors, ThemeOptionalColor> = {};
+  for (const key of THEME_OPTIONAL_COLORS) {
+    const value = raw[key];
+    if (isHexColor(value)) colors[key] = value.toLowerCase();
   }
-  return zones;
+  return colors;
 }
 
 function normalizeBackdrop(value: unknown): ThemeBackdrop | null {
@@ -183,7 +195,7 @@ export function normalizeTheme(value: unknown): ThemeDefinition | null {
       surface: colors.surface.toLowerCase(),
       foreground: colors.foreground.toLowerCase(),
       accent: isHexColor(colors.accent) ? colors.accent.toLowerCase() : null,
-      ...normalizeZoneColors(colors),
+      ...normalizeOptionalColors(colors),
     },
     backdrop: normalizeBackdrop(raw.backdrop),
     ...(galleryId ? { galleryId } : {}),
@@ -357,6 +369,9 @@ export function themeVariables(
     "--chart-1": palette.primary,
     "--primary-foreground": palette.primaryText,
     ...(light ? LIGHT_SEMANTIC : {}),
+    ...(theme.colors.info
+      ? { "--info": theme.colors.info, "--info-foreground": textOn(theme.colors.info) }
+      : {}),
   };
 }
 
@@ -378,6 +393,7 @@ function zoneTheme(theme: ThemeDefinition, color: string): ThemeDefinition {
       surface: mixHex(color, foreground, 0.05),
       foreground,
       accent: theme.colors.accent,
+      ...(theme.colors.info ? { info: theme.colors.info } : {}),
     },
   };
 }
@@ -450,7 +466,7 @@ export type ContrastLevel = "ok" | "warn" | "fail";
 type BaseCheckId = "text" | "background" | "muted" | "faint" | "accent" | "accentText";
 
 export interface ContrastCheck {
-  id: BaseCheckId | ThemeZone;
+  id: BaseCheckId | ThemeZone | "info";
   ratio: number;
   level: ContrastLevel;
 }
@@ -492,7 +508,10 @@ export function contrastReport(
     const zoned = zonePalette(theme, zone, accent);
     return zoned ? [check(zone, contrastRatio(zoned.muted, zoned.color), CONTRAST_RULES.muted)] : [];
   });
-  return [...base, ...zones];
+  const info = theme.colors.info
+    ? [check("info", contrastRatio(theme.colors.info, surface), CONTRAST_RULES.muted)]
+    : [];
+  return [...base, ...zones, ...info];
 }
 
 export function isThemeReadable(theme: ThemeDefinition, accent: string): boolean {

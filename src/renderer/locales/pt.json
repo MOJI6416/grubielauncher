@@ -6770,7 +6770,7 @@
     "customize": "Personalizar a interface",
     "customizeAction": "Personalizar",
     "customizeDescription": "Arraste itens da barra lateral e oculte o que não precisa, direto na tela",
-    "editHint": "Arraste os itens da barra lateral; o olho oculta o que sobra. Os blocos da tela inicial ficam em “Jogar”.",
+    "editHint": "Mova os itens da barra lateral arrastando ou com ↑ ↓; o olho oculta o que sobra. Esc cancela.",
     "moreSettings": "Mais configurações",
     "reset": "Redefinir layout",
     "done": "Pronto",
@@ -6779,8 +6779,6 @@
     "dockMore": "Mais {{count}}",
     "dockMoreHint": "Todas as instâncias ficam em “Jogar”",
     "nowHint": "Downloads, erros e compartilhamento de mundo aparecem aqui",
-    "moveUp": "Subir “{{name}}”",
-    "moveDown": "Descer “{{name}}”",
     "groups": {
       "sidebar": "Barra lateral",
       "home": "Tela “Jogar”",
@@ -6797,7 +6795,8 @@
       "description": "As fixadas aparecem sempre; o resto, pelo último início",
       "all": "Todas",
       "hiddenCount": "Ocultas da barra: {{count}}",
-      "showAll": "Mostrar todas"
+      "showAll": "Mostrar todas",
+      "shownAll": "Todas as instâncias voltaram à barra lateral"
     },
     "home": {
       "title": "Tela “Jogar”",
@@ -6805,7 +6804,8 @@
       "description": "O cartão da última instância acima da lista",
       "hero": "Cartão da instância",
       "stats": "Estatísticas",
-      "continue": "“Continuar”"
+      "continue": "“Continuar”",
+      "needsHero": "Este bloco faz parte do cartão da instância. Mostre o cartão primeiro"
     },
     "instance": {
       "defaultTab": "Aba ao abrir",
@@ -6841,7 +6841,11 @@
       }
     },
     "resetDone": "Layout redefinido",
-    "hiddenDone": "Oculto: “{{name}}”"
+    "hiddenDone": "Oculto: “{{name}}”",
+    "restore": "Restaurar",
+    "reorder": "Mover “{{name}}”: arraste ou pressione ↑ ↓",
+    "cancelHint": "Deixar tudo como estava · Esc",
+    "resetPart": "Redefinido: “{{name}}”"
   },
   "theme": {
     "title": "Tema da interface",
@@ -6854,7 +6858,7 @@
     "delete": "Excluir tema",
     "saved": "Tema “{{name}}” salvo",
     "limit": "Você pode guardar até {{count}} temas",
-    "accentByTheme": "O tema “{{name}}” define o destaque. Para escolher uma cor aqui, desative “Cor de destaque própria” no editor do tema",
+    "accentByTheme": "O tema “{{name}}” define o destaque. Para escolher uma cor aqui, desmarque “Destaque” no editor do tema",
     "command": "Tema: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
@@ -6865,7 +6869,6 @@
       "ownAccent": "Cor de destaque própria do tema"
     },
     "editor": {
-      "title": "Editor de tema",
       "livePreview": "as mudanças aparecem na hora em todo o launcher até você salvar ou cancelar",
       "name": "Nome",
       "mode": "Base",
@@ -6879,7 +6882,6 @@
       "surface": "Painéis",
       "foreground": "Texto",
       "accent": "Destaque",
-      "ownAccent": "Cor de destaque própria",
       "picture": "Imagem de fundo",
       "pictureDescription": "PNG, JPG ou WEBP. A imagem fica neste computador",
       "pick": "Escolher imagem",
@@ -6906,13 +6908,15 @@
       "framing": "Parte visível da imagem",
       "framingHint": "Arraste para escolher a parte visível",
       "framingCenter": "Centralizar",
-      "zones": "Cores dos painéis",
-      "zonesDescription": "A barra lateral e a barra superior podem ter cores próprias. A cor do texto se ajusta sozinha",
       "zone": {
         "sidebar": "Barra lateral",
         "topbar": "Barra superior"
       },
-      "zoneOwn": "Cor própria"
+      "info": "Marcadores",
+      "ownColors": "Cores próprias",
+      "ownColorsDescription": "Marque para definir a cor você mesmo; caso contrário, ela vem da base. Os marcadores indicam o que é novo, não lido ou alterado",
+      "ownColor": "Cor própria: {{name}}",
+      "unsaved": "Há alterações não salvas"
     },
     "checks": {
       "text": "Texto nos painéis",
@@ -6922,7 +6926,8 @@
       "accent": "Destaque nos painéis",
       "accentText": "Texto do botão",
       "sidebar": "Texto na barra lateral",
-      "topbar": "Texto na barra superior"
+      "topbar": "Texto na barra superior",
+      "info": "Marcadores nos painéis"
     },
     "transfer": {
       "export": "Salvar em arquivo",
@@ -6942,8 +6947,6 @@
       "codeNoPicture": "A imagem de fundo não entra no código. Salve o tema em arquivo para compartilhá-la"
     },
     "gallery": {
-      "tabs": "Origem dos temas",
-      "tabMine": "Meus temas",
       "tab": "Galeria",
       "publish": "Publicar na galeria",
       "publishTitle": "Publicar “{{name}}”?",
@@ -6952,7 +6955,7 @@
       "publishAction": "Publicar",
       "signIn": "Entre na conta para publicar temas na galeria",
       "published": "“{{name}}” enviado para verificação",
-      "publishedHint": "O status aparece na aba Galeria",
+      "publishedHint": "O status aparece na galeria de temas, em “Minhas publicações”",
       "search": "Buscar temas",
       "modeLabel": "Base",
       "sortLabel": "Ordenar",
@@ -7002,9 +7005,12 @@
         "load": "A galeria não carregou. Verifique a conexão",
         "notFound": "Tema não encontrado: talvez o autor o tenha removido",
         "mineFailed": "O servidor do Grubie não retornou suas publicações",
-        "loadFailed": "O servidor do Grubie não responde — a galeria de temas não carregou"
+        "loadFailed": "O servidor do Grubie não responde — a galeria de temas não carregou",
+        "installBroken": "O tema chegou incompleto ou com uma imagem no formato errado"
       },
-      "unpublishQuestion": "Remover “{{name}}” da galeria?"
+      "unpublishQuestion": "Remover “{{name}}” da galeria?",
+      "open": "Galeria de temas",
+      "installing": "Instalando…"
     },
     "deleted": "Tema “{{name}}” excluído",
     "unsavedHint": "O tema “{{name}}” não foi salvo. Se sair, as alterações serão perdidas."

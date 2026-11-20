@@ -6713,7 +6713,7 @@
     "customize": "Customize interface",
     "customizeAction": "Customize",
     "customizeDescription": "Drag sidebar items and hide what you don't need, right on screen",
-    "editHint": "Drag sidebar items, the eye hides what you don't need. Home blocks are on the Play screen.",
+    "editHint": "Move sidebar items by dragging or with ↑ ↓, the eye hides what you don't need. Esc cancels.",
     "moreSettings": "More settings",
     "reset": "Reset layout",
     "done": "Done",
@@ -6722,8 +6722,6 @@
     "dockMore": "{{count}} more",
     "dockMoreHint": "All instances are on the Play screen",
     "nowHint": "Downloads, errors and world sharing show up here",
-    "moveUp": "Move “{{name}}” up",
-    "moveDown": "Move “{{name}}” down",
     "groups": {
       "sidebar": "Sidebar",
       "home": "Play screen",
@@ -6740,7 +6738,8 @@
       "description": "Pinned ones are always shown, the rest by last launch",
       "all": "All",
       "hiddenCount": "Hidden from the sidebar: {{count}}",
-      "showAll": "Show all"
+      "showAll": "Show all",
+      "shownAll": "All instances are back in the sidebar"
     },
     "home": {
       "title": "Play screen",
@@ -6748,7 +6747,8 @@
       "description": "The card of the last instance above the list",
       "hero": "Instance card",
       "stats": "Statistics",
-      "continue": "Continue"
+      "continue": "Continue",
+      "needsHero": "This block is part of the instance card. Show the card first"
     },
     "instance": {
       "defaultTab": "Tab to open",
@@ -6784,7 +6784,11 @@
       }
     },
     "resetDone": "Layout reset",
-    "hiddenDone": "Hidden: “{{name}}”"
+    "hiddenDone": "Hidden: “{{name}}”",
+    "restore": "Restore",
+    "reorder": "Move “{{name}}”: drag it or press ↑ ↓",
+    "cancelHint": "Put everything back as it was · Esc",
+    "resetPart": "Reset: “{{name}}”"
   },
   "theme": {
     "title": "Interface theme",
@@ -6797,7 +6801,7 @@
     "delete": "Delete theme",
     "saved": "“{{name}}” theme saved",
     "limit": "You can keep up to {{count}} themes",
-    "accentByTheme": "The “{{name}}” theme sets the accent. To pick a colour here, turn off “Own accent colour” in the theme editor",
+    "accentByTheme": "The “{{name}}” theme sets the accent. To pick a colour here, untick “Accent” in the theme editor",
     "command": "Theme: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
@@ -6808,7 +6812,6 @@
       "ownAccent": "The theme's own accent colour"
     },
     "editor": {
-      "title": "Theme editor",
       "livePreview": "changes show across the launcher right away, until you save or cancel",
       "name": "Name",
       "mode": "Base",
@@ -6822,7 +6825,6 @@
       "surface": "Panels",
       "foreground": "Text",
       "accent": "Accent",
-      "ownAccent": "Own accent colour",
       "picture": "Background picture",
       "pictureDescription": "PNG, JPG or WEBP. The picture stays on this computer",
       "pick": "Choose picture",
@@ -6849,13 +6851,15 @@
       "framing": "Visible part of the picture",
       "framingHint": "Drag to choose the visible part",
       "framingCenter": "Center",
-      "zones": "Panel colours",
-      "zonesDescription": "The sidebar and the top bar can have their own colours. Text on them adjusts automatically",
       "zone": {
         "sidebar": "Sidebar",
         "topbar": "Top bar"
       },
-      "zoneOwn": "Own colour"
+      "info": "Markers",
+      "ownColors": "Own colours",
+      "ownColorsDescription": "Tick to set the colour yourself, otherwise it comes from the base. Markers flag what is new, unread or changed",
+      "ownColor": "Own colour: {{name}}",
+      "unsaved": "Unsaved changes"
     },
     "checks": {
       "text": "Text on panels",
@@ -6865,7 +6869,8 @@
       "accent": "Accent on panels",
       "accentText": "Button label",
       "sidebar": "Text on the sidebar",
-      "topbar": "Text on the top bar"
+      "topbar": "Text on the top bar",
+      "info": "Markers on panels"
     },
     "transfer": {
       "export": "Save to file",
@@ -6885,8 +6890,6 @@
       "codeNoPicture": "The background picture isn't part of the code. Save the theme to a file to share it"
     },
     "gallery": {
-      "tabs": "Theme source",
-      "tabMine": "My themes",
       "tab": "Gallery",
       "publish": "Publish to the gallery",
       "publishTitle": "Publish “{{name}}”?",
@@ -6895,7 +6898,7 @@
       "publishAction": "Publish",
       "signIn": "Sign in to publish themes to the gallery",
       "published": "“{{name}}” sent for review",
-      "publishedHint": "You can see its status on the Gallery tab",
+      "publishedHint": "Its status is in the theme gallery, under “My publications”",
       "search": "Search themes",
       "modeLabel": "Base",
       "sortLabel": "Sort",
@@ -6945,9 +6948,12 @@
         "load": "The gallery didn't load. Check your connection",
         "notFound": "Theme not found: the author may have removed it",
         "mineFailed": "The Grubie server didn't return your publications",
-        "loadFailed": "The Grubie server isn't responding — the theme gallery didn't load"
+        "loadFailed": "The Grubie server isn't responding — the theme gallery didn't load",
+        "installBroken": "The theme arrived incomplete or with a picture in the wrong format"
       },
-      "unpublishQuestion": "Remove “{{name}}” from the gallery?"
+      "unpublishQuestion": "Remove “{{name}}” from the gallery?",
+      "open": "Theme gallery",
+      "installing": "Installing…"
     },
     "deleted": "“{{name}}” theme deleted",
     "unsavedHint": "The “{{name}}” theme isn't saved. If you leave, your edits are lost."

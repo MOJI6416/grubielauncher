@@ -6713,7 +6713,7 @@
     "customize": "Arayüzü özelleştir",
     "customizeAction": "Özelleştir",
     "customizeDescription": "Kenar çubuğu öğelerini doğrudan ekranda sürükleyin ve gereksizleri gizleyin",
-    "editHint": "Kenar çubuğu öğelerini sürükleyin, göz simgesi gereksizleri gizler. Ana ekran blokları “Oyna” ekranında.",
+    "editHint": "Kenar çubuğu öğelerini sürükleyerek ya da ↑ ↓ ile taşıyın, göz simgesi gereksizleri gizler. Esc iptal eder.",
     "moreSettings": "Diğer ayarlar",
     "reset": "Yerleşimi sıfırla",
     "done": "Bitti",
@@ -6722,8 +6722,6 @@
     "dockMore": "{{count}} tane daha",
     "dockMoreHint": "Tüm kurulumlar “Oyna” ekranında",
     "nowHint": "İndirmeler, hatalar ve dünya paylaşımı burada görünür",
-    "moveUp": "“{{name}}” yukarı taşı",
-    "moveDown": "“{{name}}” aşağı taşı",
     "groups": {
       "sidebar": "Kenar çubuğu",
       "home": "“Oyna” ekranı",
@@ -6740,7 +6738,8 @@
       "description": "Sabitlenenler her zaman görünür, diğerleri son açılışa göre",
       "all": "Tümü",
       "hiddenCount": "Kenar çubuğundan gizlenen: {{count}}",
-      "showAll": "Tümünü göster"
+      "showAll": "Tümünü göster",
+      "shownAll": "Tüm kurulumlar kenar çubuğuna geri döndü"
     },
     "home": {
       "title": "“Oyna” ekranı",
@@ -6748,7 +6747,8 @@
       "description": "Listenin üstündeki son kurulum kartı",
       "hero": "Kurulum kartı",
       "stats": "İstatistikler",
-      "continue": "“Devam et”"
+      "continue": "“Devam et”",
+      "needsHero": "Bu blok kurulum kartının bir parçası. Önce kartı gösterin"
     },
     "instance": {
       "defaultTab": "Açılışta sekme",
@@ -6784,7 +6784,11 @@
       }
     },
     "resetDone": "Düzen sıfırlandı",
-    "hiddenDone": "Gizlendi: “{{name}}”"
+    "hiddenDone": "Gizlendi: “{{name}}”",
+    "restore": "Geri getir",
+    "reorder": "“{{name}}” öğesini taşı: sürükleyin ya da ↑ ↓ tuşlarına basın",
+    "cancelHint": "Her şeyi düzenlemeden önceki haline getir · Esc",
+    "resetPart": "Sıfırlandı: “{{name}}”"
   },
   "theme": {
     "title": "Arayüz teması",
@@ -6797,7 +6801,7 @@
     "delete": "Temayı sil",
     "saved": "“{{name}}” teması kaydedildi",
     "limit": "En fazla {{count}} tema saklayabilirsiniz",
-    "accentByTheme": "Vurgu rengini “{{name}}” teması belirliyor. Burada renk seçmek için tema düzenleyicisinde “Kendi vurgu rengim” seçeneğini kapatın",
+    "accentByTheme": "Vurgu rengini “{{name}}” teması belirliyor. Burada renk seçmek için tema düzenleyicisinde “Vurgu” işaretini kaldırın",
     "command": "Tema: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
@@ -6808,7 +6812,6 @@
       "ownAccent": "Temanın kendi vurgu rengi"
     },
     "editor": {
-      "title": "Tema düzenleyici",
       "livePreview": "kaydedene veya iptal edene kadar değişiklikler tüm başlatıcıda hemen görünür",
       "name": "Ad",
       "mode": "Temel",
@@ -6822,7 +6825,6 @@
       "surface": "Paneller",
       "foreground": "Metin",
       "accent": "Vurgu",
-      "ownAccent": "Kendi vurgu rengim",
       "picture": "Arka plan resmi",
       "pictureDescription": "PNG, JPG veya WEBP. Resim bu bilgisayarda kalır",
       "pick": "Resim seç",
@@ -6849,13 +6851,15 @@
       "framing": "Resmin görünen kısmı",
       "framingHint": "Görünen kısmı seçmek için sürükleyin",
       "framingCenter": "Ortala",
-      "zones": "Panel renkleri",
-      "zonesDescription": "Kenar çubuğu ve üst çubuk kendi renklerine sahip olabilir. Üzerlerindeki yazı rengi kendiliğinden ayarlanır",
       "zone": {
         "sidebar": "Kenar çubuğu",
         "topbar": "Üst çubuk"
       },
-      "zoneOwn": "Kendi rengi"
+      "info": "İşaretler",
+      "ownColors": "Kendi renkleri",
+      "ownColorsDescription": "Rengi kendiniz belirlemek için işaretleyin, yoksa temelden gelir. İşaretler yeni, okunmamış ve değiştirilmiş olanı gösterir",
+      "ownColor": "Kendi rengi: {{name}}",
+      "unsaved": "Kaydedilmemiş değişiklikler var"
     },
     "checks": {
       "text": "Paneldeki metin",
@@ -6865,7 +6869,8 @@
       "accent": "Paneldeki vurgu",
       "accentText": "Düğme yazısı",
       "sidebar": "Kenar çubuğundaki yazı",
-      "topbar": "Üst çubuktaki yazı"
+      "topbar": "Üst çubuktaki yazı",
+      "info": "Paneldeki işaretler"
     },
     "transfer": {
       "export": "Dosyaya kaydet",
@@ -6885,8 +6890,6 @@
       "codeNoPicture": "Arka plan resmi koda dahil değil. Paylaşmak için temayı dosyaya kaydedin"
     },
     "gallery": {
-      "tabs": "Tema kaynağı",
-      "tabMine": "Temalarım",
       "tab": "Galeri",
       "publish": "Galeride yayınla",
       "publishTitle": "“{{name}}” yayınlansın mı?",
@@ -6895,7 +6898,7 @@
       "publishAction": "Yayınla",
       "signIn": "Galeride tema yayınlamak için hesabınıza giriş yapın",
       "published": "“{{name}}” kontrole gönderildi",
-      "publishedHint": "Durumunu Galeri sekmesinde görebilirsiniz",
+      "publishedHint": "Durumunu tema galerisinde, “Yayınlarım” bölümünde görebilirsiniz",
       "search": "Tema ara",
       "modeLabel": "Temel",
       "sortLabel": "Sıralama",
@@ -6945,9 +6948,12 @@
         "load": "Galeri yüklenmedi. Bağlantınızı kontrol edin",
         "notFound": "Tema bulunamadı: yazar onu kaldırmış olabilir",
         "mineFailed": "Grubie sunucusu yayınlarınızı döndürmedi",
-        "loadFailed": "Grubie sunucusu yanıt vermiyor — tema galerisi yüklenmedi"
+        "loadFailed": "Grubie sunucusu yanıt vermiyor — tema galerisi yüklenmedi",
+        "installBroken": "Tema eksik geldi ya da görseli yanlış biçimde"
       },
-      "unpublishQuestion": "“{{name}}” galeriden kaldırılsın mı?"
+      "unpublishQuestion": "“{{name}}” galeriden kaldırılsın mı?",
+      "open": "Tema galerisi",
+      "installing": "Kuruluyor…"
     },
     "deleted": "“{{name}}” teması silindi",
     "unsavedHint": "“{{name}}” teması kaydedilmedi. Çıkarsanız değişiklikler kaybolur."

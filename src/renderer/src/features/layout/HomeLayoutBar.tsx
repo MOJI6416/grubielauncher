@@ -1,8 +1,8 @@
 import { LayoutTemplate } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { HOME_BLOCKS, isSlotHidden, slotId } from "./layout";
-import { toggleSlot, useLayout } from "./useLayout";
-import { LayoutChip } from "./LayoutChip";
+import { setSlotVisible, useLayout } from "./useLayout";
+import { SlotItem } from "./SlotItem";
 
 export function HomeLayoutBar() {
   const { t } = useTranslation();
@@ -15,14 +15,18 @@ export function HomeLayoutBar() {
       <span className="text-xs text-muted-foreground">{t("layout.home.title")}</span>
       <div className="ml-auto flex items-center gap-1.5">
         {HOME_BLOCKS.map((block) => {
-          const hidden = isSlotHidden(layout, slotId.home(block));
+          const id = slotId.home(block);
+          const hidden = isSlotHidden(layout, id);
+          const label = t(`layout.home.${block}`);
           return (
-            <LayoutChip
+            <SlotItem
               key={block}
-              label={t(`layout.home.${block}`)}
+              size="pill"
+              label={label}
               hidden={hidden}
               disabled={block !== "hero" && isHeroHidden}
-              onToggle={() => toggleSlot(slotId.home(block), !hidden)}
+              disabledReason={t("layout.home.needsHero")}
+              onToggle={() => setSlotVisible(id, label, hidden)}
             />
           );
         })}

@@ -158,7 +158,10 @@ export async function installGalleryTheme(item: GalleryTheme): Promise<boolean> 
       ? galleryThemeToDefinition(result.theme, newThemeId(), result.backdropPath)
       : null;
     if (!theme) {
-      toast.error(i18n.t("theme.gallery.errors.install"));
+      showFailureToast(i18n.t("theme.gallery.errors.install"), undefined, {
+        channels: ["theme:galleryInstall"],
+        fallbackDescription: i18n.t("theme.gallery.errors.installBroken"),
+      });
       return false;
     }
     return await addTheme(theme);

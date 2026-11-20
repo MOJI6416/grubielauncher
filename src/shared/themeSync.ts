@@ -1,7 +1,7 @@
 import {
   BACKDROP_FITS,
   MAX_USER_THEMES,
-  THEME_ZONES,
+  THEME_OPTIONAL_COLORS,
   isHexColor,
   type BackdropFit,
   type ThemeColors,
@@ -66,9 +66,9 @@ function colorsOf(value: unknown): ThemeColors | null {
     foreground: raw.foreground.toLowerCase(),
     accent: isHexColor(raw.accent) ? raw.accent.toLowerCase() : null,
   };
-  for (const zone of THEME_ZONES) {
-    const color = raw[zone];
-    if (isHexColor(color)) colors[zone] = color.toLowerCase();
+  for (const key of THEME_OPTIONAL_COLORS) {
+    const color = raw[key];
+    if (isHexColor(color)) colors[key] = color.toLowerCase();
   }
   return colors;
 }

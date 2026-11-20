@@ -36,7 +36,7 @@ export type Route =
   | { name: "accounts" }
   | { name: "catalog" }
   | { name: "screenshots"; instance?: string }
-  | { name: "settings"; section?: string };
+  | { name: "settings"; section?: string; view?: string };
 
 export type RouteName = Route["name"];
 
@@ -58,7 +58,7 @@ export function routeKey(route: Route): string {
         ? `profile:${route.userId}:${route.tab}`
         : `profile:${route.userId}`;
     case "settings":
-      return route.section ? `settings:${route.section}` : "settings";
+      return ["settings", route.section, route.view].filter(Boolean).join(":");
     case "agent":
       return route.chatId ? `agent:${route.chatId}` : "agent";
     default:

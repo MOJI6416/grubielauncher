@@ -6770,7 +6770,7 @@
     "customize": "Personalizar la interfaz",
     "customizeAction": "Personalizar",
     "customizeDescription": "Arrastra elementos de la barra lateral y oculta lo que no necesites, en la misma pantalla",
-    "editHint": "Arrastra los elementos de la barra lateral; el ojo oculta lo que sobra. Los bloques de inicio están en «Jugar».",
+    "editHint": "Mueva los elementos de la barra lateral arrastrándolos o con ↑ ↓; el ojo oculta lo que sobra. Esc cancela.",
     "moreSettings": "Más ajustes",
     "reset": "Restablecer la distribución",
     "done": "Listo",
@@ -6779,8 +6779,6 @@
     "dockMore": "{{count}} más",
     "dockMoreHint": "Todas las instancias están en «Jugar»",
     "nowHint": "Aquí aparecen descargas, errores y el mundo compartido",
-    "moveUp": "Subir «{{name}}»",
-    "moveDown": "Bajar «{{name}}»",
     "groups": {
       "sidebar": "Barra lateral",
       "home": "Pantalla «Jugar»",
@@ -6797,7 +6795,8 @@
       "description": "Las fijadas siempre se ven; el resto, por último inicio",
       "all": "Todas",
       "hiddenCount": "Ocultas de la barra: {{count}}",
-      "showAll": "Mostrar todas"
+      "showAll": "Mostrar todas",
+      "shownAll": "Todas las instancias vuelven a la barra lateral"
     },
     "home": {
       "title": "Pantalla «Jugar»",
@@ -6805,7 +6804,8 @@
       "description": "La tarjeta de la última instancia sobre la lista",
       "hero": "Tarjeta de instancia",
       "stats": "Estadísticas",
-      "continue": "«Continuar»"
+      "continue": "«Continuar»",
+      "needsHero": "Este bloque forma parte de la tarjeta de instancia. Muestre primero la tarjeta"
     },
     "instance": {
       "defaultTab": "Pestaña al abrir",
@@ -6841,7 +6841,11 @@
       }
     },
     "resetDone": "Diseño restablecido",
-    "hiddenDone": "Oculto: «{{name}}»"
+    "hiddenDone": "Oculto: «{{name}}»",
+    "restore": "Restaurar",
+    "reorder": "Mover «{{name}}»: arrástrelo o pulse ↑ ↓",
+    "cancelHint": "Dejar todo como estaba · Esc",
+    "resetPart": "Restablecido: «{{name}}»"
   },
   "theme": {
     "title": "Tema de la interfaz",
@@ -6854,7 +6858,7 @@
     "delete": "Eliminar tema",
     "saved": "Tema «{{name}}» guardado",
     "limit": "Puedes guardar hasta {{count}} temas",
-    "accentByTheme": "El tema «{{name}}» define el acento. Para elegir un color aquí, desactive «Color de acento propio» en el editor del tema",
+    "accentByTheme": "El tema «{{name}}» define el acento. Para elegir un color aquí, desmarque «Acento» en el editor del tema",
     "command": "Tema: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
@@ -6865,7 +6869,6 @@
       "ownAccent": "Color de acento propio del tema"
     },
     "editor": {
-      "title": "Editor de tema",
       "livePreview": "los cambios se ven al instante en todo el launcher hasta que guardes o canceles",
       "name": "Nombre",
       "mode": "Base",
@@ -6879,7 +6882,6 @@
       "surface": "Paneles",
       "foreground": "Texto",
       "accent": "Acento",
-      "ownAccent": "Color de acento propio",
       "picture": "Imagen de fondo",
       "pictureDescription": "PNG, JPG o WEBP. La imagen se queda en esta computadora",
       "pick": "Elegir imagen",
@@ -6906,13 +6908,15 @@
       "framing": "Parte visible de la imagen",
       "framingHint": "Arrastre para elegir la parte visible",
       "framingCenter": "Centrar",
-      "zones": "Colores de los paneles",
-      "zonesDescription": "La barra lateral y la barra superior pueden tener su propio color. El color del texto se ajusta solo",
       "zone": {
         "sidebar": "Barra lateral",
         "topbar": "Barra superior"
       },
-      "zoneOwn": "Color propio"
+      "info": "Marcas",
+      "ownColors": "Colores propios",
+      "ownColorsDescription": "Marque para elegir el color usted mismo; si no, se toma de la base. Las marcas señalan lo nuevo, lo no leído y lo cambiado",
+      "ownColor": "Color propio: {{name}}",
+      "unsaved": "Hay cambios sin guardar"
     },
     "checks": {
       "text": "Texto en paneles",
@@ -6922,7 +6926,8 @@
       "accent": "Acento en paneles",
       "accentText": "Texto del botón",
       "sidebar": "Texto en la barra lateral",
-      "topbar": "Texto en la barra superior"
+      "topbar": "Texto en la barra superior",
+      "info": "Marcas en paneles"
     },
     "transfer": {
       "export": "Guardar en archivo",
@@ -6942,8 +6947,6 @@
       "codeNoPicture": "La imagen de fondo no va en el código. Guarda el tema en un archivo para compartirla"
     },
     "gallery": {
-      "tabs": "Origen de temas",
-      "tabMine": "Mis temas",
       "tab": "Galería",
       "publish": "Publicar en la galería",
       "publishTitle": "¿Publicar «{{name}}»?",
@@ -6952,7 +6955,7 @@
       "publishAction": "Publicar",
       "signIn": "Inicia sesión para publicar temas en la galería",
       "published": "«{{name}}» enviado a revisión",
-      "publishedHint": "Su estado aparece en la pestaña Galería",
+      "publishedHint": "Su estado aparece en la galería de temas, en «Mis publicaciones»",
       "search": "Buscar temas",
       "modeLabel": "Base",
       "sortLabel": "Orden",
@@ -7002,9 +7005,12 @@
         "load": "La galería no cargó. Revisa tu conexión",
         "notFound": "Tema no encontrado: puede que el autor lo haya eliminado",
         "mineFailed": "El servidor de Grubie no devolvió sus publicaciones",
-        "loadFailed": "El servidor de Grubie no responde: la galería de temas no se cargó"
+        "loadFailed": "El servidor de Grubie no responde: la galería de temas no se cargó",
+        "installBroken": "El tema llegó incompleto o con una imagen en un formato incorrecto"
       },
-      "unpublishQuestion": "¿Retirar «{{name}}» de la galería?"
+      "unpublishQuestion": "¿Retirar «{{name}}» de la galería?",
+      "open": "Galería de temas",
+      "installing": "Instalando…"
     },
     "deleted": "Tema «{{name}}» eliminado",
     "unsavedHint": "El tema «{{name}}» no está guardado. Si sale, se perderán los cambios."

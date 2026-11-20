@@ -1,5 +1,5 @@
 import {
-  THEME_ZONES,
+  THEME_OPTIONAL_COLORS,
   isHexColor,
   normalizeTheme,
   type BackdropFrame,
@@ -84,7 +84,7 @@ function fromBase64Url(code: string): string {
 
 export function encodeThemeCode(theme: ThemeDefinition): string {
   const { background, surface, foreground, accent } = theme.colors;
-  const zones = THEME_ZONES.map((zone) => theme.colors[zone] ?? "");
+  const zones = THEME_OPTIONAL_COLORS.map((key) => theme.colors[key] ?? "");
   const colors = [background, surface, foreground, accent ?? "", ...zones];
   while (colors.length > 4 && !colors[colors.length - 1]) colors.pop();
   const payload = {
@@ -119,7 +119,7 @@ export function decodeThemeCode(text: string, id: string): ThemeDefinition | nul
         surface,
         foreground,
         accent: isHexColor(accent) ? accent : null,
-        ...Object.fromEntries(THEME_ZONES.map((zone, index) => [zone, zones[index]])),
+        ...Object.fromEntries(THEME_OPTIONAL_COLORS.map((key, index) => [key, zones[index]])),
       },
       backdrop: null,
     });

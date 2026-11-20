@@ -10,7 +10,7 @@ import { Toaster as Sonner, type ToasterProps } from "sonner";
 
 import { cn } from "@/lib/utils";
 
-const TOASTER_OFFSET = { top: 44, right: 16, bottom: 20, left: 16 };
+export const TOASTER_OFFSET = { top: 44, right: 16, bottom: 20, left: 16 };
 
 function Toaster({
   className,

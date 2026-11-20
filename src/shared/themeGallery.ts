@@ -1,6 +1,6 @@
 import {
   BACKDROP_LIMITS,
-  THEME_ZONES,
+  THEME_OPTIONAL_COLORS,
   isHexColor,
   normalizeBackdropFrame,
   normalizeTheme,
@@ -123,9 +123,9 @@ export function normalizeGalleryTheme(value: unknown): GalleryTheme | null {
       foreground: colors.foreground.toLowerCase(),
       accent: isHexColor(colors.accent) ? colors.accent.toLowerCase() : null,
       ...Object.fromEntries(
-        THEME_ZONES.flatMap((zone) => {
-          const value = colors[zone];
-          return isHexColor(value) ? [[zone, value.toLowerCase()]] : [];
+        THEME_OPTIONAL_COLORS.flatMap((key) => {
+          const value = colors[key];
+          return isHexColor(value) ? [[key, value.toLowerCase()]] : [];
         }),
       ),
     },

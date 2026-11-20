@@ -145,7 +145,7 @@ export function DeepLinkHost() {
       if (intent.kind === "theme") {
         countFeature("links.theme");
         getDefaultStore().set(galleryFocusAtom, intent.themeId);
-        navigate({ name: "settings", section: "themes" });
+        navigate({ name: "settings", section: "themes", view: "gallery" });
         return;
       }
 

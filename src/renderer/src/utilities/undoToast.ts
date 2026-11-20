@@ -10,6 +10,7 @@ export function showUndoToast(
     description?: string;
     id?: string | number;
     tone?: "success" | "warning";
+    actionLabel?: string;
   } = {},
 ): string | number {
   const show = options.tone === "warning" ? toast.warning : toast.success;
@@ -18,7 +19,7 @@ export function showUndoToast(
     description: options.description,
     duration: UNDO_TOAST_MS,
     action: {
-      label: i18n.t("common.undo"),
+      label: options.actionLabel ?? i18n.t("common.undo"),
       onClick: () => void onUndo(),
     },
   });

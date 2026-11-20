@@ -1,6 +1,6 @@
 import { Children, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Hint } from "@renderer/components/Hint";
@@ -45,6 +45,38 @@ export function LockedNote({
       <Lock className="mt-px size-3 shrink-0 text-faint" />
       <span className="min-w-0">{reason}</span>
     </p>
+  );
+}
+
+export function SubViewHeader({
+  parent,
+  title,
+  onBack,
+  aside,
+}: {
+  parent: string;
+  title: string;
+  onBack: () => void;
+  aside?: ReactNode;
+}) {
+  return (
+    <div className="mb-2 flex h-7 min-w-0 items-center gap-1 px-0.5">
+      <button
+        type="button"
+        onClick={onBack}
+        className="-ml-1 flex h-7 shrink-0 items-center gap-1 rounded-md pr-1.5 pl-1 text-sm text-muted-foreground transition-colors hover:bg-row-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      >
+        <ChevronLeft className="size-3.5" />
+        {parent}
+      </button>
+      <ChevronRight aria-hidden className="size-3.5 shrink-0 text-faint" />
+      <Hint content={title} variant="text" truncatedOnly>
+        <h3 className="min-w-0 truncate text-sm font-medium text-foreground">{title}</h3>
+      </Hint>
+      {aside && (
+        <div className="ml-auto flex min-w-0 shrink items-center gap-2 pl-3">{aside}</div>
+      )}
+    </div>
   );
 }
 

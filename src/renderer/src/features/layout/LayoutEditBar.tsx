@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, LayoutTemplate, RotateCcw, SlidersHorizontal, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@renderer/components/Hint";
 import { navigate } from "@renderer/navigation/navigate";
 import { isLayoutCustomized } from "./layout";
 import {
@@ -22,7 +23,7 @@ export function LayoutEditBar() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented) return;
       event.preventDefault();
-      finishLayoutEditing();
+      cancelLayoutEditing();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -61,10 +62,12 @@ export function LayoutEditBar() {
           <RotateCcw />
           {t("layout.reset")}
         </Button>
-        <Button variant="ghost" size="sm" onClick={cancelLayoutEditing}>
-          <Undo2 />
-          {t("common.cancel")}
-        </Button>
+        <Hint content={t("layout.cancelHint")}>
+          <Button variant="ghost" size="sm" onClick={cancelLayoutEditing}>
+            <Undo2 />
+            {t("common.cancel")}
+          </Button>
+        </Hint>
         <Button variant="secondary" size="sm" onClick={finishLayoutEditing}>
           <Check />
           {t("layout.done")}

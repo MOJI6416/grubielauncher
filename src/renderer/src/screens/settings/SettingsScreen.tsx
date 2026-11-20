@@ -94,9 +94,11 @@ const SECTION_ICON: Record<SettingsSectionId, LucideIcon> = {
 
 export function SettingsScreen({
   section,
+  view,
   onShowWhatsNew,
 }: {
   section?: string;
+  view?: string;
   onShowWhatsNew?: () => void;
 }) {
   const { t } = useTranslation();
@@ -414,7 +416,7 @@ export function SettingsScreen({
               )}
               {active === "downloads" && <DownloadsSection {...sectionProps} />}
               {active === "interface" && <InterfaceSection {...sectionProps} />}
-              {active === "themes" && <ThemeSection {...sectionProps} />}
+              {active === "themes" && <ThemeSection {...sectionProps} view={view} />}
               {active === "layout" && <LayoutSection {...sectionProps} />}
               {active === "system" && <SystemSection {...sectionProps} />}
               {active === "voice" && <VoiceSection {...sectionProps} />}

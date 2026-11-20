@@ -6832,7 +6832,7 @@
     "customize": "Dostosuj interfejs",
     "customizeAction": "Dostosuj",
     "customizeDescription": "Przeciągaj elementy panelu bocznego i ukrywaj zbędne bezpośrednio na ekranie",
-    "editHint": "Przeciągaj elementy panelu bocznego, oko ukrywa zbędne. Bloki strony głównej są na ekranie „Graj”.",
+    "editHint": "Przesuwaj elementy panelu bocznego przeciąganiem lub strzałkami ↑ ↓, oko ukrywa zbędne. Esc anuluje.",
     "moreSettings": "Więcej ustawień",
     "reset": "Przywróć układ",
     "done": "Gotowe",
@@ -6841,8 +6841,6 @@
     "dockMore": "Jeszcze {{count}}",
     "dockMoreHint": "Wszystkie instancje są na ekranie „Graj”",
     "nowHint": "Tu pojawiają się pobierania, błędy i udostępnianie świata",
-    "moveUp": "Przesuń „{{name}}” wyżej",
-    "moveDown": "Przesuń „{{name}}” niżej",
     "groups": {
       "sidebar": "Panel boczny",
       "home": "Ekran „Graj”",
@@ -6859,7 +6857,8 @@
       "description": "Przypięte widać zawsze, resztę według ostatniego uruchomienia",
       "all": "Wszystkie",
       "hiddenCount": "Ukryte w panelu: {{count}}",
-      "showAll": "Pokaż wszystkie"
+      "showAll": "Pokaż wszystkie",
+      "shownAll": "Wszystkie instancje wróciły do panelu"
     },
     "home": {
       "title": "Ekran „Graj”",
@@ -6867,7 +6866,8 @@
       "description": "Karta ostatniej instancji nad listą",
       "hero": "Karta instancji",
       "stats": "Statystyki",
-      "continue": "„Kontynuuj”"
+      "continue": "„Kontynuuj”",
+      "needsHero": "Ten blok jest częścią karty instancji. Najpierw pokaż kartę"
     },
     "instance": {
       "defaultTab": "Karta przy otwarciu",
@@ -6903,7 +6903,11 @@
       }
     },
     "resetDone": "Układ zresetowany",
-    "hiddenDone": "Ukryto: „{{name}}”"
+    "hiddenDone": "Ukryto: „{{name}}”",
+    "restore": "Przywróć",
+    "reorder": "Przenieś „{{name}}”: przeciągnij lub naciśnij ↑ ↓",
+    "cancelHint": "Przywróć wszystko sprzed edycji · Esc",
+    "resetPart": "Zresetowano: „{{name}}”"
   },
   "theme": {
     "title": "Motyw interfejsu",
@@ -6916,7 +6920,7 @@
     "delete": "Usuń motyw",
     "saved": "Zapisano motyw „{{name}}”",
     "limit": "Możesz zapisać do {{count}} motywów",
-    "accentByTheme": "Akcent ustala motyw „{{name}}”. Aby wybrać kolor tutaj, wyłącz „Własny kolor akcentu” w edytorze motywu",
+    "accentByTheme": "Akcent ustala motyw „{{name}}”. Aby wybrać kolor tutaj, odznacz „Akcent” w edytorze motywu",
     "command": "Motyw: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
@@ -6927,7 +6931,6 @@
       "ownAccent": "Własny kolor akcentu motywu"
     },
     "editor": {
-      "title": "Edytor motywu",
       "livePreview": "zmiany od razu widać w całym launcherze, dopóki nie zapiszesz lub nie anulujesz",
       "name": "Nazwa",
       "mode": "Podstawa",
@@ -6941,7 +6944,6 @@
       "surface": "Panele",
       "foreground": "Tekst",
       "accent": "Akcent",
-      "ownAccent": "Własny kolor akcentu",
       "picture": "Obraz w tle",
       "pictureDescription": "PNG, JPG lub WEBP. Obraz zostaje na tym komputerze",
       "pick": "Wybierz obraz",
@@ -6968,13 +6970,15 @@
       "framing": "Widoczna część obrazu",
       "framingHint": "Przeciągnij, aby wybrać widoczną część",
       "framingCenter": "Wyśrodkuj",
-      "zones": "Kolory paneli",
-      "zonesDescription": "Pasek boczny i górny pasek mogą mieć własne kolory. Kolor tekstu dobiera się sam",
       "zone": {
         "sidebar": "Pasek boczny",
         "topbar": "Górny pasek"
       },
-      "zoneOwn": "Własny kolor"
+      "info": "Oznaczenia",
+      "ownColors": "Własne kolory",
+      "ownColorsDescription": "Zaznacz, aby samodzielnie ustawić kolor, inaczej pochodzi z bazy. Oznaczenia wskazują nowe, nieprzeczytane i zmienione",
+      "ownColor": "Własny kolor: {{name}}",
+      "unsaved": "Niezapisane zmiany"
     },
     "checks": {
       "text": "Tekst na panelach",
@@ -6984,7 +6988,8 @@
       "accent": "Akcent na panelach",
       "accentText": "Napis na przycisku",
       "sidebar": "Tekst na pasku bocznym",
-      "topbar": "Tekst na górnym pasku"
+      "topbar": "Tekst na górnym pasku",
+      "info": "Oznaczenia na panelach"
     },
     "transfer": {
       "export": "Zapisz do pliku",
@@ -7004,8 +7009,6 @@
       "codeNoPicture": "Obraz tła nie trafia do kodu. Zapisz motyw do pliku, aby go udostępnić"
     },
     "gallery": {
-      "tabs": "Źródło motywów",
-      "tabMine": "Moje motywy",
       "tab": "Galeria",
       "publish": "Opublikuj w galerii",
       "publishTitle": "Opublikować „{{name}}”?",
@@ -7014,7 +7017,7 @@
       "publishAction": "Opublikuj",
       "signIn": "Zaloguj się, aby publikować motywy w galerii",
       "published": "Wysłano „{{name}}” do sprawdzenia",
-      "publishedHint": "Status zobaczysz w karcie „Galeria”",
+      "publishedHint": "Status zobaczysz w galerii motywów, w sekcji „Moje publikacje”",
       "search": "Szukaj motywów",
       "modeLabel": "Baza",
       "sortLabel": "Sortowanie",
@@ -7064,9 +7067,12 @@
         "load": "Galeria się nie wczytała. Sprawdź połączenie",
         "notFound": "Nie znaleziono motywu: możliwe, że autor go usunął",
         "mineFailed": "Serwer Grubie nie zwrócił Twoich publikacji",
-        "loadFailed": "Serwer Grubie nie odpowiada — galeria motywów się nie wczytała"
+        "loadFailed": "Serwer Grubie nie odpowiada — galeria motywów się nie wczytała",
+        "installBroken": "Motyw dotarł niekompletny albo z obrazem w złym formacie"
       },
-      "unpublishQuestion": "Usunąć „{{name}}” z galerii?"
+      "unpublishQuestion": "Usunąć „{{name}}” z galerii?",
+      "open": "Galeria motywów",
+      "installing": "Instalowanie…"
     },
     "deleted": "Usunięto motyw „{{name}}”",
     "unsavedHint": "Motyw „{{name}}” nie jest zapisany. Jeśli wyjdziesz, zmiany przepadną."

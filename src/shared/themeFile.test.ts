@@ -83,6 +83,14 @@ describe("theme code", () => {
     expect(decoded?.colors).not.toHaveProperty("sidebar");
   });
 
+  it("carries the info colour after the panel colours and reads old codes", () => {
+    const withInfo = { ...theme, colors: { ...theme.colors, info: "#f2b84b" } };
+    const decoded = decodeThemeCode(encodeThemeCode(withInfo), "v");
+    expect(decoded?.colors.info).toBe("#f2b84b");
+    expect(decoded?.colors).not.toHaveProperty("topbar");
+    expect(decodeThemeCode(encodeThemeCode(theme), "u")?.colors).not.toHaveProperty("info");
+  });
+
   it("rejects garbage", () => {
     expect(decodeThemeCode("grubie-theme:%%%", "z")).toBeNull();
     expect(decodeThemeCode("grubie-theme:e30", "z")).toBeNull();

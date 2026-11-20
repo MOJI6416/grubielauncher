@@ -1,8 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useAtomValue } from "jotai";
 import {
-  ArrowDown,
-  ArrowUp,
   BookUser,
   Camera,
   LayoutGrid,
@@ -35,10 +33,7 @@ import {
   type TSettings,
 } from "@/types/Settings";
 import { Hint } from "@renderer/components/Hint";
-import {
-  instanceDockHiddenAtom,
-  updateInstancesFile,
-} from "@renderer/features/instances/instancesStore";
+import { instanceDockHiddenAtom } from "@renderer/features/instances/instancesStore";
 import {
   DEFAULT_TAB_CHOICES,
   HIDEABLE_TABS,
@@ -47,19 +42,21 @@ import {
   SIDEBAR_SECTIONS,
   isNavFixed,
   isSlotHidden,
-  moveNav,
   orderedNav,
   slotId,
   type NavSlot,
 } from "@renderer/features/layout/layout";
 import {
+  resetLayout,
+  resetLayoutPart,
+  setSlotVisible,
+  showWholeDock,
   startLayoutEditing,
-  toggleSlot,
   updateLayout,
   useLayout,
 } from "@renderer/features/layout/useLayout";
-import { LayoutChip } from "@renderer/features/layout/LayoutChip";
-import { SlotToggle } from "@renderer/features/layout/SlotToggle";
+import { SlotItem } from "@renderer/features/layout/SlotItem";
+import { ReorderHandle, useNavDrag } from "@renderer/features/layout/ReorderHandle";
 import { PresetCards } from "@renderer/features/layout/PresetCards";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
@@ -96,73 +93,41 @@ function clearPrefix(layout: InterfaceLayout, prefix: string): InterfaceLayout {
 function NavOrderList({ layout }: { layout: InterfaceLayout }) {
   const { t } = useTranslation();
   const order = orderedNav(layout);
+  const dragProps = useNavDrag();
 
   return (
-    <div className="mt-2.5 flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
+    <div className="mt-2.5 flex flex-col gap-1">
       {order.map((slot, index) => {
         const fixed = isNavFixed(slot);
-        const hidden = !fixed && isSlotHidden(layout, slotId.nav(slot));
+        const id = slotId.nav(slot);
+        const hidden = !fixed && isSlotHidden(layout, id);
         const label = t(NAV_LABELS[slot]);
 
         return (
-          <div
+          <SlotItem
             key={slot}
-            className="flex h-9 items-center gap-2.5 bg-surface-2 px-2.5"
-          >
-            <span className="shrink-0 text-faint">{NAV_ICONS[slot]}</span>
-            <Hint content={label} variant="text" truncatedOnly>
-              <span
-                className={`min-w-0 flex-1 truncate text-sm ${hidden ? "text-faint" : "text-foreground"}`}
-              >
-                {label}
-              </span>
-            </Hint>
-            <Hint
-              content={
-                index === 0 ? undefined : t("layout.moveUp", { name: label })
-              }
-            >
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                disabled={index === 0}
-                aria-label={t("layout.moveUp", { name: label })}
-                onClick={() => updateLayout((current) => moveNav(current, slot, -1))}
-              >
-                <ArrowUp />
-              </Button>
-            </Hint>
-            <Hint
-              content={
-                index === order.length - 1
-                  ? undefined
-                  : t("layout.moveDown", { name: label })
-              }
-            >
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                disabled={index === order.length - 1}
-                aria-label={t("layout.moveDown", { name: label })}
-                onClick={() => updateLayout((current) => moveNav(current, slot, 1))}
-              >
-                <ArrowDown />
-              </Button>
-            </Hint>
-            {fixed ? (
-              <Hint content={t("layout.alwaysVisible")}>
-                <span className="flex size-6 shrink-0 items-center justify-center text-faint">
-                  <Lock className="size-3.5" />
-                </span>
-              </Hint>
-            ) : (
-              <SlotToggle
-                hidden={hidden}
-                label={label}
-                onToggle={() => toggleSlot(slotId.nav(slot), !hidden)}
-              />
-            )}
-          </div>
+            {...dragProps(slot)}
+            className="pl-1"
+            label={label}
+            hidden={hidden}
+            icon={NAV_ICONS[slot]}
+            lead={
+              <ReorderHandle slot={slot} label={label} index={index} count={order.length} />
+            }
+            onToggle={fixed ? undefined : () => setSlotVisible(id, label, hidden)}
+            trail={
+              fixed ? (
+                <Hint content={t("layout.alwaysVisible")}>
+                  <span
+                    aria-label={t("layout.alwaysVisible")}
+                    className="flex size-6 shrink-0 items-center justify-center text-faint"
+                  >
+                    <Lock className="size-3.5" />
+                  </span>
+                </Hint>
+              ) : undefined
+            }
+          />
         );
       })}
     </div>
@@ -189,19 +154,20 @@ export function LayoutSection({
   const dockHidden = useAtomValue(instanceDockHiddenAtom);
   const isHeroHidden = isSlotHidden(layout, slotId.home("hero"));
 
-  const chips = (
+  const slots = (
     ids: { id: string; label: string; disabled?: boolean }[],
   ) => (
-    <div className="mt-2.5 flex flex-wrap gap-1.5">
+    <div className="mt-2.5 grid grid-cols-3 gap-1.5">
       {ids.map(({ id, label, disabled }) => {
         const hidden = isSlotHidden(layout, id);
         return (
-          <LayoutChip
+          <SlotItem
             key={id}
             label={label}
             hidden={hidden}
             disabled={disabled}
-            onToggle={() => toggleSlot(id, !hidden)}
+            disabledReason={t("layout.home.needsHero")}
+            onToggle={() => setSlotVisible(id, label, hidden)}
           />
         );
       })}
@@ -229,7 +195,7 @@ export function LayoutSection({
             description={t("layout.customizeDescription")}
             query={query}
             changed={isChanged("layoutCustomize")}
-            onReset={() => reset("layoutCustomize")}
+            onReset={resetLayout}
             control={
               <Button variant="secondary" size="sm" onClick={startLayoutEditing}>
                 <LayoutTemplate />
@@ -306,14 +272,14 @@ export function LayoutSection({
             query={query}
             changed={layout.navOrder.length > 0 || hasPrefix(layout, "sidebar.")}
             onReset={() =>
-              updateLayout((current) => ({
+              resetLayoutPart(t("layout.sidebar.title"), (current) => ({
                 ...clearPrefix(current, "sidebar."),
                 navOrder: [],
               }))
             }
           >
             <NavOrderList layout={layout} />
-            {chips(
+            {slots(
               SIDEBAR_SECTIONS.map((section) => ({
                 id: slotId.section(section),
                 label: t(`layout.sidebar.${section}`),
@@ -330,7 +296,7 @@ export function LayoutSection({
             query={query}
             changed={layout.dockLimit !== DEFAULT_INTERFACE_LAYOUT.dockLimit}
             onReset={() =>
-              updateLayout((current) => ({
+              resetLayoutPart(t("layout.dock.title"), (current) => ({
                 ...current,
                 dockLimit: DEFAULT_INTERFACE_LAYOUT.dockLimit,
               }))
@@ -359,13 +325,7 @@ export function LayoutSection({
                   variant="ghost"
                   size="sm"
                   className="h-6 px-2 text-xs"
-                  onClick={() =>
-                    updateInstancesFile((file) => {
-                      const next = { ...file };
-                      delete next.dockHidden;
-                      return next;
-                    })
-                  }
+                  onClick={showWholeDock}
                 >
                   {t("layout.dock.showAll")}
                 </Button>
@@ -428,9 +388,13 @@ export function LayoutSection({
             description={t("layout.home.description")}
             query={query}
             changed={hasPrefix(layout, "home.")}
-            onReset={() => updateLayout((current) => clearPrefix(current, "home."))}
+            onReset={() =>
+              resetLayoutPart(t("layout.home.rowTitle"), (current) =>
+                clearPrefix(current, "home."),
+              )
+            }
           >
-            {chips(
+            {slots(
               HOME_BLOCKS.map((block) => ({
                 id: slotId.home(block),
                 label: t(`layout.home.${block}`),
@@ -450,7 +414,7 @@ export function LayoutSection({
             query={query}
             changed={layout.instanceTab !== DEFAULT_INTERFACE_LAYOUT.instanceTab}
             onReset={() =>
-              updateLayout((current) => ({
+              resetLayoutPart(t("layout.instance.defaultTab"), (current) => ({
                 ...current,
                 instanceTab: DEFAULT_INTERFACE_LAYOUT.instanceTab,
               }))
@@ -486,10 +450,12 @@ export function LayoutSection({
             query={query}
             changed={hasPrefix(layout, "instance.tab.")}
             onReset={() =>
-              updateLayout((current) => clearPrefix(current, "instance.tab."))
+              resetLayoutPart(t("layout.instance.tabs"), (current) =>
+                clearPrefix(current, "instance.tab."),
+              )
             }
           >
-            {chips(
+            {slots(
               HIDEABLE_TABS.map((tab) => ({
                 id: slotId.tab(tab),
                 label: t(`shell.tabs.${tab}`),
@@ -505,9 +471,13 @@ export function LayoutSection({
             description={t("layout.instance.overviewDescription")}
             query={query}
             changed={hasPrefix(layout, "overview.")}
-            onReset={() => updateLayout((current) => clearPrefix(current, "overview."))}
+            onReset={() =>
+              resetLayoutPart(t("layout.instance.overview"), (current) =>
+                clearPrefix(current, "overview."),
+              )
+            }
           >
-            {chips(
+            {slots(
               OVERVIEW_CARDS.map((card) => ({
                 id: slotId.card(card),
                 label: t(`layout.overview.${card}`),

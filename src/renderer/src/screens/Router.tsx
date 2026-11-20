@@ -146,6 +146,7 @@ function RouteScreen({
       <Suspense fallback={<ScreenFallback />}>
         <LazySettingsScreen
           section={route.section}
+          view={route.view}
           onShowWhatsNew={onShowWhatsNew}
         />
       </Suspense>

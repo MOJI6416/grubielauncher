@@ -47,14 +47,13 @@ import {
   slotId,
 } from "@renderer/features/layout/layout";
 import {
-  hideFromDock,
   pinInDock,
-  toggleSlot,
+  setDockVisible,
+  setSlotVisible,
   useLayout,
   useLayoutEditing,
 } from "@renderer/features/layout/useLayout";
 import { SlotToggle } from "@renderer/features/layout/SlotToggle";
-import { showUndoToast } from "@renderer/utilities/undoToast";
 
 export function InstanceDock({
   runGame,
@@ -106,13 +105,6 @@ export function InstanceDock({
 
   const activeId = route.name === "instance" ? route.id : null;
 
-  const hideWithUndo = (key: string, name: string) => {
-    hideFromDock(key, true);
-    showUndoToast(t("layout.hiddenDone", { name }), () =>
-      hideFromDock(key, false),
-    );
-  };
-
   const dockActions = (key: string, name: string): InstanceAction[] => {
     const isPinned = pinned.includes(key);
     return [
@@ -126,7 +118,7 @@ export function InstanceDock({
         id: "dock-hide",
         label: t("layout.hideFromSidebar"),
         icon: EyeOff,
-        onSelect: () => hideWithUndo(key, name),
+        onSelect: () => setDockVisible(key, name, false),
       },
     ];
   };
@@ -174,7 +166,13 @@ export function InstanceDock({
           <SlotToggle
             hidden={isSectionHidden}
             label={t("shell.nav.instances")}
-            onToggle={() => toggleSlot(slotId.section("dock"), !isSectionHidden)}
+            onToggle={() =>
+              setSlotVisible(
+                slotId.section("dock"),
+                t("shell.nav.instances"),
+                isSectionHidden,
+              )
+            }
             className="ml-auto"
           />
         )}
@@ -260,7 +258,9 @@ export function InstanceDock({
                   <SlotToggle
                     hidden={isHiddenHere}
                     label={instance.version.name}
-                    onToggle={() => hideFromDock(key, !isHiddenHere)}
+                    onToggle={() =>
+                      setDockVisible(key, instance.version.name, isHiddenHere)
+                    }
                   />
                 </div>
               );

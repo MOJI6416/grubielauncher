@@ -6713,7 +6713,7 @@
     "customize": "Oberfläche anpassen",
     "customizeAction": "Anpassen",
     "customizeDescription": "Einträge der Seitenleiste direkt am Bildschirm verschieben und ausblenden",
-    "editHint": "Einträge der Seitenleiste verschieben, das Auge blendet Unnötiges aus. Blöcke der Startseite gibt es auf „Spielen“.",
+    "editHint": "Einträge der Seitenleiste per Ziehen oder mit ↑ ↓ verschieben, das Auge blendet Unnötiges aus. Esc bricht ab.",
     "moreSettings": "Weitere Einstellungen",
     "reset": "Anordnung zurücksetzen",
     "done": "Fertig",
@@ -6722,8 +6722,6 @@
     "dockMore": "{{count}} weitere",
     "dockMoreHint": "Alle Instanzen findest du auf „Spielen“",
     "nowHint": "Hier erscheinen Downloads, Fehler und Weltfreigabe",
-    "moveUp": "„{{name}}“ nach oben",
-    "moveDown": "„{{name}}“ nach unten",
     "groups": {
       "sidebar": "Seitenleiste",
       "home": "„Spielen“",
@@ -6740,7 +6738,8 @@
       "description": "Angeheftete sind immer sichtbar, der Rest nach letztem Start",
       "all": "Alle",
       "hiddenCount": "Ausgeblendet: {{count}}",
-      "showAll": "Alle anzeigen"
+      "showAll": "Alle anzeigen",
+      "shownAll": "Alle Instanzen sind wieder in der Seitenleiste"
     },
     "home": {
       "title": "„Spielen“",
@@ -6748,7 +6747,8 @@
       "description": "Karte der letzten Instanz über der Liste",
       "hero": "Instanzkarte",
       "stats": "Statistik",
-      "continue": "„Weiterspielen“"
+      "continue": "„Weiterspielen“",
+      "needsHero": "Dieser Block gehört zur Instanzkarte. Blenden Sie zuerst die Karte ein"
     },
     "instance": {
       "defaultTab": "Tab beim Öffnen",
@@ -6784,7 +6784,11 @@
       }
     },
     "resetDone": "Layout zurückgesetzt",
-    "hiddenDone": "Ausgeblendet: „{{name}}“"
+    "hiddenDone": "Ausgeblendet: „{{name}}“",
+    "restore": "Zurückholen",
+    "reorder": "„{{name}}“ verschieben: ziehen oder ↑ ↓ drücken",
+    "cancelHint": "Alles wie vor der Bearbeitung · Esc",
+    "resetPart": "Zurückgesetzt: „{{name}}“"
   },
   "theme": {
     "title": "Design der Oberfläche",
@@ -6797,7 +6801,7 @@
     "delete": "Design löschen",
     "saved": "Design „{{name}}“ gespeichert",
     "limit": "Sie können bis zu {{count}} Designs speichern",
-    "accentByTheme": "Das Design „{{name}}“ bestimmt die Akzentfarbe. Um hier eine Farbe zu wählen, schalten Sie „Eigene Akzentfarbe“ im Design-Editor aus",
+    "accentByTheme": "Das Design „{{name}}“ bestimmt die Akzentfarbe. Um hier eine Farbe zu wählen, entfernen Sie im Design-Editor den Haken bei „Akzent“",
     "command": "Design: {{name}}",
     "builtIn": {
       "grubie": "Grubie",
@@ -6808,7 +6812,6 @@
       "ownAccent": "Eigene Akzentfarbe des Designs"
     },
     "editor": {
-      "title": "Design-Editor",
       "livePreview": "Änderungen sind sofort im ganzen Launcher sichtbar, bis Sie speichern oder abbrechen",
       "name": "Name",
       "mode": "Grundlage",
@@ -6822,7 +6825,6 @@
       "surface": "Flächen",
       "foreground": "Text",
       "accent": "Akzent",
-      "ownAccent": "Eigene Akzentfarbe",
       "picture": "Hintergrundbild",
       "pictureDescription": "PNG, JPG oder WEBP. Das Bild bleibt auf diesem Computer",
       "pick": "Bild wählen",
@@ -6849,13 +6851,15 @@
       "framing": "Sichtbarer Bildausschnitt",
       "framingHint": "Ziehen Sie, um den sichtbaren Ausschnitt zu wählen",
       "framingCenter": "Zentrieren",
-      "zones": "Farben der Leisten",
-      "zonesDescription": "Seitenleiste und obere Leiste können eigene Farben haben. Die Textfarbe passt sich automatisch an",
       "zone": {
         "sidebar": "Seitenleiste",
         "topbar": "Obere Leiste"
       },
-      "zoneOwn": "Eigene Farbe"
+      "info": "Markierungen",
+      "ownColors": "Eigene Farben",
+      "ownColorsDescription": "Haken setzen, um die Farbe selbst festzulegen, sonst kommt sie aus der Basis. Markierungen zeigen Neues, Ungelesenes und Geändertes",
+      "ownColor": "Eigene Farbe: {{name}}",
+      "unsaved": "Ungespeicherte Änderungen"
     },
     "checks": {
       "text": "Text auf Flächen",
@@ -6865,7 +6869,8 @@
       "accent": "Akzent auf Flächen",
       "accentText": "Schrift auf Schaltflächen",
       "sidebar": "Text in der Seitenleiste",
-      "topbar": "Text in der oberen Leiste"
+      "topbar": "Text in der oberen Leiste",
+      "info": "Markierungen auf Flächen"
     },
     "transfer": {
       "export": "Als Datei speichern",
@@ -6885,8 +6890,6 @@
       "codeNoPicture": "Das Hintergrundbild ist nicht im Code. Speichern Sie das Design als Datei, um es zu teilen"
     },
     "gallery": {
-      "tabs": "Design-Quelle",
-      "tabMine": "Meine Designs",
       "tab": "Galerie",
       "publish": "In der Galerie veröffentlichen",
       "publishTitle": "„{{name}}“ veröffentlichen?",
@@ -6895,7 +6898,7 @@
       "publishAction": "Veröffentlichen",
       "signIn": "Melden Sie sich an, um Designs in der Galerie zu veröffentlichen",
       "published": "„{{name}}“ zur Prüfung gesendet",
-      "publishedHint": "Den Status sehen Sie im Tab „Galerie“",
+      "publishedHint": "Den Status sehen Sie in der Design-Galerie unter „Meine Veröffentlichungen“",
       "search": "Designs suchen",
       "modeLabel": "Basis",
       "sortLabel": "Sortierung",
@@ -6945,9 +6948,12 @@
         "load": "Die Galerie wurde nicht geladen. Prüfen Sie die Internetverbindung",
         "notFound": "Design nicht gefunden: Vielleicht hat der Autor es entfernt",
         "mineFailed": "Der Grubie-Server hat Ihre Veröffentlichungen nicht geliefert",
-        "loadFailed": "Der Grubie-Server antwortet nicht — die Design-Galerie wurde nicht geladen"
+        "loadFailed": "Der Grubie-Server antwortet nicht — die Design-Galerie wurde nicht geladen",
+        "installBroken": "Das Design kam unvollständig oder mit einem Bild im falschen Format an"
       },
-      "unpublishQuestion": "„{{name}}“ aus der Galerie entfernen?"
+      "unpublishQuestion": "„{{name}}“ aus der Galerie entfernen?",
+      "open": "Design-Galerie",
+      "installing": "Wird installiert…"
     },
     "deleted": "Design „{{name}}“ gelöscht",
     "unsavedHint": "Das Design „{{name}}“ ist nicht gespeichert. Wenn Sie gehen, gehen die Änderungen verloren."
