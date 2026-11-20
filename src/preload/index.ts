@@ -308,6 +308,11 @@ import {
   IpcFailurePayload,
   readIpcFailureEnvelope,
 } from "@/shared/ipcFailureEnvelope";
+import type {
+  CompanionSession,
+  CompanionSupport,
+  CompanionToast,
+} from "@/shared/companion";
 
 export type UpdaterStatus =
   | "checking"
@@ -1560,6 +1565,25 @@ export interface IElectronAPI {
       token?: string,
     ) => Promise<ModTranslationStatus>;
     onStatus: (callback: (status: ModTranslationStatus) => void) => () => void;
+  };
+  companion: {
+    support: (minecraft: string, loader: string) => Promise<CompanionSupport>;
+    sync: (
+      versionPath: string,
+      enabled: boolean,
+      minecraft: string,
+      loader: string,
+    ) => Promise<boolean>;
+    sessions: () => Promise<CompanionSession[]>;
+    setToasts: (items: CompanionToast[]) => Promise<void>;
+    connect: (
+      versionName: string,
+      instance: number,
+      address: string,
+      name: string,
+    ) => Promise<boolean>;
+    onStatus: (callback: (sessions: CompanionSession[]) => void) => () => void;
+    onAccept: (callback: (id: string) => void) => () => void;
   };
   sharedSettings: {
     status: (ref: SharedInstanceRef) => Promise<SharedInstanceStatus>;
@@ -3002,6 +3026,42 @@ export const api: IElectronAPI = {
       };
       ipcRenderer.on("modTranslations:status", listener);
       return () => ipcRenderer.off("modTranslations:status", listener);
+    },
+  },
+  companion: {
+    support: (minecraft: string, loader: string) =>
+      invoke("companion:support", minecraft, loader),
+    sync: (
+      versionPath: string,
+      enabled: boolean,
+      minecraft: string,
+      loader: string,
+    ) => invoke("companion:sync", versionPath, enabled, minecraft, loader),
+    sessions: () => invoke("companion:sessions"),
+    setToasts: (items: CompanionToast[]) =>
+      invoke("companion:setToasts", items),
+    connect: (
+      versionName: string,
+      instance: number,
+      address: string,
+      name: string,
+    ) => invoke("companion:connect", versionName, instance, address, name),
+    onStatus: (callback: (sessions: CompanionSession[]) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        sessions: CompanionSession[],
+      ) => {
+        callback(sessions);
+      };
+      ipcRenderer.on("companion:status", listener);
+      return () => ipcRenderer.off("companion:status", listener);
+    },
+    onAccept: (callback: (id: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, id: string) => {
+        callback(id);
+      };
+      ipcRenderer.on("companion:accept", listener);
+      return () => ipcRenderer.off("companion:accept", listener);
     },
   },
   sharedSettings: {

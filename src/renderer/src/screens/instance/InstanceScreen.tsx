@@ -65,6 +65,7 @@ import {
   ModTranslationRow,
   canTranslateMods,
 } from "@renderer/features/instances/ModTranslationRow";
+import { CompanionModRow } from "@renderer/features/companion/CompanionModRow";
 import {
   effectiveJava,
   instanceRequiredJava,
@@ -784,6 +785,12 @@ export function InstanceScreen({
                         <OptiFineSettingsRow
                           conf={version.version}
                           onOpen={() => setIsOptiFinePanelOpen(true)}
+                        />
+                        <CompanionModRow
+                          instance={version}
+                          disabled={
+                            isLoading || isVersionRunning || isForeignInstance
+                          }
                         />
                       </>
                     }

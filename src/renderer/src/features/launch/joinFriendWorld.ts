@@ -281,6 +281,33 @@ export async function joinFriendWorld(
         return;
       }
 
+      const running = store
+        .get(consolesAtom)
+        .consoles.find(
+          (entry) =>
+            entry.versionName === version!.version.name &&
+            entry.status === "running",
+        );
+      const joinedInGame = running
+        ? await api.companion
+            .connect(
+              running.versionName,
+              running.instance,
+              address,
+              t0("friends.joinFlow.serverEntryName", {
+                nickname: params.hostNickname,
+              }),
+            )
+            .catch(() => false)
+        : false;
+      if (joinedInGame) {
+        toast.success(
+          t0("companion.joining", { nickname: params.hostNickname }),
+          { id: toastId },
+        );
+        return;
+      }
+
       toast.success(t0("friends.joinFlow.alreadyRunning"), {
         id: toastId,
         duration: 10000,

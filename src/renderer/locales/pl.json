@@ -7968,5 +7968,20 @@
       "sodiumAdded": "Zostaną zainstalowane Sodium i Iris",
       "sodiumFailed": "Nie znaleziono Sodium i Iris dla tej wersji"
     }
+  },
+  "companion": {
+    "title": "Mod towarzyszący",
+    "toggle": "Dodawaj mod towarzyszący",
+    "hintOff": "Zaproszenia, wiadomości od znajomych i panel „Grajcie razem” prosto w grze",
+    "hintOn": "Wersja {{version}} jest instalowana przy każdym uruchomieniu. W grze: klawisz G lub przycisk Grubie w menu pauzy",
+    "toggleFailed": "Nie udało się przełączyć moda towarzyszącego",
+    "joining": "Łączenie ze światem {{nickname}} prosto w grze",
+    "servers": {
+      "none": "Postęp na serwerach liczy się tylko z modem towarzyszącym. Włącz go w ustawieniach instancji",
+      "counted_one": "Uwzględniono postęp z {{count}} serwera przez mod towarzyszący",
+      "counted_few": "Uwzględniono postęp z {{count}} serwerów przez mod towarzyszący",
+      "counted_many": "Uwzględniono postęp z {{count}} serwerów przez mod towarzyszący",
+      "counted_other": "Uwzględniono postęp z {{count}} serwera przez mod towarzyszący"
+    }
   }
 }

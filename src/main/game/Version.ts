@@ -179,6 +179,7 @@ import {
   stripOptiFineLayer,
   vanillaOptiFine,
 } from "./optifine";
+import { prepareCompanionLaunch } from "../companion/launch";
 
 type VersionInstallRuntimeOptions = VersionInstallOptions & {
   signal?: AbortSignal;
@@ -2216,6 +2217,12 @@ export class Version {
 
       await this.ensureJarModAsm();
       await this.ensureLwjglAgent();
+      const companionEnv = await prepareCompanionLaunch(
+        this.versionPath,
+        this.version,
+        this.version.name,
+        instance,
+      );
 
       const command = await this.getRunCommand(
         account,
@@ -2298,6 +2305,7 @@ export class Version {
         ...(legacyHome?.env ?? {}),
         ...gpu.env,
         ...(linux?.env ?? {}),
+        ...companionEnv,
       };
       const hookContext: LaunchHookContext = {
         instanceName: this.version.name,

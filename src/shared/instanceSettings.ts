@@ -126,11 +126,12 @@ export function clearOverride(
   return countOverrides(next) > 0 ? next : undefined
 }
 
-export function withoutOverrides<T extends { overrides?: unknown }>(
-  conf: T
-): Omit<T, 'overrides'> {
+export function withoutOverrides<
+  T extends { overrides?: unknown; companionMod?: boolean }
+>(conf: T): Omit<T, 'overrides' | 'companionMod'> {
   const copy = { ...conf }
   delete copy.overrides
+  delete copy.companionMod
   return copy
 }
 

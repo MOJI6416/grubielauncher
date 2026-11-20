@@ -20,6 +20,7 @@ export class WorldStatsUnreadableError extends Error {
 export interface MergedAchievementStats {
   stats: IAchievementStats;
   partial: boolean;
+  servers: number;
 }
 
 export async function fetchMergedAchievementStats(
@@ -33,9 +34,10 @@ export async function fetchMergedAchievementStats(
   };
 
   let partial = local.partial === true;
+  const servers = local.servers ?? 0;
 
   const token = account.accessToken;
-  if (!token) return { stats: merged, partial };
+  if (!token) return { stats: merged, partial, servers };
 
   try {
     const remote = await api.backend.getRemoteStats(token);
@@ -58,5 +60,5 @@ export async function fetchMergedAchievementStats(
     partial = true;
   }
 
-  return { stats: merged, partial };
+  return { stats: merged, partial, servers };
 }

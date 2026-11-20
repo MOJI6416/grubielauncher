@@ -55,6 +55,7 @@ import {
 } from "./achievementVisuals";
 import { reachPercentParts } from "./profileMetrics";
 import { ensureFreshAccount } from "./loadProfileUser";
+import { ServerProgressNote } from "@renderer/features/companion/ServerProgressNote";
 
 const api = window.api;
 
@@ -291,6 +292,8 @@ export function ProfileAchievements({
           </Hint>
         </div>
       </div>
+
+      {isOwner && <ServerProgressNote />}
 
       {(statsFailed || statsPartial) && (
         <div className="flex shrink-0 items-center gap-2 rounded-lg border border-warning/40 bg-surface-2 px-3 py-2">

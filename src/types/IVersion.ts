@@ -58,6 +58,7 @@ export interface IVersionConf {
   modpack?: IModpackSource
   updateChannel?: UpdateChannel
   optifine?: OptiFineChoice
+  companionMod?: boolean
 }
 
 export interface VersionDeleteResult {

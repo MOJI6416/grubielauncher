@@ -7871,5 +7871,19 @@
       "sodiumAdded": "Se instalarán Sodium e Iris",
       "sodiumFailed": "No se encontraron Sodium e Iris para esta versión"
     }
+  },
+  "companion": {
+    "title": "Mod complementario",
+    "toggle": "Añadir el mod complementario",
+    "hintOff": "Invitaciones, mensajes de amigos y el panel «Jugar en compañía» dentro del juego",
+    "hintOn": "La versión {{version}} se instala en cada inicio. En el juego: la tecla G o el botón Grubie del menú de pausa",
+    "toggleFailed": "No se pudo cambiar el mod complementario",
+    "joining": "Conectando al mundo de {{nickname}} dentro del juego",
+    "servers": {
+      "none": "El progreso en servidores solo cuenta con el mod complementario. Actívelo en los ajustes de la instancia",
+      "counted_one": "Se cuenta el progreso de {{count}} servidor mediante el mod complementario",
+      "counted_many": "Se cuenta el progreso de {{count}} servidores mediante el mod complementario",
+      "counted_other": "Se cuenta el progreso de {{count}} servidores mediante el mod complementario"
+    }
   }
 }

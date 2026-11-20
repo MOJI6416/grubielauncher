@@ -7779,5 +7779,18 @@
       "sodiumAdded": "Sodium ve Iris kurulacak",
       "sodiumFailed": "Bu sürüm için Sodium ve Iris bulunamadı"
     }
+  },
+  "companion": {
+    "title": "Yardımcı mod",
+    "toggle": "Yardımcı modu ekle",
+    "hintOff": "Davetler, arkadaş mesajları ve Birlikte oyna paneli doğrudan oyunda",
+    "hintOn": "{{version}} sürümü her başlatmada kurulur. Oyunda: G tuşu veya duraklatma menüsündeki Grubie düğmesi",
+    "toggleFailed": "Yardımcı mod değiştirilemedi",
+    "joining": "{{nickname}} adlı oyuncunun dünyasına oyunda bağlanılıyor",
+    "servers": {
+      "none": "Sunuculardaki ilerleme yalnızca yardımcı modla sayılır. Onu örnek ayarlarından açın",
+      "counted_one": "{{count}} sunucudaki ilerleme yardımcı mod üzerinden sayıldı",
+      "counted_other": "{{count}} sunucudaki ilerleme yardımcı mod üzerinden sayıldı"
+    }
   }
 }

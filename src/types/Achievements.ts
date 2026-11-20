@@ -25,6 +25,7 @@ export interface IAchievementStatsResult {
   stats: IAchievementStats
   worldKeys: string[]
   partial?: boolean
+  servers?: number
 }
 
 export interface IRemoteWorldStats {

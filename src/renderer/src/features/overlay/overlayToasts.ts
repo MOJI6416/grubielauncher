@@ -5,6 +5,7 @@ import {
   versionsAtom,
 } from "@renderer/stores/atoms";
 import { countFeature } from "@renderer/features/usage/usage";
+import { companionSessionsAtom } from "@renderer/features/companion/companionStore";
 import {
   type QueuedToast,
   isFullscreenOptions,
@@ -56,8 +57,17 @@ export async function canShowOverlayToast(): Promise<boolean> {
   return !(await isRunningGameFullscreen());
 }
 
+function canShowCompanionToast(): boolean {
+  const store = getDefaultStore();
+  return (
+    store.get(settingsAtom).overlayToasts &&
+    !document.hasFocus() &&
+    store.get(companionSessionsAtom).length > 0
+  );
+}
+
 export async function showOverlayToast(input: ToastInput): Promise<boolean> {
-  if (!(await canShowOverlayToast())) return false;
+  if (!canShowCompanionToast() && !(await canShowOverlayToast())) return false;
 
   const store = getDefaultStore();
   store.set(overlayToastsAtom, (list) =>
@@ -74,17 +84,19 @@ export function dismissOverlayToast(id: string) {
   );
 }
 
-export function acceptOverlayToast(): boolean {
+export function acceptOverlayToast(id?: string): boolean {
   const store = getDefaultStore();
   const list = pruneToasts(store.get(overlayToastsAtom), Date.now());
-  const target = latestActionable(list);
+  const target = id
+    ? list.find((toast) => toast.id === id && toast.accept)
+    : latestActionable(list);
   if (!target?.accept) return false;
 
   store.set(
     overlayToastsAtom,
     list.filter((toast) => toast.id !== target.id),
   );
-  countFeature("overlay.accept");
+  if (!id) countFeature("overlay.accept");
   target.accept();
   return true;
 }

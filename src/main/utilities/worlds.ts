@@ -24,6 +24,8 @@ import { deserialize } from "@xmcl/nbt";
 import { patchNbtString, readNbtString } from "./nbtPatch";
 import { WORLD_SOURCE_FILE, parseWorldSource } from "@/shared/worldSource";
 import { randomUUID } from "crypto";
+import { loadServerSnapshots } from "./serverStats";
+import { COMPANION_STATS_DIR } from "@/shared/companion";
 import path from "path";
 import fs from "fs-extra";
 import zlib from "zlib";
@@ -552,12 +554,11 @@ export async function loadGlobalAchievementStats(
 
   let versions: string[] = [];
   try {
-    if (!(await fs.pathExists(versionsPath))) {
-      return { stats, worldKeys: [], partial: false };
+    if (await fs.pathExists(versionsPath)) {
+      versions = await fs.readdir(versionsPath);
     }
-    versions = await fs.readdir(versionsPath);
   } catch {
-    return { stats, worldKeys: [], partial: true };
+    partial = true;
   }
 
   for (const version of versions) {
@@ -588,7 +589,20 @@ export async function loadGlobalAchievementStats(
     }
   }
 
-  return { stats, worldKeys: [...worldKeys], partial };
+  const servers = await loadServerSnapshots(
+    path.join(getLauncherPaths().launcher, COMPANION_STATS_DIR),
+    accountUUIDs,
+  );
+  for (const snapshot of servers.snapshots) {
+    stats = addAchievementStats(stats, reduceStatsToAchievementStats(snapshot.data));
+  }
+
+  return {
+    stats,
+    worldKeys: [...worldKeys],
+    partial: partial || servers.partial,
+    servers: servers.snapshots.length,
+  };
 }
 
 function sanitizeWorldFolderName(name: string) {

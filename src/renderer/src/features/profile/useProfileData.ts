@@ -30,7 +30,9 @@ export function useWorldStats(enabled: boolean) {
     staleTime: 5 * 60 * 1000,
     retry: false,
     queryFn: async () => {
-      if (!account) return { stats: EMPTY_ACHIEVEMENT_STATS, partial: false };
+      if (!account) {
+        return { stats: EMPTY_ACHIEVEMENT_STATS, partial: false, servers: 0 };
+      }
       return await fetchMergedAchievementStats(account);
     },
   });

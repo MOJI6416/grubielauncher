@@ -7875,5 +7875,19 @@
       "sodiumAdded": "Sodium et Iris seront installés",
       "sodiumFailed": "Sodium et Iris introuvables pour cette version"
     }
+  },
+  "companion": {
+    "title": "Mod compagnon",
+    "toggle": "Ajouter le mod compagnon",
+    "hintOff": "Invitations, messages d'amis et le panneau « Jouer ensemble » directement en jeu",
+    "hintOn": "La version {{version}} est installée à chaque lancement. En jeu : la touche G ou le bouton Grubie du menu pause",
+    "toggleFailed": "Impossible de changer le mod compagnon",
+    "joining": "Connexion au monde de {{nickname}} directement en jeu",
+    "servers": {
+      "none": "La progression sur les serveurs ne compte qu'avec le mod compagnon. Activez-le dans les paramètres de l'instance",
+      "counted_one": "La progression de {{count}} serveur est prise en compte via le mod compagnon",
+      "counted_many": "La progression de {{count}} serveurs est prise en compte via le mod compagnon",
+      "counted_other": "La progression de {{count}} serveurs est prise en compte via le mod compagnon"
+    }
   }
 }

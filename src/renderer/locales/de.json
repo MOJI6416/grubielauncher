@@ -7779,5 +7779,18 @@
       "sodiumAdded": "Sodium und Iris werden installiert",
       "sodiumFailed": "Sodium und Iris wurden für diese Version nicht gefunden"
     }
+  },
+  "companion": {
+    "title": "Begleit-Mod",
+    "toggle": "Begleit-Mod hinzufügen",
+    "hintOff": "Einladungen, Nachrichten von Freunden und das Panel „Zusammen spielen“ direkt im Spiel",
+    "hintOn": "Version {{version}} wird bei jedem Start installiert. Im Spiel: Taste G oder die Schaltfläche Grubie im Pausenmenü",
+    "toggleFailed": "Der Begleit-Mod konnte nicht umgeschaltet werden",
+    "joining": "Verbindung zur Welt von {{nickname}} direkt im Spiel",
+    "servers": {
+      "none": "Fortschritt auf Servern zählt nur mit dem Begleit-Mod. Schalten Sie ihn in den Einstellungen der Instanz ein",
+      "counted_one": "Fortschritt von {{count}} Server wird über den Begleit-Mod gezählt",
+      "counted_other": "Fortschritt von {{count}} Servern wird über den Begleit-Mod gezählt"
+    }
   }
 }

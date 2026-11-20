@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
   accountAtom,
@@ -34,6 +34,8 @@ import {
   type VoiceOverlayState,
 } from "@/types/Voice";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
+import { companionSessionsAtom } from "@renderer/features/companion/companionStore";
+import type { CompanionToast } from "@/shared/companion";
 
 export function VoiceOverlayHost() {
   const { t } = useTranslation();
@@ -49,6 +51,9 @@ export function VoiceOverlayHost() {
   const skinVersion = useAtomValue(rpcSkinVersionAtom);
   const faceOf = useFaceLookup();
   const isGameRunning = consoles.some((meta) => meta.status === "running");
+  const companionSessions = useAtomValue(companionSessionsAtom);
+  const setCompanionSessions = useSetAtom(companionSessionsAtom);
+  const companionLive = companionSessions.length > 0;
   const sentRef = useRef<VoiceOverlayState>(HIDDEN_VOICE_OVERLAY);
   const acceptRef = useRef("");
 
@@ -112,20 +117,62 @@ export function VoiceOverlayHost() {
       .catch(ignoreFailure);
   }, [acceptBind, actionable]);
 
-  useEffect(() => window.api.voice.onOverlayAccept(acceptOverlayToast), []);
+  useEffect(() => window.api.voice.onOverlayAccept(() => acceptOverlayToast()), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void window.api.companion
+      .sessions()
+      .then((sessions) => {
+        if (!cancelled) setCompanionSessions(sessions);
+      })
+      .catch(ignoreFailure);
+    const offStatus = window.api.companion.onStatus(setCompanionSessions);
+    const offAccept = window.api.companion.onAccept((id) => {
+      acceptOverlayToast(id);
+    });
+    return () => {
+      cancelled = true;
+      offStatus();
+      offAccept();
+    };
+  }, [setCompanionSessions]);
+
+  useEffect(() => {
+    const items: CompanionToast[] = companionLive
+      ? queued.map((toast) => ({
+          id: toast.id,
+          kind: toast.kind,
+          title: toast.title,
+          body: toast.body(toast.count),
+          count: toast.count,
+          actionable: Boolean(toast.accept),
+        }))
+      : [];
+    void window.api.companion.setToasts(items).catch(ignoreFailure);
+  }, [companionLive, queued]);
 
   useEffect(() => {
     const placement = { corner, displayId };
     const next = withOverlayToasts(
       buildOverlayState(session, isGameRunning, isEnabled, headUrlOf, placement),
-      toasts,
+      companionLive ? [] : toasts,
       isGameRunning,
       placement,
     );
     if (sameOverlayState(sentRef.current, next)) return;
     sentRef.current = next;
     void window.api.voice.updateOverlay(next).catch(ignoreFailure);
-  }, [session, isGameRunning, isEnabled, headUrlOf, corner, displayId, toasts]);
+  }, [
+    session,
+    isGameRunning,
+    isEnabled,
+    headUrlOf,
+    corner,
+    displayId,
+    toasts,
+    companionLive,
+  ]);
 
   return null;
 }
