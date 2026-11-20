@@ -54,3 +54,33 @@ export function resolveActiveTab(
   if (requested && tabs.some((tab) => tab.id === requested)) return requested;
   return "overview";
 }
+
+export function fitTabs(
+  widths: number[],
+  activeIndex: number,
+  available: number,
+  moreWidth: number,
+): number[] {
+  const all = widths.map((_, index) => index);
+  const total = widths.reduce((sum, width) => sum + width, 0);
+  if (total <= available) return all;
+
+  const room = available - moreWidth;
+  const shown: number[] = [];
+  let used = 0;
+  for (const index of all) {
+    if (used + widths[index] > room) break;
+    shown.push(index);
+    used += widths[index];
+  }
+
+  if (activeIndex < 0 || activeIndex >= widths.length) return shown;
+  if (shown.includes(activeIndex)) return shown;
+
+  while (shown.length > 0 && used + widths[activeIndex] > room) {
+    const last = shown.pop();
+    if (last === undefined) break;
+    used -= widths[last];
+  }
+  return [...shown, activeIndex];
+}

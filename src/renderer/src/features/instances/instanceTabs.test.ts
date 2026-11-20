@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildInstanceTabs, resolveActiveTab } from "./instanceTabs";
+import { buildInstanceTabs, fitTabs, resolveActiveTab } from "./instanceTabs";
 
 const base = {
   contentCount: 0,
@@ -113,5 +113,25 @@ describe("resolveActiveTab", () => {
     expect(resolveActiveTab(buildInstanceTabs(base), undefined)).toBe(
       "overview",
     );
+  });
+});
+
+describe("fitTabs", () => {
+  const widths = [80, 90, 100, 70, 110, 120];
+
+  it("shows every tab when they all fit, without the more button", () => {
+    expect(fitTabs(widths, 0, 570, 60)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  it("keeps the leading tabs that fit next to the more button", () => {
+    expect(fitTabs(widths, 1, 400, 60)).toEqual([0, 1, 2, 3]);
+  });
+
+  it("keeps the open tab on the bar when it would overflow", () => {
+    expect(fitTabs(widths, 5, 400, 60)).toEqual([0, 1, 5]);
+  });
+
+  it("shows only the open tab when nothing else fits", () => {
+    expect(fitTabs(widths, 4, 150, 60)).toEqual([4]);
   });
 });
