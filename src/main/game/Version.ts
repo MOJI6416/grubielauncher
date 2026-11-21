@@ -13,6 +13,7 @@ import { gameJavaArch } from "./javaArch";
 import { assertRosettaFor } from "../utilities/rosetta";
 import type { ResolvedJava } from "@/shared/javaRuntime";
 import { buildQuickPlayArguments } from "./quickPlayArgs";
+import { readDefaultOptions, withOption } from "./defaultOptions";
 import { IFabricManifest } from "@/types/IFabricManifest";
 import { IInstallProfile } from "@/types/IInstallProfile";
 import { DownloadItem } from "@/types/Downloader";
@@ -1248,12 +1249,14 @@ export class Version {
       this.sendInstallProgress("options", 94, false);
       const lang = LANGUAGES.find((l) => l.code == settings.lang);
       if (lang) {
+        const code = getFullLangCode(
+          lang,
+          usesUppercaseLangCode(this.version.version.id),
+        );
+        const defaults = await readDefaultOptions(this.versionPath);
         await fs.writeFile(
           optionsPath,
-          `lang:${getFullLangCode(
-            lang,
-            usesUppercaseLangCode(this.version.version.id),
-          )}`,
+          defaults === null ? `lang:${code}` : withOption(defaults, "lang", code),
           "utf-8",
         );
       }
