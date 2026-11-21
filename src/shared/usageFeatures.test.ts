@@ -28,7 +28,7 @@ function apiIds(): string[] {
 }
 
 function dashboardIds(): string[] {
-  const source = readFileSync(DASHBOARD_LABELS, "utf8");
+  const source = readFileSync(DASHBOARD_LABELS, "utf8").replace(/\r\n/g, "\n");
   const map = block(source, "export const FEATURES", "\n}\n");
   return [...map.matchAll(/^\s*'([^']+)':\s*\{/gm)].map((match) => match[1]);
 }
