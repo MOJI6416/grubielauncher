@@ -3117,6 +3117,7 @@
       "noWebgl": "3B görünüm kullanılamıyor",
       "noWebglHint": "Ekran kartı veya sürücüsü WebGL 2 desteklemiyor. Malzeme listesi onsuz da çalışır.",
       "failed": "3B görünüm oluşturulamadı",
+      "crashedHint": "Malzeme listesi onsuz da çalışır.",
       "top": "Üst",
       "front": "Ön",
       "side": "Yan",
@@ -4961,7 +4962,8 @@
     "title": "Bir şeyler ters gitti",
     "description": "Arayüz beklenmedik şekilde çöktü. Yeniden yüklemek genellikle sorunu çözer.",
     "reload": "Yeniden yükle",
-    "copy": "Ayrıntıları kopyala"
+    "copy": "Ayrıntıları kopyala",
+    "partTitle": "Arayüzün bir bölümü çöktü"
   },
   "ipcError": {
     "fileOperation": "Dosya işlemi başarısız. Diskteki boş alanı ve izinleri kontrol edin."
@@ -6096,7 +6098,11 @@
     "resetCamera": "Kamerayı sıfırla",
     "noSkin": "Önizlenecek skin yok",
     "textureError_skin": "Skin yüklenmedi",
-    "textureError_cape": "Pelerin yüklenmedi"
+    "textureError_cape": "Pelerin yüklenmedi",
+    "unavailable": {
+      "webgl": "3B önizleme kullanılamıyor: ekran kartı veya sürücüsü WebGL desteklemiyor",
+      "error": "3B önizleme başlamadı — skin önden gösteriliyor"
+    }
   },
   "home": {
     "continue": {

@@ -3117,6 +3117,7 @@
       "noWebgl": "3D-Ansicht nicht verfügbar",
       "noWebglHint": "Die Grafikkarte oder ihr Treiber unterstützt WebGL 2 nicht. Die Materialliste funktioniert auch ohne.",
       "failed": "3D-Ansicht konnte nicht aufgebaut werden",
+      "crashedHint": "Die Materialliste funktioniert auch ohne.",
       "top": "Oben",
       "front": "Vorne",
       "side": "Seite",
@@ -4961,7 +4962,8 @@
     "title": "Etwas ist schiefgelaufen",
     "description": "Die Oberfläche ist unerwartet abgestürzt. Neu laden hilft meistens.",
     "reload": "Neu laden",
-    "copy": "Details kopieren"
+    "copy": "Details kopieren",
+    "partTitle": "Ein Teil der Oberfläche ist abgestürzt"
   },
   "ipcError": {
     "fileOperation": "Dateivorgang fehlgeschlagen. Prüfen Sie den freien Speicherplatz und die Berechtigungen."
@@ -6096,7 +6098,11 @@
     "resetCamera": "Kamera zurücksetzen",
     "noSkin": "Kein Skin zur Vorschau",
     "textureError_skin": "Der Skin wurde nicht geladen",
-    "textureError_cape": "Der Umhang wurde nicht geladen"
+    "textureError_cape": "Der Umhang wurde nicht geladen",
+    "unavailable": {
+      "webgl": "3D-Vorschau nicht verfügbar: Die Grafikkarte oder ihr Treiber unterstützt WebGL nicht",
+      "error": "Die 3D-Vorschau ist nicht gestartet – der Skin wird von vorne gezeigt"
+    }
   },
   "home": {
     "continue": {

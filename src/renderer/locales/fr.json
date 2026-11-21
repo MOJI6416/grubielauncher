@@ -3143,6 +3143,7 @@
       "noWebgl": "Vue 3D indisponible",
       "noWebglHint": "La carte graphique ou son pilote ne prend pas en charge WebGL 2. La liste des matériaux fonctionne sans elle.",
       "failed": "Impossible de construire la vue 3D",
+      "crashedHint": "La liste des matériaux fonctionne sans elle.",
       "top": "Dessus",
       "front": "Face",
       "side": "Côté",
@@ -5007,7 +5008,8 @@
     "title": "Une erreur s’est produite",
     "description": "L’interface a planté de manière inattendue. Recharger règle généralement le problème.",
     "reload": "Recharger",
-    "copy": "Copier les détails"
+    "copy": "Copier les détails",
+    "partTitle": "Une partie de l’interface a planté"
   },
   "ipcError": {
     "fileOperation": "L’opération sur le fichier a échoué. Vérifiez l’espace disque disponible et les droits d’accès."
@@ -6155,7 +6157,11 @@
     "resetCamera": "Réinitialiser la caméra",
     "noSkin": "Aucun skin à prévisualiser",
     "textureError_skin": "Le skin ne s’est pas chargé",
-    "textureError_cape": "La cape ne s’est pas chargée"
+    "textureError_cape": "La cape ne s’est pas chargée",
+    "unavailable": {
+      "webgl": "Aperçu 3D indisponible : la carte graphique ou son pilote ne prend pas en charge WebGL",
+      "error": "L’aperçu 3D n’a pas démarré — le skin est affiché de face"
+    }
   },
   "home": {
     "continue": {

@@ -3143,6 +3143,7 @@
       "noWebgl": "La vista 3D no está disponible",
       "noWebglHint": "La tarjeta gráfica o su controlador no admite WebGL 2. La lista de materiales funciona sin ella.",
       "failed": "No se pudo construir la vista 3D",
+      "crashedHint": "La lista de materiales funciona sin ella.",
       "top": "Arriba",
       "front": "Frente",
       "side": "Lado",
@@ -5007,7 +5008,8 @@
     "title": "Algo salió mal",
     "description": "La interfaz falló de forma inesperada. Recargar suele solucionarlo.",
     "reload": "Recargar",
-    "copy": "Copiar los detalles"
+    "copy": "Copiar los detalles",
+    "partTitle": "Una parte de la interfaz falló"
   },
   "ipcError": {
     "fileOperation": "La operación con archivos falló. Revise el espacio libre en el disco y los permisos."
@@ -6151,7 +6153,11 @@
     "resetCamera": "Restablecer la cámara",
     "noSkin": "No hay skin para mostrar",
     "textureError_skin": "La skin no se cargó",
-    "textureError_cape": "La capa no se cargó"
+    "textureError_cape": "La capa no se cargó",
+    "unavailable": {
+      "webgl": "Vista previa 3D no disponible: la tarjeta gráfica o su controlador no admite WebGL",
+      "error": "La vista previa 3D no se inició: la skin se muestra de frente"
+    }
   },
   "home": {
     "continue": {

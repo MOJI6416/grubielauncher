@@ -9,6 +9,7 @@ import {
   isSupportedCapeSize,
   isSupportedSkinSize,
   readPngSize,
+  renderSkinFront,
   upgradeLegacySkin,
   MAX_SKIN_TEXTURE_BYTES,
 } from "./skinTexture";
@@ -283,5 +284,56 @@ describe("cropSkinHead", () => {
     const head = cropSkinHead(image, { overlay: false });
 
     expect(getPixel(head, 2, 2)).toEqual([3, 3, 3, 255]);
+  });
+});
+
+describe("renderSkinFront", () => {
+  it("lays out the front of every part at scale 1", () => {
+    const image = createPixelImage(64, 64);
+    setPixel(image, 8, 8, [1, 0, 0, 255]);
+    setPixel(image, 20, 20, [2, 0, 0, 255]);
+    setPixel(image, 44, 20, [3, 0, 0, 255]);
+    setPixel(image, 36, 52, [4, 0, 0, 255]);
+    setPixel(image, 4, 20, [5, 0, 0, 255]);
+    setPixel(image, 20, 52, [6, 0, 0, 255]);
+
+    const front = renderSkinFront(image, "classic", { overlay: false });
+
+    expect(front.width).toBe(16);
+    expect(front.height).toBe(32);
+    expect(getPixel(front, 4, 0)).toEqual([1, 0, 0, 255]);
+    expect(getPixel(front, 4, 8)).toEqual([2, 0, 0, 255]);
+    expect(getPixel(front, 0, 8)).toEqual([3, 0, 0, 255]);
+    expect(getPixel(front, 12, 8)).toEqual([4, 0, 0, 255]);
+    expect(getPixel(front, 4, 20)).toEqual([5, 0, 0, 255]);
+    expect(getPixel(front, 8, 20)).toEqual([6, 0, 0, 255]);
+  });
+
+  it("narrows the arms of a slim skin", () => {
+    const image = createPixelImage(64, 64);
+    setPixel(image, 44, 20, [7, 0, 0, 255]);
+
+    const front = renderSkinFront(image, "slim", { overlay: false });
+
+    expect(getPixel(front, 0, 8)).toEqual([0, 0, 0, 0]);
+    expect(getPixel(front, 1, 8)).toEqual([7, 0, 0, 255]);
+  });
+
+  it("puts the second layer over the base", () => {
+    const image = createPixelImage(64, 64);
+    setPixel(image, 20, 20, [0, 0, 0, 255]);
+    setPixel(image, 20, 36, [9, 9, 9, 255]);
+
+    expect(getPixel(renderSkinFront(image, "classic"), 4, 8)).toEqual([9, 9, 9, 255]);
+  });
+
+  it("mirrors the right limbs of a legacy texture", () => {
+    const image = createPixelImage(64, 32);
+    setPixel(image, 44, 20, [8, 0, 0, 255]);
+
+    const front = renderSkinFront(image, "classic");
+
+    expect(getPixel(front, 0, 8)).toEqual([8, 0, 0, 255]);
+    expect(getPixel(front, 15, 8)).toEqual([8, 0, 0, 255]);
   });
 });

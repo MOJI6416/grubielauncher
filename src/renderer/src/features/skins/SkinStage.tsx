@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
-import SkinCanvas, { SKIN_ANIMATIONS, SkinAnimation } from "./SkinCanvas";
+import SkinCanvas, {
+  SKIN_ANIMATIONS,
+  SkinAnimation,
+  type SkinCanvasUnavailable,
+} from "./SkinCanvas";
 
 export function SkinStage({
   skinUrl,
@@ -53,6 +57,9 @@ export function SkinStage({
   const [backEquipment, setBackEquipment] = useState<"cape" | "elytra">("cape");
   const [showNameTag, setShowNameTag] = useState(false);
   const [failedTexture, setFailedTexture] = useState<"skin" | "cape" | null>(
+    null,
+  );
+  const [unavailable, setUnavailable] = useState<SkinCanvasUnavailable | null>(
     null,
   );
 
@@ -95,6 +102,7 @@ export function SkinStage({
           fillContainer
           onReady={handleReady}
           onTextureError={setFailedTexture}
+          onUnavailable={setUnavailable}
         />
 
         {badges ? (
@@ -127,103 +135,119 @@ export function SkinStage({
         {overlay}
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-center justify-center gap-0.5 border-t border-border bg-surface-2 px-1.5 py-1">
-        <DropdownMenu>
-          <Hint content={t("skinStage.animation")}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                aria-label={t("skinStage.animation")}
-              >
-                <PersonStanding />
-              </Button>
-            </DropdownMenuTrigger>
+      {unavailable ? (
+        <div className="flex h-9 shrink-0 items-center justify-center border-t border-border bg-surface-2 px-3">
+          <Hint
+            content={t(`skinStage.unavailable.${unavailable}`)}
+            variant="text"
+            truncatedOnly
+          >
+            <span className="truncate text-2xs text-muted-foreground">
+              {t(`skinStage.unavailable.${unavailable}`)}
+            </span>
           </Hint>
-          <DropdownMenuContent align="start">
-            <DropdownMenuRadioGroup
-              value={animation}
-              onValueChange={(value) => setAnimation(value as SkinAnimation)}
-            >
-              {SKIN_ANIMATIONS.map((value) => (
-                <DropdownMenuRadioItem key={value} value={value}>
-                  {t(`skinStage.animations.${value}`)}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        </div>
+      ) : (
+        <div className="flex shrink-0 flex-wrap items-center justify-center gap-0.5 border-t border-border bg-surface-2 px-1.5 py-1">
+          <DropdownMenu>
+            <Hint content={t("skinStage.animation")}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label={t("skinStage.animation")}
+                >
+                  <PersonStanding />
+                </Button>
+              </DropdownMenuTrigger>
+            </Hint>
+            <DropdownMenuContent align="start">
+              <DropdownMenuRadioGroup
+                value={animation}
+                onValueChange={(value) => setAnimation(value as SkinAnimation)}
+              >
+                {SKIN_ANIMATIONS.map((value) => (
+                  <DropdownMenuRadioItem key={value} value={value}>
+                    {t(`skinStage.animations.${value}`)}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        <Hint content={t("skinStage.autoRotate")}>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-pressed={autoRotate}
-            aria-label={t("skinStage.autoRotate")}
-            className={cn(autoRotate && "bg-surface-3 text-foreground")}
-            onClick={() => setAutoRotate((prev) => !prev)}
-          >
-            <RotateCw />
-          </Button>
-        </Hint>
-
-        <Hint content={t("skinStage.outerLayer")}>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-pressed={showOuterLayer}
-            aria-label={t("skinStage.outerLayer")}
-            className={cn(showOuterLayer && "bg-surface-3 text-foreground")}
-            onClick={() => setShowOuterLayer((prev) => !prev)}
-          >
-            <Layers />
-          </Button>
-        </Hint>
-
-        <Hint content={t("skinStage.elytra")}>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            disabled={!capeUrl}
-            aria-pressed={backEquipment === "elytra"}
-            aria-label={t("skinStage.elytra")}
-            className={cn(
-              backEquipment === "elytra" && "bg-surface-3 text-foreground",
-            )}
-            onClick={() =>
-              setBackEquipment((prev) => (prev === "cape" ? "elytra" : "cape"))
-            }
-          >
-            <Feather />
-          </Button>
-        </Hint>
-
-        {nickname ? (
-          <Hint content={t("skinStage.nameTag")}>
+          <Hint content={t("skinStage.autoRotate")}>
             <Button
               size="icon-sm"
               variant="ghost"
-              aria-pressed={showNameTag}
-              aria-label={t("skinStage.nameTag")}
-              className={cn(showNameTag && "bg-surface-3 text-foreground")}
-              onClick={() => setShowNameTag((prev) => !prev)}
+              aria-pressed={autoRotate}
+              aria-label={t("skinStage.autoRotate")}
+              className={cn(autoRotate && "bg-surface-3 text-foreground")}
+              onClick={() => setAutoRotate((prev) => !prev)}
             >
-              <Tag />
+              <RotateCw />
             </Button>
           </Hint>
-        ) : null}
 
-        <Hint content={t("skinStage.resetCamera")}>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label={t("skinStage.resetCamera")}
-            onClick={handleReset}
-          >
-            <RotateCcw />
-          </Button>
-        </Hint>
-      </div>
+          <Hint content={t("skinStage.outerLayer")}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-pressed={showOuterLayer}
+              aria-label={t("skinStage.outerLayer")}
+              className={cn(showOuterLayer && "bg-surface-3 text-foreground")}
+              onClick={() => setShowOuterLayer((prev) => !prev)}
+            >
+              <Layers />
+            </Button>
+          </Hint>
+
+          <Hint content={t("skinStage.elytra")}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              disabled={!capeUrl}
+              aria-pressed={backEquipment === "elytra"}
+              aria-label={t("skinStage.elytra")}
+              className={cn(
+                backEquipment === "elytra" && "bg-surface-3 text-foreground",
+              )}
+              onClick={() =>
+                setBackEquipment((prev) =>
+                  prev === "cape" ? "elytra" : "cape",
+                )
+              }
+            >
+              <Feather />
+            </Button>
+          </Hint>
+
+          {nickname ? (
+            <Hint content={t("skinStage.nameTag")}>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-pressed={showNameTag}
+                aria-label={t("skinStage.nameTag")}
+                className={cn(showNameTag && "bg-surface-3 text-foreground")}
+                onClick={() => setShowNameTag((prev) => !prev)}
+              >
+                <Tag />
+              </Button>
+            </Hint>
+          ) : null}
+
+          <Hint content={t("skinStage.resetCamera")}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("skinStage.resetCamera")}
+              onClick={handleReset}
+            >
+              <RotateCcw />
+            </Button>
+          </Hint>
+        </div>
+      )}
     </div>
   );
 }

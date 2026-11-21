@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   CrouchAnimation,
   FlyingAnimation,
@@ -11,6 +11,8 @@ import {
   type SkinViewerOptions,
 } from "skinview3d";
 import { resolveLocalImage } from "@renderer/utilities/localMedia";
+import { LocalErrorBoundary } from "@renderer/components/LocalErrorBoundary";
+import { FlatSkin } from "./FlatSkin";
 import { stageExtents, stageZoom } from "./stageCamera";
 
 export type SkinAnimation =
@@ -33,6 +35,14 @@ export const SKIN_ANIMATIONS: SkinAnimation[] = [
 ];
 
 type ViewerOptions = Omit<SkinViewerOptions, "canvas" | "width" | "height">;
+
+export type SkinCanvasUnavailable = "webgl" | "error";
+
+let webglFailed = false;
+
+function rememberWebglFailure() {
+  webglFailed = true;
+}
 
 const CAMERA_DEPTH_OFFSET = 4.5;
 
@@ -79,9 +89,52 @@ export interface SkinCanvasProps {
   options?: ViewerOptions;
   onReady?: (payload: { viewer: SkinViewer; canvas: HTMLCanvasElement }) => void;
   onTextureError?: (kind: "skin" | "cape") => void;
+  fallback?: ReactNode;
+  onUnavailable?: (reason: SkinCanvasUnavailable) => void;
 }
 
-export default function SkinCanvas({
+export default function SkinCanvas(props: SkinCanvasProps) {
+  const [failed, setFailed] = useState<SkinCanvasUnavailable | null>(() =>
+    webglFailed ? "webgl" : null,
+  );
+  const onUnavailableRef = useRef(props.onUnavailable);
+  onUnavailableRef.current = props.onUnavailable;
+
+  useEffect(() => {
+    if (failed) onUnavailableRef.current?.(failed);
+  }, [failed]);
+
+  const flat =
+    props.fallback !== undefined ? (
+      props.fallback
+    ) : (
+      <FlatSkin
+        skinUrl={props.skinUrl}
+        model={props.model}
+        showOuterLayer={props.showOuterLayer}
+        minHeight={props.fillContainer ? Number(props.height) : undefined}
+        width={props.fillContainer ? undefined : Number(props.width)}
+        height={props.fillContainer ? undefined : Number(props.height)}
+        onTextureError={props.onTextureError}
+      />
+    );
+
+  if (failed) return flat;
+
+  return (
+    <LocalErrorBoundary fallback={flat} onError={() => setFailed("error")}>
+      <SkinCanvasView
+        {...props}
+        onWebglFailure={() => {
+          rememberWebglFailure();
+          setFailed("webgl");
+        }}
+      />
+    </LocalErrorBoundary>
+  );
+}
+
+function SkinCanvasView({
   className,
   width,
   height,
@@ -99,17 +152,20 @@ export default function SkinCanvas({
   options,
   onReady,
   onTextureError,
-}: SkinCanvasProps) {
+  onWebglFailure,
+}: SkinCanvasProps & { onWebglFailure: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<SkinViewer | null>(null);
   const onReadyRef = useRef(onReady);
   const onTextureErrorRef = useRef(onTextureError);
+  const onWebglFailureRef = useRef(onWebglFailure);
   const visibleRef = useRef(true);
   const pausedRef = useRef(paused);
 
   onReadyRef.current = onReady;
   onTextureErrorRef.current = onTextureError;
+  onWebglFailureRef.current = onWebglFailure;
   pausedRef.current = paused;
 
   const [measured, setMeasured] = useState<{
@@ -147,12 +203,18 @@ export default function SkinCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const viewer = new SkinViewer({
-      canvas,
-      width: viewWidth,
-      height: viewHeight,
-      ...options,
-    });
+    let viewer: SkinViewer;
+    try {
+      viewer = new SkinViewer({
+        canvas,
+        width: viewWidth,
+        height: viewHeight,
+        ...options,
+      });
+    } catch {
+      onWebglFailureRef.current();
+      return;
+    }
 
     viewerRef.current = viewer;
     onReadyRef.current?.({ viewer, canvas });

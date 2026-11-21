@@ -3117,6 +3117,7 @@
       "noWebgl": "3D view is not available",
       "noWebglHint": "The graphics card or its driver does not support WebGL 2. The materials list works without it.",
       "failed": "Couldn't build the 3D view",
+      "crashedHint": "The materials list works without it.",
       "top": "Top",
       "front": "Front",
       "side": "Side",
@@ -4961,7 +4962,8 @@
     "title": "Something went wrong",
     "description": "The interface crashed unexpectedly. Reloading usually fixes it.",
     "reload": "Reload",
-    "copy": "Copy the details"
+    "copy": "Copy the details",
+    "partTitle": "Part of the interface crashed"
   },
   "ipcError": {
     "fileOperation": "File operation failed. Check available disk space and permissions."
@@ -6096,7 +6098,11 @@
     "resetCamera": "Reset the camera",
     "noSkin": "No skin to preview",
     "textureError_skin": "The skin did not load",
-    "textureError_cape": "The cape did not load"
+    "textureError_cape": "The cape did not load",
+    "unavailable": {
+      "webgl": "3D preview unavailable: the graphics card or its driver does not support WebGL",
+      "error": "The 3D preview did not start — the skin is shown from the front"
+    }
   },
   "home": {
     "continue": {

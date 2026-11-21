@@ -3166,6 +3166,7 @@
       "noWebgl": "Widok 3D jest niedostępny",
       "noWebglHint": "Karta graficzna lub jej sterownik nie obsługuje WebGL 2. Lista materiałów działa i bez niego.",
       "failed": "Nie udało się zbudować widoku 3D",
+      "crashedHint": "Lista materiałów działa i bez niego.",
       "top": "Z góry",
       "front": "Z przodu",
       "side": "Z boku",
@@ -5050,7 +5051,8 @@
     "title": "Coś poszło nie tak",
     "description": "Interfejs nieoczekiwanie uległ awarii. Zwykle pomaga ponowne wczytanie.",
     "reload": "Odśwież",
-    "copy": "Kopiuj szczegóły"
+    "copy": "Kopiuj szczegóły",
+    "partTitle": "Część interfejsu uległa awarii"
   },
   "ipcError": {
     "fileOperation": "Operacja na pliku nie powiodła się. Sprawdź wolne miejsce na dysku i uprawnienia."
@@ -6211,7 +6213,11 @@
     "resetCamera": "Resetuj kamerę",
     "noSkin": "Brak skina do podglądu",
     "textureError_skin": "Skin się nie wczytał",
-    "textureError_cape": "Peleryna się nie wczytała"
+    "textureError_cape": "Peleryna się nie wczytała",
+    "unavailable": {
+      "webgl": "Podgląd 3D niedostępny: karta graficzna lub jej sterownik nie obsługuje WebGL",
+      "error": "Podgląd 3D się nie uruchomił — skin jest pokazany z przodu"
+    }
   },
   "home": {
     "continue": {

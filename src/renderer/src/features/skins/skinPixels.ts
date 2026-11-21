@@ -77,6 +77,34 @@ export async function decodeToPixels(
   }
 }
 
+export function decodeImagePixels(url: string): Promise<PixelImage | null> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) {
+          resolve(null);
+          return;
+        }
+
+        context.drawImage(image, 0, 0);
+        const data = context.getImageData(0, 0, canvas.width, canvas.height);
+        resolve({ width: canvas.width, height: canvas.height, data: data.data });
+      } catch {
+        resolve(null);
+      }
+    };
+    image.onerror = () => resolve(null);
+    image.src = resolveLocalImage(url);
+  });
+}
+
 export async function loadSkinTexture(
   url: string,
 ): Promise<LoadedTextureResult> {

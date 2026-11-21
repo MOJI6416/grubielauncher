@@ -3143,6 +3143,7 @@
       "noWebgl": "A vista 3D não está disponível",
       "noWebglHint": "A placa de vídeo ou o driver não suporta WebGL 2. A lista de materiais funciona sem ela.",
       "failed": "Não foi possível montar a vista 3D",
+      "crashedHint": "A lista de materiais funciona sem ela.",
       "top": "Cima",
       "front": "Frente",
       "side": "Lado",
@@ -5007,7 +5008,8 @@
     "title": "Algo deu errado",
     "description": "A interface travou inesperadamente. Recarregar geralmente resolve.",
     "reload": "Recarregar",
-    "copy": "Copiar os detalhes"
+    "copy": "Copiar os detalhes",
+    "partTitle": "Uma parte da interface travou"
   },
   "ipcError": {
     "fileOperation": "A operação com o arquivo falhou. Confira o espaço disponível no disco e as permissões."
@@ -6151,7 +6153,11 @@
     "resetCamera": "Redefinir a câmera",
     "noSkin": "Nenhuma skin para mostrar",
     "textureError_skin": "A skin não carregou",
-    "textureError_cape": "A capa não carregou"
+    "textureError_cape": "A capa não carregou",
+    "unavailable": {
+      "webgl": "Prévia 3D indisponível: a placa de vídeo ou o driver não suporta WebGL",
+      "error": "A prévia 3D não iniciou — a skin é mostrada de frente"
+    }
   },
   "home": {
     "continue": {

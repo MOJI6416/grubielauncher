@@ -10,6 +10,7 @@ import { resolveLocalImage } from "@renderer/utilities/localMedia";
 import { usePageVisible } from "@renderer/utilities/usePageVisible";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import { Hint } from "@renderer/components/Hint";
+import { LocalErrorBoundary } from "@renderer/components/LocalErrorBoundary";
 
 const LazySkinCanvas = lazyWithPreload(
   () => import("@renderer/features/skins/SkinCanvas"),
@@ -127,18 +128,21 @@ export function LaunchCompanion({
 
       {skin?.skin && runnerReady && (
         <div className="pointer-events-none absolute inset-x-0 top-3 bottom-6 animate-in duration-500 fade-in">
-          <Suspense fallback={null}>
-            <LazySkinCanvas
-              skinUrl={skin.skin}
-              capeUrl={skin.cape}
-              animation="run"
-              width={240}
-              height={150}
-              fillContainer
-              paused={!visible}
-              onReady={poseRunner}
-            />
-          </Suspense>
+          <LocalErrorBoundary fallback={null}>
+            <Suspense fallback={null}>
+              <LazySkinCanvas
+                skinUrl={skin.skin}
+                capeUrl={skin.cape}
+                animation="run"
+                width={240}
+                height={150}
+                fillContainer
+                paused={!visible}
+                onReady={poseRunner}
+                fallback={null}
+              />
+            </Suspense>
+          </LocalErrorBoundary>
         </div>
       )}
 

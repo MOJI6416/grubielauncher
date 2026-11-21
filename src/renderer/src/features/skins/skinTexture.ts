@@ -366,3 +366,56 @@ export function cropSkinHead(
 
   return head;
 }
+
+type FrontPart = [number, number, number, number, number, number];
+
+function frontParts(arm: number): { base: FrontPart[]; overlay: FrontPart[] } {
+  return {
+    base: [
+      [8, 8, 8, 8, 4, 0],
+      [20, 20, 8, 12, 4, 8],
+      [44, 20, arm, 12, 4 - arm, 8],
+      [36, 52, arm, 12, 12, 8],
+      [4, 20, 4, 12, 4, 20],
+      [20, 52, 4, 12, 8, 20],
+    ],
+    overlay: [
+      [40, 8, 8, 8, 4, 0],
+      [20, 36, 8, 12, 4, 8],
+      [44, 36, arm, 12, 4 - arm, 8],
+      [52, 52, arm, 12, 12, 8],
+      [4, 36, 4, 12, 4, 20],
+      [4, 52, 4, 12, 8, 20],
+    ],
+  };
+}
+
+export function renderSkinFront(
+  image: PixelImage,
+  model: "classic" | "slim",
+  options: { overlay?: boolean } = {},
+): PixelImage {
+  const modern = upgradeLegacySkin(image);
+  const scale = Math.max(1, Math.floor(modern.width / 64));
+  const parts = frontParts(model === "slim" ? 3 : 4);
+
+  const paint = (list: FrontPart[]) => {
+    const target = createPixelImage(16 * scale, 32 * scale);
+    for (const [sx, sy, width, height, dx, dy] of list) {
+      copyRegion(modern, target, {
+        sx: sx * scale,
+        sy: sy * scale,
+        width: width * scale,
+        height: height * scale,
+        dx: dx * scale,
+        dy: dy * scale,
+      });
+    }
+    return target;
+  };
+
+  const front = paint(parts.base);
+  if (options.overlay !== false) blendOver(front, paint(parts.overlay));
+
+  return front;
+}

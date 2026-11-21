@@ -54,6 +54,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Hint } from "@renderer/components/Hint";
+import { LocalErrorBoundary } from "@renderer/components/LocalErrorBoundary";
 import { ListSkeleton } from "@renderer/components/ListSkeleton";
 import { RemovalItem, RemovalList } from "@renderer/components/RemovalCollapse";
 import { accountAtom, versionsAtom } from "@renderer/stores/atoms";
@@ -495,15 +496,30 @@ function SchematicDetail({
           <>
             <SchematicFacts details={details} file={file} locale={locale} />
             <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_16rem] gap-2">
-              <Suspense fallback={<Skeleton className="h-full rounded-xl" />}>
-                <SchematicViewer
-                  file={file}
-                  versionPath={version.versionPath}
-                  info={blockInfo.get}
-                  onPick={setFocusId}
-                  onPalette={setPaletteIds}
-                />
-              </Suspense>
+              <LocalErrorBoundary
+                key={file.path}
+                fallback={
+                  <Empty className="h-full rounded-xl border border-border bg-surface-1">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <TriangleAlert />
+                      </EmptyMedia>
+                      <EmptyTitle>{t("schematics.viewer.failed")}</EmptyTitle>
+                      <EmptyDescription>{t("schematics.viewer.crashedHint")}</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                }
+              >
+                <Suspense fallback={<Skeleton className="h-full rounded-xl" />}>
+                  <SchematicViewer
+                    file={file}
+                    versionPath={version.versionPath}
+                    info={blockInfo.get}
+                    onPick={setFocusId}
+                    onPalette={setPaletteIds}
+                  />
+                </Suspense>
+              </LocalErrorBoundary>
               <MaterialsList
                 title={title}
                 blocks={details.blocks}
