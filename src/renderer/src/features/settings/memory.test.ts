@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   activePresetId,
   clampMemory,
+  formatGigabytes,
+  formatGigabytesFixed,
   maxMemoryMb,
   memoryAdvice,
   memoryArgsPreview,
@@ -160,5 +162,38 @@ describe("memoryArgsPreview", () => {
 
   it("starts small without them", () => {
     expect(memoryArgsPreview(6144, false)).toBe("-Xms1G -Xmx6144M");
+  });
+});
+
+describe("formatGigabytes", () => {
+  it("drops the fraction for whole gigabytes", () => {
+    expect(formatGigabytes(4096, "ru")).toBe("4");
+    expect(formatGigabytes(4608, "en")).toBe("4.5");
+  });
+
+  it("uses the player's decimal separator", () => {
+    expect(formatGigabytes(4608, "ru")).toBe("4,5");
+    expect(formatGigabytes(30106, "de")).toBe("29,4");
+  });
+});
+
+describe("formatGigabytesFixed", () => {
+  it("always keeps one digit after the separator", () => {
+    expect(formatGigabytesFixed(4096, "ru")).toBe("4,0");
+    expect(formatGigabytesFixed(4608, "ru")).toBe("4,5");
+    expect(formatGigabytesFixed(10240, "en")).toBe("10.0");
+  });
+
+  it("keeps the same length for every step of the same magnitude", () => {
+    const lengths = new Set(
+      [8192, 8704, 9216, 9728].map(
+        (mb) => formatGigabytesFixed(mb, "fr").length,
+      ),
+    );
+    expect(lengths.size).toBe(1);
+  });
+
+  it("never groups thousands", () => {
+    expect(formatGigabytesFixed(1024 * 1536, "en")).toBe("1536.0");
   });
 });

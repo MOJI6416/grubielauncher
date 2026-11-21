@@ -13,8 +13,12 @@ export function useInstanceDiskUsage(versionPath: string | undefined): {
   isUnknown: boolean;
 } {
   const revision = useInstanceDataRevision();
-  const [size, setSize] = useState<number | null>(null);
-  const [isUnknown, setIsUnknown] = useState(false);
+  const [size, setSize] = useState<number | null>(() =>
+    versionPath ? (sizeCache.get(versionPath)?.size ?? null) : null,
+  );
+  const [isUnknown, setIsUnknown] = useState(() =>
+    versionPath ? sizeCache.get(versionPath)?.size === null : false,
+  );
 
   useEffect(() => {
     if (!versionPath) {
@@ -57,14 +61,22 @@ export interface InstanceScreenshot {
   path: string;
 }
 
+const screenshotCache = new Map<
+  string,
+  { screenshots: InstanceScreenshot[]; folder: string }
+>();
+
 export function useInstanceScreenshots(
   versionPath: string | undefined,
   limit: number,
 ): { screenshots: InstanceScreenshot[] | null; folder: string } {
+  const cacheKey = `${versionPath ?? ""}|${limit}`;
   const [screenshots, setScreenshots] = useState<InstanceScreenshot[] | null>(
-    null,
+    () => screenshotCache.get(cacheKey)?.screenshots ?? null,
   );
-  const [folder, setFolder] = useState("");
+  const [folder, setFolder] = useState(
+    () => screenshotCache.get(cacheKey)?.folder ?? "",
+  );
   const revision = useInstanceDataRevision();
 
   useEffect(() => {
@@ -83,6 +95,7 @@ export function useInstanceScreenshots(
         setFolder(directory);
 
         if (!(await api.fs.pathExists(directory))) {
+          screenshotCache.set(cacheKey, { screenshots: [], folder: directory });
           if (!cancelled) setScreenshots([]);
           return;
         }
@@ -97,6 +110,10 @@ export function useInstanceScreenshots(
           entries.push({ name, path: await api.path.join(directory, name) });
         }
 
+        screenshotCache.set(cacheKey, {
+          screenshots: entries,
+          folder: directory,
+        });
         if (!cancelled) setScreenshots(entries);
       } catch {
         if (!cancelled) setScreenshots([]);
@@ -106,7 +123,7 @@ export function useInstanceScreenshots(
     return () => {
       cancelled = true;
     };
-  }, [versionPath, limit, revision]);
+  }, [versionPath, limit, revision, cacheKey]);
 
   return { screenshots, folder };
 }

@@ -1,3 +1,5 @@
+import { formatNumber } from "@renderer/utilities/numbers";
+
 export const MEMORY_MIN_MB = 1024;
 export const MEMORY_STEP_MB = 512;
 const MEMORY_FALLBACK_MAX_MB = 32768;
@@ -128,6 +130,18 @@ export function tickOffset(mb: number, totalMb: number): number {
   return ((mb - MEMORY_MIN_MB) / (max - MEMORY_MIN_MB)) * 100;
 }
 
-export function formatGigabytes(mb: number): string {
-  return (mb / 1024).toFixed(mb % 1024 === 0 ? 0 : 1);
+function gigabytes(mb: number, digits: number, lang?: string): string {
+  return formatNumber(mb / 1024, lang, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    useGrouping: false,
+  });
+}
+
+export function formatGigabytes(mb: number, lang?: string): string {
+  return gigabytes(mb, mb % 1024 === 0 ? 0 : 1, lang);
+}
+
+export function formatGigabytesFixed(mb: number, lang?: string): string {
+  return gigabytes(mb, 1, lang);
 }

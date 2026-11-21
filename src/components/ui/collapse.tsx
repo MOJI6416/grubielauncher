@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   AnimatePresence,
   LazyMotion,
@@ -10,6 +10,19 @@ import { useReducedMotionPreference } from "@/lib/motionPreference";
 import { cn } from "@/lib/utils";
 import { motionTransition } from "@/lib/motion";
 
+const SETTLE_MS = 300;
+
+function useSettled(): boolean {
+  const [settled, setSettled] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSettled(true), SETTLE_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return settled;
+}
+
 export function Collapse({
   show,
   children,
@@ -19,7 +32,9 @@ export function Collapse({
   children: ReactNode;
   className?: string;
 }) {
-  const transition = motionTransition(useReducedMotionPreference());
+  const reduced = useReducedMotionPreference();
+  const settled = useSettled();
+  const transition = motionTransition(reduced || !settled);
   const node = useRef<HTMLDivElement | null>(null);
   const isOpen = useRef(show);
   isOpen.current = show;
@@ -63,7 +78,9 @@ export function CollapseInline({
   children: ReactNode;
   className?: string;
 }) {
-  const transition = motionTransition(useReducedMotionPreference());
+  const reduced = useReducedMotionPreference();
+  const settled = useSettled();
+  const transition = motionTransition(reduced || !settled);
 
   return (
     <LazyMotion features={domAnimation}>

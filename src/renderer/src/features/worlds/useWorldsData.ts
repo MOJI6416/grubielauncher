@@ -13,6 +13,14 @@ const READ_WORLD_CONCURRENCY = 4;
 
 export type WorldsStatus = "loading" | "ready" | "error";
 
+interface WorldsSnapshot {
+  worlds: IWorld[];
+  sizes: Record<string, number>;
+  backups: Record<string, number>;
+}
+
+const knownWorlds = new Map<string, WorldsSnapshot>();
+
 export interface DatapackOption {
   mod: ILocalProject;
   file: NonNullable<ILocalProject["version"]>["files"][number];
@@ -23,10 +31,19 @@ export interface DatapackOption {
 export function useWorldsData(version: Version | undefined) {
   const account = useAtomValue(accountAtom);
   const revision = useInstanceDataRevision();
-  const [worlds, setWorlds] = useState<IWorld[]>([]);
-  const [status, setStatus] = useState<WorldsStatus>("loading");
-  const [sizes, setSizes] = useState<Record<string, number>>({});
-  const [backups, setBackups] = useState<Record<string, number>>({});
+  const [known] = useState(() =>
+    version ? knownWorlds.get(version.versionPath) : undefined,
+  );
+  const [worlds, setWorlds] = useState<IWorld[]>(known?.worlds ?? []);
+  const [status, setStatus] = useState<WorldsStatus>(
+    known ? "ready" : "loading",
+  );
+  const [sizes, setSizes] = useState<Record<string, number>>(
+    known?.sizes ?? {},
+  );
+  const [backups, setBackups] = useState<Record<string, number>>(
+    known?.backups ?? {},
+  );
 
   const mounted = useRef(true);
   useEffect(() => {
@@ -99,8 +116,13 @@ export function useWorldsData(version: Version | undefined) {
   }, [version, account]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load(!!version && knownWorlds.has(version.versionPath));
+  }, [load, version]);
+
+  useEffect(() => {
+    if (!version || status !== "ready") return;
+    knownWorlds.set(version.versionPath, { worlds, sizes, backups });
+  }, [version, status, worlds, sizes, backups]);
 
   const seenRevision = useRef(revision);
 

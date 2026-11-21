@@ -5,6 +5,7 @@ import {
   FolderOpen,
   GalleryHorizontalEnd,
   History,
+  ImageOff,
   ListChecks,
   type LucideIcon,
 } from "lucide-react";
@@ -20,8 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
 import { formatDay } from "@renderer/utilities/date";
-import { resolveLocalImage } from "@renderer/utilities/localMedia";
-import { toFileUrl } from "@renderer/utilities/exportVersion";
+import { useThumbnail } from "@renderer/features/screenshots/thumbnails";
 import { IVersionSession } from "@/types/VersionStatistics";
 import { SectionCard } from "./SectionCard";
 import { recentSessions, screenshotLabel } from "./instanceOverview";
@@ -38,6 +38,31 @@ export interface ActivityHint {
   description: string;
   icon: LucideIcon;
   onSelect: () => void;
+}
+
+function ShotImage({ path }: { path: string }) {
+  const { url, failed } = useThumbnail(path);
+
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt=""
+        draggable={false}
+        className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
+      />
+    );
+  }
+
+  if (failed) {
+    return (
+      <span className="flex size-full items-center justify-center text-faint">
+        <ImageOff className="size-4" />
+      </span>
+    );
+  }
+
+  return <Skeleton className="size-full rounded-none" />;
 }
 
 export function ScreenshotsCard({
@@ -124,14 +149,7 @@ export function ScreenshotsCard({
               }}
               className="group relative min-h-[68px] overflow-hidden rounded-lg border border-border bg-surface-3 transition-colors hover:border-input focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-              <img
-                src={resolveLocalImage(toFileUrl(shot.path))}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                draggable={false}
-                className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
-              />
+              <ShotImage path={shot.path} />
               <Hint
                 content={screenshotLabel(shot.name)}
                 variant="text"

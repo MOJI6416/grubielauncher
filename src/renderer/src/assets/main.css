@@ -593,6 +593,26 @@ body {
   animation: screen-enter var(--dur) var(--ease-swift) backwards;
 }
 
+@keyframes skeleton-reveal {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton-pulse {
+  --skeleton-delay: 200ms;
+  animation:
+    skeleton-reveal var(--dur) var(--ease-swift) var(--skeleton-delay) backwards,
+    skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1)
+      calc(var(--skeleton-delay) + var(--dur)) infinite;
+}
+
 @keyframes result-enter {
   from {
     opacity: 0;

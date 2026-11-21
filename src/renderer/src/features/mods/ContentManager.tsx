@@ -241,6 +241,15 @@ function writeTrashHiddenAt(instancePath: string, at: number) {
 }
 const LOCAL_IMPORT_CONCURRENCY = 4;
 
+interface FolderState {
+  projectType: ProjectType;
+  listing: Set<string>;
+  managed: Partial<Record<ProjectType, string[]>> | null;
+}
+
+const knownFolderStates = new Map<string, FolderState>();
+const knownTrash = new Map<string, TrashEntry[]>();
+
 function toModVersion(mod: ILocalProject): ModVersion[] {
   if (!mod.version) return [];
   return [
@@ -485,7 +494,9 @@ export function ContentManager({
   }, [modpackStage]);
   const [isTranslating, setIsTranslating] = useState(false);
   const [gameVersions, setGameVersions] = useState<IVersion[]>([]);
-  const [trashEntries, setTrashEntries] = useState<TrashEntry[]>([]);
+  const [trashEntries, setTrashEntries] = useState<TrashEntry[]>(
+    () => (instancePath && knownTrash.get(instancePath)) || [],
+  );
   const [trashHiddenAt, setTrashHiddenAt] = useState(0);
   const [isClearTrashOpen, setIsClearTrashOpen] = useState(false);
   const splitRef = useRef<HTMLDivElement | null>(null);
@@ -494,11 +505,12 @@ export function ContentManager({
   const [identifyReport, setIdentifyReport] = useState<IdentifyReport | null>(
     null,
   );
-  const [folderState, setFolderState] = useState<{
-    projectType: ProjectType;
-    listing: Set<string>;
-    managed: Partial<Record<ProjectType, string[]>> | null;
-  } | null>(null);
+  const [folderState, setFolderState] = useState<FolderState | null>(
+    () =>
+      (instancePath &&
+        knownFolderStates.get(`${instancePath}|${projectType}`)) ||
+      null,
+  );
 
   const [listElement, setListElement] = useState<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -2054,6 +2066,7 @@ export function ContentManager({
     let cancelled = false;
 
     void listTrash(instancePath).then((entries) => {
+      knownTrash.set(instancePath, entries);
       if (!cancelled) setTrashEntries(entries);
     });
 
@@ -2077,7 +2090,9 @@ export function ContentManager({
         .catch(ignoreFailure)
         .then((managed) => managed ?? null),
     ]).then(([listing, managed]) => {
-      if (!cancelled) setFolderState({ projectType, listing, managed });
+      const next = { projectType, listing, managed };
+      knownFolderStates.set(`${instancePath}|${projectType}`, next);
+      if (!cancelled) setFolderState(next);
     });
 
     return () => {

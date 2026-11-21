@@ -13,6 +13,7 @@ import {
   activePresetId,
   clampMemory,
   formatGigabytes,
+  formatGigabytesFixed,
   maxMemoryMb,
   memoryAdvice,
   memoryArgsPreview,
@@ -30,8 +31,26 @@ const ADVICE_STYLE = {
   danger: { icon: CircleAlert, tone: "text-destructive" },
 } as const;
 
+let knownAvailableBytes: number | null = null;
+let knownTotalMb = 0;
+let totalRequest: Promise<number> | null = null;
+
+function loadTotalMemoryMb(): Promise<number> {
+  totalRequest ??= api.os
+    .totalmem()
+    .catch(ignoreFailure)
+    .then((bytes) => {
+      knownTotalMb = bytes ? toTotalMemoryMb(bytes) : 0;
+      if (!knownTotalMb) totalRequest = null;
+      return knownTotalMb;
+    });
+  return totalRequest;
+}
+
+void loadTotalMemoryMb();
+
 function useAvailableMemory(): number | null {
-  const [available, setAvailable] = useState<number | null>(null);
+  const [available, setAvailable] = useState(knownAvailableBytes);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +59,8 @@ function useAvailableMemory(): number | null {
         .availableMemory()
         .catch(ignoreFailure)
         .then((bytes) => {
-          if (!cancelled) setAvailable(bytes ?? null);
+          knownAvailableBytes = bytes ?? null;
+          if (!cancelled) setAvailable(knownAvailableBytes);
         });
 
     read();
@@ -52,6 +72,17 @@ function useAvailableMemory(): number | null {
   }, []);
 
   return available;
+}
+
+function Amount({ mb, widestMb }: { mb: number; widestMb: number }) {
+  return (
+    <span
+      className="inline-block text-right"
+      style={{ minWidth: `${formatGigabytesFixed(widestMb).length}ch` }}
+    >
+      {formatGigabytesFixed(mb)}
+    </span>
+  );
 }
 
 export function MemoryControl({
@@ -86,6 +117,8 @@ export function MemoryControl({
   const gameShare = totalMemoryMb
     ? Math.min(100, Math.round((draft / totalMemoryMb) * 100))
     : 0;
+  const systemMb = Math.max(0, totalMemoryMb - draft);
+  const widestSystemMb = Math.max(0, totalMemoryMb - MEMORY_MIN_MB);
 
   const apply = (mb: number) => {
     const next = clampMemory(mb, totalMemoryMb);
@@ -102,7 +135,7 @@ export function MemoryControl({
 
   const valueLabel = (
     <span className="shrink-0 font-mono text-lg whitespace-nowrap tabular-nums text-foreground">
-      {formatGigabytes(draft)}
+      <Amount mb={draft} widestMb={max} />
       <span className="ml-1 text-xs text-faint">{t("settings.game.gb")}</span>
     </span>
   );
@@ -186,7 +219,7 @@ export function MemoryControl({
               <span className="size-1.5 shrink-0 rounded-[2px] bg-info" />
               {t("settings.game.splitGame")}
               <span className="font-mono whitespace-nowrap tabular-nums text-faint">
-                {formatGigabytes(draft)} {t("settings.game.gb")}
+                <Amount mb={draft} widestMb={max} /> {t("settings.game.gb")}
               </span>
             </span>
             <span className="flex h-1.5 min-w-8 flex-1 overflow-hidden rounded-full bg-surface-3">
@@ -198,7 +231,7 @@ export function MemoryControl({
             <span className="flex shrink-0 items-center gap-1.5">
               {t("settings.game.splitSystem")}
               <span className="font-mono whitespace-nowrap tabular-nums text-faint">
-                {formatGigabytes(Math.max(0, totalMemoryMb - draft))}{" "}
+                <Amount mb={systemMb} widestMb={widestSystemMb} />{" "}
                 {t("settings.game.gb")}
               </span>
             </span>
@@ -216,14 +249,14 @@ export function MemoryControl({
                 <span className="size-1.5 shrink-0 rounded-[2px] bg-info" />
                 {t("settings.game.splitGame")}
                 <span className="font-mono whitespace-nowrap tabular-nums text-faint">
-                  {formatGigabytes(draft)} {t("settings.game.gb")}
+                  <Amount mb={draft} widestMb={max} /> {t("settings.game.gb")}
                 </span>
               </span>
               <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                 <span className="size-1.5 shrink-0 rounded-[2px] bg-surface-3" />
                 {t("settings.game.splitSystem")}
                 <span className="font-mono whitespace-nowrap tabular-nums text-faint">
-                  {formatGigabytes(Math.max(0, totalMemoryMb - draft))}{" "}
+                  <Amount mb={systemMb} widestMb={widestSystemMb} />{" "}
                   {t("settings.game.gb")}
                 </span>
               </span>
@@ -236,8 +269,8 @@ export function MemoryControl({
           <TriangleAlert className="mt-px size-3.5 shrink-0" />
           <span>
             {t("settings.game.freeNow", {
-              free: formatGigabytes(shortfall.availableMb),
-              allocated: formatGigabytes(shortfall.allocatedMb),
+              free: formatGigabytesFixed(shortfall.availableMb),
+              allocated: formatGigabytesFixed(shortfall.allocatedMb),
             })}
           </span>
         </p>
@@ -252,7 +285,7 @@ export function MemoryControl({
             <Advice className="mt-px size-3.5 shrink-0" />
             <span>
               {t(`settings.game.advice.${advice.key}`, {
-                free: formatGigabytes(advice.headroomMb),
+                free: formatGigabytesFixed(advice.headroomMb),
                 os: OS_NAME,
               })}
             </span>
@@ -270,20 +303,18 @@ export function MemoryControl({
 }
 
 export function useTotalMemoryMb(): number {
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(knownTotalMb);
 
   useEffect(() => {
+    if (total) return;
     let cancelled = false;
-    void api.os
-      .totalmem()
-      .catch(ignoreFailure)
-      .then((bytes) => {
-        if (!cancelled && bytes) setTotal(toTotalMemoryMb(bytes));
-      });
+    void loadTotalMemoryMb().then((mb) => {
+      if (!cancelled && mb) setTotal(mb);
+    });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [total]);
 
   return total;
 }

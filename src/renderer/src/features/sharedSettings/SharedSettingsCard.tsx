@@ -20,6 +20,8 @@ import { countFeature } from "@renderer/features/usage/usage";
 
 const api = window.api;
 
+const knownStatuses = new Map<string, SharedInstanceStatus>();
+
 export function sharedRefOf(instance: Version): SharedInstanceRef {
   return {
     versionPath: instance.versionPath,
@@ -37,7 +39,6 @@ export function SharedSettingsCard({
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
-  const [status, setStatus] = useState<SharedInstanceStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const ref = useMemo(
     () => sharedRefOf(instance),
@@ -48,13 +49,18 @@ export function SharedSettingsCard({
       instance.version.shareCode,
     ],
   );
+  const statusKey = JSON.stringify(ref);
+  const [status, setStatus] = useState<SharedInstanceStatus | null>(
+    () => knownStatuses.get(statusKey) ?? null,
+  );
 
   useEffect(() => {
     let cancelled = false;
-    setStatus(null);
+    setStatus(knownStatuses.get(statusKey) ?? null);
     void api.sharedSettings
       .status(ref)
       .then((next) => {
+        knownStatuses.set(statusKey, next);
         if (!cancelled) setStatus(next);
       })
       .catch((error) => {
@@ -73,7 +79,7 @@ export function SharedSettingsCard({
     return () => {
       cancelled = true;
     };
-  }, [ref]);
+  }, [ref, statusKey]);
 
   const locked = disabled || busy || !status;
   const groupName = (group: SharedGroup) => t(`sharedSettings.groups.${group}`);
@@ -87,6 +93,7 @@ export function SharedSettingsCard({
     try {
       const next = await api.sharedSettings.configure(ref, choice);
       if (!next) throw new Error("shared settings were not changed");
+      knownStatuses.set(statusKey, next);
       setStatus(next);
       if (toastTitle && previous) {
         showUndoToast(toastTitle, () =>
