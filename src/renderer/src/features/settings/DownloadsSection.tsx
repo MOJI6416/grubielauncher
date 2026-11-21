@@ -20,6 +20,7 @@ import { onRadioKeyDown, radioFocusIndex } from "@renderer/utilities/radioKeys";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import type { SettingsEntryId } from "./catalog";
 import { countFeature } from "@renderer/features/usage/usage";
+import { useLauncherRuntime } from "@renderer/app/launcherRuntime";
 
 const api = window.api;
 
@@ -60,6 +61,7 @@ export function DownloadsSection({
   reset: (id: SettingsEntryId) => void;
 }) {
   const { t } = useTranslation();
+  const isPortable = !!useLauncherRuntime()?.portableRoot;
   const cachedMode = useAtomValue(mirrorModeAtom);
   const [mode, setMode] = useState<MirrorMode | null>(cachedMode);
   const [isProbing, setProbing] = useState(false);
@@ -250,6 +252,9 @@ export function DownloadsSection({
               htmlFor="settings-catalogLinks"
               title={t("settings.downloads.catalogLinks")}
               description={t("settings.downloads.catalogLinksDescription")}
+              lockedReason={
+                isPortable ? t("settings.portable.catalogLinks") : undefined
+              }
               query={query}
               changed={isChanged("catalogLinks")}
               onReset={() => {

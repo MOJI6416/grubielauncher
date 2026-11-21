@@ -74,6 +74,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build and publish the portable archive
+        if: runner.os == 'Windows'
+        run: node .github/scripts/portable.mjs --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   release-mac:
     needs: notes
     if: vars.MACOS_RELEASE == 'true'

@@ -37,6 +37,7 @@ export interface DataLocationInfo {
   isDefault: boolean;
   freeBytes?: number | null;
   movedAcrossDrives?: boolean;
+  portable?: boolean;
 }
 
 export type DataLocationApplyResult =

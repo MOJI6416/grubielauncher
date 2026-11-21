@@ -24,6 +24,9 @@ export function DataLocationGroup({ query }: { query: string }) {
           entry="dataLocation"
           title={t("settings.dataLocation.title")}
           description={t("settings.dataLocation.description")}
+          lockedReason={
+            info?.portable ? t("settings.portable.dataLocation") : undefined
+          }
           query={query}
           control={
             <Button
@@ -48,7 +51,7 @@ export function DataLocationGroup({ query }: { query: string }) {
               path={info?.root ? redact.path(info.root) : "…"}
               className="flex-1 text-xs text-faint"
             />
-            {info?.isDefault ? (
+            {info?.portable ? null : info?.isDefault ? (
               <span className="shrink-0 text-2xs text-faint">
                 {t("settings.dataLocation.default")}
               </span>

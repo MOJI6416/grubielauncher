@@ -4,6 +4,7 @@ import { promisify } from "util";
 import path from "path";
 import { HIDDEN_START_FLAG, WINDOWS_LOGIN_ITEM_NAME } from "./launchAtLogin";
 import { isUpdateLoop, isVersionBelow, UpdateAttempt } from "./updateLoopGuard";
+import { isPortable } from "./portable";
 
 export interface InstalledLauncher {
   exe: string;
@@ -71,7 +72,8 @@ export async function recoverWindowsStartup(options: {
   hidden: boolean;
   attempt: UpdateAttempt | null;
 }): Promise<boolean> {
-  if (process.platform !== "win32" || !app.isPackaged) return false;
+  if (process.platform !== "win32" || !app.isPackaged || isPortable())
+    return false;
   try {
     const powershell = path.win32.join(
       process.env.SystemRoot || "C:\\Windows",

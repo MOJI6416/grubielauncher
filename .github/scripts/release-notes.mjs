@@ -413,7 +413,7 @@ async function updateGithub(release, notes, publish, coverUrl) {
   const patch = { body: renderGithub(notes, coverUrl) };
   if (publish && release.draft) {
     const names = new Set(release.assets.map((asset) => asset.name));
-    const required = ["latest.yml", "latest-linux.yml"];
+    const required = ["latest.yml", "latest-linux.yml", `grubie-launcher-${notes.version}-portable.zip`];
     if (process.env.REQUIRE_MAC_ASSETS === "true") required.push("latest-mac.yml");
     const missing = required.filter((name) => !names.has(name));
     if (missing.length) fail(`В черновике ${notes.version} нет ${missing.join(", ")} — сборка выложила не всё`);

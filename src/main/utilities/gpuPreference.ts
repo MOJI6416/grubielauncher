@@ -11,6 +11,7 @@ import {
 } from "@/shared/gpuPreference";
 import { getDataRoot } from "./dataRoot";
 import { detectLinuxLaunchTools } from "./linuxLaunchTools";
+import { isPortable } from "./portable";
 
 interface HeldPreference {
   previous: string | null;
@@ -158,6 +159,7 @@ export async function prepareGpuPreference(
   preference: GpuPreference,
 ): Promise<PreparedGpuPreference> {
   if (process.platform === "win32") {
+    if (isPortable()) return { env: {}, release: null };
     const release = await holdWindowsPreference(javaPath, preference).catch(
       (error) => {
         console.warn("[gpu] could not set the GPU preference:", error);

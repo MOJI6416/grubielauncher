@@ -1881,7 +1881,8 @@
       "languageDescription": "Applies immediately, no restart needed",
       "groups": {
         "effects": "Animations and effects",
-        "soundAndLogs": "Sound and logs"
+        "soundAndLogs": "Sound and logs",
+        "gamepad": "Gamepad and TV"
       },
       "uiScale": "Interface scale",
       "uiScaleDescription": "Size of text, buttons and spacing. Also works with Ctrl + mouse wheel.",
@@ -1908,7 +1909,8 @@
         "lists": "Lists and tabs",
         "logs": "Logs and console",
         "chat": "Chat",
-        "voice": "Voice chat"
+        "voice": "Voice chat",
+        "gamepad": "Gamepad"
       },
       "shortcuts": {
         "global": {
@@ -1957,6 +1959,17 @@
         },
         "voice": {
           "ptt": "Talk (push-to-talk)"
+        },
+        "gamepad": {
+          "move": "Move the focus",
+          "activate": "Press the focused item",
+          "back": "Back or close the dialog",
+          "menu": "Row menu",
+          "tabs": "Next or previous tab or section",
+          "page": "Scroll a page",
+          "scroll": "Smooth scrolling",
+          "play": "Play the selected instance",
+          "bigMode": "Big mode"
         }
       },
       "accent": "Accent color",
@@ -1985,7 +1998,12 @@
         "graphite": "Graphite"
       },
       "seasonalDecor": "Holiday decorations",
-      "seasonalDecorDescription": "Themed touches on holidays: {{events}}."
+      "seasonalDecorDescription": "Themed touches on holidays: {{events}}.",
+      "gamepad": "Gamepad control",
+      "gamepadDescription": "The D-pad or the left stick moves the focus, A presses, B goes back, ☰ plays the selected instance. Works while the launcher window is active.",
+      "bigMode": "Big mode",
+      "bigModeDescription": "Big full-screen instance tiles for a gamepad, a Steam Deck or a TV. Leave with B, Esc or the button at the bottom.",
+      "bigModeOnStart": "Open when the launcher starts"
     },
     "voice": {
       "devicesDescription": "Devices are shared with the in-call panel. Test the microphone before joining."
@@ -2014,7 +2032,8 @@
       "historyCurrent": "Installed",
       "historyNoDetails": "There is no change list for this release.",
       "historyUnavailable": "The release list is unavailable right now — it will load once the connection is back.",
-      "openLinkFailed": "Couldn't open the link"
+      "openLinkFailed": "Couldn't open the link",
+      "portable": "Portable version"
     },
     "index": {
       "memory": {
@@ -2391,6 +2410,16 @@
         "title": "Check connection",
         "description": "Reachability of the launcher servers, Mojang, the mirror and mod sites, service status",
         "keywords": "connection network internet mirror check status services"
+      },
+      "gamepad": {
+        "title": "Gamepad control",
+        "description": "Navigate the launcher and play an instance with a gamepad",
+        "keywords": "gamepad joystick controller xbox playstation dualsense steam deck navigation"
+      },
+      "bigMode": {
+        "title": "Big mode",
+        "description": "Big instance tiles for a TV and a Steam Deck",
+        "keywords": "big mode tv television steam deck big picture full screen couch"
       }
     },
     "voicePttCaptureTimeout": "No key was pressed — the shortcut is unchanged.",
@@ -2475,7 +2504,12 @@
     },
     "overlayToasts": "Notifications over the game",
     "overlayToastsDescription": "Messages, invites and calls appear in the overlay corner while you play; accept an invite with a key. Does not work in exclusive fullscreen",
-    "overlayAcceptKey": "Accept key"
+    "overlayAcceptKey": "Accept key",
+    "portable": {
+      "catalogLinks": "The portable version writes nothing to the registry, so the «Install» buttons on these sites cannot open it.",
+      "dataLocation": "The portable version keeps its data in the data folder next to the program. To move it, move the whole launcher folder.",
+      "gpu": "The portable version writes nothing to the registry, so Windows picks the graphics card for the game."
+    }
   },
   "skinView": {
     "title": "Skin preview",
@@ -7792,5 +7826,17 @@
       "counted_one": "Progress from {{count}} server is counted through the companion mod",
       "counted_other": "Progress from {{count}} servers is counted through the companion mod"
     }
+  },
+  "gamepad": {
+    "connected": "Gamepad connected",
+    "connectedDescription": "The D-pad moves the focus, A presses, B goes back. For a TV or a Steam Deck there is big mode — the ⧉ button."
+  },
+  "bigMode": {
+    "name": "Big mode",
+    "open": "Open",
+    "inGame": "In game now",
+    "emptyTitle": "No instances yet",
+    "emptyDescription": "Create your first instance and it will show up here as a big tile.",
+    "exit": "Leave big mode"
   }
 }

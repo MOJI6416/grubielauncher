@@ -1905,7 +1905,8 @@
       "languageDescription": "Vale na hora, sem reiniciar",
       "groups": {
         "effects": "Animações e efeitos",
-        "soundAndLogs": "Som e logs"
+        "soundAndLogs": "Som e logs",
+        "gamepad": "Controle e TV"
       },
       "uiScale": "Escala da interface",
       "uiScaleDescription": "Tamanho do texto, dos botões e dos espaçamentos. Também funciona com Ctrl + roda do mouse.",
@@ -1932,7 +1933,8 @@
         "lists": "Listas e abas",
         "logs": "Logs e console",
         "chat": "Chat",
-        "voice": "Chat de voz"
+        "voice": "Chat de voz",
+        "gamepad": "Controle"
       },
       "shortcuts": {
         "global": {
@@ -1981,6 +1983,17 @@
         },
         "voice": {
           "ptt": "Falar (apertar para falar)"
+        },
+        "gamepad": {
+          "move": "Mover o foco",
+          "activate": "Pressionar o item em foco",
+          "back": "Voltar ou fechar a janela",
+          "menu": "Menu da linha",
+          "tabs": "Aba ou seção vizinha",
+          "page": "Rolar uma página",
+          "scroll": "Rolagem suave",
+          "play": "Jogar a instância escolhida",
+          "bigMode": "Modo grande"
         }
       },
       "accent": "Cor de destaque",
@@ -2009,7 +2022,12 @@
         "graphite": "Grafite"
       },
       "seasonalDecor": "Decoração de feriados",
-      "seasonalDecorDescription": "Toques temáticos em datas especiais: {{events}}."
+      "seasonalDecorDescription": "Toques temáticos em datas especiais: {{events}}.",
+      "gamepad": "Controle por gamepad",
+      "gamepadDescription": "O direcional ou o analógico esquerdo movem o foco, A pressiona, B volta e ☰ joga a instância escolhida. Funciona enquanto a janela do launcher está ativa.",
+      "bigMode": "Modo grande",
+      "bigModeDescription": "Blocos grandes das instâncias em tela cheia, para controle, Steam Deck e TV. Para sair: B, Esc ou o botão embaixo.",
+      "bigModeOnStart": "Abrir ao iniciar o launcher"
     },
     "voice": {
       "devicesDescription": "Os dispositivos são os mesmos do painel da chamada. Teste o microfone antes de entrar."
@@ -2038,7 +2056,8 @@
       "historyCurrent": "Instalada",
       "historyNoDetails": "Não há lista de mudanças para esta versão.",
       "historyUnavailable": "A lista de versões está indisponível agora — ela carrega quando a conexão voltar.",
-      "openLinkFailed": "Não foi possível abrir o link"
+      "openLinkFailed": "Não foi possível abrir o link",
+      "portable": "Versão portátil"
     },
     "index": {
       "memory": {
@@ -2415,6 +2434,16 @@
         "title": "Verificar conexão",
         "description": "Disponibilidade dos servidores do launcher, Mojang, espelho e mods, status dos serviços",
         "keywords": "conexão rede internet espelho verificar status serviços"
+      },
+      "gamepad": {
+        "title": "Controle por gamepad",
+        "description": "Navegar pelo launcher e jogar uma instância com o controle",
+        "keywords": "controle gamepad joystick xbox playstation dualsense steam deck navegação"
+      },
+      "bigMode": {
+        "title": "Modo grande",
+        "description": "Blocos grandes de instâncias para TV e Steam Deck",
+        "keywords": "modo grande tv televisão steam deck big picture tela cheia sofá"
       }
     },
     "voicePttCaptureTimeout": "Nenhuma tecla foi pressionada — o atalho não mudou.",
@@ -2499,7 +2528,12 @@
     },
     "overlayToasts": "Notificações sobre o jogo",
     "overlayToastsDescription": "Mensagens, convites e chamadas aparecem no canto do overlay durante o jogo; aceite um convite com uma tecla. Não funciona em tela cheia exclusiva",
-    "overlayAcceptKey": "Tecla “Aceitar”"
+    "overlayAcceptKey": "Tecla “Aceitar”",
+    "portable": {
+      "catalogLinks": "A versão portátil não grava nada no registro, então os botões «Install» desses sites não conseguem abri-la.",
+      "dataLocation": "A versão portátil guarda os dados na pasta data ao lado do programa. Para movê-los, mova a pasta inteira do launcher.",
+      "gpu": "A versão portátil não grava nada no registro, então o Windows escolhe a placa de vídeo para o jogo."
+    }
   },
   "skinView": {
     "title": "Prévia da skin",
@@ -7885,5 +7919,17 @@
       "counted_many": "O progresso de {{count}} servidores é contado pelo mod complementar",
       "counted_other": "O progresso de {{count}} servidores é contado pelo mod complementar"
     }
+  },
+  "gamepad": {
+    "connected": "Controle conectado",
+    "connectedDescription": "O direcional move o foco, A pressiona e B volta. Para TV ou Steam Deck existe o modo grande — botão ⧉."
+  },
+  "bigMode": {
+    "name": "Modo grande",
+    "open": "Abrir",
+    "inGame": "Jogando agora",
+    "emptyTitle": "Ainda não há instâncias",
+    "emptyDescription": "Crie sua primeira instância e ela aparecerá aqui como um bloco grande.",
+    "exit": "Sair do modo grande"
   }
 }

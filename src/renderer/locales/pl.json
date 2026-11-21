@@ -1926,7 +1926,8 @@
       "languageDescription": "Działa od razu, bez ponownego uruchamiania",
       "groups": {
         "effects": "Animacje i efekty",
-        "soundAndLogs": "Dźwięk i logi"
+        "soundAndLogs": "Dźwięk i logi",
+        "gamepad": "Pad i telewizor"
       },
       "uiScale": "Skala interfejsu",
       "uiScaleDescription": "Rozmiar tekstu, przycisków i odstępów. Działa też z Ctrl + kółko myszy.",
@@ -1953,7 +1954,8 @@
         "lists": "Listy i zakładki",
         "logs": "Logi i konsola",
         "chat": "Czat",
-        "voice": "Czat głosowy"
+        "voice": "Czat głosowy",
+        "gamepad": "Pad"
       },
       "shortcuts": {
         "global": {
@@ -2002,6 +2004,17 @@
         },
         "voice": {
           "ptt": "Mów (naciśnij, aby mówić)"
+        },
+        "gamepad": {
+          "move": "Przesuń fokus",
+          "activate": "Naciśnij zaznaczone",
+          "back": "Wstecz lub zamknij okno",
+          "menu": "Menu wiersza",
+          "tabs": "Sąsiednia karta lub sekcja",
+          "page": "Przewiń o stronę",
+          "scroll": "Płynne przewijanie",
+          "play": "Graj w wybraną instancję",
+          "bigMode": "Tryb duży"
         }
       },
       "accent": "Kolor akcentu",
@@ -2030,7 +2043,12 @@
         "graphite": "Grafitowy"
       },
       "seasonalDecor": "Świąteczne dekoracje",
-      "seasonalDecorDescription": "Tematyczne akcenty w święta: {{events}}."
+      "seasonalDecorDescription": "Tematyczne akcenty w święta: {{events}}.",
+      "gamepad": "Sterowanie padem",
+      "gamepadDescription": "Krzyżak lub lewa gałka przesuwa fokus, A naciska, B cofa, ☰ uruchamia wybraną instancję. Działa, gdy okno launchera jest aktywne.",
+      "bigMode": "Tryb duży",
+      "bigModeDescription": "Duże kafelki instancji na cały ekran — dla pada, Steam Decka i telewizora. Wyjście: B, Esc lub przycisk na dole.",
+      "bigModeOnStart": "Otwieraj przy starcie launchera"
     },
     "voice": {
       "devicesDescription": "Urządzenia są wspólne z panelem rozmowy. Przetestuj mikrofon przed dołączeniem."
@@ -2059,7 +2077,8 @@
       "historyCurrent": "Zainstalowana",
       "historyNoDetails": "Brak listy zmian dla tego wydania.",
       "historyUnavailable": "Lista wydań jest teraz niedostępna — wczyta się, gdy połączenie wróci.",
-      "openLinkFailed": "Nie udało się otworzyć linku"
+      "openLinkFailed": "Nie udało się otworzyć linku",
+      "portable": "Wersja przenośna"
     },
     "index": {
       "memory": {
@@ -2436,6 +2455,16 @@
         "title": "Sprawdź połączenie",
         "description": "Dostępność serwerów launchera, Mojang, mirrora i modów, status usług",
         "keywords": "połączenie sieć internet mirror sprawdzenie status usługi"
+      },
+      "gamepad": {
+        "title": "Sterowanie padem",
+        "description": "Poruszanie się po launcherze i uruchamianie instancji padem",
+        "keywords": "pad gamepad joystick kontroler xbox playstation dualsense steam deck sterowanie"
+      },
+      "bigMode": {
+        "title": "Tryb duży",
+        "description": "Duże kafelki instancji na telewizor i Steam Decka",
+        "keywords": "tryb duży telewizor tv steam deck big picture pełny ekran kanapa"
       }
     },
     "voicePttCaptureTimeout": "Nie naciśnięto żadnego klawisza — skrót się nie zmienił.",
@@ -2520,7 +2549,12 @@
     },
     "overlayToasts": "Powiadomienia nad grą",
     "overlayToastsDescription": "Wiadomości, zaproszenia i połączenia pojawiają się w rogu nakładki podczas gry, zaproszenie przyjmuje się klawiszem. Nie działa w trybie wyłącznie pełnoekranowym",
-    "overlayAcceptKey": "Klawisz „Akceptuj”"
+    "overlayAcceptKey": "Klawisz „Akceptuj”",
+    "portable": {
+      "catalogLinks": "Wersja przenośna niczego nie zapisuje w rejestrze, więc przyciski «Install» na tych stronach jej nie otworzą.",
+      "dataLocation": "Wersja przenośna trzyma dane w folderze data obok programu. Aby je przenieść, przenieś cały folder launchera.",
+      "gpu": "Wersja przenośna niczego nie zapisuje w rejestrze, więc kartę graficzną do gry wybiera Windows."
+    }
   },
   "skinView": {
     "title": "Podgląd skina",
@@ -7983,5 +8017,17 @@
       "counted_many": "Uwzględniono postęp z {{count}} serwerów przez mod towarzyszący",
       "counted_other": "Uwzględniono postęp z {{count}} serwera przez mod towarzyszący"
     }
+  },
+  "gamepad": {
+    "connected": "Pad podłączony",
+    "connectedDescription": "Krzyżak przesuwa fokus, A naciska, B cofa. Na telewizor i Steam Decka jest tryb duży — przycisk ⧉."
+  },
+  "bigMode": {
+    "name": "Tryb duży",
+    "open": "Otwórz",
+    "inGame": "Teraz w grze",
+    "emptyTitle": "Nie ma jeszcze instancji",
+    "emptyDescription": "Utwórz pierwszą instancję — pojawi się tu jako duży kafelek.",
+    "exit": "Wyjdź z trybu dużego"
   }
 }

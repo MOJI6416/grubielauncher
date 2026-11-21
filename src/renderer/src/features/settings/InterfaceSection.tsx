@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import ReactCountryFlag from "react-country-flag";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Maximize2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import {
   Select,
@@ -30,6 +32,7 @@ import {
   formatMonthDay,
 } from "@renderer/features/seasonal/calendar";
 import { previewSound } from "@renderer/utilities/sounds";
+import { openBigMode } from "@renderer/features/bigMode/bigModeStore";
 
 const api = window.api;
 
@@ -340,6 +343,59 @@ export function InterfaceSection({
           />
         )}
       </SettingsGroup>
+
+      {(visible("gamepad") || visible("bigMode")) && (
+        <SettingsGroup title={t("settings.interface.groups.gamepad")}>
+          {visible("gamepad") && (
+            <SettingRow
+              entry="gamepad"
+              htmlFor="settings-gamepad"
+              title={t("settings.interface.gamepad")}
+              description={t("settings.interface.gamepadDescription")}
+              query={query}
+              changed={isChanged("gamepad")}
+              onReset={() => reset("gamepad")}
+              control={
+                <Switch
+                  id="settings-gamepad"
+                  checked={settings.gamepad}
+                  onCheckedChange={(value) => commit({ gamepad: value })}
+                />
+              }
+            />
+          )}
+
+          {visible("bigMode") && (
+            <SettingRow
+              entry="bigMode"
+              title={t("settings.interface.bigMode")}
+              description={t("settings.interface.bigModeDescription")}
+              query={query}
+              changed={isChanged("bigMode")}
+              onReset={() => reset("bigMode")}
+              control={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openBigMode()}
+                >
+                  <Maximize2 />
+                  {t("bigMode.open")}
+                </Button>
+              }
+            >
+              <label className="flex w-fit items-center gap-2.5 text-xs text-muted-foreground">
+                <Switch
+                  size="sm"
+                  checked={settings.bigModeOnStart}
+                  onCheckedChange={(value) => commit({ bigModeOnStart: value })}
+                />
+                {t("settings.interface.bigModeOnStart")}
+              </label>
+            </SettingRow>
+          )}
+        </SettingsGroup>
+      )}
 
       {visible("shortcuts") && (
         <>

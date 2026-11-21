@@ -1,3 +1,4 @@
+import "./portableBoot";
 import "./journal/bootstrap";
 import { app, crashReporter, Menu, net, protocol, session } from "electron";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
@@ -42,7 +43,7 @@ import { registerAppImageDesktopEntry } from "./utilities/linuxDesktopEntry";
 import { disposePushToTalk } from "./services/PushToTalk";
 import { initWorldBackupService } from "./services/WorldBackupService";
 import { initTray } from "./tray/tray";
-import { initUsageStats } from "./utilities/usageStats";
+import { countUsage, initUsageStats } from "./utilities/usageStats";
 import {
   rememberRejectedUpdate,
   startBackgroundUpdateChecks,
@@ -52,6 +53,8 @@ import { scheduleUpdateInstall } from "./utilities/updateInstall";
 import { loadAutoUpdater } from "./utilities/autoUpdater";
 import { verifyDownloadedUpdate } from "./utilities/updateSignature";
 import { getDataRoot } from "./utilities/dataRoot";
+import { getPortableRoot, isPortable } from "./utilities/portable";
+import { rebasePortableData } from "./utilities/portableRebase";
 import { prepareDataRoot } from "./windows/dataLocationWindow";
 import {
   consumeHiddenStart,
@@ -372,6 +375,8 @@ function notifyMainWindowUpdateFailed(
 }
 
 function registerProtocolClient() {
+  if (isPortable()) return;
+
   if (process.defaultApp) {
     const appPath = process.argv.slice(1).find((arg) => !arg.startsWith("-"));
     if (appPath) {
@@ -474,7 +479,8 @@ if (!gotTheLock) {
     const startHidden = consumeHiddenStart(process.argv);
     if (!startHidden && (await offerMoveToApplications())) return;
     const updateAttemptDir = app.getPath("userData");
-    const updateAttempt = is.dev
+    const skipsUpdates = is.dev || isPortable();
+    const updateAttempt = skipsUpdates
       ? null
       : await readUpdateAttempt(updateAttemptDir);
     const runningCopy = { version: app.getVersion(), exe: process.execPath };
@@ -503,6 +509,23 @@ if (!gotTheLock) {
     await fs.ensureDir(launcherPath);
     journal.info("app", "data root ready", { dataRoot: launcherPath });
 
+    const portableRoot = getPortableRoot();
+    if (portableRoot) {
+      const rebased = await rebasePortableData({
+        root: portableRoot,
+        dataRoot: launcherPath,
+        userData: app.getPath("userData"),
+      }).catch((error) => {
+        journal.failure("app", "portable paths not rebased", error);
+        return null;
+      });
+      journal.info("app", "portable mode", {
+        root: portableRoot,
+        movedFrom: rebased?.from ?? null,
+        rebasedFiles: rebased?.files ?? 0,
+      });
+    }
+
     void initMirrorState(launcherPath);
     scheduleApiRouteProbe();
 
@@ -513,6 +536,7 @@ if (!gotTheLock) {
     Object.values(ipcHandlers).forEach((register) => register());
     initTray();
     initUsageStats();
+    if (portableRoot) countUsage("app.portable");
     registerLegacyLocalStorageIpc();
     initWorldBackupService();
 
@@ -524,7 +548,7 @@ if (!gotTheLock) {
     const initialDeepLink = extractLauncherDeepLink(process.argv);
     if (initialDeepLink) pendingDeepLinks.push(initialDeepLink);
 
-    if (is.dev) {
+    if (skipsUpdates) {
       createMainWindow({ deferShow: startHidden });
       flushPendingDeepLinks();
       return;

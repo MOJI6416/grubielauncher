@@ -49,6 +49,7 @@ import {
 import { supportsGpuPreference } from "@/shared/gpuPreference";
 import { supportsGraphicsBackend } from "@/shared/graphicsBackend";
 import { PLATFORM } from "@renderer/utilities/platform";
+import { useLauncherRuntime } from "@renderer/app/launcherRuntime";
 import {
   GpuPreferenceControl,
   GraphicsBackendControl,
@@ -236,6 +237,7 @@ export function InstanceSettingsPanel({
   const totalMemoryMb = useTotalMemoryMb();
   const { list: javaList } = useJavaRuntimes();
   const isLinux = PLATFORM === "linux";
+  const gpuLocked = !!useLauncherRuntime()?.portableRoot && PLATFORM === "win32";
   const linuxTools = useLinuxLaunchTools(isLinux);
   const linuxOverridden = LINUX_KEYS.some((key) =>
     isOverridden(overrides, key),
@@ -386,13 +388,14 @@ export function InstanceSettingsPanel({
               <SettingLine
                 icon={Cpu}
                 title={t("launchSettings.gpu.title")}
+                hint={gpuLocked ? t("settings.portable.gpu") : undefined}
                 overridden={isOverridden(overrides, "gpuPreference")}
-                disabled={disabled}
+                disabled={disabled || gpuLocked}
                 onReset={() => reset("gpuPreference")}
                 control={
                   <GpuPreferenceControl
                     value={resolved.gpuPreference}
-                    disabled={disabled}
+                    disabled={disabled || gpuLocked}
                     onChange={(gpuPreference) =>
                       set("gpuPreference", gpuPreference)
                     }

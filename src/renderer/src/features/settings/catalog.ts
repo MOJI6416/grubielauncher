@@ -35,6 +35,8 @@ export type SettingsEntryId =
   | "logFontSize"
   | "accent"
   | "highContrast"
+  | "gamepad"
+  | "bigMode"
   | "motion"
   | "ambientTint"
   | "backgroundGrain"
@@ -173,6 +175,8 @@ export const SETTINGS_ENTRIES: SettingsEntryDef[] = [
   { id: "seasonalDecor", section: "interface", keys: ["seasonalDecor"] },
   { id: "sounds", section: "interface", keys: ["sounds", "soundVolume"] },
   { id: "logFontSize", section: "interface", keys: ["logFontSize"] },
+  { id: "gamepad", section: "interface", keys: ["gamepad"] },
+  { id: "bigMode", section: "interface", keys: ["bigModeOnStart"] },
 
   { id: "shortcuts", section: "interface", keys: [] },
   { id: "layoutPresets", section: "layout", keys: [] },

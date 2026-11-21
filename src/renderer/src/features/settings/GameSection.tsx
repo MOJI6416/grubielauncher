@@ -26,6 +26,7 @@ import { SharedSettingsGroup } from "@renderer/features/sharedSettings/SharedSet
 import { JvmFlagsInfo } from "@renderer/components/JvmFlagsInfo";
 import { PLATFORM } from "@renderer/utilities/platform";
 import { supportsGpuPreference } from "@/shared/gpuPreference";
+import { useLauncherRuntime } from "@renderer/app/launcherRuntime";
 import {
   GpuPreferenceControl,
   LinuxLaunchFields,
@@ -61,6 +62,7 @@ export function GameSection({
   const isLinux = PLATFORM === "linux";
   const linuxTools = useLinuxLaunchTools(isLinux);
   const lockedReason = useGameLockReason();
+  const gpuLocked = !!useLauncherRuntime()?.portableRoot && PLATFORM === "win32";
   const [showAllOverrides, setShowAllOverrides] = useState(false);
 
   const overriding = versions.filter(
@@ -140,6 +142,7 @@ export function GameSection({
           <SettingRow
             title={t("launchSettings.gpu.title")}
             description={t("launchSettings.gpu.description")}
+            lockedReason={gpuLocked ? t("settings.portable.gpu") : undefined}
             query={query}
             changed={isChanged("gpuPreference")}
             onReset={() => reset("gpuPreference")}

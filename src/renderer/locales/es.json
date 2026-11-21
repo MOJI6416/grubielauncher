@@ -1905,7 +1905,8 @@
       "languageDescription": "Se aplica de inmediato, sin reiniciar",
       "groups": {
         "effects": "Animaciones y efectos",
-        "soundAndLogs": "Sonido y registros"
+        "soundAndLogs": "Sonido y registros",
+        "gamepad": "Mando y televisor"
       },
       "uiScale": "Escala de la interfaz",
       "uiScaleDescription": "Tamaño del texto, los botones y los espacios. También funciona con Ctrl + rueda del mouse.",
@@ -1932,7 +1933,8 @@
         "lists": "Listas y pestañas",
         "logs": "Registros y consola",
         "chat": "Chat",
-        "voice": "Chat de voz"
+        "voice": "Chat de voz",
+        "gamepad": "Mando"
       },
       "shortcuts": {
         "global": {
@@ -1981,6 +1983,17 @@
         },
         "voice": {
           "ptt": "Hablar (presionar para hablar)"
+        },
+        "gamepad": {
+          "move": "Mover el foco",
+          "activate": "Pulsar lo seleccionado",
+          "back": "Atrás o cerrar el diálogo",
+          "menu": "Menú de la fila",
+          "tabs": "Pestaña o sección anterior o siguiente",
+          "page": "Desplazar una página",
+          "scroll": "Desplazamiento suave",
+          "play": "Jugar la instancia elegida",
+          "bigMode": "Modo grande"
         }
       },
       "accent": "Color de acento",
@@ -2009,7 +2022,12 @@
         "graphite": "Grafito"
       },
       "seasonalDecor": "Decoración festiva",
-      "seasonalDecorDescription": "Detalles temáticos en días festivos: {{events}}."
+      "seasonalDecorDescription": "Detalles temáticos en días festivos: {{events}}.",
+      "gamepad": "Control con mando",
+      "gamepadDescription": "La cruceta o el stick izquierdo mueven el foco, A pulsa, B vuelve atrás y ☰ juega la instancia elegida. Funciona mientras la ventana del launcher está activa.",
+      "bigMode": "Modo grande",
+      "bigModeDescription": "Mosaicos grandes de las instancias a pantalla completa, para mando, Steam Deck y televisor. Se sale con B, Esc o el botón de abajo.",
+      "bigModeOnStart": "Abrir al iniciar el launcher"
     },
     "voice": {
       "devicesDescription": "Los dispositivos son los mismos que en el panel de llamada. Pruebe el micrófono antes de entrar."
@@ -2038,7 +2056,8 @@
       "historyCurrent": "Instalada",
       "historyNoDetails": "No hay lista de cambios para esta versión.",
       "historyUnavailable": "La lista de versiones no está disponible ahora: se cargará cuando vuelva la conexión.",
-      "openLinkFailed": "No se pudo abrir el enlace"
+      "openLinkFailed": "No se pudo abrir el enlace",
+      "portable": "Versión portátil"
     },
     "index": {
       "memory": {
@@ -2415,6 +2434,16 @@
         "title": "Comprobar la conexión",
         "description": "Disponibilidad de los servidores del launcher, Mojang, el espejo y los mods, estado de los servicios",
         "keywords": "conexión red internet espejo comprobar estado servicios"
+      },
+      "gamepad": {
+        "title": "Control con mando",
+        "description": "Navegar por el launcher y jugar una instancia con el mando",
+        "keywords": "mando gamepad joystick controlador xbox playstation dualsense steam deck"
+      },
+      "bigMode": {
+        "title": "Modo grande",
+        "description": "Mosaicos grandes de instancias para televisor y Steam Deck",
+        "keywords": "modo grande televisor tv steam deck big picture pantalla completa sofá"
       }
     },
     "voicePttCaptureTimeout": "No se presionó ninguna tecla: el atajo no cambió.",
@@ -2499,7 +2528,12 @@
     },
     "overlayToasts": "Notificaciones sobre el juego",
     "overlayToastsDescription": "Los mensajes, invitaciones y llamadas aparecen en la esquina del overlay mientras juega; acepte una invitación con una tecla. No funciona en pantalla completa exclusiva",
-    "overlayAcceptKey": "Tecla «Aceptar»"
+    "overlayAcceptKey": "Tecla «Aceptar»",
+    "portable": {
+      "catalogLinks": "La versión portátil no escribe nada en el registro, así que los botones «Install» de esas webs no pueden abrirla.",
+      "dataLocation": "La versión portátil guarda sus datos en la carpeta data junto al programa. Para moverlos, mueva toda la carpeta del launcher.",
+      "gpu": "La versión portátil no escribe nada en el registro, así que Windows elige la tarjeta gráfica para el juego."
+    }
   },
   "skinView": {
     "title": "Vista previa de la skin",
@@ -7885,5 +7919,17 @@
       "counted_many": "Se cuenta el progreso de {{count}} servidores mediante el mod complementario",
       "counted_other": "Se cuenta el progreso de {{count}} servidores mediante el mod complementario"
     }
+  },
+  "gamepad": {
+    "connected": "Mando conectado",
+    "connectedDescription": "La cruceta mueve el foco, A pulsa y B vuelve atrás. Para la tele o una Steam Deck está el modo grande: botón ⧉."
+  },
+  "bigMode": {
+    "name": "Modo grande",
+    "open": "Abrir",
+    "inGame": "Jugando ahora",
+    "emptyTitle": "Aún no hay instancias",
+    "emptyDescription": "Cree su primera instancia y aparecerá aquí como un mosaico grande.",
+    "exit": "Salir del modo grande"
   }
 }

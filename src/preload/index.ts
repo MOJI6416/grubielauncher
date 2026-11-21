@@ -230,6 +230,7 @@ import type {
 } from "@/types/Catalog";
 import type { FailureInfo } from "@/shared/errors";
 import type { UiScaleState } from "@/shared/uiScale";
+import type { LauncherRuntime } from "@/types/LauncherRuntime";
 import type { LaunchOutcome, LinuxLaunchTools } from "@/shared/launchCommand";
 import type { LaunchShortcutTarget } from "@/shared/launchLink";
 import type { ThemeFileManifest } from "@/shared/themeFile";
@@ -1090,6 +1091,8 @@ export interface IElectronAPI {
     confirmClose: () => Promise<void>;
     getUiScale: () => Promise<UiScaleState>;
     setUiScale: (scale: number) => Promise<UiScaleState>;
+    getRuntime: () => Promise<LauncherRuntime>;
+    setFullScreen: (value: boolean) => Promise<boolean>;
     setTitleBarColors: (color: string, symbolColor: string) => Promise<void>;
     onCloseRequested: (
       callback: (reason: {
@@ -2462,6 +2465,8 @@ export const api: IElectronAPI = {
     confirmClose: () => invoke("other:confirmClose"),
     getUiScale: () => invoke("other:getUiScale"),
     setUiScale: (scale: number) => invoke("other:setUiScale", scale),
+    getRuntime: () => invoke("other:getRuntime"),
+    setFullScreen: (value: boolean) => invoke("other:setFullScreen", value),
     setTitleBarColors: (color: string, symbolColor: string) =>
       invoke("other:setTitleBarColors", color, symbolColor),
     onCloseRequested: (

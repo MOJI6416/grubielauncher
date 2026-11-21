@@ -5,7 +5,8 @@ export type ShortcutGroupId =
   | "palette"
   | "lists"
   | "logs"
-  | "chat";
+  | "chat"
+  | "gamepad";
 
 export interface ShortcutDef {
   id: string;
@@ -75,6 +76,20 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { id: "newline", combos: [[SHIFT_KEY, "Enter"]] },
       { id: "cancelReply", combos: [["Esc"]] },
       { id: "switchFriend", combos: [["↑"], ["↓"]] },
+    ],
+  },
+  {
+    id: "gamepad",
+    items: [
+      { id: "move", combos: [["✚"], ["LS"]] },
+      { id: "activate", combos: [["A"]] },
+      { id: "back", combos: [["B"]] },
+      { id: "menu", combos: [["X"]] },
+      { id: "tabs", combos: [["LB"], ["RB"]] },
+      { id: "page", combos: [["LT"], ["RT"]] },
+      { id: "scroll", combos: [["RS"]] },
+      { id: "play", combos: [["☰"]] },
+      { id: "bigMode", combos: [["⧉"]] },
     ],
   },
 ];

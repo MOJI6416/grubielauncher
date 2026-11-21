@@ -246,6 +246,10 @@ export const USAGE_FEATURES = [
   "storage.cleanup",
   "instance.packAnalytics",
   "feature.packChannel",
+  "app.portable",
+  "gamepad.use",
+  "bigMode.open",
+  "bigMode.play",
 ] as const;
 
 export type UsageFeature = (typeof USAGE_FEATURES)[number];

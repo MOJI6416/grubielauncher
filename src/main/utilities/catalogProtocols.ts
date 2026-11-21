@@ -4,6 +4,7 @@ import fs from "fs-extra";
 import { normalizeSettings } from "@/types/Settings";
 import { getDataRoot } from "./dataRoot";
 import { CATALOG_PROTOCOLS } from "./deepLink";
+import { isPortable } from "./portable";
 
 function clientArgs(): [string, string[]] | null {
   if (!process.defaultApp) return null;
@@ -35,12 +36,14 @@ function unregister(scheme: string): boolean {
 }
 
 export function applyCatalogProtocols(enabled: boolean): boolean {
+  if (isPortable()) return false;
   return CATALOG_PROTOCOLS.map((scheme) =>
     enabled ? register(scheme) : unregister(scheme),
   ).every(Boolean);
 }
 
 export async function restoreCatalogProtocols(): Promise<void> {
+  if (isPortable()) return;
   const raw = await fs
     .readJSON(path.join(getDataRoot(), "settings.json"))
     .catch(() => null);

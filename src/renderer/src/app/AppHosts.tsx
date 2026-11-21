@@ -39,6 +39,8 @@ import { AppUpdateHost } from "./hosts/AppUpdateHost";
 import { SupportHost } from "./hosts/SupportHost";
 import { StreamerModeHost } from "./hosts/StreamerModeHost";
 import { DataMoveHost } from "./hosts/DataMoveHost";
+import { GamepadHost } from "./hosts/GamepadHost";
+import { BigModeHost } from "@renderer/features/bigMode/BigModeHost";
 import { BisectHost } from "@renderer/features/bisect/BisectHost";
 import { ModpackInfectedHost } from "@renderer/features/security/ModpackInfectedHost";
 
@@ -49,6 +51,8 @@ export function AppHosts() {
       <StreamerModeHost />
       <ThemeHost />
       <UiScaleHost />
+      <GamepadHost />
+      <BigModeHost />
       <AppearanceHost />
       <SeasonalHost />
       <AppUpdateHost />

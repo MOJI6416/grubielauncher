@@ -1881,7 +1881,8 @@
       "languageDescription": "Gilt sofort, kein Neustart nötig",
       "groups": {
         "effects": "Animationen und Effekte",
-        "soundAndLogs": "Ton und Logs"
+        "soundAndLogs": "Ton und Logs",
+        "gamepad": "Gamepad und Fernseher"
       },
       "uiScale": "Oberflächenskalierung",
       "uiScaleDescription": "Größe von Text, Schaltflächen und Abständen. Geht auch mit Strg + Mausrad.",
@@ -1908,7 +1909,8 @@
         "lists": "Listen und Tabs",
         "logs": "Logs und Konsole",
         "chat": "Chat",
-        "voice": "Sprachchat"
+        "voice": "Sprachchat",
+        "gamepad": "Gamepad"
       },
       "shortcuts": {
         "global": {
@@ -1957,6 +1959,17 @@
         },
         "voice": {
           "ptt": "Sprechen (Push-to-Talk)"
+        },
+        "gamepad": {
+          "move": "Fokus bewegen",
+          "activate": "Fokussiertes drücken",
+          "back": "Zurück oder Dialog schließen",
+          "menu": "Menü der Zeile",
+          "tabs": "Nächster oder vorheriger Tab bzw. Bereich",
+          "page": "Eine Seite scrollen",
+          "scroll": "Stufenlos scrollen",
+          "play": "Gewählte Instanz spielen",
+          "bigMode": "Großer Modus"
         }
       },
       "accent": "Akzentfarbe",
@@ -1985,7 +1998,12 @@
         "graphite": "Graphit"
       },
       "seasonalDecor": "Festtagsdekoration",
-      "seasonalDecorDescription": "Thematische Akzente an Feiertagen: {{events}}."
+      "seasonalDecorDescription": "Thematische Akzente an Feiertagen: {{events}}.",
+      "gamepad": "Steuerung mit Gamepad",
+      "gamepadDescription": "Steuerkreuz oder linker Stick bewegen den Fokus, A drückt, B geht zurück, ☰ startet die gewählte Instanz. Funktioniert, solange das Launcher-Fenster aktiv ist.",
+      "bigMode": "Großer Modus",
+      "bigModeDescription": "Große Vollbild-Kacheln der Instanzen für Gamepad, Steam Deck und Fernseher. Verlassen mit B, Esc oder der Taste unten.",
+      "bigModeOnStart": "Beim Start des Launchers öffnen"
     },
     "voice": {
       "devicesDescription": "Die Geräte werden mit dem Anrufbereich geteilt. Testen Sie das Mikrofon, bevor Sie beitreten."
@@ -2014,7 +2032,8 @@
       "historyCurrent": "Installiert",
       "historyNoDetails": "Für dieses Release gibt es keine Änderungsliste.",
       "historyUnavailable": "Die Release-Liste ist gerade nicht verfügbar – sie lädt, sobald die Verbindung wieder steht.",
-      "openLinkFailed": "Der Link konnte nicht geöffnet werden"
+      "openLinkFailed": "Der Link konnte nicht geöffnet werden",
+      "portable": "Portable Version"
     },
     "index": {
       "memory": {
@@ -2391,6 +2410,16 @@
         "title": "Verbindung prüfen",
         "description": "Erreichbarkeit der Launcher-Server, von Mojang, dem Mirror und Mod-Seiten, Dienststatus",
         "keywords": "Verbindung Netzwerk Internet Mirror Prüfung Status Dienste"
+      },
+      "gamepad": {
+        "title": "Steuerung mit Gamepad",
+        "description": "Mit dem Gamepad durch den Launcher navigieren und Instanzen starten",
+        "keywords": "gamepad joystick controller xbox playstation dualsense steam deck steuerung"
+      },
+      "bigMode": {
+        "title": "Großer Modus",
+        "description": "Große Instanz-Kacheln für Fernseher und Steam Deck",
+        "keywords": "großer modus fernseher tv steam deck big picture vollbild sofa"
       }
     },
     "voicePttCaptureTimeout": "Es wurde keine Taste gedrückt – das Tastenkürzel bleibt unverändert.",
@@ -2475,7 +2504,12 @@
     },
     "overlayToasts": "Benachrichtigungen über dem Spiel",
     "overlayToastsDescription": "Nachrichten, Einladungen und Anrufe erscheinen beim Spielen in der Overlay-Ecke; Einladungen nehmen Sie per Taste an. Funktioniert nicht im exklusiven Vollbild",
-    "overlayAcceptKey": "Taste „Annehmen“"
+    "overlayAcceptKey": "Taste „Annehmen“",
+    "portable": {
+      "catalogLinks": "Die portable Version schreibt nichts in die Registry, deshalb können die «Install»-Schaltflächen der Websites sie nicht öffnen.",
+      "dataLocation": "Die portable Version speichert ihre Daten im Ordner data neben dem Programm. Verschieben Sie zum Umziehen den ganzen Launcher-Ordner.",
+      "gpu": "Die portable Version schreibt nichts in die Registry, deshalb wählt Windows die Grafikkarte für das Spiel."
+    }
   },
   "skinView": {
     "title": "Skin-Vorschau",
@@ -7792,5 +7826,17 @@
       "counted_one": "Fortschritt von {{count}} Server wird über den Begleit-Mod gezählt",
       "counted_other": "Fortschritt von {{count}} Servern wird über den Begleit-Mod gezählt"
     }
+  },
+  "gamepad": {
+    "connected": "Gamepad verbunden",
+    "connectedDescription": "Das Steuerkreuz bewegt den Fokus, A drückt, B geht zurück. Für Fernseher und Steam Deck gibt es den großen Modus – Taste ⧉."
+  },
+  "bigMode": {
+    "name": "Großer Modus",
+    "open": "Öffnen",
+    "inGame": "Gerade im Spiel",
+    "emptyTitle": "Noch keine Instanzen",
+    "emptyDescription": "Erstellen Sie Ihre erste Instanz – sie erscheint hier als große Kachel.",
+    "exit": "Großen Modus verlassen"
   }
 }

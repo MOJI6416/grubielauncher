@@ -208,6 +208,8 @@ export type TSettings = {
   ambientTint: boolean;
   backgroundGrain: boolean;
   highContrast: boolean;
+  gamepad: boolean;
+  bigModeOnStart: boolean;
   soundVolume: number;
   gameWindow: GameWindowMode;
   restoreAfterGame: boolean;
@@ -289,6 +291,8 @@ export const DEFAULT_SETTINGS: TSettings = {
   ambientTint: true,
   backgroundGrain: true,
   highContrast: false,
+  gamepad: true,
+  bigModeOnStart: false,
   soundVolume: DEFAULT_SOUND_VOLUME,
   gameWindow: "minimize",
   restoreAfterGame: true,
@@ -366,6 +370,11 @@ export function normalizeSettings(
       DEFAULT_SETTINGS.backgroundGrain,
     ),
     highContrast: booleanOr(value?.highContrast, DEFAULT_SETTINGS.highContrast),
+    gamepad: booleanOr(value?.gamepad, DEFAULT_SETTINGS.gamepad),
+    bigModeOnStart: booleanOr(
+      value?.bigModeOnStart,
+      DEFAULT_SETTINGS.bigModeOnStart,
+    ),
     soundVolume: normalizeSoundVolume(value?.soundVolume),
     gameWindow: oneOf(
       value?.gameWindow,

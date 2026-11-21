@@ -680,6 +680,12 @@ body {
   outline-offset: -2px;
 }
 
+:root[data-input="gamepad"]
+  :focus:not(:focus-visible):not([tabindex="-1"]):not(input, textarea) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 .streamer-mask {
   -webkit-text-security: disc;
 }

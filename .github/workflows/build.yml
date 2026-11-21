@@ -66,6 +66,10 @@ jobs:
       - name: Build Electron + Vite app
         run: ${{ matrix.build_command }}
 
+      - name: Build the portable archive
+        if: runner.os == 'Windows'
+        run: node .github/scripts/portable.mjs
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:

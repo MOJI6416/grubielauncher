@@ -197,6 +197,7 @@ function NavRow({
       type="button"
       aria-current={current ? "page" : undefined}
       aria-disabled={disabled}
+      data-nav-row
       data-indicator-active={current}
       onMouseEnter={onPreload}
       onFocus={onPreload}

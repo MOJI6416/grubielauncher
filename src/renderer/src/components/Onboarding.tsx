@@ -171,7 +171,12 @@ export function Onboarding() {
     },
   ];
 
-  const activeIndex = steps.findIndex((step) => !step.done && !step.optional);
+  const shownSteps = info?.portable
+    ? steps.filter((step) => step.id !== "data")
+    : steps;
+  const activeIndex = shownSteps.findIndex(
+    (step) => !step.done && !step.optional,
+  );
 
   return (
     <Dialog
@@ -239,7 +244,7 @@ export function Onboarding() {
           </div>
         ) : (
           <div className="grid gap-2 px-5 py-4">
-            {steps.map((step, index) => {
+            {shownSteps.map((step, index) => {
               const isActive = index === activeIndex;
 
               return (

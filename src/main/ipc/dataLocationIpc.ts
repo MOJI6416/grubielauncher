@@ -17,6 +17,7 @@ import { HIDDEN_START_FLAG } from "../utilities/launchAtLogin";
 import { gameRuntime } from "../utilities/runtime";
 import { hasRunningServers } from "../game/Server";
 import { isVersionInstallActive } from "./versionIpc";
+import { isPortable } from "../utilities/portable";
 import type {
   DataLocationApplyResult,
   DataLocationInfo,
@@ -71,6 +72,7 @@ export function registerDataLocationIpc() {
         isDefault: isSamePath(root, defaultRoot),
         freeBytes: await getFreeBytes(root),
         movedAcrossDrives: wasMovedAcrossDrives(),
+        portable: isPortable(),
       };
     },
   );
@@ -79,6 +81,7 @@ export function registerDataLocationIpc() {
     "dataLocation:pick",
     null,
     async (event) => {
+      if (isPortable()) return null;
       const parent = BrowserWindow.fromWebContents(event.sender);
       const options: Electron.OpenDialogOptions = {
         properties: ["openDirectory", "createDirectory"],
@@ -98,6 +101,7 @@ export function registerDataLocationIpc() {
     "dataLocation:planDefault",
     null,
     async () => {
+      if (isPortable()) return null;
       pendingChoice = { chosen: getDefaultDataRoot(), exact: true };
       return plan(pendingChoice);
     },

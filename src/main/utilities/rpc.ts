@@ -7,6 +7,7 @@ import * as DiscordRPC from 'discord-rpc'
 import { gameRuntime } from './runtime'
 import { linkDiscordIpcSocket } from './discordIpcSocket'
 import { getApiBaseUrl } from './apiHost'
+import { isPortable } from './portable'
 
 type SupportedRpcLanguage = 'en' | 'ru' | 'uk' | 'de' | 'es' | 'fr' | 'pl' | 'pt' | 'tr'
 
@@ -140,9 +141,11 @@ export class RPC {
     this.isDisposed = false
     this.clearReconnectTimer()
 
-    try {
-      DiscordRPC.register(DISCORD_CLIENT_ID)
-    } catch {}
+    if (!isPortable()) {
+      try {
+        DiscordRPC.register(DISCORD_CLIENT_ID)
+      } catch {}
+    }
 
     if (!this.client) {
       this.client = this.createClient()

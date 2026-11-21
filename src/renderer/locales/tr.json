@@ -1881,7 +1881,8 @@
       "languageDescription": "Hemen uygulanır, yeniden başlatma gerekmez",
       "groups": {
         "effects": "Animasyonlar ve efektler",
-        "soundAndLogs": "Ses ve günlükler"
+        "soundAndLogs": "Ses ve günlükler",
+        "gamepad": "Oyun kumandası ve televizyon"
       },
       "uiScale": "Arayüz ölçeği",
       "uiScaleDescription": "Metin, düğme ve boşlukların boyutu. Ctrl + fare tekerleğiyle de değişir.",
@@ -1908,7 +1909,8 @@
         "lists": "Listeler ve sekmeler",
         "logs": "Günlükler ve konsol",
         "chat": "Sohbet",
-        "voice": "Sesli sohbet"
+        "voice": "Sesli sohbet",
+        "gamepad": "Oyun kumandası"
       },
       "shortcuts": {
         "global": {
@@ -1957,6 +1959,17 @@
         },
         "voice": {
           "ptt": "Konuş (bas-konuş)"
+        },
+        "gamepad": {
+          "move": "Odağı taşı",
+          "activate": "Seçili öğeye bas",
+          "back": "Geri veya pencereyi kapat",
+          "menu": "Satır menüsü",
+          "tabs": "Önceki veya sonraki sekme ya da bölüm",
+          "page": "Bir sayfa kaydır",
+          "scroll": "Akıcı kaydırma",
+          "play": "Seçili kurulumu oyna",
+          "bigMode": "Büyük mod"
         }
       },
       "accent": "Vurgu rengi",
@@ -1985,7 +1998,12 @@
         "graphite": "Grafit"
       },
       "seasonalDecor": "Bayram süslemeleri",
-      "seasonalDecorDescription": "Özel günlerde temalı dokunuşlar: {{events}}."
+      "seasonalDecorDescription": "Özel günlerde temalı dokunuşlar: {{events}}.",
+      "gamepad": "Oyun kumandasıyla kontrol",
+      "gamepadDescription": "Yön tuşları veya sol çubuk odağı taşır, A basar, B geri döner, ☰ seçili kurulumu başlatır. Başlatıcı penceresi etkinken çalışır.",
+      "bigMode": "Büyük mod",
+      "bigModeDescription": "Oyun kumandası, Steam Deck ve televizyon için tam ekran büyük kurulum kutucukları. Çıkmak için B, Esc veya alttaki düğme.",
+      "bigModeOnStart": "Başlatıcı açılınca aç"
     },
     "voice": {
       "devicesDescription": "Cihazlar görüşme paneliyle ortaktır. Katılmadan önce mikrofonu test edin."
@@ -2014,7 +2032,8 @@
       "historyCurrent": "Kurulu",
       "historyNoDetails": "Bu sürüm için değişiklik listesi yok.",
       "historyUnavailable": "Sürüm listesi şu anda kullanılamıyor — bağlantı geri gelince yüklenecek.",
-      "openLinkFailed": "Bağlantı açılamadı"
+      "openLinkFailed": "Bağlantı açılamadı",
+      "portable": "Taşınabilir sürüm"
     },
     "index": {
       "memory": {
@@ -2391,6 +2410,16 @@
         "title": "Bağlantıyı kontrol et",
         "description": "Başlatıcı sunucularına, Mojang’a, aynaya ve mod sitelerine erişim, hizmet durumu",
         "keywords": "bağlantı ağ internet ayna kontrol durum hizmetler"
+      },
+      "gamepad": {
+        "title": "Oyun kumandasıyla kontrol",
+        "description": "Başlatıcıda oyun kumandasıyla gezinme ve kurulum başlatma",
+        "keywords": "oyun kumandası gamepad joystick xbox playstation dualsense steam deck"
+      },
+      "bigMode": {
+        "title": "Büyük mod",
+        "description": "Televizyon ve Steam Deck için büyük kurulum kutucukları",
+        "keywords": "büyük mod televizyon tv steam deck big picture tam ekran koltuk"
       }
     },
     "voicePttCaptureTimeout": "Hiçbir tuşa basılmadı — kısayol değişmedi.",
@@ -2475,7 +2504,12 @@
     },
     "overlayToasts": "Oyun üstünde bildirimler",
     "overlayToastsDescription": "Oynarken mesajlar, davetler ve aramalar kaplama köşesinde görünür; daveti bir tuşla kabul edin. Özel tam ekranda çalışmaz",
-    "overlayAcceptKey": "“Kabul et” tuşu"
+    "overlayAcceptKey": "“Kabul et” tuşu",
+    "portable": {
+      "catalogLinks": "Taşınabilir sürüm kayıt defterine hiçbir şey yazmaz, bu yüzden sitelerdeki «Install» düğmeleri onu açamaz.",
+      "dataLocation": "Taşınabilir sürüm verilerini programın yanındaki data klasöründe tutar. Taşımak için başlatıcı klasörünün tamamını taşıyın.",
+      "gpu": "Taşınabilir sürüm kayıt defterine hiçbir şey yazmaz, bu yüzden oyun için ekran kartını Windows seçer."
+    }
   },
   "skinView": {
     "title": "Skin önizlemesi",
@@ -7792,5 +7826,17 @@
       "counted_one": "{{count}} sunucudaki ilerleme yardımcı mod üzerinden sayıldı",
       "counted_other": "{{count}} sunucudaki ilerleme yardımcı mod üzerinden sayıldı"
     }
+  },
+  "gamepad": {
+    "connected": "Oyun kumandası bağlandı",
+    "connectedDescription": "Yön tuşları odağı taşır, A basar, B geri döner. Televizyon ve Steam Deck için büyük mod var: ⧉ düğmesi."
+  },
+  "bigMode": {
+    "name": "Büyük mod",
+    "open": "Aç",
+    "inGame": "Şu an oyunda",
+    "emptyTitle": "Henüz kurulum yok",
+    "emptyDescription": "İlk kurulumunuzu oluşturun, burada büyük bir kutucuk olarak görünecek.",
+    "exit": "Büyük moddan çık"
   }
 }

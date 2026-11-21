@@ -20,6 +20,8 @@ import {
   setUnsavedChangesGuard
 } from '../windows/mainWindow'
 import { UI_SCALES, type UiScaleState } from '@/shared/uiScale'
+import { BIG_MODE_FLAG, type LauncherRuntime } from '@/types/LauncherRuntime'
+import { getPortableRoot } from '../utilities/portable'
 import { getLauncherPaths } from '../utilities/other'
 import { GAME_TEXTURE_ENTRY, GameTextures, readGameTextures } from '../utilities/gameTextures'
 import { getConnectivityPlan, runConnectivityTests } from '../utilities/connectivityTest'
@@ -487,6 +489,29 @@ export function registerOtherIpc() {
   }
 
   handleSafe<UiScaleState>('other:getUiScale', uiScaleFallback, () => getUiScaleState())
+
+  handleSafe<LauncherRuntime>(
+    'other:getRuntime',
+    { portableRoot: null, bigModeStart: false },
+    () => ({
+      portableRoot: getPortableRoot(),
+      bigModeStart:
+        process.argv.includes(BIG_MODE_FLAG) || process.env['SteamGamepadUI'] === '1'
+    })
+  )
+
+  handleSafe<boolean, [boolean]>(
+    'other:setFullScreen',
+    false,
+    [check.boolean()],
+    async (_, value) => {
+      const target = mainWindow
+      if (!target || target.isDestroyed()) return false
+      if (target.isVisible()) target.setFullScreen(value)
+      else target.once('show', () => target.setFullScreen(value))
+      return true
+    }
+  )
 
   handleSafe<UiScaleState, [number]>(
     'other:setUiScale',

@@ -2,6 +2,7 @@ import { app } from "electron";
 import fs from "fs";
 import path from "path";
 import type { DataLocationFile } from "@/types/DataLocation";
+import { isPortable } from "./portable";
 
 export const DEFAULT_DATA_DIR = ".grubielauncher";
 const LOCATION_FILE = "data-location.json";
@@ -54,6 +55,7 @@ export function sanitizeDataLocation(value: unknown): DataLocationFile {
 }
 
 export function readDataLocation(): DataLocationFile {
+  if (isPortable()) return {};
   const file = getLocationFilePath();
   if (!file) return {};
 
@@ -65,6 +67,7 @@ export function readDataLocation(): DataLocationFile {
 }
 
 export function writeDataLocation(next: DataLocationFile): void {
+  if (isPortable()) throw new Error("The portable launcher keeps its data next to the program");
   const file = getLocationFilePath();
   if (!file) throw new Error("userData is not available");
 

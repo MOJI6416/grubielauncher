@@ -20,6 +20,7 @@ import type { AppUpdateCheckResult } from "@/types/AppUpdate";
 import { platformName } from "@renderer/utilities/platform";
 import type { SettingsEntryId } from "./catalog";
 import { countFeature } from "@renderer/features/usage/usage";
+import { useLauncherRuntime } from "@renderer/app/launcherRuntime";
 
 const api = window.api;
 
@@ -41,6 +42,7 @@ export function AboutSection({
   const { t, i18n } = useTranslation();
   const isMilestone = isMilestoneRelease(useCurrentRelease());
   const isWhatsNewLoading = useAtomValue(whatsNewLoadingAtom);
+  const isPortable = !!useLauncherRuntime()?.portableRoot;
   const [checkResult, setCheckResult] = useState<AppUpdateCheckResult | null>(
     null,
   );
@@ -74,6 +76,12 @@ export function AboutSection({
             )}
             <span>·</span>
             <span>{platformName(api.platform)}</span>
+            {isPortable && (
+              <>
+                <span>·</span>
+                <span>{t("settings.about.portable")}</span>
+              </>
+            )}
             {totalMemoryMb > 0 && (
               <>
                 <span>·</span>

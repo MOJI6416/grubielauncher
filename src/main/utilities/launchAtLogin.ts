@@ -2,6 +2,7 @@ import os from "os";
 import path from "path";
 import fs from "fs-extra";
 import { app } from "electron";
+import { isPortable } from "./portable";
 
 export const HIDDEN_START_FLAG = "--hidden";
 export const WINDOWS_LOGIN_ITEM_NAME = "com.grubielauncher";
@@ -39,7 +40,7 @@ export function linuxAutostartEntry(executable: string): string {
 }
 
 function isSupported(): boolean {
-  if (!app.isPackaged) return false;
+  if (!app.isPackaged || isPortable()) return false;
   if (process.platform === "linux") return linuxExecutable() !== null;
   return process.platform === "win32" || process.platform === "darwin";
 }
