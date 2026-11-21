@@ -702,6 +702,10 @@ if (!gotTheLock) {
         );
         return;
       }
+      journal.info("updater", "update signature ok", {
+        version: info.version,
+        keyId: verdict.keyId,
+      });
       if (updateFlowSettled) return;
       updateFlowSettled = true;
 

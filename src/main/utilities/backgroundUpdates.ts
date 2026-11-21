@@ -6,6 +6,7 @@ import { gameRuntime } from "./runtime";
 import { loadAutoUpdater } from "./autoUpdater";
 import { countUsage } from "./usageStats";
 import { verifyDownloadedUpdate } from "./updateSignature";
+import { journal } from "../journal/journal";
 
 export const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 export const FIRST_UPDATE_CHECK_DELAY_MS = 20 * 60 * 1000;
@@ -82,6 +83,10 @@ export function startBackgroundUpdateChecks(options: {
         }
         return;
       }
+      journal.info("updater", "update signature ok", {
+        version: info.version,
+        keyId: verdict.keyId,
+      });
       publish({ status: "ready", version: info.version });
     });
 
