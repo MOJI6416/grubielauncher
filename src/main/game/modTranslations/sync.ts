@@ -55,6 +55,14 @@ import {
 } from "./packSources";
 import { COMPONENT_KEY_PREFIX } from "./components";
 import {
+  applyFancyRewrite,
+  FANCYMENU_BOOK,
+  FancyFile,
+  planFancyUnits,
+  readFancyEnglish,
+  restoreFancy,
+} from "./fancyMenu";
+import {
   applyInlineRewrite,
   FTB_INLINE_BOOK,
   InlineFile,
@@ -166,6 +174,7 @@ interface TranslationState {
   quotaUntil: number | null;
   dataFiles: RewrittenData[];
   ftbInlineFiles: InlineFile[];
+  fancyFiles: FancyFile[];
   mods: number;
   needsAccount: boolean;
   error: string | null;
@@ -184,6 +193,7 @@ interface BooksFile {
   groups: BookGroup[];
   quests?: string | null;
   ftbInline?: LangEntries;
+  fancy?: LangEntries;
 }
 
 interface JarFile {
@@ -233,6 +243,7 @@ function emptyState(): TranslationState {
     quotaUntil: null,
     dataFiles: [],
     ftbInlineFiles: [],
+    fancyFiles: [],
     mods: 0,
     needsAccount: false,
     error: null,
@@ -812,18 +823,24 @@ async function submitUnits(
 async function readBooks(
   versionPath: string,
   locale: string,
-): Promise<{ groups: BookGroup[]; quests: string | null; ftbInline: LangEntries }> {
+): Promise<{
+  groups: BookGroup[];
+  quests: string | null;
+  ftbInline: LangEntries;
+  fancy: LangEntries;
+}> {
   const stored = (await fs.readJSON(booksPath(versionPath)).catch(() => null)) as
     | BooksFile
     | null;
   if (stored?.version !== BOOKS_VERSION || stored.locale !== locale) {
-    return { groups: [], quests: null, ftbInline: {} };
+    return { groups: [], quests: null, ftbInline: {}, fancy: {} };
   }
   return {
     groups: Array.isArray(stored.groups) ? stored.groups : [],
     quests: typeof stored.quests === "string" ? stored.quests : null,
     ftbInline:
       stored.ftbInline && typeof stored.ftbInline === "object" ? stored.ftbInline : {},
+    fancy: stored.fancy && typeof stored.fancy === "object" ? stored.fancy : {},
   };
 }
 
@@ -833,6 +850,7 @@ async function writeBooks(
   groups: BookGroup[],
   quests: string | null,
   ftbInline: LangEntries,
+  fancy: LangEntries,
 ): Promise<void> {
   await fs.ensureDir(storageDir(versionPath));
   await writeJsonAtomic(booksPath(versionPath), {
@@ -841,6 +859,7 @@ async function writeBooks(
     groups,
     quests,
     ftbInline,
+    fancy,
   } satisfies BooksFile);
 }
 
@@ -949,6 +968,7 @@ async function buildAiPack(
   done: Map<string, number>;
   data: boolean;
   ftbInline: boolean;
+  fancy: boolean;
 }> {
   const known = await loadCachedHashes(locale);
   const units: Array<{ namespace: string; entries: LangEntries }> = [];
@@ -977,7 +997,12 @@ async function buildAiPack(
   bookTranslations.delete(FTB_INLINE_BOOK);
   const ftbInline = Object.keys(inline).length > 0;
   if (ftbInline) units.push({ namespace: "grubie", entries: inline });
-  const inlineEnglish = (await readBooks(versionPath, locale)).ftbInline;
+  const fancyTranslations = bookTranslations.get(FANCYMENU_BOOK) ?? {};
+  bookTranslations.delete(FANCYMENU_BOOK);
+  const fancy = Object.keys(fancyTranslations).length > 0;
+  if (fancy) units.push({ namespace: "grubie", entries: fancyTranslations });
+  const stored = await readBooks(versionPath, locale);
+  const inlineEnglish = { ...stored.ftbInline, ...stored.fancy };
   const questz = units.some((unit) =>
     Object.keys(unit.entries).some((key) => key.startsWith(QUESTZ_KEY_PREFIX)),
   );
@@ -1004,7 +1029,7 @@ async function buildAiPack(
   ];
   if (files.length === 0) {
     await fs.remove(target).catch(() => undefined);
-    return { file: null, digest: null, quests, questz, books: bookTranslations, done, data, ftbInline };
+    return { file: null, digest: null, quests, questz, books: bookTranslations, done, data, ftbInline, fancy };
   }
 
   const description = PACK_DESCRIPTIONS[locale] ?? "Grubie: AI translation of mods";
@@ -1017,7 +1042,7 @@ async function buildAiPack(
   const value = contentDigest.digest("hex");
 
   if (value === state.aiDigest && (await fs.pathExists(target))) {
-    return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data, ftbInline };
+    return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data, ftbInline, fancy };
   }
 
   setStage(versionPath, "building");
@@ -1026,7 +1051,7 @@ async function buildAiPack(
   await createZipArchive([], temp, undefined, 9, undefined, files);
   await fs.ensureDir(packsDir(versionPath));
   await fs.move(temp, target, { overwrite: true });
-  return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data, ftbInline };
+  return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data, ftbInline, fancy };
 }
 
 export function supportsTextFallback(mcVersion: string): boolean {
@@ -1168,7 +1193,8 @@ async function cleanup(
     state.questzFiles.length > 0 ||
     state.externalFiles.length > 0 ||
     state.dataFiles.length > 0 ||
-    state.ftbInlineFiles.length > 0;
+    state.ftbInlineFiles.length > 0 ||
+    state.fancyFiles.length > 0;
   if (!hadAnything) return;
   if (isVersionRunning(versionPath)) return;
   await removeStaleManaged(versionPath, new Set());
@@ -1177,6 +1203,7 @@ async function cleanup(
   await removeExternalBooks(versionPath, state);
   await restoreDataRewrite(versionPath, storageDir(versionPath), state.dataFiles);
   await restoreInline(versionPath, storageDir(versionPath), state.ftbInlineFiles);
+  await restoreFancy(versionPath, storageDir(versionPath), state.fancyFiles);
   await fs.remove(booksPath(versionPath)).catch(() => undefined);
   if (mcVersion) await applyOptions(versionPath, mcVersion, [], null);
   await writeState(versionPath, {
@@ -1222,6 +1249,11 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     storageDir(versionPath),
     state.ftbInlineFiles,
   );
+  const fancyEnglish = await readFancyEnglish(
+    versionPath,
+    storageDir(versionPath),
+    state.fancyFiles,
+  );
   const skipProjects = userPackProjects(conf);
   const player = await playerPacks(versionPath);
   const fingerprint = digest([
@@ -1233,6 +1265,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     questzLang ? digest(questzLang.english) : null,
     dataText.langs.map((lang) => [lang.context?.name, digest(lang.english)]),
     Object.keys(inlineEnglish).length > 0 ? digest(inlineEnglish) : null,
+    Object.keys(fancyEnglish).length > 0 ? digest(fancyEnglish) : null,
     skipProjects,
     player.map((pack) => pack.identity),
   ]);
@@ -1360,7 +1393,12 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
           ...(unit.context ? { context: unit.context } : {}),
           ...(unit.origin ? { group: unit.origin === "pack" ? ("packs" as const) : ("quests" as const) } : {}),
         })),
-        ...[...planBookUnits(groups), ...questUnits, ...planInlineUnits(inlineEnglish)].map((unit) => ({
+        ...[
+          ...planBookUnits(groups),
+          ...questUnits,
+          ...planInlineUnits(inlineEnglish),
+          ...planFancyUnits(fancyEnglish),
+        ].map((unit) => ({
           hash: unit.hash,
           namespace: unit.namespace,
           entries: unit.entries,
@@ -1370,7 +1408,9 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
           group:
             unit.book === FTB_QUESTS_BOOK || unit.book === FTB_INLINE_BOOK
               ? ("quests" as const)
-              : ("books" as const),
+              : unit.book === FANCYMENU_BOOK
+                ? ("packs" as const)
+                : ("books" as const),
           ...(unit.context ? { context: unit.context } : {}),
         })),
       ];
@@ -1380,6 +1420,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
         groups.filter((group) => units.some((unit) => unit.book === group.key)),
         questUnits.length > 0 ? quests : null,
         inlineEnglish,
+        fancyEnglish,
       );
       const { missing, failed } = await resolveUnits(
         api,
@@ -1444,6 +1485,13 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
   );
   Object.assign(next, await applyQuestLang(versionPath, next, locale, ai.quests));
   next.externalFiles = await applyExternalBooks(versionPath, next, locale, ai.books);
+  if (ai.fancy) {
+    next.fancyFiles = await applyFancyRewrite(
+      versionPath,
+      storageDir(versionPath),
+      state.fancyFiles,
+    );
+  }
   if (ai.ftbInline) {
     next.ftbInlineFiles = await applyInlineRewrite(
       versionPath,
