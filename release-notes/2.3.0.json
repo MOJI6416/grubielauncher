@@ -1,0 +1,283 @@
+{
+  "version": "2.3.0",
+  "isMilestone": true,
+  "links": [
+    "people/friends",
+    "screenshots",
+    null,
+    null,
+    null,
+    "catalog",
+    "instance-new",
+    null,
+    "instance-new",
+    null,
+    "instance-new",
+    "wardrobe",
+    "settings/interface",
+    "settings/support",
+    null,
+    null
+  ],
+  "en": {
+    "subtitle": "The biggest update yet: direct play with friends, a companion mod in the game, mod translation and much more.",
+    "highlights": [
+      "Added direct connections in Play together with the Grubie server as a backup, and opening your own server to friends with host controls right in the launcher.",
+      "Added Microsoft friends in People, joining friends on their servers, a screenshot feed and toasts over the game.",
+      "Added the Grubie Companion mod: invites, messages, voice chat and a friends panel right in the game. New instances get it automatically.",
+      "Added translation of mods and modpacks into Russian and Ukrainian, including guide books, quests and data packs.",
+      "Added Culprit search: it splits your mods in half until it finds the one that breaks the game.",
+      "Added update channels, mod relations, the modpack a mod came from and a mod catalog you can browse outside an instance.",
+      "Added moving instances over from nine other launchers, including Prism, CurseForge and Modrinth App, and export with the folders and worlds you choose or as a Modrinth .mrpack.",
+      "Added game settings shared between instances: keys, video and sound settings follow you to every instance.",
+      "Added optional files and a look at the contents before installing a modpack, plus modpack updates from an archive or a link.",
+      "Added a catalog of maps and data packs in the Worlds tab, advancement progress, a seed map and 3D schematics with real blocks.",
+      "Added Cleanroom for Minecraft 1.12.2 and OptiFine installation for vanilla and Forge up to 1.16.5.",
+      "Added the Wardrobe, achievement Difficulty, LittleSkin accounts and sync of themes, the wardrobe and settings through your Grubie account.",
+      "Added a portable Windows version and gamepad control with Big mode for Steam Deck and TV.",
+      "Added the Support page with the error log and answers from support right in the launcher, and readable names in crash logs.",
+      "Improved safety and disk space: updates are signed, unknown jars in modpacks are flagged, and identical mods are stored once for all instances.",
+      "Improved the instance screen: changes to its content apply at once with Undo, and settings stay open while you play."
+    ],
+    "fixes": [
+      "When sign-in servers are down, the game now starts with your saved session.",
+      "Downloads from CurseForge no longer stop when its servers ask for a key: the launcher switches to the mirror.",
+      "The launcher no longer breaks when the graphics driver lacks WebGL: skins are shown flat instead.",
+      "Microsoft sign-in now says why it was refused.",
+      "Minecraft 26.x no longer crashes at startup on drivers with a broken Vulkan.",
+      "Publishing an instance now includes disabled local mods and explains why publishing failed."
+    ]
+  },
+  "ru": {
+    "subtitle": "Самое большое обновление: игра с друзьями напрямую, компаньон-мод в игре, перевод модов и многое другое.",
+    "highlights": [
+      "Добавлены прямое подключение в «Играть вместе» с сервером Grubie про запас и открытие своего сервера друзьям с управлением хостом прямо в лаунчере.",
+      "Добавлены друзья Microsoft в «Людях», вход к друзьям на их серверы, лента скриншотов и тосты поверх игры.",
+      "Добавлен компаньон-мод Grubie: приглашения, сообщения, голосовой чат и панель друзей прямо в игре. В новые сборки он ставится сам.",
+      "Добавлен перевод модов и модпаков на русский и украинский, включая книги-гайды, квесты и датапаки.",
+      "Добавлен поиск виновника: лаунчер делит моды пополам, пока не найдёт тот, что ломает игру.",
+      "Добавлены каналы обновлений, связи модов, модпак, из которого пришёл мод, и каталог модов вне сборки.",
+      "Добавлены перенос сборок из девяти других лаунчеров, среди них Prism, CurseForge и Modrinth App, и экспорт с выбором папок и миров или в Modrinth .mrpack.",
+      "Добавлены общие игровые настройки: клавиши, графика и звук переходят во все сборки.",
+      "Добавлены выбор необязательных файлов и просмотр состава перед установкой модпака, а также обновление модпака из архива или по ссылке.",
+      "Добавлены каталог карт и датапаков во вкладке «Миры», прогресс достижений, карта сида и схематики в 3D с настоящими блоками.",
+      "Добавлены Cleanroom для Minecraft 1.12.2 и установка OptiFine для ванили и Forge до 1.16.5.",
+      "Добавлены «Гардероб», «Сложность» у достижений, аккаунты LittleSkin и синхронизация тем, гардероба и настроек через аккаунт Grubie.",
+      "Добавлены portable-версия для Windows и управление геймпадом с крупным режимом для Steam Deck и телевизора.",
+      "Добавлены страница «Поддержка» с журналом ошибок и ответами поддержки прямо в лаунчере и понятные имена в логах крашей.",
+      "Улучшены безопасность и место на диске: обновления подписаны, неизвестные jar в модпаках помечаются, а одинаковые моды хранятся один раз для всех сборок.",
+      "Улучшен экран сборки: изменения контента применяются сразу с кнопкой «Отменить», а настройки открыты и во время игры."
+    ],
+    "fixes": [
+      "Если серверы входа недоступны, игра запускается с сохранённой сессией.",
+      "Загрузки с CurseForge больше не обрываются, когда его серверы просят ключ: лаунчер переходит на зеркало.",
+      "Лаунчер больше не ломается, если видеодрайвер не поддерживает WebGL: скины показываются плоскими.",
+      "Вход через Microsoft теперь объясняет, почему его не приняли.",
+      "Minecraft 26.x больше не падает при запуске на драйверах со сломанным Vulkan.",
+      "При публикации сборки теперь уходят и выключенные локальные моды, а при ошибке видна её причина."
+    ]
+  },
+  "uk": {
+    "subtitle": "Найбільше оновлення: гра з друзями напряму, мод-компаньйон у грі, переклад модів і багато іншого.",
+    "highlights": [
+      "Додано пряме підключення в «Грати разом» із сервером Grubie про запас і відкриття свого сервера друзям з керуванням хостом просто в лаунчері.",
+      "Додано друзів Microsoft у «Людях», вхід до друзів на їхні сервери, стрічку скриншотів і тости поверх гри.",
+      "Додано мод-компаньйон Grubie: запрошення, повідомлення, голосовий чат і панель друзів просто в грі. У нові збірки він встановлюється сам.",
+      "Додано переклад модів і модпаків російською та українською, зокрема книг-посібників, квестів і датапаків.",
+      "Додано пошук винуватця: лаунчер ділить моди навпіл, доки не знайде той, що ламає гру.",
+      "Додано канали оновлень, зв’язки модів, модпак, з якого прийшов мод, і каталог модів поза збіркою.",
+      "Додано перенесення збірок з дев’яти інших лаунчерів, серед них Prism, CurseForge і Modrinth App, та експорт з вибором тек і світів або в Modrinth .mrpack.",
+      "Додано спільні ігрові налаштування: клавіші, графіка і звук переходять у всі збірки.",
+      "Додано вибір необов’язкових файлів і перегляд складу перед встановленням модпака, а також оновлення модпака з архіву або за посиланням.",
+      "Додано каталог мап і датапаків у вкладці «Світи», прогрес досягнень, мапу сіду і схематики в 3D зі справжніми блоками.",
+      "Додано Cleanroom для Minecraft 1.12.2 і встановлення OptiFine для ванілі та Forge до 1.16.5.",
+      "Додано «Гардероб», «Складність» у досягнень, акаунти LittleSkin і синхронізацію тем, гардероба та налаштувань через акаунт Grubie.",
+      "Додано portable-версію для Windows і керування геймпадом із великим режимом для Steam Deck і телевізора.",
+      "Додано сторінку «Підтримка» з журналом помилок і відповідями підтримки просто в лаунчері та зрозумілі імена в логах крашів.",
+      "Покращено безпеку й місце на диску: оновлення підписано, невідомі jar у модпаках позначаються, а однакові моди зберігаються один раз для всіх збірок.",
+      "Покращено екран збірки: зміни вмісту застосовуються одразу з кнопкою «Скасувати», а налаштування відкриті й під час гри."
+    ],
+    "fixes": [
+      "Якщо сервери входу недоступні, гра запускається зі збереженою сесією.",
+      "Завантаження з CurseForge більше не обриваються, коли його сервери просять ключ: лаунчер переходить на дзеркало.",
+      "Лаунчер більше не ламається, якщо відеодрайвер не підтримує WebGL: скіни показуються пласкими.",
+      "Вхід через Microsoft тепер пояснює, чому його не прийняли.",
+      "Minecraft 26.x більше не падає під час запуску на драйверах зі зламаним Vulkan.",
+      "Під час публікації збірки тепер ідуть і вимкнені локальні моди, а в разі помилки видно її причину."
+    ]
+  },
+  "de": {
+    "subtitle": "Das bisher größte Update: direkt mit Freunden spielen, ein Begleit-Mod im Spiel, Mod-Übersetzung und vieles mehr.",
+    "highlights": [
+      "Neu: direkte Verbindungen bei „Zusammen spielen“ mit dem Grubie-Server als Reserve und der eigene Server für Freunde mit Host-Verwaltung direkt im Launcher.",
+      "Neu: Microsoft-Freunde unter „Leute“, Freunden auf ihre Server folgen, ein Screenshot-Feed und Benachrichtigungen über dem Spiel.",
+      "Neu: der Grubie Begleit-Mod – Einladungen, Nachrichten, Sprachchat und Freundesliste direkt im Spiel. Neue Instanzen erhalten ihn automatisch.",
+      "Neu: Übersetzung von Mods und Modpacks ins Russische und Ukrainische, einschließlich Handbüchern, Quests und Datenpaketen.",
+      "Neu: die Verursachersuche halbiert Ihre Mods, bis der Mod gefunden ist, der das Spiel kaputt macht.",
+      "Neu: Update-Kanäle, Mod-Beziehungen, das Modpack, aus dem ein Mod stammt, und ein Mod-Katalog auch außerhalb einer Instanz.",
+      "Neu: Instanzen aus neun anderen Launchern übernehmen, darunter Prism, CurseForge und Modrinth App, sowie Export mit frei wählbaren Ordnern und Welten oder als Modrinth-.mrpack.",
+      "Neu: gemeinsame Spieleinstellungen – Tastenbelegung, Grafik und Ton gelten in allen Instanzen.",
+      "Neu: optionale Dateien und ein Blick auf den Inhalt vor der Modpack-Installation sowie Modpack-Updates aus einem Archiv oder per Link.",
+      "Neu: ein Katalog für Karten und Datenpakete im Tab „Welten“, der Stand der Fortschritte, eine Karte zum Startwert und 3D-Schematics mit echten Blöcken.",
+      "Neu: Cleanroom für Minecraft 1.12.2 und OptiFine-Installation für Vanilla und Forge bis 1.16.5.",
+      "Neu: die Garderobe, die Schwierigkeit bei Erfolgen, LittleSkin-Konten und die Synchronisierung von Designs, Garderobe und Einstellungen über Ihr Grubie-Konto.",
+      "Neu: eine portable Windows-Version und Gamepad-Steuerung mit dem Großen Modus für Steam Deck und Fernseher.",
+      "Neu: die Seite „Support“ mit Fehlerprotokoll und Antworten des Supports direkt im Launcher sowie verständliche Namen in Absturzprotokollen.",
+      "Sicherer und sparsamer: Updates sind signiert, unbekannte JAR-Dateien in Modpacks werden markiert und gleiche Mods nur einmal für alle Instanzen gespeichert.",
+      "Die Instanzseite übernimmt Inhaltsänderungen sofort mit „Rückgängig“, und die Einstellungen bleiben auch während des Spiels offen."
+    ],
+    "fixes": [
+      "Sind die Anmeldeserver nicht erreichbar, startet das Spiel mit der gespeicherten Sitzung.",
+      "Downloads von CurseForge brechen nicht mehr ab, wenn dessen Server einen Schlüssel verlangen – der Launcher wechselt zum Mirror.",
+      "Der Launcher stürzt nicht mehr ab, wenn der Grafiktreiber kein WebGL unterstützt – Skins werden dann flach angezeigt.",
+      "Die Microsoft-Anmeldung nennt jetzt den Grund, wenn sie abgelehnt wird.",
+      "Minecraft 26.x stürzt beim Start nicht mehr auf Treibern mit fehlerhaftem Vulkan ab.",
+      "Beim Veröffentlichen einer Instanz werden jetzt auch deaktivierte lokale Mods übernommen, und bei einem Fehler wird der Grund angezeigt."
+    ]
+  },
+  "es": {
+    "subtitle": "La actualización más grande hasta ahora: juegue con amigos de forma directa, un mod complementario en el juego, traducción de mods y mucho más.",
+    "highlights": [
+      "Se agregaron conexiones directas en «Jugar en compañía» con el servidor de Grubie como respaldo, y la opción de abrir su propio servidor a amigos con control del anfitrión desde el launcher.",
+      "Se agregaron los amigos de Microsoft en «Personas», unirse a amigos en sus servidores, un feed de capturas y avisos sobre el juego.",
+      "Se agregó el mod complementario de Grubie: invitaciones, mensajes, chat de voz y panel de amigos dentro del juego. Las instancias nuevas lo reciben automáticamente.",
+      "Se agregó la traducción de mods y modpacks al ruso y al ucraniano, incluidas las guías, las misiones y los paquetes de datos.",
+      "Se agregó la búsqueda del culpable: divide sus mods a la mitad hasta encontrar el que rompe el juego.",
+      "Se agregaron canales de actualización, relaciones entre mods, el modpack del que viene cada mod y un catálogo de mods fuera de las instancias.",
+      "Se agregaron la importación de instancias desde nueve launchers, entre ellos Prism, CurseForge y Modrinth App, y la exportación con las carpetas y los mundos que elija o como .mrpack de Modrinth.",
+      "Se agregaron ajustes del juego compartidos: los controles, los gráficos y el sonido se aplican en todas las instancias.",
+      "Se agregaron los archivos opcionales y la vista del contenido antes de instalar un modpack, y las actualizaciones de modpacks desde un archivo o un enlace.",
+      "Se agregaron un catálogo de mapas y paquetes de datos en la pestaña «Mundos», el avance de los progresos, un mapa de la semilla y esquemas en 3D con bloques reales.",
+      "Se agregaron Cleanroom para Minecraft 1.12.2 y la instalación de OptiFine para vanilla y Forge hasta la 1.16.5.",
+      "Se agregaron el Guardarropa, la Dificultad de los logros, las cuentas de LittleSkin y la sincronización de temas, guardarropa y ajustes con su cuenta de Grubie.",
+      "Se agregaron una versión portátil para Windows y el control con gamepad con el modo grande para Steam Deck y televisores.",
+      "Se agregaron la página «Soporte» con el registro de errores y las respuestas del soporte dentro del launcher, y nombres legibles en los registros de fallos.",
+      "Se mejoraron la seguridad y el espacio en disco: las actualizaciones están firmadas, se marcan los jar desconocidos de los modpacks y los mods idénticos se guardan una sola vez.",
+      "Se mejoró la pantalla de la instancia: los cambios de contenido se aplican al instante con «Deshacer» y los ajustes siguen abiertos mientras juega."
+    ],
+    "fixes": [
+      "Si los servidores de inicio de sesión no responden, el juego se inicia con la sesión guardada.",
+      "Las descargas de CurseForge ya no se interrumpen cuando sus servidores piden una clave: el launcher cambia al espejo.",
+      "El launcher ya no falla cuando el controlador gráfico no admite WebGL: los skins se muestran planos.",
+      "El inicio de sesión con Microsoft ahora explica por qué fue rechazado.",
+      "Minecraft 26.x ya no se cierra al iniciar en controladores con Vulkan defectuoso.",
+      "Al publicar una instancia ahora se incluyen los mods locales desactivados y, si algo falla, se muestra el motivo."
+    ]
+  },
+  "fr": {
+    "subtitle": "La plus grande mise à jour à ce jour : jouer directement avec vos amis, un mod compagnon dans le jeu, la traduction des mods et bien plus.",
+    "highlights": [
+      "Ajout des connexions directes dans « Jouer ensemble » avec le serveur Grubie en secours, et de l’ouverture de votre propre serveur à vos amis avec la gestion de l’hôte dans le launcher.",
+      "Ajout des amis Microsoft dans « Personnes », de la possibilité de rejoindre vos amis sur leurs serveurs, d’un fil de captures et de notifications par-dessus le jeu.",
+      "Ajout du mod compagnon Grubie : invitations, messages, chat vocal et panneau d’amis directement dans le jeu. Les nouvelles instances le reçoivent automatiquement.",
+      "Ajout de la traduction des mods et modpacks en russe et en ukrainien, y compris les guides, les quêtes et les packs de données.",
+      "Ajout de la recherche du coupable : le launcher divise vos mods en deux jusqu’à trouver celui qui casse le jeu.",
+      "Ajout des canaux de mise à jour, des relations entre mods, du modpack d’origine de chaque mod et d’un catalogue de mods hors instance.",
+      "Ajout du transfert d’instances depuis neuf autres launchers, dont Prism, CurseForge et Modrinth App, et de l’export avec les dossiers et les mondes de votre choix ou en .mrpack Modrinth.",
+      "Ajout de paramètres de jeu partagés : les touches, les graphismes et le son vous suivent dans toutes les instances.",
+      "Ajout des fichiers optionnels et d’un aperçu du contenu avant d’installer un modpack, ainsi que des mises à jour de modpack depuis une archive ou un lien.",
+      "Ajout d’un catalogue de cartes et de packs de données dans l’onglet « Mondes », de l’avancement des progrès, d’une carte de la graine et de schémas en 3D avec de vrais blocs.",
+      "Ajout de Cleanroom pour Minecraft 1.12.2 et de l’installation d’OptiFine pour vanilla et Forge jusqu’à 1.16.5.",
+      "Ajout de la Garde-robe, de la Difficulté des succès, des comptes LittleSkin et de la synchronisation des thèmes, de la garde-robe et des paramètres via votre compte Grubie.",
+      "Ajout d’une version portable pour Windows et de la manette avec le mode grand écran pour Steam Deck et la télévision.",
+      "Ajout de la page « Support » avec le journal des erreurs et les réponses du support dans le launcher, et de noms lisibles dans les rapports de plantage.",
+      "Sécurité et espace disque améliorés : les mises à jour sont signées, les jar inconnus des modpacks sont signalés et les mods identiques ne sont stockés qu’une fois.",
+      "Écran d’instance amélioré : les changements de contenu s’appliquent tout de suite avec « Annuler », et les paramètres restent ouverts pendant que vous jouez."
+    ],
+    "fixes": [
+      "Si les serveurs de connexion sont indisponibles, le jeu démarre avec la session enregistrée.",
+      "Les téléchargements depuis CurseForge ne s’interrompent plus quand ses serveurs demandent une clé : le launcher passe au miroir.",
+      "Le launcher ne plante plus quand le pilote graphique ne prend pas en charge WebGL : les skins s’affichent à plat.",
+      "La connexion Microsoft indique désormais pourquoi elle a été refusée.",
+      "Minecraft 26.x ne plante plus au démarrage avec les pilotes dont Vulkan est défaillant.",
+      "La publication d’une instance inclut désormais les mods locaux désactivés et, en cas d’échec, en indique la raison."
+    ]
+  },
+  "pl": {
+    "subtitle": "Największa aktualizacja: gra ze znajomymi bezpośrednio, mod towarzyszący w grze, tłumaczenie modów i wiele więcej.",
+    "highlights": [
+      "Dodano bezpośrednie połączenia w „Grajcie razem” z serwerem Grubie w zapasie oraz udostępnianie własnego serwera znajomym z zarządzaniem hostem w launcherze.",
+      "Dodano znajomych z Microsoft w zakładce „Ludzie”, dołączanie do znajomych na ich serwerach, kanał zrzutów ekranu i powiadomienia nad grą.",
+      "Dodano mod towarzyszący Grubie: zaproszenia, wiadomości, czat głosowy i panel znajomych bezpośrednio w grze. Nowe instancje otrzymują go automatycznie.",
+      "Dodano tłumaczenie modów i modpacków na rosyjski i ukraiński, w tym poradników, zadań i paczek danych.",
+      "Dodano szukanie winowajcy: launcher dzieli mody na pół, aż znajdzie ten, który psuje grę.",
+      "Dodano kanały aktualizacji, powiązania modów, modpack, z którego pochodzi mod, i katalog modów poza instancją.",
+      "Dodano przenoszenie instancji z dziewięciu innych launcherów, w tym Prism, CurseForge i Modrinth App, oraz eksport z wybranymi folderami i światami lub jako .mrpack Modrinth.",
+      "Dodano wspólne ustawienia gry: klawisze, grafika i dźwięk obowiązują we wszystkich instancjach.",
+      "Dodano pliki opcjonalne i podgląd zawartości przed instalacją modpacka oraz aktualizację modpacka z archiwum lub z linku.",
+      "Dodano katalog map i paczek danych w zakładce „Światy”, stan postępów, mapę ziarna i schematy w 3D z prawdziwymi blokami.",
+      "Dodano Cleanroom dla Minecraft 1.12.2 i instalację OptiFine dla wersji vanilla i Forge do 1.16.5.",
+      "Dodano Garderobę, poziom trudności osiągnięć, konta LittleSkin oraz synchronizację motywów, garderoby i ustawień przez konto Grubie.",
+      "Dodano wersję przenośną dla Windows i sterowanie padem z trybem dużym dla Steam Deck i telewizora.",
+      "Dodano stronę „Pomoc” z dziennikiem błędów i odpowiedziami wsparcia w launcherze oraz czytelne nazwy w raportach awarii.",
+      "Ulepszono bezpieczeństwo i wykorzystanie dysku: aktualizacje są podpisane, nieznane pliki jar w modpackach są oznaczane, a identyczne mody zapisywane raz dla wszystkich instancji.",
+      "Ulepszono ekran instancji: zmiany zawartości działają od razu z przyciskiem „Cofnij”, a ustawienia są dostępne także podczas gry."
+    ],
+    "fixes": [
+      "Gdy serwery logowania są niedostępne, gra uruchamia się z zapisaną sesją.",
+      "Pobieranie z CurseForge nie przerywa się już, gdy jego serwery żądają klucza: launcher przełącza się na mirror.",
+      "Launcher nie psuje się już, gdy sterownik grafiki nie obsługuje WebGL: skiny są pokazywane płasko.",
+      "Logowanie przez Microsoft wyjaśnia teraz, dlaczego zostało odrzucone.",
+      "Minecraft 26.x nie zamyka się już przy starcie na sterownikach z wadliwym Vulkanem.",
+      "Publikowanie instancji obejmuje teraz wyłączone lokalne mody, a przy błędzie pokazuje jego przyczynę."
+    ]
+  },
+  "pt": {
+    "subtitle": "A maior atualização até agora: jogue direto com amigos, um mod complementar no jogo, tradução de mods e muito mais.",
+    "highlights": [
+      "Adicionadas conexões diretas no “Jogar junto” com o servidor da Grubie de reserva, e a abertura do seu próprio servidor para amigos com controle do anfitrião no launcher.",
+      "Adicionados os amigos da Microsoft em “Pessoas”, entrar com amigos nos servidores deles, um feed de capturas e avisos por cima do jogo.",
+      "Adicionado o mod complementar Grubie: convites, mensagens, chat de voz e painel de amigos dentro do jogo. Novas instâncias o recebem automaticamente.",
+      "Adicionada a tradução de mods e modpacks para russo e ucraniano, incluindo guias, missões e pacotes de dados.",
+      "Adicionada a busca do culpado: o launcher divide seus mods ao meio até achar o que quebra o jogo.",
+      "Adicionados canais de atualização, relações entre mods, o modpack de origem de cada mod e um catálogo de mods fora da instância.",
+      "Adicionadas a importação de instâncias de nove outros launchers, entre eles Prism, CurseForge e Modrinth App, e a exportação com as pastas e os mundos que você escolher ou como .mrpack do Modrinth.",
+      "Adicionadas configurações de jogo compartilhadas: teclas, gráficos e som valem em todas as instâncias.",
+      "Adicionados os arquivos opcionais e a prévia do conteúdo antes de instalar um modpack, e atualizações de modpack por arquivo ou link.",
+      "Adicionados um catálogo de mapas e pacotes de dados na aba “Mundos”, o andamento dos progressos, um mapa da semente e esquemas em 3D com blocos reais.",
+      "Adicionados o Cleanroom para Minecraft 1.12.2 e a instalação do OptiFine para vanilla e Forge até 1.16.5.",
+      "Adicionados o Guarda-roupa, a Dificuldade das conquistas, contas LittleSkin e a sincronização de temas, guarda-roupa e configurações pela sua conta Grubie.",
+      "Adicionadas uma versão portátil para Windows e o controle por gamepad com o modo grande para Steam Deck e TV.",
+      "Adicionadas a página “Suporte” com o registro de erros e as respostas do suporte no launcher, e nomes legíveis nos relatórios de falha.",
+      "Melhorados a segurança e o espaço em disco: as atualizações são assinadas, jars desconhecidos em modpacks são marcados e mods idênticos são salvos uma vez para todas as instâncias.",
+      "Melhorada a tela da instância: mudanças de conteúdo valem na hora com “Desfazer”, e as configurações ficam abertas enquanto você joga."
+    ],
+    "fixes": [
+      "Quando os servidores de login estão fora do ar, o jogo inicia com a sessão salva.",
+      "Downloads do CurseForge não param mais quando os servidores dele pedem uma chave: o launcher passa para o espelho.",
+      "O launcher não quebra mais quando o driver de vídeo não suporta WebGL: as skins aparecem planas.",
+      "O login da Microsoft agora explica por que foi recusado.",
+      "O Minecraft 26.x não fecha mais ao iniciar em drivers com Vulkan com defeito.",
+      "Publicar uma instância agora inclui os mods locais desativados e, se algo falhar, mostra o motivo."
+    ]
+  },
+  "tr": {
+    "subtitle": "Şimdiye kadarki en büyük güncelleme: arkadaşlarla doğrudan oyun, oyunda yardımcı mod, mod çevirisi ve çok daha fazlası.",
+    "highlights": [
+      "“Birlikte oyna”ya Grubie sunucusunun yedekte durduğu doğrudan bağlantı ve kendi sunucunuzu ana makine yönetimiyle arkadaşlara açma eklendi.",
+      "“Kişiler”de Microsoft arkadaşları, arkadaşlara sunucularında katılma, ekran görüntüsü akışı ve oyunun üstünde bildirimler eklendi.",
+      "Grubie yardımcı modu eklendi: davetler, mesajlar, sesli sohbet ve arkadaş paneli doğrudan oyunda. Yeni kurulumlara kendiliğinden yüklenir.",
+      "Rehber kitaplar, görevler ve veri paketleri dahil, modların ve mod paketlerinin Rusça ve Ukraynacaya çevirisi eklendi.",
+      "Oyunu bozan modu, modları ikiye bölerek bulan suçlu araması eklendi.",
+      "Güncelleme kanalları, mod ilişkileri, bir modun geldiği mod paketi ve kurulum dışında mod kataloğu eklendi.",
+      "Prism, CurseForge ve Modrinth App dahil dokuz başlatıcıdan kurulum taşıma ve seçtiğiniz klasör ve dünyalarla ya da Modrinth .mrpack olarak dışa aktarma eklendi.",
+      "Ortak oyun ayarları eklendi: tuşlar, grafik ve ses tüm kurulumlarda geçerli oluyor.",
+      "Mod paketi kurmadan önce isteğe bağlı dosyalar ve içerik önizlemesi, ayrıca arşivden veya bağlantıyla mod paketi güncelleme eklendi.",
+      "“Dünyalar” sekmesinde harita ve veri paketi kataloğu, gelişim ilerlemesi, dünya oluşturucusu kodu haritası ve gerçek bloklarla 3D şemalar eklendi.",
+      "Minecraft 1.12.2 için Cleanroom ve vanilla ile 1.16.5’e kadar Forge için OptiFine kurulumu eklendi.",
+      "Gardırop, başarımlarda Zorluk, LittleSkin hesapları ve temalar, gardırop ile ayarların Grubie hesabınız üzerinden eşitlenmesi eklendi.",
+      "Windows için taşınabilir sürüm ve Steam Deck ile televizyon için büyük modlu oyun kumandası desteği eklendi.",
+      "Başlatıcıya hata günlüğü ve destek yanıtlarıyla “Destek” sayfası, çökme raporlarına okunabilir adlar eklendi.",
+      "Güvenlik ve disk alanı geliştirildi: güncellemeler imzalı, mod paketlerindeki bilinmeyen jar dosyaları işaretleniyor ve aynı modlar tüm kurulumlar için bir kez saklanıyor.",
+      "Kurulum ekranı geliştirildi: içerik değişiklikleri “Geri al” ile hemen uygulanıyor ve ayarlar oyun sırasında da açık kalıyor."
+    ],
+    "fixes": [
+      "Giriş sunucuları çalışmadığında oyun kayıtlı oturumla başlıyor.",
+      "CurseForge indirmeleri, sunucuları anahtar istediğinde artık durmuyor: başlatıcı aynaya geçiyor.",
+      "Ekran kartı sürücüsü WebGL desteklemediğinde başlatıcı artık çökmüyor: skinler düz gösteriliyor.",
+      "Microsoft girişi artık neden reddedildiğini açıklıyor.",
+      "Minecraft 26.x, Vulkan’ı bozuk sürücülerde artık açılışta çökmüyor.",
+      "Kurulum yayımlanırken artık devre dışı yerel modlar da gidiyor ve hata olursa nedeni gösteriliyor."
+    ]
+  }
+}
