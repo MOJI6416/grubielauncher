@@ -6,6 +6,7 @@ import { rewriteComponent } from "./components";
 import type { NamespaceLang } from "./jarScan";
 import { readZipFiles } from "./jarScan";
 import { decodeUtf8Strict } from "./langFiles";
+import { ORIGIN_FILE, originEntries } from "./origins";
 import type { LangEntries } from "./unitHash";
 
 export const DATA_TEXT_NAMESPACE = "grubie";
@@ -189,43 +190,6 @@ const REWRITERS: Array<{ match: RegExp; rewrite: Rewriter }> = [
   { match: /^data\/[^/]+\/functions?\/.+\.mcfunction$/, rewrite: rewriteFunction },
   { match: /^data\/[^/]+\/welcomescreen\/.+\.json$/, rewrite: rewriteWelcome },
 ];
-
-const ORIGIN_FILE = /^data\/([^/]+)\/(origins|powers|origin_layers)\/(.+)\.json$/;
-const ORIGIN_KIND: Record<string, string> = {
-  origins: "origin",
-  powers: "power",
-  origin_layers: "layer",
-};
-const KEY_LIKE = /^[a-z0-9_-]+(?:\.[a-z0-9_-]+)+$/;
-
-export function originEntries(
-  name: string,
-  text: string,
-  keysAreText: boolean,
-): LangEntries {
-  const match = ORIGIN_FILE.exec(name);
-  if (!match) return {};
-  let json: unknown;
-  try {
-    json = JSON.parse(text.replace(/^\uFEFF/, ""));
-  } catch {
-    return {};
-  }
-  if (!json || typeof json !== "object" || Array.isArray(json)) return {};
-  const [, namespace, folder, file] = match;
-  const kind = ORIGIN_KIND[folder];
-  const fields = kind === "layer" ? ["name"] : ["name", "description"];
-  const entries: LangEntries = {};
-  for (const field of fields) {
-    const value = (json as Record<string, unknown>)[field];
-    if (typeof value !== "string" || !value.trim() || KEY_LIKE.test(value.trim())) continue;
-    const key = keysAreText
-      ? value
-      : `${kind}.${namespace}.${file.replace(/\//g, ".")}.${field}`;
-    entries[key] = value;
-  }
-  return entries;
-}
 
 function rewriterFor(name: string): Rewriter | null {
   return REWRITERS.find((entry) => entry.match.test(name))?.rewrite ?? null;

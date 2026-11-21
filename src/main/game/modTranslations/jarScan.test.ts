@@ -254,6 +254,36 @@ describe("scanSource", () => {
   });
 });
 
+describe("Origins in mod jars", () => {
+  it("reads origin, power and layer texts, but not keys or what the jar translates", async () => {
+    const jar = await zip("aspects.jar", {
+      "fabric.mod.json": '{"id":"aspects","name":"Aspects","description":"Elemental origins"}',
+      "data/aspects/origins/vacuos.json": '{"name":"Vacuos","description":"Devoid of any Aspect."}',
+      "data/aspects/origin_layers/elements.json": '{"name":"Aspect","origins":[]}',
+      "data/aspects/powers/pyro/melt.json": '{"name":"power.aspects.melt.name","description":"Melts ice"}',
+      "data/aspects/origins/broken.json": "{",
+      "assets/aspects/lang/ru_ru.json": '{"Aspect":"Аспект"}',
+    });
+
+    const result = await scanSource(jar, "ru_ru");
+
+    expect(result.originText).toEqual({
+      Vacuos: "Vacuos",
+      "Devoid of any Aspect.": "Devoid of any Aspect.",
+      "Melts ice": "Melts ice",
+    });
+    expect(result.context?.name).toBe("Aspects");
+  });
+
+  it("leaves origins in pack folders to the data pack logic", async () => {
+    const pack = await folder("origins_pack", {
+      "pack.mcmeta": '{"pack":{"pack_format":15,"description":"Origins pack"}}',
+      "data/pack/origins/elf.json": '{"name":"Elf"}',
+    });
+    expect((await scanSource(pack, "ru_ru")).originText).toBeUndefined();
+  });
+});
+
 describe("ResourceLoader folders", () => {
   it("reads resources/<namespace>/lang as assets", async () => {
     const root = await folder("resources", {

@@ -55,8 +55,10 @@ import {
 } from "./packSources";
 import { COMPONENT_KEY_PREFIX, expandSpans } from "./components";
 import {
+  applyDefaultOptionsPacks,
   applyPackOverrides,
   OverridesFile,
+  restoreDefaultOptionsPacks,
   restorePackOverrides,
 } from "./packOverrides";
 import {
@@ -77,12 +79,15 @@ import {
 } from "./ftbInline";
 import {
   applyDataRewrite,
+  DATA_TEXT_NAMESPACE,
   DataPack,
   listDataPacks,
   restoreDataRewrite,
   RewrittenData,
   scanDataPacks,
 } from "./datapackText";
+import { originKeysAreText } from "./origins";
+import { readDefaultOptions } from "../defaultOptions";
 import {
   applyQuestzRewrite,
   QUESTZ_KEY_PREFIX,
@@ -97,6 +102,7 @@ import {
   isManagedPackFile,
   legacyPackFormat,
   MANAGED_PACK_PREFIX,
+  packEntryName,
   packMcmeta,
   packSupportsGame,
   readOptionList,
@@ -118,8 +124,8 @@ import {
 } from "./translationApi";
 import type { LangEntries } from "./unitHash";
 
-const PROTOCOL = 2;
-const SCAN_VERSION = 2;
+const PROTOCOL = 3;
+const SCAN_VERSION = 3;
 const BOOKS_VERSION = 1;
 const LOOKUP_BATCH = 100;
 const SUBMIT_BATCH_UNITS = 40;
@@ -1096,8 +1102,7 @@ async function readDataText(
   if (!supportsTextFallback(mcVersion)) {
     return { packs: [], langs: await scanDataPacks(packs, true, true) };
   }
-  const origins21 = /^1\.(?:2[1-9]|[3-9]\d)|^\d{2}\./.test(mcVersion);
-  return { packs, langs: await scanDataPacks(packs, !origins21) };
+  return { packs, langs: await scanDataPacks(packs, originKeysAreText(mcVersion)) };
 }
 
 async function applyExternalBooks(
@@ -1211,7 +1216,9 @@ async function applyOptions(
   dropDefaults: string[] = [],
 ): Promise<string[]> {
   const file = path.join(versionPath, "options.txt");
-  const current = await fs.readFile(file, "utf8").catch(() => null);
+  const existing = await fs.readFile(file, "utf8").catch(() => null);
+  const current =
+    existing ?? (packFiles.length > 0 || locale ? await readDefaultOptions(versionPath) : null);
   const had = (text: string | null, key: string) =>
     !!text && new RegExp(`^${key}:`, "m").test(text);
   const result = applyTranslationOptions(current, {
@@ -1261,6 +1268,7 @@ async function cleanup(
   await restoreInline(versionPath, storageDir(versionPath), state.ftbInlineFiles);
   await restoreFancy(versionPath, storageDir(versionPath), state.fancyFiles);
   await restorePackOverrides(versionPath, storageDir(versionPath), state.packOverrides);
+  await restoreDefaultOptionsPacks(versionPath);
   for (const name of ["questz-originals", "data-originals", "ftbq-originals", "fancymenu-originals"]) {
     await removeEmptyTree(path.join(storageDir(versionPath), name));
   }
@@ -1400,10 +1408,26 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
                 })),
               },
       );
+      const jarOrigins: NamespaceLang[] = originKeysAreText(mcVersion)
+        ? scanned.flatMap((scan) =>
+            scan.originText
+              ? [
+                  {
+                    namespace: DATA_TEXT_NAMESPACE,
+                    format: "json" as const,
+                    english: scan.originText,
+                    translatedKeys: [],
+                    ...(scan.context ? { context: scan.context } : {}),
+                  },
+                ]
+              : [],
+          )
+        : [];
       const langs = preferPackEnglish([
         ...scanned.map((scan) => scan.namespaces),
         ...(questzLang ? [[questzLang]] : []),
         dataText.langs,
+        jarOrigins,
       ]);
       const namespaces = modNamespaces(langs);
 
@@ -1588,6 +1612,10 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     storageDir(versionPath),
     ourPackFiles(next),
     state.packOverrides,
+  );
+  await applyDefaultOptionsPacks(
+    versionPath,
+    ourPackFiles(next).map((file) => packEntryName(file, mcVersion)),
   );
   next.forcedLocale = locale;
   await writeState(versionPath, next);

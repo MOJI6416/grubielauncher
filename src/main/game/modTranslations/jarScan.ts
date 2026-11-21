@@ -12,13 +12,14 @@ import {
   parseBookPath,
   parsePatchouliBookJson,
 } from "./books";
-import { LangFormat, parseLangFile, parseLangPath } from "./langFiles";
+import { decodeUtf8Strict, LangFormat, parseLangFile, parseLangPath } from "./langFiles";
 import {
   MOD_METADATA_FILES,
   ModContext,
   preferredContext,
   readModContext,
 } from "./modContext";
+import { ORIGIN_FILE, originEntries } from "./origins";
 import type { LangEntries } from "./unitHash";
 
 export const SOURCE_LOCALE = "en_us";
@@ -45,6 +46,7 @@ export interface SourceScan {
   books: BookDoc[];
   translatedDocs: string[];
   patchouliI18n: string[];
+  originText?: LangEntries;
 }
 
 export interface PackCoverage {
@@ -65,6 +67,7 @@ interface ScanState {
   books: Map<string, { doc: BookDoc; root: boolean }>;
   translatedDocs: Set<string>;
   patchouliI18n: Set<string>;
+  originText: LangEntries;
 }
 
 type Read = () => Promise<Buffer>;
@@ -228,6 +231,13 @@ async function collect(
       return;
     }
 
+    if (!isPack && ORIGIN_FILE.test(name)) {
+      if (size > MAX_META_BYTES) return;
+      const text = decodeUtf8Strict(await read());
+      if (text !== null) Object.assign(state.originText, originEntries(name, text, true));
+      return;
+    }
+
     if (name === "pack.mcmeta" && size <= MAX_META_BYTES) {
       pack = packContext(await read());
       return;
@@ -332,6 +342,7 @@ function emptyState(locale: string): ScanState {
     books: new Map(),
     translatedDocs: new Set(),
     patchouliI18n: new Set(),
+    originText: {},
   };
 }
 
@@ -349,6 +360,12 @@ function finish(state: ScanState, context: ModContext | null): SourceScan {
       ...(collected.context ? { context: collected.context } : {}),
     });
   }
+  const translated = new Set(
+    [...state.namespaces.values()].flatMap((collected) => [...collected.translated]),
+  );
+  const originText = Object.fromEntries(
+    Object.entries(state.originText).filter(([key]) => !translated.has(key)),
+  );
   return {
     context,
     namespaces: namespaces.sort((a, b) => a.namespace.localeCompare(b.namespace)),
@@ -357,6 +374,7 @@ function finish(state: ScanState, context: ModContext | null): SourceScan {
       .sort((a, b) => docId(a).localeCompare(docId(b))),
     translatedDocs: [...state.translatedDocs].sort(),
     patchouliI18n: [...state.patchouliI18n].sort(),
+    ...(Object.keys(originText).length > 0 ? { originText } : {}),
   };
 }
 
