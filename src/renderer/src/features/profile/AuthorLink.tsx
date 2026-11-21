@@ -16,6 +16,7 @@ export function AuthorLink({
     nickname: string;
     platform?: IUser["platform"] | null;
     headUrl?: string | null;
+    publicProfile?: boolean | null;
   };
   size?: number;
   headClassName?: string;
@@ -38,7 +39,7 @@ export function AuthorLink({
     </>
   );
 
-  if (!author.id) {
+  if (!author.id || author.publicProfile === false) {
     return (
       <Hint content={author.nickname} variant="text" truncatedOnly>
         <span className={cn("flex min-w-0 items-center gap-1.5", className)}>

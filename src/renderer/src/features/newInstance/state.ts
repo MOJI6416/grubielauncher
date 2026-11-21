@@ -44,6 +44,7 @@ export interface PackAuthor {
   nickname: string;
   platform: IUser["platform"] | null;
   headUrl: string | null;
+  publicProfile?: boolean;
 }
 
 export interface ForeignPackSource {

@@ -48,6 +48,7 @@ export function sharedPackAuthor(
     nickname: owner.nickname,
     platform: owner.platform ?? null,
     headUrl: owner.headUrl ?? owner.image ?? null,
+    publicProfile: owner.publicProfile,
   };
 }
 

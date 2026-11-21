@@ -756,6 +756,7 @@ export function CatalogPanel({
                           author={{
                             id: selected.authorId,
                             nickname: selected.authorName,
+                            publicProfile: selected.authorPublicProfile,
                           }}
                           headClassName="rounded-[3px]"
                         />

@@ -40,6 +40,12 @@ describe("normalizeGalleryTheme", () => {
     expect(normalizeGalleryTheme({ ...RAW, authorId: "../profile" })?.authorId).toBeNull();
   });
 
+  it("withholds the author's profile only when the api says it is hidden", () => {
+    expect(normalizeGalleryTheme({ ...RAW, authorPublicProfile: false })?.authorPublicProfile).toBe(false);
+    expect(normalizeGalleryTheme({ ...RAW, authorPublicProfile: true })?.authorPublicProfile).toBe(true);
+    expect(normalizeGalleryTheme(RAW)?.authorPublicProfile).toBe(true);
+  });
+
   it("refuses ids and colours that did not come from the gallery", () => {
     expect(normalizeGalleryTheme({ ...RAW, id: "../../etc" })).toBeNull();
     expect(

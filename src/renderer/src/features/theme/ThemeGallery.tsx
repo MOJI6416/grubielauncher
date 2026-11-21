@@ -113,7 +113,11 @@ function GalleryCard({
         <div className="flex items-center gap-1.5 text-xs text-faint">
           {item.authorId && item.authorName ? (
             <AuthorLink
-              author={{ id: item.authorId, nickname: item.authorName }}
+              author={{
+                id: item.authorId,
+                nickname: item.authorName,
+                publicProfile: item.authorPublicProfile,
+              }}
               headClassName="rounded-[3px]"
             />
           ) : (

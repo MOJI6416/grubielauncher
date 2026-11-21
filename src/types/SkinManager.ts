@@ -70,6 +70,7 @@ export interface ICatalogSkin {
   source: CatalogSkinSource
   authorName: string | null
   authorId?: string | null
+  authorPublicProfile?: boolean
   skinUrl: string | null
   capeUrl?: string | null
   previewUrl?: string | null

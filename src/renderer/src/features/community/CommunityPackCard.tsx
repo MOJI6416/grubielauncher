@@ -66,6 +66,7 @@ export function CommunityPackCard({
               id: pack.owner.id || null,
               nickname: pack.owner.nickname,
               headUrl: pack.owner.imageUrl,
+              publicProfile: pack.owner.publicProfile,
             }}
             headClassName="rounded-[3px]"
             className="max-w-40 shrink-0"

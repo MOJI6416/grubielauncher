@@ -29,6 +29,7 @@ export interface GalleryTheme {
   backdrop: GalleryBackdrop | null;
   authorName: string | null;
   authorId: string | null;
+  authorPublicProfile: boolean;
   downloads: number;
 }
 
@@ -148,6 +149,7 @@ export function normalizeGalleryTheme(value: unknown): GalleryTheme | null {
         : null,
     authorName: typeof raw.authorName === "string" && raw.authorName ? raw.authorName : null,
     authorId: typeof raw.authorId === "string" && GALLERY_ID.test(raw.authorId) ? raw.authorId : null,
+    authorPublicProfile: raw.authorPublicProfile !== false,
     downloads: typeof raw.downloads === "number" ? raw.downloads : 0,
   };
 }
