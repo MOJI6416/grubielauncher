@@ -338,10 +338,10 @@
     "addressFriends": "Dla znajomych",
     "friendsAction": "Otwórz znajomym przez Grubie",
     "friendsNeedsRun": "Uruchom serwer, aby otworzyć go znajomym",
-    "friendsOpen": "Otwarty — zarządzaj w „Graj razem”",
+    "friendsOpen": "Otwarty — zarządzaj w „Grajcie razem”",
     "friendsStarting": "Otwieranie…",
     "friendsError": "Nie udało się otworzyć serwera znajomym",
-    "friendsBusy": "Teraz otwarty jest inny świat. Zamknij go w „Graj razem”, aby otworzyć serwer."
+    "friendsBusy": "Teraz otwarty jest inny świat. Zamknij go w „Grajcie razem”, aby otworzyć serwer."
   },
   "serverSettings": {
     "description": "Opis",
@@ -2424,7 +2424,7 @@
       "directConnect": {
         "title": "Połączenie bezpośrednie (P2P)",
         "description": "Graj ze znajomymi bezpośrednio, z pominięciem serwera Grubie",
-        "keywords": "p2p połączenie bezpośrednie graj razem ping ip webrtc przekaźnik"
+        "keywords": "p2p połączenie bezpośrednie grajcie razem ping ip webrtc przekaźnik"
       },
       "modUpdateChannel": {
         "title": "Aktualizacje modów",
@@ -2540,7 +2540,7 @@
     },
     "resetAllDone": "Przywrócono ustawienia domyślne",
     "directConnect": "Bezpośrednie połączenie ze znajomymi",
-    "directConnectDescription": "„Graj razem” idzie bezpośrednio między tobą a znajomym, z pominięciem serwera Grubie, więc ping jest niższy. Znajomy poznaje twój adres IP. Nie działa w trybie streamera ani w światach otwartych dla wszystkich.",
+    "directConnectDescription": "„Grajcie razem” idzie bezpośrednio między Tobą a znajomym, z pominięciem serwera Grubie, więc ping jest niższy. Znajomy poznaje Twój adres IP. Nie działa w trybie streamera ani w światach otwartych dla wszystkich.",
     "assistant": {
       "providersTitle": "Dostawcy i klucze",
       "providersHint": "w asystencie odpowiada wybrany",
@@ -8084,7 +8084,7 @@
   "companion": {
     "title": "Mod towarzyszący",
     "toggle": "Dodawaj mod towarzyszący",
-    "hintOff": "Znajomi, zaproszenia, Graj razem i czat głosowy prosto w grze",
+    "hintOff": "Znajomi, zaproszenia, „Grajcie razem” i czat głosowy prosto w grze",
     "hintOn": "Wersja {{version}} jest instalowana przy każdym uruchomieniu. W grze: klawisz G lub przycisk Grubie w menu pauzy",
     "toggleFailed": "Nie udało się przełączyć moda towarzyszącego",
     "joining": "Łączenie ze światem {{nickname}} prosto w grze",

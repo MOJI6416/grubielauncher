@@ -2379,7 +2379,7 @@
       "directConnect": {
         "title": "Direkte Verbindung (P2P)",
         "description": "Direkt mit Freunden spielen, am Grubie-Server vorbei",
-        "keywords": "p2p direkte verbindung gemeinsam spielen ping ip webrtc relay"
+        "keywords": "p2p direkte verbindung zusammen spielen ping ip webrtc relay"
       },
       "modUpdateChannel": {
         "title": "Mod-Updates",
@@ -2495,7 +2495,7 @@
     },
     "resetAllDone": "Einstellungen auf Standard zurückgesetzt",
     "directConnect": "Direkte Verbindung mit Freunden",
-    "directConnectDescription": "„Gemeinsam spielen“ läuft direkt zwischen dir und deinem Freund, am Grubie-Server vorbei – der Ping ist niedriger. Dein Freund erfährt deine IP-Adresse. Im Streamer-Modus und in Welten, die für alle offen sind, nicht verwendet.",
+    "directConnectDescription": "„Zusammen spielen“ läuft direkt zwischen Ihnen und Ihrem Freund, am Grubie-Server vorbei – der Ping ist niedriger. Ihr Freund erfährt Ihre IP-Adresse. Im Streamer-Modus und in Welten, die für alle offen sind, nicht verwendet.",
     "assistant": {
       "providersTitle": "Anbieter und Schlüssel",
       "providersHint": "im Assistenten antwortet der ausgewählte",
@@ -7893,7 +7893,7 @@
   "companion": {
     "title": "Begleit-Mod",
     "toggle": "Begleit-Mod hinzufügen",
-    "hintOff": "Freunde, Einladungen, Zusammen spielen und Sprachchat direkt im Spiel",
+    "hintOff": "Freunde, Einladungen, „Zusammen spielen“ und Sprachchat direkt im Spiel",
     "hintOn": "Version {{version}} wird bei jedem Start installiert. Im Spiel: Taste G oder die Schaltfläche Grubie im Pausenmenü",
     "toggleFailed": "Der Begleit-Mod konnte nicht umgeschaltet werden",
     "joining": "Verbindung zur Welt von {{nickname}} direkt im Spiel",

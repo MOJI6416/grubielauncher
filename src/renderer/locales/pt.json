@@ -338,10 +338,10 @@
     "addressFriends": "Para amigos",
     "friendsAction": "Abrir para amigos pelo Grubie",
     "friendsNeedsRun": "Inicie o servidor para abri-lo aos amigos",
-    "friendsOpen": "Aberto — gerencie em Jogar juntos",
+    "friendsOpen": "Aberto — gerencie em “Jogar junto”",
     "friendsStarting": "Abrindo…",
     "friendsError": "Não foi possível abrir o servidor aos amigos",
-    "friendsBusy": "Outro mundo está aberto agora. Feche-o em Jogar juntos para abrir o servidor."
+    "friendsBusy": "Outro mundo está aberto agora. Feche-o em “Jogar junto” para abrir o servidor."
   },
   "serverSettings": {
     "description": "Descrição",
@@ -2403,7 +2403,7 @@
       "directConnect": {
         "title": "Conexão direta (P2P)",
         "description": "Jogar com amigos diretamente, sem passar pelo servidor do Grubie",
-        "keywords": "p2p conexão direta jogar juntos ping ip webrtc relay"
+        "keywords": "p2p conexão direta jogar junto ping ip webrtc relay"
       },
       "modUpdateChannel": {
         "title": "Atualizações de mods",
@@ -2519,7 +2519,7 @@
     },
     "resetAllDone": "Configurações redefinidas para o padrão",
     "directConnect": "Conexão direta com amigos",
-    "directConnectDescription": "O «Jogar juntos» vai direto entre você e seu amigo, sem passar pelo servidor do Grubie, e o ping fica menor. Seu amigo fica sabendo seu endereço IP. Não é usado no modo streamer nem em mundos abertos a todos.",
+    "directConnectDescription": "O “Jogar junto” vai direto entre você e seu amigo, sem passar pelo servidor do Grubie, e o ping fica menor. Seu amigo fica sabendo seu endereço IP. Não é usado no modo streamer nem em mundos abertos a todos.",
     "assistant": {
       "providersTitle": "Provedores e chaves",
       "providersHint": "no assistente responde o selecionado",
@@ -7986,7 +7986,7 @@
   "companion": {
     "title": "Mod complementar",
     "toggle": "Adicionar o mod complementar",
-    "hintOff": "Amigos, convites, Jogar juntos e chat de voz dentro do jogo",
+    "hintOff": "Amigos, convites, “Jogar junto” e chat de voz dentro do jogo",
     "hintOn": "A versão {{version}} é instalada a cada inicialização. No jogo: a tecla G ou o botão Grubie no menu de pausa",
     "toggleFailed": "Não foi possível alternar o mod complementar",
     "joining": "Conectando ao mundo de {{nickname}} dentro do jogo",

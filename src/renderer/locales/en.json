@@ -2495,7 +2495,7 @@
     },
     "resetAllDone": "Settings reset to defaults",
     "directConnect": "Direct connection with friends",
-    "directConnectDescription": "Play Together goes straight between you and your friend, bypassing the Grubie server, so the ping is lower. Your friend learns your IP address. Not used in streamer mode or in worlds open to everyone.",
+    "directConnectDescription": "Play together goes straight between you and your friend, bypassing the Grubie server, so the ping is lower. Your friend learns your IP address. Not used in streamer mode or in worlds open to everyone.",
     "assistant": {
       "providersTitle": "Providers and keys",
       "providersHint": "the selected one answers in the assistant",
