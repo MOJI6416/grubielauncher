@@ -4,11 +4,13 @@ import type {
   CompanionFriend,
   CompanionFriendStatus,
   CompanionFriends,
+  CompanionOfflineFriend,
   CompanionToast,
   CompanionToastKind,
   CompanionVoice,
   CompanionVoiceMember
 } from '@/shared/companion'
+import { COMPANION_OFFLINE_LIMIT } from '@/shared/companion'
 
 export const COMPANION_MAX_LINE = 1024 * 1024
 export const COMPANION_WIRE_PROTOCOL = 2
@@ -291,8 +293,26 @@ export function sanitizeFriends(value: unknown): CompanionFriends {
       online.push(entry)
     }
   }
+  const offlineList: CompanionOfflineFriend[] = []
+  if (Array.isArray(record.offlineList)) {
+    for (const item of record.offlineList) {
+      if (!item || typeof item !== 'object' || offlineList.length >= COMPANION_OFFLINE_LIMIT) continue
+      const friend = item as Record<string, unknown>
+      const id = text(friend.id, 64)
+      const name = text(friend.name, 64)
+      if (!id || !name) continue
+      const entry: CompanionOfflineFriend = { id, name }
+      const url = avatarUrl(friend.avatarUrl)
+      if (url) entry.avatarUrl = url
+      offlineList.push(entry)
+    }
+  }
   const offline = Number(record.offline)
-  return { online, offline: Number.isInteger(offline) && offline > 0 ? offline : 0 }
+  return {
+    online,
+    offline: Number.isInteger(offline) && offline > 0 ? offline : 0,
+    ...(offlineList.length ? { offlineList } : {})
+  }
 }
 
 export function sanitizeVoice(value: unknown): CompanionVoice {

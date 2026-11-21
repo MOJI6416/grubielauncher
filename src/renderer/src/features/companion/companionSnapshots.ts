@@ -6,6 +6,7 @@ import type {
   CompanionFriends,
   CompanionVoice,
 } from "@/shared/companion";
+import { COMPANION_OFFLINE_LIMIT } from "@/shared/companion";
 import { friendPresence } from "@renderer/features/friends/presence";
 import { isVoiceLive } from "@renderer/features/voice/roomModel";
 import { userHeadUrl } from "@renderer/features/accounts/identity";
@@ -81,6 +82,7 @@ export function buildFriendsSnapshot(
 ): CompanionFriends {
   const sharesByHost = new Map(shares.map((share) => [share.hostUserId, share]));
   const online: CompanionFriends["online"] = [];
+  const offlineList: NonNullable<CompanionFriends["offlineList"]> = [];
   let offline = 0;
   for (const friend of friends) {
     const id = friend.user?._id;
@@ -88,6 +90,8 @@ export function buildFriendsSnapshot(
     const presence = friendPresence(friend, sharesByHost.get(id));
     if (presence.kind === "offline") {
       offline += 1;
+      const avatarUrl = headUrl(apiBase, id);
+      offlineList.push({ id, name: friend.user.nickname, ...(avatarUrl ? { avatarUrl } : {}) });
       continue;
     }
     const place =
@@ -107,7 +111,8 @@ export function buildFriendsSnapshot(
     });
   }
   online.sort((a, b) => Number(b.status === "playing") - Number(a.status === "playing") || a.name.localeCompare(b.name));
-  return { online, offline };
+  offlineList.sort((a, b) => a.name.localeCompare(b.name));
+  return { online, offline, offlineList: offlineList.slice(0, COMPANION_OFFLINE_LIMIT) };
 }
 
 export function buildVoiceSnapshot(

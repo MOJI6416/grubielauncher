@@ -190,14 +190,16 @@ describe('companion protocol', () => {
         { id: 'u2', name: 'Alex', status: 'playing', joinable: true, avatarUrl: 'https://cdn.example/u2.png' },
         { name: 'no id' }
       ],
-      offline: -3
+      offline: -3,
+      offlineList: [{ id: 'u3', name: 'Pacyk', avatarUrl: 'https://cdn.example/u3.png' }, { id: 'u4' }, 'junk']
     })
     expect(friends).toEqual({
       online: [
         { id: 'u1', name: 'Kituk', status: 'online', joinable: false },
         { id: 'u2', name: 'Alex', status: 'playing', joinable: true, avatarUrl: 'https://cdn.example/u2.png' }
       ],
-      offline: 0
+      offline: 0,
+      offlineList: [{ id: 'u3', name: 'Pacyk', avatarUrl: 'https://cdn.example/u3.png' }]
     })
     expect(sanitizeVoice({ active: false, members: [{ id: 'x', name: 'y' }] }).members).toEqual([])
     expect(sanitizeVoice({ active: true, pttCode: 9999, members: [{ id: 'x', name: 'y', speaking: true }] })).toEqual({

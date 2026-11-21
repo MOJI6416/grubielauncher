@@ -1,6 +1,8 @@
 export const COMPANION_FILE_PREFIX = 'grubie-companion-'
 export const COMPANION_PROTOCOL = 2
 export const COMPANION_STATS_DIR = 'server-stats'
+export const COMPANION_OFFLINE_LIMIT = 100
+export const COMPANION_OFFLINE_AVATARS = 30
 export const COMPANION_ENV_ADDRESS = 'GRUBIE_COMPANION_ADDRESS'
 export const COMPANION_ENV_TOKEN = 'GRUBIE_COMPANION_TOKEN'
 export const COMPANION_ENV_STATS_DIR = 'GRUBIE_COMPANION_STATS_DIR'
@@ -10,6 +12,14 @@ const SHARE_JOIN_SUFFIX = '.join.grubielauncher.com'
 export interface CompanionSupport {
   supported: boolean
   version: string | null
+}
+
+export type CompanionPlaceKind = 'world' | 'server'
+
+export interface CompanionPlace {
+  address: string
+  name: string
+  kind: CompanionPlaceKind
 }
 
 export interface CompanionSession {
@@ -48,9 +58,16 @@ export interface CompanionFriend {
   joinable: boolean
 }
 
+export interface CompanionOfflineFriend {
+  id: string
+  name: string
+  avatarUrl?: string
+}
+
 export interface CompanionFriends {
   online: CompanionFriend[]
   offline: number
+  offlineList?: CompanionOfflineFriend[]
 }
 
 export interface CompanionVoiceMember {

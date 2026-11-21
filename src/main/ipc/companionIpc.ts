@@ -1,5 +1,6 @@
 import path from "path";
 import type {
+  CompanionPlaceKind,
   CompanionSession,
   CompanionSupport,
 } from "@/shared/companion";
@@ -32,6 +33,7 @@ import { pushToTalkFromGame } from "../services/PushToTalk";
 
 const isPath = check.nonEmptyString(4096);
 const isName = check.nonEmptyString(255);
+const isPlaceKind = check.oneOf("world", "server");
 const isShort = check.nonEmptyString(64);
 
 function send(channel: string, ...args: unknown[]) {
@@ -196,11 +198,19 @@ export function registerCompanionIpc() {
     },
   );
 
-  handleSafe<boolean, [string, number, string, string]>(
+  handleSafe<boolean, [string, number, string, string, CompanionPlaceKind | undefined]>(
     "companion:connect",
     false,
-    [isName, check.integer(), check.nonEmptyString(255), isName],
-    (_, versionName, instance, address, name) =>
-      companionBridge.connect(versionName, instance, address, name),
+    [isName, check.integer(), check.nonEmptyString(255), isName, check.optional(isPlaceKind)],
+    (_, versionName, instance, address, name, kind) =>
+      companionBridge.connect(versionName, instance, address, name, kind ?? "server"),
+  );
+
+  handleSafe<void, [string, string, string, CompanionPlaceKind]>(
+    "companion:expectPlace",
+    undefined,
+    [isName, check.nonEmptyString(255), isName, isPlaceKind],
+    (_, versionName, address, name, kind) =>
+      companionBridge.expectPlace(versionName, { address, name, kind }),
   );
 }

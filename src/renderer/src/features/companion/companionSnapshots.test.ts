@@ -37,6 +37,7 @@ describe("companion snapshots", () => {
       "https://api.example.com",
     );
     expect(snapshot.offline).toBe(1);
+    expect(snapshot.offlineList?.map((entry) => entry.name)).toEqual(["Offline"]);
     expect(snapshot.online.map((entry) => entry.name)).toEqual(["Kituk", "Zed"]);
     expect(snapshot.online[0]).toMatchObject({
       id: "b",

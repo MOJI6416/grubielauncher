@@ -314,6 +314,7 @@ import type {
   CompanionFriends,
   CompanionGameEvent,
   CompanionHang,
+  CompanionPlaceKind,
   CompanionSelf,
   CompanionSession,
   CompanionStage,
@@ -1596,7 +1597,14 @@ export interface IElectronAPI {
       instance: number,
       address: string,
       name: string,
+      kind?: CompanionPlaceKind,
     ) => Promise<boolean>;
+    expectPlace: (
+      versionName: string,
+      address: string,
+      name: string,
+      kind: CompanionPlaceKind,
+    ) => Promise<void>;
     onStatus: (callback: (sessions: CompanionSession[]) => void) => () => void;
     onAccept: (callback: (id: string) => void) => () => void;
     setSelf: (self: CompanionSelf | null) => Promise<void>;
@@ -3085,7 +3093,15 @@ export const api: IElectronAPI = {
       instance: number,
       address: string,
       name: string,
-    ) => invoke("companion:connect", versionName, instance, address, name),
+      kind?: CompanionPlaceKind,
+    ) =>
+      invoke("companion:connect", versionName, instance, address, name, kind),
+    expectPlace: (
+      versionName: string,
+      address: string,
+      name: string,
+      kind: CompanionPlaceKind,
+    ) => invoke("companion:expectPlace", versionName, address, name, kind),
     onStatus: (callback: (sessions: CompanionSession[]) => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,

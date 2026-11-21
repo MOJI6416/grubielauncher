@@ -3,12 +3,15 @@ import net from 'net'
 import { randomBytes } from 'crypto'
 import type {
   CompanionFriends,
+  CompanionPlace,
+  CompanionPlaceKind,
   CompanionSelf,
   CompanionSession,
   CompanionToast,
   CompanionVoice
 } from '@/shared/companion'
 import {
+  COMPANION_OFFLINE_AVATARS,
   COMPANION_ENV_ADDRESS,
   COMPANION_ENV_STATS_DIR,
   COMPANION_ENV_TOKEN
@@ -24,6 +27,7 @@ import {
 
 const HELLO_TIMEOUT_MS = 5000
 const MAX_PENDING_SOCKETS = 8
+const PLACE_TTL_MS = 10 * 60 * 1000
 
 interface Registration {
   key: string
@@ -65,6 +69,7 @@ export class CompanionBridge extends EventEmitter {
   private avatarUrls = new Map<string, string>()
   private avatarData = new Map<string, string>()
   private avatarSource: CompanionAvatarSource | null = null
+  private places = new Map<string, { place: CompanionPlace; at: number }>()
 
   public setAvatarSource(source: CompanionAvatarSource): void {
     this.avatarSource = source
@@ -151,7 +156,16 @@ export class CompanionBridge extends EventEmitter {
       this.rememberAvatar(friend.id, avatarUrl)
       return { ...friend, avatar: friend.id }
     })
-    const line = JSON.stringify({ t: 'friends', online, offline: friends.offline })
+    const offlineList = (friends.offlineList ?? []).map(({ avatarUrl, ...friend }, index) => {
+      if (!avatarUrl || index >= COMPANION_OFFLINE_AVATARS) return friend
+      this.rememberAvatar(friend.id, avatarUrl)
+      return { ...friend, avatar: friend.id }
+    })
+    const line = JSON.stringify(
+      offlineList.length
+        ? { t: 'friends', online, offline: friends.offline, offlineList }
+        : { t: 'friends', online, offline: friends.offline }
+    )
     if (line === this.friendsLine) return
     this.friendsLine = line
     for (const entry of this.registrations.values()) {
@@ -226,10 +240,27 @@ export class CompanionBridge extends EventEmitter {
     this.write(entry, line)
   }
 
-  public connect(versionName: string, instance: number, address: string, name: string): boolean {
+  public connect(
+    versionName: string,
+    instance: number,
+    address: string,
+    name: string,
+    kind: CompanionPlaceKind = 'server'
+  ): boolean {
     const entry = this.registrations.get(`${versionName}-${instance}`)
     if (!entry?.socket) return false
-    return this.write(entry, JSON.stringify({ t: 'connect', address, name }))
+    return this.write(entry, JSON.stringify({ t: 'connect', address, name, kind }))
+  }
+
+  public expectPlace(versionName: string, place: CompanionPlace): void {
+    this.places.set(versionName, { place, at: Date.now() })
+  }
+
+  private takePlace(versionName: string): CompanionPlace | null {
+    const pending = this.places.get(versionName)
+    if (!pending) return null
+    this.places.delete(versionName)
+    return Date.now() - pending.at < PLACE_TTL_MS ? pending.place : null
   }
 
   public async close(): Promise<void> {
@@ -338,6 +369,8 @@ export class CompanionBridge extends EventEmitter {
       )
     )
     if (entry.protocol >= 2) {
+      const place = this.takePlace(entry.versionName)
+      if (place) this.write(entry, JSON.stringify({ t: 'place', ...place }))
       for (const id of this.avatarData.keys()) this.sendAvatar(entry, id)
       this.write(entry, this.friendsLine)
       this.write(entry, this.voiceLine)

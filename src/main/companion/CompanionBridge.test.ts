@@ -90,7 +90,14 @@ describe('companion bridge', () => {
     await reader.next('host')
     expect(bridge.connect('Pack', 0, '127.0.0.1:40000', 'World')).toBe(true)
     const connect = await reader.next('connect')
-    expect(connect).toEqual({ t: 'connect', address: '127.0.0.1:40000', name: 'World' })
+    expect(connect).toEqual({ t: 'connect', address: '127.0.0.1:40000', name: 'World', kind: 'server' })
+    expect(bridge.connect('Pack', 0, 'abcd.join.grubielauncher.com', "kit's world", 'world')).toBe(true)
+    expect(await reader.next('connect')).toEqual({
+      t: 'connect',
+      address: 'abcd.join.grubielauncher.com',
+      name: "kit's world",
+      kind: 'world'
+    })
     expect(reader.received.filter((message) => message.t === 'host')).toEqual([])
 
     bridge.unregister('Pack', 0)
@@ -138,6 +145,7 @@ describe('companion bridge', () => {
       pttCode: 86,
       members: [{ id: 'u1', name: 'Kituk', speaking: true, muted: false }]
     })
+    bridge.expectPlace('Pack', { address: '127.0.0.1:41000', name: "kit's world", kind: 'world' })
     const env = await bridge.register('Pack', 2, '/stats')
     const port = Number(env.GRUBIE_COMPANION_ADDRESS.split(':')[1])
     const game = await open(port)
@@ -147,6 +155,12 @@ describe('companion bridge', () => {
     )
     const welcome = await reader.next('welcome')
     expect(welcome).toEqual({ t: 'welcome', protocol: 2, selfId: 'me', selfName: 'Steve' })
+    expect(await reader.next('place')).toEqual({
+      t: 'place',
+      address: '127.0.0.1:41000',
+      name: "kit's world",
+      kind: 'world'
+    })
     const friends = await reader.next('friends')
     expect(friends.offline).toBe(4)
     expect((friends.online as Record<string, unknown>[])[0]).toEqual({

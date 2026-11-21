@@ -11,6 +11,7 @@ const connectToFriendShare = vi.fn(async () => ({
 }));
 const openGuestLink = vi.fn(async (..._args: unknown[]) => null as unknown);
 const serversWrite = vi.fn(async () => true);
+const expectPlace = vi.fn(async (..._args: unknown[]) => undefined);
 const showFailureToastMock = vi.fn();
 const openNewInstanceMock = vi.fn();
 const readInstanceServersMock = vi.fn(async (..._args: unknown[]) => [] as
@@ -33,6 +34,7 @@ beforeAll(() => {
       path: { join: async (...parts: string[]) => parts.join("/") },
       servers: { read: async () => [], write: serversWrite },
       share: { connectToFriendShare, openGuestLink },
+      companion: { expectPlace },
       backend: {
         getModpack: async () => ({
           status: "ok",
@@ -185,6 +187,12 @@ describe("joinFriendWorld transport", () => {
     expect(runGameMock.mock.calls[0]?.[0]).toMatchObject({
       quick: { multiplayer: "127.0.0.1:50123" },
     });
+    expect(expectPlace).toHaveBeenLastCalledWith(
+      expect.any(String),
+      "127.0.0.1:50123",
+      expect.any(String),
+      "world",
+    );
   });
 
   it("keeps the relay address when the direct link is not available", async () => {

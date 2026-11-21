@@ -243,6 +243,11 @@ export async function joinFriendWorld(
       version.version.name,
     );
 
+    const placeKind = params.slug ? "world" : "server";
+    const placeName = params.slug
+      ? t0("friends.joinFlow.serverEntryName", { nickname: params.hostNickname })
+      : address;
+
     const writeServerEntry = async () => {
       const serversLocal = await readInstanceServers(version!.versionPath);
       if (!serversLocal) return false;
@@ -294,9 +299,8 @@ export async function joinFriendWorld(
               running.versionName,
               running.instance,
               address,
-              t0("friends.joinFlow.serverEntryName", {
-                nickname: params.hostNickname,
-              }),
+              placeName,
+              placeKind,
             )
             .catch(ignoreFailure)
         : false;
@@ -314,6 +318,10 @@ export async function joinFriendWorld(
       });
       return;
     }
+
+    await api.companion
+      .expectPlace(version.version.name, address, placeName, placeKind)
+      .catch(ignoreFailure);
 
     if (quickPlaySupported) {
       toast.success(
