@@ -2378,7 +2378,7 @@
       },
       "directConnect": {
         "title": "Doğrudan bağlantı (P2P)",
-        "description": "Arkadaşlarla Grubie sunucusunu atlayarak doğrudan oyna",
+        "description": "Arkadaşlarınızla Grubie sunucusunu atlayarak doğrudan oynayın",
         "keywords": "p2p doğrudan bağlantı birlikte oyna ping ip webrtc röle"
       },
       "modUpdateChannel": {
@@ -2495,7 +2495,7 @@
     },
     "resetAllDone": "Ayarlar varsayılana sıfırlandı",
     "directConnect": "Arkadaşlarla doğrudan bağlantı",
-    "directConnectDescription": "«Birlikte oyna» sen ve arkadaşın arasında Grubie sunucusunu atlayarak doğrudan gider, ping daha düşük olur. Arkadaşın IP adresini öğrenir. Yayıncı modunda ve herkese açık dünyalarda kullanılmaz.",
+    "directConnectDescription": "“Birlikte oyna” sizinle arkadaşınız arasında Grubie sunucusunu atlayarak doğrudan gider, ping daha düşük olur. Arkadaşınız IP adresinizi öğrenir. Yayıncı modunda ve herkese açık dünyalarda kullanılmaz.",
     "assistant": {
       "providersTitle": "Sağlayıcılar ve anahtarlar",
       "providersHint": "asistanda seçili olan yanıt verir",
@@ -3693,7 +3693,7 @@
       "direct": "P2P",
       "turn": "TURN",
       "relay": "Sunucu üzerinden",
-      "directHint": "Arkadaşınla doğrudan bağlantı, Grubie sunucusunu atlayarak",
+      "directHint": "Arkadaşınızla doğrudan bağlantı, Grubie sunucusunu atlayarak",
       "turnHint": "Grubie TURN sunucusu üzerinden: doğrudan bağlantı kurulamadı",
       "relayHint": "Grubie sunucusu üzerinden: doğrudan bağlantı kullanılamıyor veya kapalı"
     },
