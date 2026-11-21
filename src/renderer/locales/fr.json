@@ -5761,6 +5761,7 @@
     "errorUnavailable": "Le serveur Grubie ne traduit pas encore les mods",
     "errorNetwork": "Pas de connexion au serveur Grubie : ce qui est déjà téléchargé est conservé",
     "errorQuota": "La limite quotidienne de traduction par IA est atteinte : reprise demain",
+    "errorQuotaUntil": "La limite quotidienne de traduction par IA est atteinte : reprise dans {{time}}",
     "errorInternal": "Impossible de mettre à jour la traduction",
     "toggleFailed": "Impossible de changer la traduction des mods",
     "packsHint": "Les packs de la communauté passent au-dessus de la traduction par IA et sous vos propres packs de ressources :",

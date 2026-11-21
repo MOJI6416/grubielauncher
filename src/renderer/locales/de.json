@@ -5708,6 +5708,7 @@
     "errorUnavailable": "Der Grubie-Server übersetzt noch keine Mods",
     "errorNetwork": "Keine Verbindung zum Grubie-Server — bereits Heruntergeladenes bleibt",
     "errorQuota": "Das heutige Limit für KI-Übersetzungen ist erreicht — morgen geht es weiter",
+    "errorQuotaUntil": "Das heutige Limit für KI-Übersetzungen ist erreicht — weiter in {{time}}",
     "errorInternal": "Die Übersetzung konnte nicht aktualisiert werden",
     "toggleFailed": "Die Mod-Übersetzung konnte nicht umgeschaltet werden",
     "packsHint": "Community-Pakete liegen über der KI-Übersetzung und unter Ihren eigenen Ressourcenpaketen:",

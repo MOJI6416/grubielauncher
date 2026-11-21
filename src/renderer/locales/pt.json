@@ -5761,6 +5761,7 @@
     "errorUnavailable": "O servidor Grubie ainda não traduz mods",
     "errorNetwork": "Sem conexão com o servidor Grubie — mantido o que já foi baixado",
     "errorQuota": "O limite diário de tradução com IA acabou — continua amanhã",
+    "errorQuotaUntil": "O limite diário de tradução com IA acabou — continua em {{time}}",
     "errorInternal": "Não foi possível atualizar a tradução",
     "toggleFailed": "Não foi possível alternar a tradução de mods",
     "packsHint": "Os pacotes da comunidade ficam acima da tradução com IA e abaixo dos seus pacotes de recursos:",

@@ -5708,6 +5708,7 @@
     "errorUnavailable": "Grubie sunucusu henüz mod çevirmiyor",
     "errorNetwork": "Grubie sunucusuna bağlanılamadı — indirilmiş olanlar korundu",
     "errorQuota": "Günlük yapay zekâ çeviri sınırı doldu — yarın devam edecek",
+    "errorQuotaUntil": "Günlük yapay zekâ çeviri sınırı doldu — {{time}} sonra devam edecek",
     "errorInternal": "Çeviri güncellenemedi",
     "toggleFailed": "Mod çevirisi açılıp kapatılamadı",
     "packsHint": "Topluluk paketleri yapay zekâ çevirisinin üstünde, kendi kaynak paketlerinizin altında durur:",

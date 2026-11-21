@@ -7,6 +7,7 @@ import { showFailureToast } from "@renderer/utilities/failures";
 import { ignoreFailure } from "@renderer/utilities/ignoreFailure";
 import type { ModTranslationStatus } from "@/types/ModTranslations";
 import { countFeature } from "@renderer/features/usage/usage";
+import { formatDuration } from "@renderer/utilities/duration";
 
 const api = window.api;
 
@@ -152,7 +153,10 @@ export function describeTranslation(
   if (status.needsAccount) parts.push(t("modTranslations.needsAccount"));
 
   const errorKey = status.error ? ERROR_KEYS[status.error] : null;
-  if (status.error) {
+  if (status.error === "quota" && status.retryAt) {
+    const seconds = Math.max(60, Math.round((status.retryAt - Date.now()) / 1000));
+    parts.unshift(t("modTranslations.errorQuotaUntil", { time: formatDuration(seconds) }));
+  } else if (status.error) {
     parts.unshift(t(errorKey ?? "modTranslations.errorInternal"));
   }
   if (parts.length === 0) {

@@ -5708,6 +5708,7 @@
     "errorUnavailable": "The Grubie server does not translate mods yet",
     "errorNetwork": "Can't reach the Grubie server — kept what was already downloaded",
     "errorQuota": "Today's AI translation limit is used up — it continues tomorrow",
+    "errorQuotaUntil": "Today's AI translation limit is used up — it continues in {{time}}",
     "errorInternal": "Couldn't update the translation",
     "toggleFailed": "Couldn't switch mod translation",
     "packsHint": "Community packs sit above the AI translation and below your own resource packs:",

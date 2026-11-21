@@ -46,6 +46,7 @@ export interface ModTranslationStatus {
   pending: number;
   failed: number;
   items?: ModTranslationItem[];
+  retryAt?: number | null;
   needsAccount: boolean;
   error: string | null;
   updatedAt: number | null;

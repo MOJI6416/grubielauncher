@@ -12,6 +12,8 @@ const fake = vi.hoisted(() => ({
   cache: "",
   submitted: [] as Array<{ hash: string; namespace: string; kind?: string; context?: unknown; entries: Record<string, string> }>,
   done: new Map<string, Record<string, string>>(),
+  quota: false,
+  submitCalls: 0,
 }));
 
 vi.mock("../../windows/mainWindow", () => ({ mainWindow: null }));
@@ -40,13 +42,21 @@ vi.mock("./translationApi", () => ({
       );
     }
     async submit(_lang: string, units: typeof fake.submitted) {
+      fake.submitCalls++;
+      if (fake.quota) {
+        return {
+          accepted: [],
+          queued: 0,
+          rejected: units.map((unit) => ({ hash: unit.hash, reason: "quota" })),
+        };
+      }
       fake.submitted.push(...units);
       return { accepted: units.map((unit) => unit.hash), queued: units.length, rejected: [] };
     }
   },
 }));
 
-import { getModTranslationStatus, runSync } from "./sync";
+import { getModTranslationStatus, nextQuotaReset, runSync } from "./sync";
 
 let root: string;
 let instance: string;
@@ -260,5 +270,25 @@ describe("mod translation sync", () => {
     expect(
       await fs.readFile(path.join(instance, "config/ftbquests/quests/lang/ru_ru.snbt"), "utf8"),
     ).toContain("Дерево");
+  });
+
+  it("waits for the daily quota to reset and says when", async () => {
+    expect(nextQuotaReset(Date.UTC(2026, 10, 21, 18, 30))).toBe(Date.UTC(2026, 10, 22, 0, 5));
+
+    fake.quota = true;
+    await write(
+      "questz/chapters/extra.json",
+      JSON.stringify({ id: "extra", quests: [{ id: "q1", title: "Brand new quest" }] }),
+    );
+    await runSync(instance, "refresh");
+    const status = await getModTranslationStatus(instance, { launcherLang: "ru", token: "t" });
+    expect(status.error).toBe("quota");
+    expect(status.retryAt).toBeGreaterThan(Date.now());
+    expect(status.retryAt).toBeLessThanOrEqual(nextQuotaReset());
+
+    const calls = fake.submitCalls;
+    await runSync(instance, "refresh");
+    expect(fake.submitCalls).toBe(calls);
+    fake.quota = false;
   });
 });

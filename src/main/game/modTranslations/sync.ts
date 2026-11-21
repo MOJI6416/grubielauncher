@@ -144,6 +144,7 @@ interface TranslationState {
   questzFiles: RewrittenChapter[];
   externalFiles: Array<{ file: string; digest: string }>;
   forcedLocale: string | null;
+  quotaUntil: number | null;
   mods: number;
   needsAccount: boolean;
   error: string | null;
@@ -207,6 +208,7 @@ function emptyState(): TranslationState {
     questzFiles: [],
     externalFiles: [],
     forcedLocale: null,
+    quotaUntil: null,
     mods: 0,
     needsAccount: false,
     error: null,
@@ -318,6 +320,10 @@ function statusFrom(
     ),
     failed: state.failed.length,
     items: statusItems(state),
+    retryAt:
+      state.error === "quota" && state.quotaUntil && state.quotaUntil > Date.now()
+        ? state.quotaUntil
+        : null,
     needsAccount: state.needsAccount,
     error: state.error,
     updatedAt: state.updatedAt,
@@ -721,14 +727,24 @@ interface SubmitOutcome {
   unsupported: string[];
 }
 
+export function nextQuotaReset(now = Date.now()): number {
+  const reset = new Date(now);
+  reset.setUTCHours(24, 5, 0, 0);
+  return reset.getTime();
+}
+
 async function submitUnits(
   api: TranslationApi,
   locale: string,
   units: PendingUnit[],
+  quotaUntil: number | null,
 ): Promise<SubmitOutcome> {
   const unsupported: string[] = [];
   if (units.length === 0) return { needsAccount: false, quota: false, unsupported };
   if (!api.hasToken()) return { needsAccount: true, quota: false, unsupported };
+  if (quotaUntil && Date.now() < quotaUntil) {
+    return { needsAccount: false, quota: true, unsupported };
+  }
 
   const size = (unit: PendingUnit) =>
     Object.values(unit.entries).reduce((sum, value) => sum + value.length, 0);
@@ -1276,6 +1292,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
         api,
         locale,
         units.filter((unit) => missingSet.has(unit.hash)),
+        state.quotaUntil,
       );
 
       next = {
@@ -1298,6 +1315,11 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
         mods: jars.length,
         needsAccount: submitted.needsAccount,
         error: next.error ?? (submitted.quota ? "quota" : null),
+        quotaUntil: submitted.quota
+          ? state.quotaUntil && state.quotaUntil > Date.now()
+            ? state.quotaUntil
+            : nextQuotaReset()
+          : null,
       };
     }
   } catch (error) {

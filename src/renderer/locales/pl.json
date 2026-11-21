@@ -5811,6 +5811,7 @@
     "errorUnavailable": "Serwer Grubie jeszcze nie tłumaczy modów",
     "errorNetwork": "Brak połączenia z serwerem Grubie — zostawiono to, co już pobrane",
     "errorQuota": "Dzienny limit tłumaczeń AI wyczerpany — jutro ciąg dalszy",
+    "errorQuotaUntil": "Dzienny limit tłumaczeń AI wyczerpany — ciąg dalszy za {{time}}",
     "errorInternal": "Nie udało się odświeżyć tłumaczenia",
     "toggleFailed": "Nie udało się przełączyć tłumaczenia modów",
     "packsHint": "Paczki społeczności są nad tłumaczeniem AI i pod Twoimi paczkami zasobów:",
