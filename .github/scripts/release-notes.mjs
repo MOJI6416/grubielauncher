@@ -126,7 +126,7 @@ const RELEASE_LINK =
   /^(?:home|news|screenshots|catalog|accounts|agent|instance-new|wardrobe(?:\/catalog)?|profile(?:\/(?:achievements|leaderboard|modpacks))?|people(?:\/(?:friends|groups|requests))?|instance\/[a-z]+|settings(?:\/[a-z-]+){0,2}|setting:[A-Za-z]+)$/;
 
 function fail(message) {
-  console.error(IN_ACTIONS ? `::error::${message.replace(/\n/g, "%0A")}` : `Ошибка:\n${message}`);
+  console.error(IN_ACTIONS ? `::error::${message.replace(/\n/g, "%0A")}` : `Error:\n${message}`);
   process.exit(1);
 }
 
@@ -141,12 +141,12 @@ function notesPath(version) {
 function readNotes(version) {
   const file = notesPath(version);
   if (!fs.existsSync(file)) {
-    throw new NotesError(`Нет файла release-notes/${version}.json — тексты релиза пишет скилл grubie-release-writer`);
+    throw new NotesError(`No release-notes/${version}.json: the grubie-release-writer skill writes release texts`);
   }
   try {
     return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (error) {
-    throw new NotesError(`release-notes/${version}.json — не JSON: ${error.message}`);
+    throw new NotesError(`release-notes/${version}.json is not JSON: ${error.message}`);
   }
 }
 
@@ -161,22 +161,22 @@ function coverErrors(version) {
   for (const format of Object.keys(COVER_FILES)) {
     const name = `release-notes/covers/${version}.${COVER_FILES[format]}`;
     if (!present.includes(format)) {
-      errors.push(`Нет ${name}: обложка — это пара .webp и .jpg, их делает скилл grubie-news-cover`);
+      errors.push(`No ${name}: a cover is a .webp and .jpg pair`);
       continue;
     }
     const image = fs.readFileSync(coverPath(version, format));
-    if (image.length > COVER_MAX_BYTES) errors.push(`${name}: больше 2 МБ`);
+    if (image.length > COVER_MAX_BYTES) errors.push(`${name}: larger than 2 MB`);
     const matches =
       format === "webp"
         ? image.toString("ascii", 0, 4) === "RIFF" && image.toString("ascii", 8, 12) === "WEBP"
         : image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff;
-    if (!matches) errors.push(`${name}: внутри не ${format.toUpperCase()}`);
+    if (!matches) errors.push(`${name}: not a ${format.toUpperCase()} file`);
   }
   const github = path.join(COVERS_DIR, `${version}.github.webp`);
   if (fs.existsSync(github)) {
     const image = fs.readFileSync(github);
     if (image.toString("ascii", 0, 4) !== "RIFF" || image.toString("ascii", 8, 12) !== "WEBP") {
-      errors.push(`release-notes/covers/${version}.github.webp: внутри не WEBP`);
+      errors.push(`release-notes/covers/${version}.github.webp: not a WEBP file`);
     }
   }
   return errors;
@@ -293,26 +293,26 @@ function validate(notes, version) {
   const warnings = [];
 
   if (!notes || typeof notes !== "object" || Array.isArray(notes)) {
-    return { errors: ["Файл должен быть JSON-объектом"], warnings };
+    return { errors: ["The file must be a JSON object"], warnings };
   }
 
   const known = new Set(["version", "isMilestone", "links", ...LOCALES]);
   for (const key of Object.keys(notes)) {
-    if (!known.has(key)) errors.push(`Неизвестное поле «${key}»`);
+    if (!known.has(key)) errors.push(`Unknown field "${key}"`);
   }
-  if (notes.version !== version) errors.push(`version в файле («${notes.version}») не совпадает с ${version}`);
-  if (!/^\d+\.\d+\.\d+$/.test(String(notes.version))) errors.push(`Версия «${notes.version}» не вида X.Y.Z`);
+  if (notes.version !== version) errors.push(`version in the file (${notes.version}) does not match ${version}`);
+  if (!/^\d+\.\d+\.\d+$/.test(String(notes.version))) errors.push(`Version "${notes.version}" is not X.Y.Z`);
   if (notes.isMilestone !== undefined && typeof notes.isMilestone !== "boolean") {
-    errors.push("isMilestone должен быть true или false");
+    errors.push("isMilestone must be true or false");
   }
   if (notes.links !== undefined) {
     if (!Array.isArray(notes.links)) {
-      errors.push("links: должен быть массивом — по ссылке на каждый пункт highlights, null там, где ссылки нет");
+      errors.push("links: must be an array with one link per highlight, null where there is none");
     } else {
       notes.links.forEach((link, index) => {
         if (link === null) return;
         if (typeof link !== "string" || !RELEASE_LINK.test(link)) {
-          errors.push(`links[${index}]: «${link}» — не место в лаунчере (пример: settings/privacy, setting:discordActivity, wardrobe/catalog)`);
+          errors.push(`links[${index}]: "${link}" is not a place in the launcher (e.g. settings/privacy, setting:discordActivity, wardrobe/catalog)`);
         }
       });
     }
@@ -322,45 +322,45 @@ function validate(notes, version) {
     const content = notes[locale];
     if (content === undefined && !REQUIRED_LOCALES.includes(locale)) continue;
     if (!content || typeof content !== "object" || Array.isArray(content)) {
-      errors.push(`Нет блока «${locale}»`);
+      errors.push(`No "${locale}" block`);
       continue;
     }
     for (const key of Object.keys(content)) {
-      if (!["title", "subtitle", "highlights", "fixes"].includes(key)) errors.push(`${locale}: неизвестное поле «${key}»`);
+      if (!["title", "subtitle", "highlights", "fixes"].includes(key)) errors.push(`${locale}: unknown field "${key}"`);
     }
     if (content.title !== undefined && (typeof content.title !== "string" || !content.title.trim())) {
-      errors.push(`${locale}.title: пустой заголовок — уберите поле, тогда будет «Grubie Launcher ${version}»`);
+      errors.push(`${locale}.title: empty title; drop the field to get "Grubie Launcher ${version}"`);
     }
     if (typeof content.subtitle !== "string" || !content.subtitle.trim()) {
-      errors.push(`${locale}.subtitle: нужен подзаголовок в одно предложение`);
+      errors.push(`${locale}.subtitle: needs a one-sentence subtitle`);
     } else {
-      if (content.subtitle.length > 160) warnings.push(`${locale}.subtitle: длиннее 160 символов`);
-      if (!/[.!?]$/.test(content.subtitle)) warnings.push(`${locale}.subtitle: нет точки в конце`);
+      if (content.subtitle.length > 160) warnings.push(`${locale}.subtitle: longer than 160 characters`);
+      if (!/[.!?]$/.test(content.subtitle)) warnings.push(`${locale}.subtitle: no period at the end`);
     }
 
     for (const field of ["highlights", "fixes"]) {
       const items = content[field];
       if (!Array.isArray(items)) {
-        errors.push(`${locale}.${field}: должен быть массивом (пустой — [])`);
+        errors.push(`${locale}.${field}: must be an array (empty is [])`);
         continue;
       }
-      if (items.length > 16) errors.push(`${locale}.${field}: больше 16 пунктов — api хранит не больше 16`);
+      if (items.length > 16) errors.push(`${locale}.${field}: more than 16 items, the api keeps at most 16`);
       items.forEach((item, index) => {
         const where = `${locale}.${field}[${index}]`;
         if (typeof item !== "string" || !item.trim()) {
-          errors.push(`${where}: пустой пункт`);
+          errors.push(`${where}: empty item`);
           return;
         }
-        if (item !== item.trim() || /\n/.test(item)) errors.push(`${where}: пробелы по краям или перенос строки`);
-        if (/^[-–—•*]/.test(item)) errors.push(`${where}: маркер списка ставит шаблон, уберите «${item[0]}»`);
-        if (!/[.!?]$/.test(item)) warnings.push(`${where}: нет точки в конце`);
-        if (/^\p{Ll}/u.test(item)) warnings.push(`${where}: начинается с маленькой буквы`);
-        if (item.length > 220) warnings.push(`${where}: длиннее 220 символов — сократите`);
+        if (item !== item.trim() || /\n/.test(item)) errors.push(`${where}: spaces at the edges or a line break`);
+        if (/^[-–—•*]/.test(item)) errors.push(`${where}: the template adds the bullet, remove "${item[0]}"`);
+        if (!/[.!?]$/.test(item)) warnings.push(`${where}: no period at the end`);
+        if (/^\p{Ll}/u.test(item)) warnings.push(`${where}: starts with a lowercase letter`);
+        if (item.length > 220) warnings.push(`${where}: longer than 220 characters, shorten it`);
         if (field === "fixes" && FIX_PREFIX[locale].test(item)) {
-          warnings.push(`${where}: под заголовком «${WHATS_NEW[locale].fixes}» не начинайте с «${item.split(" ")[0]}» — опишите, что теперь работает`);
+          warnings.push(`${where}: under "${WHATS_NEW[locale].fixes}" do not start with "${item.split(" ")[0]}", describe what works now`);
         }
-        if (INFORMAL[locale]?.test(item)) warnings.push(`${where}: обращение на «ты» — в лаунчере везде «вы»`);
-        if (INTERNAL.test(item)) warnings.push(`${where}: похоже на внутреннее название (${item.match(INTERNAL)[0]})`);
+        if (INFORMAL[locale]?.test(item)) warnings.push(`${where}: informal address, the launcher always uses the formal one`);
+        if (INTERNAL.test(item)) warnings.push(`${where}: looks like an internal name (${item.match(INTERNAL)[0]})`);
       });
     }
   }
@@ -369,29 +369,33 @@ function validate(notes, version) {
 
   const locales = notesLocales(notes);
   if (Array.isArray(notes.links) && notes.links.length > notes.en.highlights.length) {
-    errors.push(`links: ${notes.links.length} ссылок на ${notes.en.highlights.length} пунктов highlights`);
+    errors.push(`links: ${notes.links.length} links for ${notes.en.highlights.length} highlights`);
   }
   for (const field of ["highlights", "fixes"]) {
     const counts = locales.map((locale) => notes[locale][field].length);
     if (new Set(counts).size > 1) {
-      errors.push(`${field}: разное число пунктов в языках (${locales.map((l, i) => `${l} ${counts[i]}`).join(", ")})`);
+      errors.push(`${field}: languages have different item counts (${locales.map((l, i) => `${l} ${counts[i]}`).join(", ")})`);
     }
   }
   if (locales.every((locale) => !notes[locale].highlights.length && !notes[locale].fixes.length)) {
-    errors.push("Нет ни одного пункта");
+    errors.push("No items at all");
   }
-  if (!notes.isMilestone && notes.en.highlights.length > 6) warnings.push(`highlights: ${notes.en.highlights.length} пунктов — длинный список, сгруппируйте связанные изменения`);
-  if (!notes.isMilestone && notes.en.fixes.length > 5) warnings.push(`fixes: ${notes.en.fixes.length} пунктов — длинный список, сгруппируйте связанные изменения`);
+  if (!notes.isMilestone && notes.en.highlights.length > 6) warnings.push(`highlights: ${notes.en.highlights.length} items, group related changes`);
+  if (!notes.isMilestone && notes.en.fixes.length > 5) warnings.push(`fixes: ${notes.en.fixes.length} items, group related changes`);
 
+  const trimmed = [];
   for (const locale of locales) {
     const { text, shown } = fitDiscord(notes, locale);
     const total = notes[locale].highlights.length + notes[locale].fixes.length;
-    if (text.length > DISCORD_LIMIT) errors.push(`Discord ${locale}: ${text.length} символов при лимите ${DISCORD_LIMIT}`);
-    else if (shown < total) warnings.push(`Discord ${locale}: в сообщение вошли ${shown} из ${total} пунктов, остальное — по ссылке на страницу релиза`);
+    if (text.length > DISCORD_LIMIT) errors.push(`Discord ${locale}: ${text.length} characters, the limit is ${DISCORD_LIMIT}`);
+    else if (shown < total) trimmed.push(`${locale} ${shown}/${total}`);
+  }
+  if (trimmed.length) {
+    console.log(`Discord: shorter messages with a link to the full release notes (${trimmed.join(", ")})`);
   }
 
   const cover = coverErrors(version);
-  if (cover === null) warnings.push(`Нет обложки release-notes/covers/${version}.webp — её делает скилл grubie-news-cover, без неё релиз выйдет с карточкой без арта`);
+  if (cover === null) warnings.push(`No release-notes/covers/${version}.webp: the release will ship with cards without art`);
   else errors.push(...cover);
 
   return { errors, warnings };
@@ -400,7 +404,7 @@ function validate(notes, version) {
 function load(version) {
   const notes = readNotes(version);
   const { errors, warnings } = validate(notes, version);
-  for (const warning of warnings) console.log(IN_ACTIONS ? `::warning::${warning}` : `Предупреждение: ${warning}`);
+  for (const warning of warnings) console.log(IN_ACTIONS ? `::warning::${warning}` : `Warning: ${warning}`);
   if (errors.length) throw new NotesError(errors.map((error) => `- ${error}`).join("\n"));
   return notes;
 }
@@ -428,7 +432,7 @@ function apiPayload(notes, editOnly) {
 
 async function github(pathname, init = {}) {
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
-  if (!token) fail("Нет GH_TOKEN");
+  if (!token) fail("No GH_TOKEN");
   const response = await fetch(`https://api.github.com/repos/${REPO}${pathname}`, {
     ...init,
     headers: {
@@ -455,16 +459,16 @@ async function updateGithub(release, notes, publish, coverUrl) {
     const required = ["latest.yml", "latest-linux.yml", `grubie-launcher-${notes.version}-portable.zip`];
     if (process.env.REQUIRE_MAC_ASSETS === "true") required.push("latest-mac.yml");
     const missing = required.filter((name) => !names.has(name));
-    if (missing.length) fail(`В черновике ${notes.version} нет ${missing.join(", ")} — сборка выложила не всё`);
+    if (missing.length) fail(`The ${notes.version} draft has no ${missing.join(", ")}: the build did not upload everything`);
     patch.draft = false;
   }
   const updated = await github(`/releases/${release.id}`, { method: "PATCH", body: JSON.stringify(patch) });
-  console.log(`GitHub: ${patch.draft === false ? "релиз опубликован" : "текст обновлён"} — ${updated.html_url}`);
+  console.log(`GitHub: ${patch.draft === false ? "release published" : "text updated"}: ${updated.html_url}`);
 }
 
 function agentToken() {
   const token = (process.env.RELEASE_AGENT_TOKEN || "").trim();
-  if (!token) fail("Нет секрета RELEASE_AGENT_TOKEN в настройках репозитория");
+  if (!token) fail("No RELEASE_AGENT_TOKEN secret in the repository settings");
   return token;
 }
 
@@ -496,13 +500,13 @@ async function agentPut(pathname, payload, { allowMissing = false } = {}) {
 
 async function publishToApi(notes, editOnly) {
   const result = await agentPut(encodeURIComponent(notes.version), apiPayload(notes, editOnly));
-  console.log(`Что нового: опубликовано для ${notes.version}`);
+  console.log(`What's New: published for ${notes.version}`);
   const coverUrl = result.release?.cover?.url ?? null;
-  console.log(coverUrl ? `Обложка: ${coverUrl}` : "Обложка: нет");
+  console.log(coverUrl ? `Cover: ${coverUrl}` : "Cover: none");
   if (result.discord) {
     console.log(`Discord: https://discord.com/channels/${GUILD_ID}/${result.discord.channelId}/${result.discord.messageId}`);
   } else {
-    console.log("Discord: анонса этого релиза нет, новый не публикуется");
+    console.log("Discord: this release has no announcement, no new one is posted");
   }
   return coverUrl;
 }
@@ -510,15 +514,15 @@ async function publishToApi(notes, editOnly) {
 async function publishCoverToApi(version) {
   const cover = readCover(version);
   if (!cover) {
-    console.log(`${version}: обложки нет — пропуск`);
+    console.log(`${version}: no cover, skipped`);
     return;
   }
   const result = await agentPut(`${encodeURIComponent(version)}/cover`, cover, { allowMissing: true });
   if (!result) {
-    console.log(`${version}: такого релиза нет в «Что нового» — обложка подождёт публикации`);
+    console.log(`${version}: not in What's New yet, the cover waits for the release`);
     return;
   }
-  console.log(`${version}: обложка — ${result.release.cover.url}`);
+  console.log(`${version}: cover ${result.release.cover.url}`);
 }
 
 function changedVersions(base) {
@@ -569,10 +573,10 @@ async function main() {
 
   if (command === "check" || command === "preview") {
     const tag = option(args, "--tag");
-    if (tag && tag !== version) throw new NotesError(`Тег ${tag} не совпадает с версией ${version} в package.json`);
+    if (tag && tag !== version) throw new NotesError(`Tag ${tag} does not match version ${version} in package.json`);
     const notes = load(version);
     if (command === "preview") printPreview(notes);
-    else console.log(`release-notes/${version}.json в порядке`);
+    else console.log(`release-notes/${version}.json is fine`);
     if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\n`);
     return;
   }
@@ -581,7 +585,7 @@ async function main() {
     agentToken();
     const notes = load(version);
     const release = await findRelease(version);
-    if (!release) fail(`На GitHub нет релиза ${version} — сборка его не создала`);
+    if (!release) fail(`No ${version} release on GitHub: the build did not create it`);
     await updateGithub(release, notes, true);
     const coverUrl = await publishToApi(notes, false);
     const image = githubCover(version) ?? coverUrl;
@@ -593,7 +597,7 @@ async function main() {
     agentToken();
     const versions = changedVersions(option(args, "--since"));
     if (!versions.length) {
-      console.log("Заметки релизов не менялись");
+      console.log("No release notes changed");
       return;
     }
     for (const changed of versions) {
@@ -604,7 +608,7 @@ async function main() {
       const notes = load(changed);
       const release = await findRelease(changed);
       if (!release || release.draft) {
-        console.log(`${changed}: релиз ещё не опубликован — тексты выпустит Release Launcher`);
+        console.log(`${changed}: not published yet, Release Launcher will publish the texts`);
         continue;
       }
       const coverUrl = await publishToApi(notes, true);
