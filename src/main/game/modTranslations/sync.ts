@@ -38,6 +38,7 @@ import {
   renderQuestLang,
 } from "./ftbQuests";
 import {
+  NamespaceLang,
   PackCoverage,
   scanExternalPatchouli,
   scanPackCoverage,
@@ -51,6 +52,15 @@ import {
   listModpackPacks,
   PLAYER_PACK_FOLDER,
 } from "./packSources";
+import { COMPONENT_KEY_PREFIX } from "./components";
+import {
+  applyDataRewrite,
+  DataPack,
+  listDataPacks,
+  restoreDataRewrite,
+  RewrittenData,
+  scanDataPacks,
+} from "./datapackText";
 import {
   applyQuestzRewrite,
   QUESTZ_KEY_PREFIX,
@@ -145,6 +155,7 @@ interface TranslationState {
   externalFiles: Array<{ file: string; digest: string }>;
   forcedLocale: string | null;
   quotaUntil: number | null;
+  dataFiles: RewrittenData[];
   mods: number;
   needsAccount: boolean;
   error: string | null;
@@ -209,6 +220,7 @@ function emptyState(): TranslationState {
     externalFiles: [],
     forcedLocale: null,
     quotaUntil: null,
+    dataFiles: [],
     mods: 0,
     needsAccount: false,
     error: null,
@@ -904,6 +916,7 @@ async function buildAiPack(
   questz: boolean;
   books: Map<string, LangEntries>;
   done: Map<string, number>;
+  data: boolean;
 }> {
   const known = await loadCachedHashes(locale);
   const units: Array<{ namespace: string; entries: LangEntries }> = [];
@@ -931,6 +944,9 @@ async function buildAiPack(
   const questz = units.some((unit) =>
     Object.keys(unit.entries).some((key) => key.startsWith(QUESTZ_KEY_PREFIX)),
   );
+  const data = units.some((unit) =>
+    Object.keys(unit.entries).some((key) => key.startsWith(COMPONENT_KEY_PREFIX)),
+  );
   const files = [
     ...translationPackFiles(units, locale, mcVersion, langFormatFor(mcVersion)),
     ...(bookTranslations.size > 0
@@ -943,7 +959,7 @@ async function buildAiPack(
   ];
   if (files.length === 0) {
     await fs.remove(target).catch(() => undefined);
-    return { file: null, digest: null, quests, questz, books: bookTranslations, done };
+    return { file: null, digest: null, quests, questz, books: bookTranslations, done, data };
   }
 
   const description = PACK_DESCRIPTIONS[locale] ?? "Grubie: AI translation of mods";
@@ -956,7 +972,7 @@ async function buildAiPack(
   const value = contentDigest.digest("hex");
 
   if (value === state.aiDigest && (await fs.pathExists(target))) {
-    return { file: fileName, digest: value, quests, questz, books: bookTranslations, done };
+    return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data };
   }
 
   setStage(versionPath, "building");
@@ -965,7 +981,25 @@ async function buildAiPack(
   await createZipArchive([], temp, undefined, 9, undefined, files);
   await fs.ensureDir(packsDir(versionPath));
   await fs.move(temp, target, { overwrite: true });
-  return { file: fileName, digest: value, quests, questz, books: bookTranslations, done };
+  return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data };
+}
+
+export function supportsTextFallback(mcVersion: string): boolean {
+  const release = /^1\.(\d+)(?:\.(\d+))?/.exec(mcVersion);
+  if (release) {
+    const minor = Number(release[1]);
+    return minor > 19 || (minor === 19 && Number(release[2] ?? 0) >= 4);
+  }
+  return /^\d{2}(?:\.\d+|w\d{2})/.test(mcVersion);
+}
+
+async function readDataText(
+  versionPath: string,
+  mcVersion: string,
+): Promise<{ packs: DataPack[]; langs: NamespaceLang[] }> {
+  if (!supportsTextFallback(mcVersion)) return { packs: [], langs: [] };
+  const packs = await listDataPacks(versionPath);
+  return { packs, langs: await scanDataPacks(packs) };
 }
 
 async function applyExternalBooks(
@@ -1084,13 +1118,15 @@ async function cleanup(
     state.units.length > 0 ||
     state.questFile ||
     state.questzFiles.length > 0 ||
-    state.externalFiles.length > 0;
+    state.externalFiles.length > 0 ||
+    state.dataFiles.length > 0;
   if (!hadAnything) return;
   if (isVersionRunning(versionPath)) return;
   await removeStaleManaged(versionPath, new Set());
   await removeOwnQuestFile(versionPath, state);
   await restoreQuestz(versionPath, storageDir(versionPath), state.questzFiles);
   await removeExternalBooks(versionPath, state);
+  await restoreDataRewrite(versionPath, storageDir(versionPath), state.dataFiles);
   await fs.remove(booksPath(versionPath)).catch(() => undefined);
   if (mcVersion) await applyOptions(versionPath, mcVersion, [], null);
   await writeState(versionPath, {
@@ -1130,6 +1166,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
   const jars = await listJars(versionPath);
   const modpackPacks = await listModpackPacks(versionPath);
   const questzLang = questzNamespace(await readQuestzChapters(versionPath));
+  const dataText = await readDataText(versionPath, mcVersion);
   const skipProjects = userPackProjects(conf);
   const player = await playerPacks(versionPath);
   const fingerprint = digest([
@@ -1139,6 +1176,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     jars.map((jar) => [jar.name, jar.size, jar.mtimeMs]),
     modpackPacks.map((pack) => [pack.id, pack.identity]),
     questzLang ? digest(questzLang.english) : null,
+    dataText.langs.map((lang) => [lang.context?.name, digest(lang.english)]),
     skipProjects,
     player.map((pack) => pack.identity),
   ]);
@@ -1214,6 +1252,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
       const langs = preferPackEnglish([
         ...scanned.map((scan) => scan.namespaces),
         ...(questzLang ? [[questzLang]] : []),
+        dataText.langs,
       ]);
       const namespaces = modNamespaces(langs);
 
@@ -1345,6 +1384,13 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
   );
   Object.assign(next, await applyQuestLang(versionPath, next, locale, ai.quests));
   next.externalFiles = await applyExternalBooks(versionPath, next, locale, ai.books);
+  if (ai.data) {
+    next.dataFiles = await applyDataRewrite(
+      storageDir(versionPath),
+      dataText.packs,
+      state.dataFiles,
+    );
+  }
   if (ai.questz) {
     next.questzFiles = await applyQuestzRewrite(
       versionPath,

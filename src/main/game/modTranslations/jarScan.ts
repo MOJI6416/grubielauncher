@@ -487,3 +487,26 @@ export async function scanPackCoverage(
   }
   return coverage;
 }
+
+export async function readZipFiles(
+  zipPath: string,
+  maxBytes: number,
+): Promise<Array<{ name: string; data: Buffer }> | null> {
+  const zip = await openZip((callback) =>
+    yauzl.open(zipPath, ZIP_OPTIONS, callback),
+  );
+  const files: Array<{ name: string; data: Buffer }> = [];
+  let total = 0;
+  try {
+    await zipWalker(zip)(async (name, size, read) => {
+      total += size;
+      if (total > maxBytes) throw new Error("Archive too large");
+      files.push({ name, data: await read() });
+    });
+  } catch {
+    return null;
+  } finally {
+    zip.close();
+  }
+  return files;
+}
