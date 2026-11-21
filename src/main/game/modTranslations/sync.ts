@@ -34,6 +34,7 @@ import {
 import {
   FTB_QUESTS_BOOK,
   FTB_QUESTS_LANG_DIR,
+  mergeQuestLang,
   planQuestUnits,
   renderQuestLang,
 } from "./ftbQuests";
@@ -852,10 +853,24 @@ async function questSource(
   locale: string,
 ): Promise<string | null> {
   const target = questLangPath(versionPath, locale);
+  const dir = path.join(versionPath, ...FTB_QUESTS_LANG_DIR);
+  if (await fs.pathExists(path.join(dir, locale))) return null;
   if ((await fs.pathExists(target)) && !(await ownsQuestFile(versionPath, state, target))) {
     return null;
   }
-  return fs.readFile(questLangPath(versionPath, "en_us"), "utf8").catch(() => null);
+  const texts: string[] = [];
+  const flat = await fs.readFile(questLangPath(versionPath, "en_us"), "utf8").catch(() => null);
+  if (flat) texts.push(flat);
+  for (const folder of [path.join(dir, "en_us"), path.join(dir, "en_us", "chapters")]) {
+    const names = await fs.readdir(folder).catch(() => [] as string[]);
+    for (const name of names.sort()) {
+      if (!/\.snbt(?:_merged)?$/.test(name)) continue;
+      const text = await fs.readFile(path.join(folder, name), "utf8").catch(() => null);
+      if (text) texts.push(text);
+    }
+  }
+  if (texts.length <= 1) return texts[0] ?? null;
+  return mergeQuestLang(texts);
 }
 
 async function removeOwnQuestFile(

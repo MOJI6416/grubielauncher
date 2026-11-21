@@ -120,6 +120,10 @@ beforeAll(async () => {
     JSON.stringify({ quests: [{ id: "6db07bbe", title: "Pick rocks", description: ["Gather rocks"] }] }),
   );
   await write(
+    "config/ftbquests/quests/lang/en_us/chapters/stone_age.snbt",
+    '{\n\tquest.1111111111111111.title: "Stone"\n}\n',
+  );
+  await write(
     "config/ftbquests/quests/lang/en_us.snbt",
     '{\n\tquest.0123456789ABCDEF.title: "Wood"\n}\n',
   );
@@ -215,6 +219,7 @@ describe("mod translation sync", () => {
       "utf8",
     );
     expect(quests).toContain('quest.0123456789ABCDEF.title: "RU Wood"');
+    expect(quests).toContain('quest.1111111111111111.title: "RU Stone"');
     const questzLang = await readJSONFromArchive<Record<string, string>>(pack, "assets/questz/lang/ru_ru.json");
     expect(questzLang?.["grubie.questz.76a9fc9e.6db07bbe.title"]).toBe("RU Pick rocks");
     const chapter = await fs.readJSON(path.join(instance, "questz/chapters/76a9fc9e.json"));
@@ -234,7 +239,7 @@ describe("mod translation sync", () => {
       expect.arrayContaining([
         expect.objectContaining({ group: "mods", title: "Lavender", format: null, translated: 1, pending: 0 }),
         expect.objectContaining({ group: "books", title: "Aged Guide Book", format: "lavender", strings: 2, translated: 2 }),
-        expect.objectContaining({ group: "quests", title: "FTB Quests", format: "ftbquests", translated: 1 }),
+        expect.objectContaining({ group: "quests", title: "FTB Quests", format: "ftbquests", translated: 2 }),
         expect.objectContaining({ group: "quests", title: "QuestZ", format: "questz", strings: 2, translated: 1, failed: 1 }),
         expect.objectContaining({ group: "packs", title: "Compat", translated: 1 }),
         expect.objectContaining({ group: "books", title: "notebook", format: "patchouli", translated: 2 }),

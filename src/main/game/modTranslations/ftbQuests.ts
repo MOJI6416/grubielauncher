@@ -205,3 +205,21 @@ export function planQuestUnits(text: string): PlannedQuestUnit[] {
   flush();
   return units;
 }
+
+export function mergeQuestLang(texts: string[]): string | null {
+  const merged: Record<string, SnbtValue> = {};
+  for (const text of texts) {
+    const table = parseQuestLang(text);
+    if (table) Object.assign(merged, table);
+  }
+  const lines: string[] = [];
+  for (const key of Object.keys(merged).sort()) {
+    const value = merged[key];
+    if (typeof value === "string") {
+      lines.push(`\t${quoteKey(key)}: ${quote(value)}`);
+    } else if (Array.isArray(value) && value.every((line) => typeof line === "string")) {
+      lines.push(`\t${quoteKey(key)}: [`, ...(value as string[]).map((line) => `\t\t${quote(line)}`), "\t]");
+    }
+  }
+  return lines.length > 0 ? `{\n${lines.join("\n")}\n}\n` : null;
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FTB_QUESTS_BOOK,
+  mergeQuestLang,
   parseQuestLang,
   planQuestUnits,
   questSegments,
@@ -76,5 +77,17 @@ describe("FTB Quests lang files", () => {
     expect(unit.namespace).toBe("ftbquests");
     expect(unit.hash).toBe(unitHash(questSegments(EN_US)));
     expect(unit.context.name).toBe("FTB Quests");
+  });
+
+  it("merges a flat file with Quests Lang Splitter's per-chapter files, later files winning", () => {
+    const merged = mergeQuestLang([
+      '{ quest.AAAAAAAAAAAAAAAA.title: "Old" quest.BBBBBBBBBBBBBBBB.title: "Kept" }',
+      '{ quest.AAAAAAAAAAAAAAAA.title: "New" quest.CCCCCCCCCCCCCCCC.quest_desc: ["Line"] }',
+    ]);
+    expect(parseQuestLang(merged!)).toEqual({
+      "quest.AAAAAAAAAAAAAAAA.title": "New",
+      "quest.BBBBBBBBBBBBBBBB.title": "Kept",
+      "quest.CCCCCCCCCCCCCCCC.quest_desc": ["Line"],
+    });
   });
 });
