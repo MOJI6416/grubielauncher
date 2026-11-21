@@ -133,12 +133,12 @@ afterAll(async () => {
   await fs.remove(root);
 });
 
-async function toggle(enabled: boolean) {
-  const file = path.join(instance, "storage", "mod-translations", "state.json");
+async function toggle(enabled: boolean, at = instance) {
+  const file = path.join(at, "storage", "mod-translations", "state.json");
   const state = await fs.readJSON(file).catch(() => ({}));
   await fs.outputJSON(file, { ...state, enabled });
-  await getModTranslationStatus(instance, { launcherLang: "ru", token: "t" });
-  await runSync(instance, "toggle");
+  await getModTranslationStatus(at, { launcherLang: "ru", token: "t" });
+  await runSync(at, "toggle");
 }
 
 const REJECTED = "grubie.questz.76a9fc9e.6db07bbe.description.0";
@@ -295,5 +295,30 @@ describe("mod translation sync", () => {
     await runSync(instance, "refresh");
     expect(fake.submitCalls).toBe(calls);
     fake.quota = false;
+  });
+
+  it("translates old FTB Quests chapters through lang keys and puts them back", async () => {
+    const old = path.join(root, "OldPack");
+    const chapter = path.join(old, "config", "ftbquests", "quests", "chapters", "start.snbt");
+    const original = '{\n\tquests: [{ id: "1111111111111111" title: "Chop wood" }]\n\ttitle: "First steps"\n}\n';
+    await fs.outputFile(path.join(old, "version.json"), JSON.stringify({ version: { id: "1.20.1" }, loader: { mods: [] } }));
+    await fs.outputFile(path.join(old, "options.txt"), "lang:ru_ru\n");
+    await fs.outputFile(chapter, original);
+
+    await toggle(true, old);
+    const unit = fake.submitted.find((entry) => Object.values(entry.entries).includes("Chop wood"));
+    expect(unit?.kind).toBe("book");
+    translateEverything();
+    await runSync(old, "refresh");
+
+    const pack = path.join(old, "resourcepacks", "grubie-i18n-ai-ru_ru.zip");
+    const russian = await readJSONFromArchive<Record<string, string>>(pack, "assets/grubie/lang/ru_ru.json");
+    const english = await readJSONFromArchive<Record<string, string>>(pack, "assets/grubie/lang/en_us.json");
+    expect(Object.values(russian ?? {}).sort()).toEqual(["RU Chop wood", "RU First steps"]);
+    expect(Object.values(english ?? {}).sort()).toEqual(["Chop wood", "First steps"]);
+    expect(await fs.readFile(chapter, "utf8")).toMatch(/title: "\{grubie\.ftbq\.[0-9a-f]{16}\}"/);
+
+    await toggle(false, old);
+    expect(await fs.readFile(chapter, "utf8")).toBe(original);
   });
 });

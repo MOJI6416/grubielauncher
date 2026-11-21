@@ -55,6 +55,14 @@ import {
 } from "./packSources";
 import { COMPONENT_KEY_PREFIX } from "./components";
 import {
+  applyInlineRewrite,
+  FTB_INLINE_BOOK,
+  InlineFile,
+  planInlineUnits,
+  readInlineEnglish,
+  restoreInline,
+} from "./ftbInline";
+import {
   applyDataRewrite,
   DataPack,
   listDataPacks,
@@ -157,6 +165,7 @@ interface TranslationState {
   forcedLocale: string | null;
   quotaUntil: number | null;
   dataFiles: RewrittenData[];
+  ftbInlineFiles: InlineFile[];
   mods: number;
   needsAccount: boolean;
   error: string | null;
@@ -174,6 +183,7 @@ interface BooksFile {
   locale: string;
   groups: BookGroup[];
   quests?: string | null;
+  ftbInline?: LangEntries;
 }
 
 interface JarFile {
@@ -222,6 +232,7 @@ function emptyState(): TranslationState {
     forcedLocale: null,
     quotaUntil: null,
     dataFiles: [],
+    ftbInlineFiles: [],
     mods: 0,
     needsAccount: false,
     error: null,
@@ -344,7 +355,7 @@ function statusFrom(
 }
 
 function unitFormat(unit: StoredUnit): ModTranslationFormat | null {
-  if (unit.book === FTB_QUESTS_BOOK) return "ftbquests";
+  if (unit.book === FTB_QUESTS_BOOK || unit.book === FTB_INLINE_BOOK) return "ftbquests";
   if (unit.book?.startsWith("lavender:")) return "lavender";
   if (unit.book?.startsWith("patchouli:")) return "patchouli";
   return unit.group === "quests" ? "questz" : null;
@@ -800,16 +811,18 @@ async function submitUnits(
 async function readBooks(
   versionPath: string,
   locale: string,
-): Promise<{ groups: BookGroup[]; quests: string | null }> {
+): Promise<{ groups: BookGroup[]; quests: string | null; ftbInline: LangEntries }> {
   const stored = (await fs.readJSON(booksPath(versionPath)).catch(() => null)) as
     | BooksFile
     | null;
   if (stored?.version !== BOOKS_VERSION || stored.locale !== locale) {
-    return { groups: [], quests: null };
+    return { groups: [], quests: null, ftbInline: {} };
   }
   return {
     groups: Array.isArray(stored.groups) ? stored.groups : [],
     quests: typeof stored.quests === "string" ? stored.quests : null,
+    ftbInline:
+      stored.ftbInline && typeof stored.ftbInline === "object" ? stored.ftbInline : {},
   };
 }
 
@@ -818,6 +831,7 @@ async function writeBooks(
   locale: string,
   groups: BookGroup[],
   quests: string | null,
+  ftbInline: LangEntries,
 ): Promise<void> {
   await fs.ensureDir(storageDir(versionPath));
   await writeJsonAtomic(booksPath(versionPath), {
@@ -825,6 +839,7 @@ async function writeBooks(
     locale,
     groups,
     quests,
+    ftbInline,
   } satisfies BooksFile);
 }
 
@@ -932,6 +947,7 @@ async function buildAiPack(
   books: Map<string, LangEntries>;
   done: Map<string, number>;
   data: boolean;
+  ftbInline: boolean;
 }> {
   const known = await loadCachedHashes(locale);
   const units: Array<{ namespace: string; entries: LangEntries }> = [];
@@ -956,6 +972,11 @@ async function buildAiPack(
   const target = path.join(packsDir(versionPath), fileName);
   const quests = bookTranslations.get(FTB_QUESTS_BOOK) ?? {};
   bookTranslations.delete(FTB_QUESTS_BOOK);
+  const inline = bookTranslations.get(FTB_INLINE_BOOK) ?? {};
+  bookTranslations.delete(FTB_INLINE_BOOK);
+  const ftbInline = Object.keys(inline).length > 0;
+  if (ftbInline) units.push({ namespace: "grubie", entries: inline });
+  const inlineEnglish = (await readBooks(versionPath, locale)).ftbInline;
   const questz = units.some((unit) =>
     Object.keys(unit.entries).some((key) => key.startsWith(QUESTZ_KEY_PREFIX)),
   );
@@ -964,6 +985,14 @@ async function buildAiPack(
   );
   const files = [
     ...translationPackFiles(units, locale, mcVersion, langFormatFor(mcVersion)),
+    ...(Object.keys(inlineEnglish).length > 0
+      ? translationPackFiles(
+          [{ namespace: "grubie", entries: inlineEnglish }],
+          "en_us",
+          mcVersion,
+          langFormatFor(mcVersion),
+        )
+      : []),
     ...(bookTranslations.size > 0
       ? bookPackFiles(
           (await readBooks(versionPath, locale)).groups,
@@ -974,7 +1003,7 @@ async function buildAiPack(
   ];
   if (files.length === 0) {
     await fs.remove(target).catch(() => undefined);
-    return { file: null, digest: null, quests, questz, books: bookTranslations, done, data };
+    return { file: null, digest: null, quests, questz, books: bookTranslations, done, data, ftbInline };
   }
 
   const description = PACK_DESCRIPTIONS[locale] ?? "Grubie: AI translation of mods";
@@ -987,7 +1016,7 @@ async function buildAiPack(
   const value = contentDigest.digest("hex");
 
   if (value === state.aiDigest && (await fs.pathExists(target))) {
-    return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data };
+    return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data, ftbInline };
   }
 
   setStage(versionPath, "building");
@@ -996,7 +1025,7 @@ async function buildAiPack(
   await createZipArchive([], temp, undefined, 9, undefined, files);
   await fs.ensureDir(packsDir(versionPath));
   await fs.move(temp, target, { overwrite: true });
-  return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data };
+  return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data, ftbInline };
 }
 
 export function supportsTextFallback(mcVersion: string): boolean {
@@ -1134,7 +1163,8 @@ async function cleanup(
     state.questFile ||
     state.questzFiles.length > 0 ||
     state.externalFiles.length > 0 ||
-    state.dataFiles.length > 0;
+    state.dataFiles.length > 0 ||
+    state.ftbInlineFiles.length > 0;
   if (!hadAnything) return;
   if (isVersionRunning(versionPath)) return;
   await removeStaleManaged(versionPath, new Set());
@@ -1142,6 +1172,7 @@ async function cleanup(
   await restoreQuestz(versionPath, storageDir(versionPath), state.questzFiles);
   await removeExternalBooks(versionPath, state);
   await restoreDataRewrite(versionPath, storageDir(versionPath), state.dataFiles);
+  await restoreInline(versionPath, storageDir(versionPath), state.ftbInlineFiles);
   await fs.remove(booksPath(versionPath)).catch(() => undefined);
   if (mcVersion) await applyOptions(versionPath, mcVersion, [], null);
   await writeState(versionPath, {
@@ -1182,6 +1213,11 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
   const modpackPacks = await listModpackPacks(versionPath);
   const questzLang = questzNamespace(await readQuestzChapters(versionPath));
   const dataText = await readDataText(versionPath, mcVersion);
+  const inlineEnglish = await readInlineEnglish(
+    versionPath,
+    storageDir(versionPath),
+    state.ftbInlineFiles,
+  );
   const skipProjects = userPackProjects(conf);
   const player = await playerPacks(versionPath);
   const fingerprint = digest([
@@ -1192,6 +1228,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     modpackPacks.map((pack) => [pack.id, pack.identity]),
     questzLang ? digest(questzLang.english) : null,
     dataText.langs.map((lang) => [lang.context?.name, digest(lang.english)]),
+    Object.keys(inlineEnglish).length > 0 ? digest(inlineEnglish) : null,
     skipProjects,
     player.map((pack) => pack.identity),
   ]);
@@ -1319,14 +1356,17 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
           ...(unit.context ? { context: unit.context } : {}),
           ...(unit.origin ? { group: unit.origin === "pack" ? ("packs" as const) : ("quests" as const) } : {}),
         })),
-        ...[...planBookUnits(groups), ...questUnits].map((unit) => ({
+        ...[...planBookUnits(groups), ...questUnits, ...planInlineUnits(inlineEnglish)].map((unit) => ({
           hash: unit.hash,
           namespace: unit.namespace,
           entries: unit.entries,
           keys: Object.keys(unit.entries).length,
           kind: "book" as const,
           book: unit.book,
-          group: unit.book === FTB_QUESTS_BOOK ? ("quests" as const) : ("books" as const),
+          group:
+            unit.book === FTB_QUESTS_BOOK || unit.book === FTB_INLINE_BOOK
+              ? ("quests" as const)
+              : ("books" as const),
           ...(unit.context ? { context: unit.context } : {}),
         })),
       ];
@@ -1335,6 +1375,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
         locale,
         groups.filter((group) => units.some((unit) => unit.book === group.key)),
         questUnits.length > 0 ? quests : null,
+        inlineEnglish,
       );
       const { missing, failed } = await resolveUnits(
         api,
@@ -1399,6 +1440,13 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
   );
   Object.assign(next, await applyQuestLang(versionPath, next, locale, ai.quests));
   next.externalFiles = await applyExternalBooks(versionPath, next, locale, ai.books);
+  if (ai.ftbInline) {
+    next.ftbInlineFiles = await applyInlineRewrite(
+      versionPath,
+      storageDir(versionPath),
+      state.ftbInlineFiles,
+    );
+  }
   if (ai.data) {
     next.dataFiles = await applyDataRewrite(
       storageDir(versionPath),
