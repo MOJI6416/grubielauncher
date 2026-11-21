@@ -5692,7 +5692,51 @@
     "errorInternal": "Çeviri güncellenemedi",
     "toggleFailed": "Mod çevirisi açılıp kapatılamadı",
     "packsHint": "Topluluk paketleri yapay zekâ çevirisinin üstünde, kendi kaynak paketlerinizin altında durur:",
-    "packLine": "{{title}} — {{author}}, {{license}}"
+    "packLine": "{{title}} — {{author}}, {{license}}",
+    "panel": {
+      "fact": {
+        "locale": "Oyun dili",
+        "mods": "Kurulumdaki modlar",
+        "packs": "Topluluk paketleri",
+        "updated": "Güncellendi"
+      },
+      "open": "Ayrıntılar",
+      "title": "Mod ve mod paketi çevirisi",
+      "parts": "Neler çevriliyor",
+      "group": {
+        "mods": "Modlar",
+        "packs": "Mod paketinin kaynak paketleri",
+        "books": "Rehber kitaplar",
+        "quests": "Görevler"
+      },
+      "hint": {
+        "mods": "Ne modların kendisinde ne de topluluk paketlerinde bulunan metinleri Grubie sunucusunda yapay zekâ çevirir.",
+        "packs": "Mod paketinin kendi yüklediği kaynak paketlerindeki metinler: Paxi, OpenLoader, Global Packs, KubeJS.",
+        "books": "Lavender ve Patchouli kitapları. Çeviri, orijinalin yanına kendi kaynak paketimize eklenir; yazarın dosyaları değişmez.",
+        "quests": "FTB Quests kendi çeviri dosyasını alır. QuestZ bölümleri yedek olarak İngilizce metinle yeniden yazılır; çeviriyi kapattığınızda orijinal geri gelir."
+      },
+      "empty": {
+        "mods": "Yapay zekâya iş kalmadı: modlar kendileri ya da topluluk paketleriyle çevrilmiş",
+        "packs": "Mod paketinin metin içeren kendi kaynak paketi yok",
+        "books": "Bu kurulumda çevrilmemiş Lavender veya Patchouli kitabı yok",
+        "quests": "Bu kurulumda çevrilmemiş FTB Quests veya QuestZ görevi yok"
+      },
+      "off": "Çeviri kapalı",
+      "offHint": "Aşağıdan açın: başlatıcı topluluk paketlerini seçer, kalanını yapay zekâ çevirir.",
+      "strings_one": "{{value}} satır",
+      "strings_other": "{{value}} satır",
+      "progress": "{{done}} / {{total}}",
+      "none": "yok",
+      "total": "Tüm satırlar",
+      "state": {
+        "done": "Hazır",
+        "queued": "Sırada",
+        "partial": "Kısmen",
+        "failed": "Başarısız"
+      },
+      "refresh": "Yenile",
+      "openPack": "Paketin sayfasını aç"
+    }
   },
   "configs": {
     "emptyTitle": "Yapılandırma dosyası yok",

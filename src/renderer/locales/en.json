@@ -5692,7 +5692,51 @@
     "errorInternal": "Couldn't update the translation",
     "toggleFailed": "Couldn't switch mod translation",
     "packsHint": "Community packs sit above the AI translation and below your own resource packs:",
-    "packLine": "{{title}} — {{author}}, {{license}}"
+    "packLine": "{{title}} — {{author}}, {{license}}",
+    "panel": {
+      "fact": {
+        "locale": "Game language",
+        "mods": "Mods in the instance",
+        "packs": "Community packs",
+        "updated": "Updated"
+      },
+      "open": "Details",
+      "title": "Mod and modpack translation",
+      "parts": "What gets translated",
+      "group": {
+        "mods": "Mods",
+        "packs": "Modpack resource packs",
+        "books": "Guide books",
+        "quests": "Quests"
+      },
+      "hint": {
+        "mods": "Strings found neither in the mods themselves nor in community packs are translated by AI on the Grubie server.",
+        "packs": "Text from resource packs the modpack loads on its own: Paxi, OpenLoader, Global Packs, KubeJS.",
+        "books": "Lavender and Patchouli books. The translation goes into our resource pack next to the original; the author's files stay unchanged.",
+        "quests": "FTB Quests gets its own translation file. QuestZ chapters are rewritten with the English text as a fallback, and the original comes back when you turn translation off."
+      },
+      "empty": {
+        "mods": "Nothing left for AI: the mods are translated by themselves or by community packs",
+        "packs": "The modpack has no resource packs of its own with text",
+        "books": "No untranslated Lavender or Patchouli books in this instance",
+        "quests": "No untranslated FTB Quests or QuestZ quests in this instance"
+      },
+      "off": "Translation is off",
+      "offHint": "Turn it on below: the launcher picks community packs and AI translates the rest.",
+      "strings_one": "{{value}} string",
+      "strings_other": "{{value}} strings",
+      "progress": "{{done}} of {{total}}",
+      "none": "none",
+      "total": "All strings",
+      "state": {
+        "done": "Done",
+        "queued": "Queued",
+        "partial": "Partly",
+        "failed": "Failed"
+      },
+      "refresh": "Refresh",
+      "openPack": "Open the pack's page"
+    }
   },
   "configs": {
     "emptyTitle": "No configuration files",

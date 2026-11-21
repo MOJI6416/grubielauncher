@@ -5745,7 +5745,52 @@
     "errorInternal": "Impossible de mettre à jour la traduction",
     "toggleFailed": "Impossible de changer la traduction des mods",
     "packsHint": "Les packs de la communauté passent au-dessus de la traduction par IA et sous vos propres packs de ressources :",
-    "packLine": "{{title}} — {{author}}, {{license}}"
+    "packLine": "{{title}} — {{author}}, {{license}}",
+    "panel": {
+      "fact": {
+        "locale": "Langue du jeu",
+        "mods": "Mods dans l'instance",
+        "packs": "Packs de la communauté",
+        "updated": "Mis à jour"
+      },
+      "open": "Détails",
+      "title": "Traduction des mods et du modpack",
+      "parts": "Ce qui est traduit",
+      "group": {
+        "mods": "Mods",
+        "packs": "Packs de ressources du modpack",
+        "books": "Livres-guides",
+        "quests": "Quêtes"
+      },
+      "hint": {
+        "mods": "Les textes absents des mods eux-mêmes et des packs de la communauté sont traduits par l'IA sur le serveur Grubie.",
+        "packs": "Textes des packs de ressources que le modpack charge lui-même : Paxi, OpenLoader, Global Packs, KubeJS.",
+        "books": "Livres Lavender et Patchouli. La traduction va dans notre pack de ressources à côté de l'original ; les fichiers de l'auteur ne changent pas.",
+        "quests": "FTB Quests reçoit son propre fichier de traduction. Les chapitres QuestZ sont réécrits avec le texte anglais en secours, et l'original revient quand vous désactivez la traduction."
+      },
+      "empty": {
+        "mods": "Plus rien pour l'IA : les mods sont traduits d'eux-mêmes ou par des packs de la communauté",
+        "packs": "Le modpack n'a pas de packs de ressources à lui avec du texte",
+        "books": "Aucun livre Lavender ou Patchouli sans traduction dans cette instance",
+        "quests": "Aucune quête FTB Quests ou QuestZ sans traduction dans cette instance"
+      },
+      "off": "La traduction est désactivée",
+      "offHint": "Activez-la en bas : le launcher choisit des packs de la communauté et l'IA traduit le reste.",
+      "strings_one": "{{value}} ligne",
+      "strings_many": "{{value}} de lignes",
+      "strings_other": "{{value}} lignes",
+      "progress": "{{done}} sur {{total}}",
+      "none": "aucun",
+      "total": "Toutes les lignes",
+      "state": {
+        "done": "Terminé",
+        "queued": "En attente",
+        "partial": "En partie",
+        "failed": "Échec"
+      },
+      "refresh": "Actualiser",
+      "openPack": "Ouvrir la page du pack"
+    }
   },
   "configs": {
     "emptyTitle": "Aucun fichier de configuration",

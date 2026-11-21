@@ -101,6 +101,8 @@ import {
 } from "@renderer/features/instances/InstanceJarCard";
 import { JarModsPanel } from "@renderer/features/instances/JarModsPanel";
 import { OptiFinePanel } from "@renderer/features/optifine/OptiFinePanel";
+import { ModTranslationPanel } from "@renderer/features/instances/ModTranslationPanel";
+import { countFeature } from "@renderer/features/usage/usage";
 import { OptiFineSettingsRow } from "@renderer/features/optifine/OptiFineSettingsRow";
 import { showsJarModsCard } from "@renderer/features/instances/jarMods";
 import { isModdedLoader } from "@/shared/loaderCompat";
@@ -157,6 +159,7 @@ export function InstanceScreen({
   const [isLoaderPanelOpen, setIsLoaderPanelOpen] = useState(false);
   const [isJarPanelOpen, setIsJarPanelOpen] = useState(false);
   const [isOptiFinePanelOpen, setIsOptiFinePanelOpen] = useState(false);
+  const [isTranslationPanelOpen, setIsTranslationPanelOpen] = useState(false);
   const [isTagsOpen, setIsTagsOpen] = useState(false);
 
   const routeTab =
@@ -168,6 +171,7 @@ export function InstanceScreen({
       setIsLoaderPanelOpen(false);
       setIsJarPanelOpen(false);
       setIsOptiFinePanelOpen(false);
+      setIsTranslationPanelOpen(false);
     }
 
     navigate({
@@ -256,6 +260,7 @@ export function InstanceScreen({
   const openLoaderPanel = () => {
     setIsJarPanelOpen(false);
     setIsOptiFinePanelOpen(false);
+    setIsTranslationPanelOpen(false);
     setIsLoaderPanelOpen(true);
     setActiveTab("settings");
   };
@@ -702,6 +707,18 @@ export function InstanceScreen({
               }
               onClose={() => setIsOptiFinePanelOpen(false)}
             />
+          ) : activeTab === "settings" && version && isTranslationPanelOpen ? (
+            <ModTranslationPanel
+              versionPath={version.versionPath}
+              lockedReason={
+                isForeignInstance
+                  ? readOnlyHint
+                  : isVersionRunning
+                    ? t("instanceSettings.runningHint")
+                    : undefined
+              }
+              onClose={() => setIsTranslationPanelOpen(false)}
+            />
           ) : activeTab === "settings" && version && isJarPanelOpen ? (
             <JarModsPanel
               instance={version}
@@ -827,6 +844,10 @@ export function InstanceScreen({
                     disabled={
                       isLoading || isVersionRunning || isForeignInstance
                     }
+                    onOpen={() => {
+                      countFeature("mods.translationDetails");
+                      setIsTranslationPanelOpen(true);
+                    }}
                   />
                 ) : undefined
               }

@@ -62,6 +62,7 @@ export const USAGE_FEATURES = [
   "mods.updateChannel",
   "mods.defaultChannel",
   "mods.autoTranslate",
+  "mods.translationDetails",
   "mods.translateDescription",
   "mods.translateChangelog",
   "modSets.save",

@@ -5745,7 +5745,52 @@
     "errorInternal": "No se pudo actualizar la traducción",
     "toggleFailed": "No se pudo cambiar la traducción de mods",
     "packsHint": "Los paquetes de la comunidad quedan por encima de la traducción con IA y por debajo de sus paquetes de recursos:",
-    "packLine": "{{title}} — {{author}}, {{license}}"
+    "packLine": "{{title}} — {{author}}, {{license}}",
+    "panel": {
+      "fact": {
+        "locale": "Idioma del juego",
+        "mods": "Mods en la instancia",
+        "packs": "Paquetes de la comunidad",
+        "updated": "Actualizado"
+      },
+      "open": "Detalles",
+      "title": "Traducción de mods y del modpack",
+      "parts": "Qué se traduce",
+      "group": {
+        "mods": "Mods",
+        "packs": "Paquetes de recursos del modpack",
+        "books": "Libros guía",
+        "quests": "Misiones"
+      },
+      "hint": {
+        "mods": "Los textos que no están ni en los propios mods ni en los paquetes de la comunidad los traduce la IA en el servidor de Grubie.",
+        "packs": "Textos de los paquetes de recursos que el modpack carga por su cuenta: Paxi, OpenLoader, Global Packs, KubeJS.",
+        "books": "Libros de Lavender y Patchouli. La traducción va a nuestro paquete de recursos junto al original; los archivos del autor no cambian.",
+        "quests": "FTB Quests recibe su propio archivo de traducción. Los capítulos de QuestZ se reescriben con el texto en inglés como respaldo, y el original vuelve cuando desactiva la traducción."
+      },
+      "empty": {
+        "mods": "No queda nada para la IA: los mods ya están traducidos por sí mismos o por paquetes de la comunidad",
+        "packs": "El modpack no tiene paquetes de recursos propios con texto",
+        "books": "No hay libros de Lavender ni de Patchouli sin traducir en esta instancia",
+        "quests": "No hay misiones de FTB Quests ni de QuestZ sin traducir en esta instancia"
+      },
+      "off": "La traducción está desactivada",
+      "offHint": "Actívela abajo: el launcher elige paquetes de la comunidad y la IA traduce el resto.",
+      "strings_one": "{{value}} línea",
+      "strings_many": "{{value}} de líneas",
+      "strings_other": "{{value}} líneas",
+      "progress": "{{done}} de {{total}}",
+      "none": "ninguno",
+      "total": "Todas las líneas",
+      "state": {
+        "done": "Hecho",
+        "queued": "En cola",
+        "partial": "En parte",
+        "failed": "Error"
+      },
+      "refresh": "Actualizar",
+      "openPack": "Abrir la página del paquete"
+    }
   },
   "configs": {
     "emptyTitle": "No hay archivos de configuración",

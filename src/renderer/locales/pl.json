@@ -5795,7 +5795,53 @@
     "errorInternal": "Nie udało się odświeżyć tłumaczenia",
     "toggleFailed": "Nie udało się przełączyć tłumaczenia modów",
     "packsHint": "Paczki społeczności są nad tłumaczeniem AI i pod Twoimi paczkami zasobów:",
-    "packLine": "{{title}} — {{author}}, {{license}}"
+    "packLine": "{{title}} — {{author}}, {{license}}",
+    "panel": {
+      "fact": {
+        "locale": "Język gry",
+        "mods": "Mody w instancji",
+        "packs": "Paczki społeczności",
+        "updated": "Zaktualizowano"
+      },
+      "open": "Szczegóły",
+      "title": "Tłumaczenie modów i modpacka",
+      "parts": "Co jest tłumaczone",
+      "group": {
+        "mods": "Mody",
+        "packs": "Paczki zasobów modpacka",
+        "books": "Księgi-poradniki",
+        "quests": "Zadania"
+      },
+      "hint": {
+        "mods": "Teksty, których nie ma ani w samych modach, ani w paczkach społeczności, tłumaczy AI na serwerze Grubie.",
+        "packs": "Teksty z paczek zasobów, które modpack wczytuje sam: Paxi, OpenLoader, Global Packs, KubeJS.",
+        "books": "Księgi Lavender i Patchouli. Tłumaczenie trafia do naszej paczki zasobów obok oryginału, pliki autora się nie zmieniają.",
+        "quests": "FTB Quests dostaje własny plik tłumaczenia. Rozdziały QuestZ są przepisywane z angielskim tekstem jako zapasowym, a oryginał wróci, gdy wyłączysz tłumaczenie."
+      },
+      "empty": {
+        "mods": "Dla AI nic nie zostało: mody są przetłumaczone same lub przez paczki społeczności",
+        "packs": "Modpack nie ma własnych paczek zasobów z tekstem",
+        "books": "W instancji nie ma nieprzetłumaczonych ksiąg Lavender ani Patchouli",
+        "quests": "W instancji nie ma nieprzetłumaczonych zadań FTB Quests ani QuestZ"
+      },
+      "off": "Tłumaczenie jest wyłączone",
+      "offHint": "Włącz je poniżej: launcher dobierze paczki społeczności, a resztę przetłumaczy AI.",
+      "strings_one": "{{value}} wiersz",
+      "strings_few": "{{value}} wiersze",
+      "strings_many": "{{value}} wierszy",
+      "strings_other": "{{value}} wiersza",
+      "progress": "{{done}} z {{total}}",
+      "none": "brak",
+      "total": "Wszystkie wiersze",
+      "state": {
+        "done": "Gotowe",
+        "queued": "W kolejce",
+        "partial": "Częściowo",
+        "failed": "Nie udało się"
+      },
+      "refresh": "Odśwież",
+      "openPack": "Otwórz stronę paczki"
+    }
   },
   "configs": {
     "emptyTitle": "Brak plików konfiguracji",

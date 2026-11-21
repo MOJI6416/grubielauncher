@@ -5745,7 +5745,52 @@
     "errorInternal": "Não foi possível atualizar a tradução",
     "toggleFailed": "Não foi possível alternar a tradução de mods",
     "packsHint": "Os pacotes da comunidade ficam acima da tradução com IA e abaixo dos seus pacotes de recursos:",
-    "packLine": "{{title}} — {{author}}, {{license}}"
+    "packLine": "{{title}} — {{author}}, {{license}}",
+    "panel": {
+      "fact": {
+        "locale": "Idioma do jogo",
+        "mods": "Mods na instância",
+        "packs": "Pacotes da comunidade",
+        "updated": "Atualizado"
+      },
+      "open": "Detalhes",
+      "title": "Tradução dos mods e do modpack",
+      "parts": "O que é traduzido",
+      "group": {
+        "mods": "Mods",
+        "packs": "Pacotes de recursos do modpack",
+        "books": "Livros-guia",
+        "quests": "Missões"
+      },
+      "hint": {
+        "mods": "Os textos que não estão nem nos próprios mods nem nos pacotes da comunidade são traduzidos pela IA no servidor Grubie.",
+        "packs": "Textos dos pacotes de recursos que o modpack carrega por conta própria: Paxi, OpenLoader, Global Packs, KubeJS.",
+        "books": "Livros do Lavender e do Patchouli. A tradução vai para o nosso pacote de recursos ao lado do original; os arquivos do autor não mudam.",
+        "quests": "O FTB Quests ganha o próprio arquivo de tradução. Os capítulos do QuestZ são reescritos com o texto em inglês como reserva, e o original volta quando você desativa a tradução."
+      },
+      "empty": {
+        "mods": "Não sobrou nada para a IA: os mods já vêm traduzidos ou são cobertos por pacotes da comunidade",
+        "packs": "O modpack não tem pacotes de recursos próprios com texto",
+        "books": "Não há livros do Lavender ou do Patchouli sem tradução nesta instância",
+        "quests": "Não há missões do FTB Quests ou do QuestZ sem tradução nesta instância"
+      },
+      "off": "A tradução está desativada",
+      "offHint": "Ative-a abaixo: o launcher escolhe pacotes da comunidade e a IA traduz o resto.",
+      "strings_one": "{{value}} linha",
+      "strings_many": "{{value}} de linhas",
+      "strings_other": "{{value}} linhas",
+      "progress": "{{done}} de {{total}}",
+      "none": "nenhum",
+      "total": "Todas as linhas",
+      "state": {
+        "done": "Pronto",
+        "queued": "Na fila",
+        "partial": "Em parte",
+        "failed": "Falhou"
+      },
+      "refresh": "Atualizar",
+      "openPack": "Abrir a página do pacote"
+    }
   },
   "configs": {
     "emptyTitle": "Nenhum arquivo de configuração",

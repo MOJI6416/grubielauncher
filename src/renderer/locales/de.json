@@ -5692,7 +5692,51 @@
     "errorInternal": "Die Übersetzung konnte nicht aktualisiert werden",
     "toggleFailed": "Die Mod-Übersetzung konnte nicht umgeschaltet werden",
     "packsHint": "Community-Pakete liegen über der KI-Übersetzung und unter Ihren eigenen Ressourcenpaketen:",
-    "packLine": "{{title}} — {{author}}, {{license}}"
+    "packLine": "{{title}} — {{author}}, {{license}}",
+    "panel": {
+      "fact": {
+        "locale": "Spielsprache",
+        "mods": "Mods in der Instanz",
+        "packs": "Community-Pakete",
+        "updated": "Aktualisiert"
+      },
+      "open": "Details",
+      "title": "Übersetzung von Mods und Modpack",
+      "parts": "Was übersetzt wird",
+      "group": {
+        "mods": "Mods",
+        "packs": "Ressourcenpakete des Modpacks",
+        "books": "Handbücher",
+        "quests": "Quests"
+      },
+      "hint": {
+        "mods": "Texte, die weder in den Mods selbst noch in Community-Paketen stehen, übersetzt die KI auf dem Grubie-Server.",
+        "packs": "Texte aus Ressourcenpaketen, die das Modpack selbst lädt: Paxi, OpenLoader, Global Packs, KubeJS.",
+        "books": "Bücher von Lavender und Patchouli. Die Übersetzung kommt in unser Ressourcenpaket neben das Original, die Dateien des Autors bleiben unverändert.",
+        "quests": "FTB Quests bekommt eine eigene Übersetzungsdatei. QuestZ-Kapitel werden mit dem englischen Text als Ersatz umgeschrieben; das Original kehrt zurück, wenn Sie die Übersetzung ausschalten."
+      },
+      "empty": {
+        "mods": "Für die KI bleibt nichts übrig: Die Mods sind selbst oder durch Community-Pakete übersetzt",
+        "packs": "Das Modpack hat keine eigenen Ressourcenpakete mit Text",
+        "books": "Keine unübersetzten Bücher von Lavender oder Patchouli in dieser Instanz",
+        "quests": "Keine unübersetzten Quests von FTB Quests oder QuestZ in dieser Instanz"
+      },
+      "off": "Übersetzung ist aus",
+      "offHint": "Schalten Sie sie unten ein: Der Launcher wählt Community-Pakete, den Rest übersetzt die KI.",
+      "strings_one": "{{value}} Zeile",
+      "strings_other": "{{value}} Zeilen",
+      "progress": "{{done}} von {{total}}",
+      "none": "keine",
+      "total": "Alle Zeilen",
+      "state": {
+        "done": "Fertig",
+        "queued": "Wartet",
+        "partial": "Teilweise",
+        "failed": "Fehlgeschlagen"
+      },
+      "refresh": "Aktualisieren",
+      "openPack": "Seite des Pakets öffnen"
+    }
   },
   "configs": {
     "emptyTitle": "Keine Konfigurationsdateien",
