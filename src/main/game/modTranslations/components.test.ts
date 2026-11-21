@@ -63,6 +63,24 @@ describe("rewriteComponent", () => {
     }
   });
 
+  it("translates styled parts of a line that has no words of its own", () => {
+    const line = ["", { text: "Click Here To Get Your Server", color: "green" }, ""];
+    const { component, entries } = rewriteComponent(line);
+    expect(component).toEqual({
+      text: "",
+      extra: [
+        {
+          color: "green",
+          translate: componentKey("Click Here To Get Your Server"),
+          fallback: "Click Here To Get Your Server",
+        },
+        "",
+      ],
+    });
+    expect(Object.values(entries)).toEqual(["Click Here To Get Your Server"]);
+    expect(rewriteComponent(component)).toEqual({ component, entries });
+  });
+
   it("is idempotent and recovers the English from a rewritten component", () => {
     const first = rewriteComponent({ text: "", extra: ["Break ", { text: "leaves", color: "gray" }, " to get sticks."] });
     const second = rewriteComponent(first.component);

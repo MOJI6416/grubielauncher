@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs-extra";
 import { createHash } from "crypto";
 import { FTB_QUESTS_CONTEXT, FTB_QUESTS_NAMESPACE } from "./ftbQuests";
+import { decodeUtf8Strict } from "./langFiles";
 import { LangEntries, needsTranslation, unitHash } from "./unitHash";
 
 export const FTB_INLINE_BOOK = "ftbquests:inline";
@@ -187,7 +188,8 @@ async function originalText(
   const target = path.join(questsDir(versionPath), ...file.split("/"));
   const stat = await fs.stat(target).catch(() => null);
   if (!stat?.isFile() || stat.size > MAX_FILE_BYTES) return null;
-  const current = await fs.readFile(target, "utf8");
+  const current = decodeUtf8Strict(await fs.readFile(target));
+  if (current === null) return null;
   if (owned.get(file) === digestOf(current)) {
     return fs.readFile(backupPath(storage, file), "utf8").catch(() => null);
   }
@@ -258,11 +260,12 @@ export async function applyInlineRewrite(
     if (original === null) continue;
     const rewritten = rewriteInline(original);
     if (Object.keys(rewritten.english).length === 0) continue;
-    const current = await fs.readFile(target, "utf8");
+    const raw = await fs.readFile(target);
+    const current = raw.toString("utf8");
     const ours = owned.get(file) === digestOf(current);
     if (!ours) {
       await fs.ensureDir(path.dirname(backupPath(storage, file)));
-      await fs.writeFile(backupPath(storage, file), current, "utf8");
+      await fs.writeFile(backupPath(storage, file), raw);
     }
     if (current !== rewritten.text) {
       await fs.writeFile(`${target}.grubie-tmp`, rewritten.text, "utf8");

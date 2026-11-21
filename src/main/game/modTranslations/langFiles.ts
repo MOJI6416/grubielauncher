@@ -93,3 +93,8 @@ export function langFormatFor(mcVersion: string): LangFormat {
   const match = /^1\.(\d+)/.exec(mcVersion);
   return match && Number(match[1]) < 13 ? "lang" : "json";
 }
+
+export function decodeUtf8Strict(data: Buffer): string | null {
+  const text = data.toString("utf8");
+  return Buffer.from(text, "utf8").equals(data) ? text : null;
+}

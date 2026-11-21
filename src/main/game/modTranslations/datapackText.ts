@@ -5,6 +5,7 @@ import { createZipArchive } from "../../utilities/archiver";
 import { rewriteComponent } from "./components";
 import type { NamespaceLang } from "./jarScan";
 import { readZipFiles } from "./jarScan";
+import { decodeUtf8Strict } from "./langFiles";
 import type { LangEntries } from "./unitHash";
 
 export const DATA_TEXT_NAMESPACE = "grubie";
@@ -36,6 +37,7 @@ export interface RewrittenData {
 interface TextFile {
   name: string;
   text: string;
+  raw: Buffer;
 }
 
 type Rewriter = (text: string) => { text: string; entries: LangEntries } | null;
@@ -112,7 +114,10 @@ function rewriteBookPages(line: string, entries: LangEntries): string {
       continue;
     }
     Object.assign(entries, result.entries);
-    out += quoteSnbtSingle(JSON.stringify(result.component));
+    out +=
+      JSON.stringify(result.component) === JSON.stringify(component)
+        ? raw
+        : quoteSnbtSingle(JSON.stringify(result.component));
   }
   return out + line.slice(index);
 }
@@ -137,6 +142,7 @@ function rewriteFunction(text: string): { text: string; entries: LangEntries } |
     const result = rewriteComponent(component);
     if (Object.keys(result.entries).length === 0) return line;
     Object.assign(entries, result.entries);
+    if (JSON.stringify(result.component) === JSON.stringify(component)) return line;
     const next = `${match[1]}${JSON.stringify(result.component)}`;
     if (next !== line) changed = true;
     return next;
@@ -243,9 +249,11 @@ async function listDir(root: string, relative = ""): Promise<string[]> {
 async function packFiles(pack: DataPack): Promise<TextFile[]> {
   if (pack.zip) {
     const files = await readZipFiles(pack.path, MAX_ZIP_BYTES);
-    return (files ?? [])
-      .filter((file) => readable(file.name) && file.data.length <= MAX_FILE_BYTES)
-      .map((file) => ({ name: file.name, text: file.data.toString("utf8") }));
+    return (files ?? []).flatMap((file) => {
+      if (!readable(file.name) || file.data.length > MAX_FILE_BYTES) return [];
+      const text = decodeUtf8Strict(file.data);
+      return text === null ? [] : [{ name: file.name, text, raw: file.data }];
+    });
   }
   const out: TextFile[] = [];
   for (const name of await listDir(pack.path, "data")) {
@@ -253,7 +261,9 @@ async function packFiles(pack: DataPack): Promise<TextFile[]> {
     const file = path.join(pack.path, ...name.split("/"));
     const stat = await fs.stat(file).catch(() => null);
     if (!stat || stat.size > MAX_FILE_BYTES) continue;
-    out.push({ name, text: await fs.readFile(file, "utf8") });
+    const raw = await fs.readFile(file);
+    const text = decodeUtf8Strict(raw);
+    if (text !== null) out.push({ name, text, raw });
   }
   return out;
 }
@@ -327,8 +337,9 @@ export async function applyDataRewrite(
       let changed = false;
       const next = files.map((file) => {
         const rewrite = file.data.length <= MAX_FILE_BYTES ? rewriterFor(file.name) : null;
-        const rewritten = rewrite?.(file.data.toString("utf8"));
-        if (!rewritten || rewritten.text === file.data.toString("utf8")) return file;
+        const text = rewrite ? decodeUtf8Strict(file.data) : null;
+        const rewritten = text === null ? null : rewrite?.(text);
+        if (!rewritten || rewritten.text === text) return file;
         changed = true;
         return { name: file.name, data: Buffer.from(rewritten.text, "utf8") };
       });
@@ -359,7 +370,7 @@ export async function applyDataRewrite(
       }
       if (owned.get(id) !== digestOf(file.text)) {
         await fs.ensureDir(path.dirname(backupPath(storage, id)));
-        await fs.writeFile(backupPath(storage, id), file.text, "utf8");
+        await fs.writeFile(backupPath(storage, id), file.raw);
       }
       await fs.writeFile(`${target}.grubie-tmp`, rewritten.text, "utf8");
       await fs.move(`${target}.grubie-tmp`, target, { overwrite: true });

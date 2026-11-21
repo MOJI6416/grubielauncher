@@ -253,6 +253,7 @@ describe("mod translation sync", () => {
     expect(await fs.pathExists(path.join(instance, "config/ftbquests/quests/lang/ru_ru.snbt"))).toBe(false);
     expect(await fs.pathExists(path.join(instance, "config/ftbquests/quests/lang/en_us.snbt"))).toBe(true);
     expect(await fs.pathExists(path.join(instance, "patchouli_books/notebook/ru_ru/entries/start.json"))).toBe(false);
+    expect(await fs.pathExists(path.join(instance, "patchouli_books/notebook/ru_ru"))).toBe(false);
     expect(await fs.pathExists(path.join(instance, "patchouli_books/notebook/zh_cn/entries/start.json"))).toBe(true);
     expect((await fs.readJSON(path.join(instance, "questz/chapters/76a9fc9e.json"))).quests[0].title).toBe(
       "Pick rocks",
@@ -320,5 +321,7 @@ describe("mod translation sync", () => {
 
     await toggle(false, old);
     expect(await fs.readFile(chapter, "utf8")).toBe(original);
+    expect(await fs.readFile(path.join(old, "options.txt"), "utf8")).toBe("lang:ru_ru\n");
+    expect(await fs.pathExists(path.join(old, "storage", "mod-translations", "ftbq-originals"))).toBe(false);
   });
 });

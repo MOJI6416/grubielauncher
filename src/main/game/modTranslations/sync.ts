@@ -172,6 +172,7 @@ interface TranslationState {
   externalFiles: Array<{ file: string; digest: string }>;
   forcedLocale: string | null;
   quotaUntil: number | null;
+  createdOptions: string[];
   dataFiles: RewrittenData[];
   ftbInlineFiles: InlineFile[];
   fancyFiles: FancyFile[];
@@ -241,6 +242,7 @@ function emptyState(): TranslationState {
     externalFiles: [],
     forcedLocale: null,
     quotaUntil: null,
+    createdOptions: [],
     dataFiles: [],
     ftbInlineFiles: [],
     fancyFiles: [],
@@ -1101,12 +1103,34 @@ async function applyExternalBooks(
     keep.add(file.name);
     result.push({ file: file.name, digest });
   }
+  const dropped: string[] = [];
   for (const [file, digest] of owned) {
     if (keep.has(file)) continue;
     const target = path.join(versionPath, ...file.split("/"));
     if ((await fileDigest(target)) === digest) await fs.remove(target).catch(() => undefined);
+    dropped.push(file);
   }
+  await pruneLocaleFolders(versionPath, dropped);
   return result;
+}
+
+async function removeEmptyTree(dir: string): Promise<boolean> {
+  const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => null);
+  if (!entries) return false;
+  let empty = true;
+  for (const entry of entries) {
+    if (entry.isDirectory() && (await removeEmptyTree(path.join(dir, entry.name)))) continue;
+    empty = false;
+  }
+  if (empty) await fs.remove(dir).catch(() => undefined);
+  return empty;
+}
+
+async function pruneLocaleFolders(versionPath: string, files: string[]): Promise<void> {
+  const folders = new Set(files.map((file) => file.split("/").slice(0, 3).join("/")));
+  for (const folder of folders) {
+    await removeEmptyTree(path.join(versionPath, ...folder.split("/")));
+  }
 }
 
 async function removeExternalBooks(
@@ -1117,6 +1141,7 @@ async function removeExternalBooks(
     const target = path.join(versionPath, ...file.split("/"));
     if ((await fileDigest(target)) === digest) await fs.remove(target).catch(() => undefined);
   }
+  await pruneLocaleFolders(versionPath, state.externalFiles.map((entry) => entry.file));
 }
 
 async function readGameResourceFormat(
@@ -1160,9 +1185,12 @@ async function applyOptions(
   packFiles: string[],
   locale: string | null,
   forceLocale = false,
-): Promise<void> {
+  dropDefaults: string[] = [],
+): Promise<string[]> {
   const file = path.join(versionPath, "options.txt");
   const current = await fs.readFile(file, "utf8").catch(() => null);
+  const had = (text: string | null, key: string) =>
+    !!text && new RegExp(`^${key}:`, "m").test(text);
   const result = applyTranslationOptions(current, {
     mcVersion,
     packFiles,
@@ -1173,11 +1201,15 @@ async function applyOptions(
     ),
     locale,
     forceLocale,
+    dropDefaults,
   });
-  if (!result.changed) return;
+  if (!result.changed) return [];
   const temp = `${file}.grubie-tmp`;
   await fs.writeFile(temp, result.text, "utf8");
   await fs.move(temp, file, { overwrite: true });
+  return ["resourcePacks", "incompatibleResourcePacks"].filter(
+    (key) => !had(current, key) && had(result.text, key),
+  );
 }
 
 async function cleanup(
@@ -1204,8 +1236,13 @@ async function cleanup(
   await restoreDataRewrite(versionPath, storageDir(versionPath), state.dataFiles);
   await restoreInline(versionPath, storageDir(versionPath), state.ftbInlineFiles);
   await restoreFancy(versionPath, storageDir(versionPath), state.fancyFiles);
+  for (const name of ["questz-originals", "data-originals", "ftbq-originals", "fancymenu-originals"]) {
+    await removeEmptyTree(path.join(storageDir(versionPath), name));
+  }
   await fs.remove(booksPath(versionPath)).catch(() => undefined);
-  if (mcVersion) await applyOptions(versionPath, mcVersion, [], null);
+  if (mcVersion) {
+    await applyOptions(versionPath, mcVersion, [], null, false, state.createdOptions);
+  }
   await writeState(versionPath, {
     ...emptyState(),
     enabled: state.enabled,
@@ -1513,13 +1550,14 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
       state.questzFiles,
     );
   }
-  await applyOptions(
+  const created = await applyOptions(
     versionPath,
     mcVersion,
     ourPackFiles(next),
     locale,
     next.forcedLocale !== locale,
   );
+  next.createdOptions = [...new Set([...next.createdOptions, ...created])];
   next.forcedLocale = locale;
   await writeState(versionPath, next);
   schedulePoll(versionPath, next);

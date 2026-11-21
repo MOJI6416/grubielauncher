@@ -63,6 +63,7 @@ export interface TranslationOptions {
   incompatibleFiles: string[];
   locale: string | null;
   forceLocale?: boolean;
+  dropDefaults?: string[];
 }
 
 export interface OptionsResult {
@@ -115,8 +116,19 @@ export function applyTranslationOptions(
 
   const set = (key: string, value: string) => {
     const line = find(key);
-    if (line) line.value = value;
-    else lines.push({ key, value });
+    if (line) {
+      line.value = value;
+      return;
+    }
+    let at = lines.length;
+    while (at > 0 && lines[at - 1] === "") at--;
+    lines.splice(at, 0, { key, value });
+  };
+  const drop = (key: string, empty: string) => {
+    const line = find(key);
+    if (line && options.dropDefaults?.includes(key) && line.value.trim() === empty) {
+      lines.splice(lines.indexOf(line), 1);
+    }
   };
 
   const before = JSON.stringify(lines);
@@ -136,6 +148,9 @@ export function applyTranslationOptions(
       set("lang", localeForVersion(options.locale, options.mcVersion));
     }
   }
+
+  drop("resourcePacks", '["vanilla"]');
+  drop("incompatibleResourcePacks", "[]");
 
   if (JSON.stringify(lines) === before) return { text, changed: false };
 

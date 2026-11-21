@@ -180,3 +180,21 @@ describe("more data pack formats", () => {
     expect(Object.keys(originsOnly).sort()).toEqual(["Duck", "Quacks loudly."]);
   });
 });
+
+describe("files that are not UTF-8", () => {
+  it("are left byte for byte as they are", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "grubie-data3-"));
+    const file = path.join(root, "config", "paxi", "datapacks", "latin", "data", "demo", "functions", "hello.mcfunction");
+    const bytes = Buffer.concat([
+      Buffer.from('tellraw @a {"text":"Welcome to the caf', "latin1"),
+      Buffer.from([0xe9]),
+      Buffer.from(' of this server"}\n', "latin1"),
+    ]);
+    await fs.outputFile(file, bytes);
+    const packs = await listDataPacks(root);
+    expect(await scanDataPacks(packs)).toEqual([]);
+    expect(await applyDataRewrite(path.join(root, "storage"), packs, [])).toEqual([]);
+    expect((await fs.readFile(file)).equals(bytes)).toBe(true);
+    await fs.remove(root);
+  });
+});

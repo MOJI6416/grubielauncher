@@ -100,7 +100,14 @@ export function rewriteComponent(value: Json): ComponentRewrite {
       format += `%${args.length}$s`;
     }
 
-    if (!worthTranslating(format)) return node;
+    if (!worthTranslating(format)) {
+      if (args.length === 0) return node;
+      let next = 0;
+      return {
+        ...object,
+        extra: extra.map((child) => (plainText(child) !== null ? child : args[next++])),
+      };
+    }
     const key = componentKey(format);
     entries[key] = format;
     return {

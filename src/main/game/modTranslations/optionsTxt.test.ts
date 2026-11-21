@@ -114,6 +114,24 @@ describe("applyTranslationOptions", () => {
     expect(german.changed).toBe(false);
   });
 
+  it("removes pack lines it created once they are back to the defaults", () => {
+    const options = { mcVersion: "1.21.1", packFiles: [], incompatibleFiles: [], locale: null };
+    const text = 'lang:ru_ru\nresourcePacks:["vanilla"]\nincompatibleResourcePacks:[]\n';
+    expect(
+      applyTranslationOptions(text, {
+        ...options,
+        dropDefaults: ["resourcePacks", "incompatibleResourcePacks"],
+      }).text,
+    ).toBe("lang:ru_ru\n");
+    expect(applyTranslationOptions(text, options).changed).toBe(false);
+    expect(
+      applyTranslationOptions('resourcePacks:["vanilla","file/Mine.zip"]\n', {
+        ...options,
+        dropDefaults: ["resourcePacks"],
+      }).changed,
+    ).toBe(false);
+  });
+
   it("switches any other language when asked to, once translation is turned on", () => {
     const options = {
       mcVersion: "1.20.1",
