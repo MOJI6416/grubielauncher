@@ -10,7 +10,7 @@ export const FTB_QUESTS_CONTEXT = {
 
 type SnbtValue = string | number | boolean | SnbtValue[] | { [key: string]: SnbtValue };
 
-const BARE = /[A-Za-z0-9._+\-]/;
+const BARE = /[A-Za-z0-9._+-]/;
 const MAX_LINE_CHARS = 4000;
 
 class SnbtReader {
@@ -103,7 +103,7 @@ class SnbtReader {
 
 export function parseQuestLang(text: string): Record<string, SnbtValue> | null {
   try {
-    const value = new SnbtReader(text.replace(/^﻿/, "")).value();
+    const value = new SnbtReader(text.replace(/^\uFEFF/, "")).value();
     return value && typeof value === "object" && !Array.isArray(value) ? value : null;
   } catch {
     return null;
@@ -144,7 +144,7 @@ function quote(value: string): string {
 }
 
 function quoteKey(key: string): string {
-  return /^[A-Za-z0-9._+\-]+$/.test(key) ? key : quote(key);
+  return /^[A-Za-z0-9._+-]+$/.test(key) ? key : quote(key);
 }
 
 export function renderQuestLang(text: string, translations: LangEntries): string | null {

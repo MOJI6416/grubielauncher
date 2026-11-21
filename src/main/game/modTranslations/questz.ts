@@ -129,7 +129,7 @@ export async function readQuestzChapters(versionPath: string): Promise<QuestzCha
     if (!stat?.isFile() || stat.size > MAX_CHAPTER_BYTES) continue;
     let json: Json;
     try {
-      json = lenientJson((await fs.readFile(file, "utf8")).replace(/^﻿/, ""));
+      json = lenientJson((await fs.readFile(file, "utf8")).replace(/^\uFEFF/, ""));
     } catch {
       continue;
     }

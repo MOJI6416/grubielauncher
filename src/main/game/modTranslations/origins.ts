@@ -21,7 +21,7 @@ export function originEntries(
   if (!match) return {};
   let json: unknown;
   try {
-    json = JSON.parse(text.replace(/^﻿/, ""));
+    json = JSON.parse(text.replace(/^\uFEFF/, ""));
   } catch {
     return {};
   }

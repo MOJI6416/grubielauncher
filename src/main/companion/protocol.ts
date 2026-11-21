@@ -75,7 +75,12 @@ const TRANSPORT_RANK: Record<ShareTransport, number> = { direct: 0, turn: 1, rel
 
 function text(value: unknown, limit: number): string | null {
   if (typeof value !== 'string') return null
-  const trimmed = value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
+  const trimmed = Array.from(value, (char) => {
+    const code = char.charCodeAt(0)
+    return code < 0x20 || code === 0x7f ? ' ' : char
+  })
+    .join('')
+    .trim()
   if (!trimmed) return null
   return trimmed.length > limit ? trimmed.slice(0, limit) : trimmed
 }

@@ -5,8 +5,11 @@ const REPLY_LIMIT = 4000;
 
 export function normalizeSupportContact(raw: unknown): string {
   if (typeof raw !== "string") return "";
-  return raw
-    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+  return Array.from(raw, (char) => {
+    const code = char.charCodeAt(0);
+    return code < 0x20 || code === 0x7f ? " " : char;
+  })
+    .join("")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, SUPPORT_CONTACT_LIMIT);

@@ -63,7 +63,7 @@ function escapeControlInStrings(text: string): string {
 }
 
 function lenientJson(text: string): unknown {
-  const body = text.replace(/^﻿/, "");
+  const body = text.replace(/^\uFEFF/, "");
   try {
     return JSON.parse(body);
   } catch {
@@ -149,7 +149,7 @@ function tomlString(
 }
 
 export function contextFromModsToml(text: string): ModContext | null {
-  const body = text.replace(/^﻿/, "");
+  const body = text.replace(/^\uFEFF/, "");
   const section = TOML_MODS.exec(body);
   if (!section) return null;
   const from = section.index + section[0].length;

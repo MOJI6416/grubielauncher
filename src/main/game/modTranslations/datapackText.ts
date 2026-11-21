@@ -55,7 +55,7 @@ function rewriteJsonFields(paths: string[][]): Rewriter {
   return (text) => {
     let json: unknown;
     try {
-      json = JSON.parse(text.replace(/^﻿/, ""));
+      json = JSON.parse(text.replace(/^\uFEFF/, ""));
     } catch {
       return null;
     }

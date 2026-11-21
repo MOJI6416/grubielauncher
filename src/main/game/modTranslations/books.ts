@@ -125,7 +125,7 @@ export function parsePatchouliBookJson(
   if (!match) return null;
   let json: unknown;
   try {
-    json = lenientJson(data.toString("utf8").replace(/^﻿/, ""));
+    json = lenientJson(data.toString("utf8").replace(/^\uFEFF/, ""));
   } catch {
     return null;
   }
@@ -364,7 +364,7 @@ function writePath(json: unknown, path: JsonPath, value: string): void {
 
 function parseDocJson(text: string): unknown {
   try {
-    return lenientJson(text.replace(/^﻿/, ""));
+    return lenientJson(text.replace(/^\uFEFF/, ""));
   } catch {
     return null;
   }

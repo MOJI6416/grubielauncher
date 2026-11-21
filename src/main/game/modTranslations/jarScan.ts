@@ -186,7 +186,7 @@ function directoryWalker(root: string, assetsRoot = false): Walker {
 function packContext(data: Buffer): ModContext | null {
   let json: unknown;
   try {
-    json = JSON.parse(data.toString("utf8").replace(/^﻿/, ""));
+    json = JSON.parse(data.toString("utf8").replace(/^\uFEFF/, ""));
   } catch {
     return null;
   }
