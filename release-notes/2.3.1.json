@@ -1,0 +1,29 @@
+{
+  "version": "2.3.1",
+  "isMilestone": false,
+  "quiet": true,
+  "en": {
+    "subtitle": "Fixes for mod translation and for starting the game where GitHub is blocked.",
+    "highlights": [],
+    "fixes": [
+      "With mod translation turned on, mods and maps show text instead of raw keys, and the instance loads faster.",
+      "Ely.by, Discord and LittleSkin accounts start the game even when GitHub is unreachable."
+    ]
+  },
+  "ru": {
+    "subtitle": "Исправления перевода модов и запуска игры там, где заблокирован GitHub.",
+    "highlights": [],
+    "fixes": [
+      "С включённым переводом модов моды и карты показывают текст, а не ключи, и сборка загружается быстрее.",
+      "Аккаунты Ely.by, Discord и LittleSkin запускают игру, даже если GitHub недоступен."
+    ]
+  },
+  "uk": {
+    "subtitle": "Виправлення перекладу модів і запуску гри там, де заблоковано GitHub.",
+    "highlights": [],
+    "fixes": [
+      "З увімкненим перекладом модів моди й карти показують текст, а не ключі, і збірка завантажується швидше.",
+      "Акаунти Ely.by, Discord і LittleSkin запускають гру, навіть якщо GitHub недоступний."
+    ]
+  }
+}

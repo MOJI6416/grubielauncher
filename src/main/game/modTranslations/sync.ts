@@ -55,6 +55,7 @@ import {
 } from "./packSources";
 import { COMPONENT_KEY_PREFIX, expandSpans } from "./components";
 import { splitBookPage } from "./bookPages";
+import { packTrim, writeTrimmedPack } from "./packTrim";
 import {
   applyDefaultOptionsPacks,
   applyPackOverrides,
@@ -125,7 +126,7 @@ import {
 } from "./translationApi";
 import type { LangEntries } from "./unitHash";
 
-const PROTOCOL = 3;
+const PROTOCOL = 4;
 const SCAN_VERSION = 3;
 const BOOKS_VERSION = 1;
 const LOOKUP_BATCH = 100;
@@ -155,6 +156,7 @@ interface InstalledPack extends ModTranslationPackInfo {
   sha1: string;
   source: string;
   projectId: string;
+  trim?: string;
 }
 
 interface StoredUnit {
@@ -293,6 +295,10 @@ function storageDir(versionPath: string): string {
 
 function packsDir(versionPath: string): string {
   return path.join(versionPath, "resourcepacks");
+}
+
+function originalPacksDir(versionPath: string): string {
+  return path.join(storageDir(versionPath), "packs");
 }
 
 function booksPath(versionPath: string): string {
@@ -613,30 +619,41 @@ async function installPacks(
   versionPath: string,
   remote: RemotePack[],
   previous: InstalledPack[],
+  namespaces: readonly string[],
 ): Promise<InstalledPack[]> {
   const folder = packsDir(versionPath);
+  const originals = originalPacksDir(versionPath);
   await fs.ensureDir(folder);
+  await fs.ensureDir(originals);
+  const trim = packTrim(namespaces);
   const installed: InstalledPack[] = [];
-  const downloads: Array<{ pack: RemotePack; fileName: string }> = [];
+  const downloads: Array<{ pack: RemotePack; original: string }> = [];
 
   for (const pack of remote) {
     const fileName = `${MANAGED_PACK_PREFIX}${pack.key}.zip`;
+    const original = path.join(originals, `${pack.key}.zip`);
     const known = previous.find((entry) => entry.key === pack.key);
-    const present = await fs.pathExists(path.join(folder, fileName));
-    if (!present || known?.sha1 !== pack.sha1) {
-      downloads.push({ pack, fileName });
+    if (
+      known?.sha1 === pack.sha1 &&
+      !known.trim &&
+      !(await fs.pathExists(original)) &&
+      (await fs.pathExists(path.join(folder, fileName)))
+    ) {
+      await fs.move(path.join(folder, fileName), original).catch(() => undefined);
     }
+    if (known?.sha1 !== pack.sha1) await fs.remove(original).catch(() => undefined);
+    if (!(await fs.pathExists(original))) downloads.push({ pack, original });
   }
 
   if (downloads.length > 0) {
     setStage(versionPath, "packs");
     const downloader = new Downloader(2);
-    for (const { pack, fileName } of downloads) {
+    for (const { pack, original } of downloads) {
       try {
         await downloader.downloadFiles([
           {
             url: pack.url,
-            destination: path.join(folder, fileName),
+            destination: original,
             group: "packs",
             sha1: pack.sha1,
             size: pack.size,
@@ -654,7 +671,29 @@ async function installPacks(
 
   for (const pack of remote) {
     const fileName = `${MANAGED_PACK_PREFIX}${pack.key}.zip`;
-    if (!(await fs.pathExists(path.join(folder, fileName)))) continue;
+    const original = path.join(originals, `${pack.key}.zip`);
+    const target = path.join(folder, fileName);
+    if (!(await fs.pathExists(original))) continue;
+    const known = previous.find((entry) => entry.key === pack.key);
+    if (
+      known?.sha1 !== pack.sha1 ||
+      known.trim !== trim.id ||
+      !(await fs.pathExists(target))
+    ) {
+      try {
+        const result = await writeTrimmedPack(original, target, trim);
+        journal.info("translations", "translation pack prepared", {
+          pack: pack.key,
+          ...result,
+        });
+      } catch (error) {
+        journal.warn("translations", "translation pack could not be prepared", {
+          pack: pack.key,
+          error: String(error),
+        });
+        continue;
+      }
+    }
     installed.push({
       key: pack.key,
       title: pack.title,
@@ -665,7 +704,13 @@ async function installPacks(
       sha1: pack.sha1,
       source: pack.source,
       projectId: pack.projectId,
+      trim: trim.id,
     });
+  }
+
+  const keys = new Set(remote.map((pack) => `${pack.key}.zip`));
+  for (const name of await fs.readdir(originals).catch(() => [] as string[])) {
+    if (!keys.has(name)) await fs.remove(path.join(originals, name)).catch(() => undefined);
   }
   return installed;
 }
@@ -736,7 +781,7 @@ async function covered(
   const sources: PackSource[] = [
     ...packs.map((pack) => ({
       file: path.join(folder, pack.fileName),
-      identity: pack.sha1,
+      identity: `${pack.sha1}:${pack.trim ?? ""}`,
     })),
     ...player,
   ];
@@ -1286,6 +1331,7 @@ async function cleanup(
   if (!hadAnything) return;
   if (isVersionRunning(versionPath)) return;
   await removeStaleManaged(versionPath, new Set());
+  await fs.remove(originalPacksDir(versionPath)).catch(() => undefined);
   await removeOwnQuestFile(versionPath, state);
   await restoreQuestz(versionPath, storageDir(versionPath), state.questzFiles);
   await removeExternalBooks(versionPath, state);
@@ -1465,7 +1511,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
           namespaces,
           skipProjects,
         });
-        packs = await installPacks(versionPath, remote, state.packs);
+        packs = await installPacks(versionPath, remote, state.packs, namespaces);
         next.packs = packs;
       } catch (error) {
         if (error instanceof TranslationApiUnavailable) throw error;

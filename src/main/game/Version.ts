@@ -39,7 +39,7 @@ import { app, shell } from "electron";
 import { runGame, runJar } from "../utilities/game";
 import { gcLogArguments, prepareGcLog } from "../utilities/gameMetrics";
 import { ProjectType } from "@/types/ModManager";
-import { getAuthlibCached } from "../utilities/authlib";
+import { getAuthlibCached, syncAuthlibLibrary } from "../utilities/authlib";
 import {
   AUTHLIB_PREFETCHED_PROPERTY,
   resolveAuthlibServer,
@@ -1116,23 +1116,7 @@ export class Version {
     if (account.type != "microsoft" && account.type != "plain") {
       await this.installCheckpoint();
       const authlib = await getAuthlibCached();
-      const existsAuthlib = this.manifest.libraries.find(
-        (lib) => lib.name === authlib?.name,
-      );
-
-      if (authlib && !existsAuthlib) {
-        this.manifest.libraries.push({
-          name: authlib.name,
-          downloads: {
-            artifact: {
-              url: authlib.url,
-              path: authlib.path,
-              size: authlib.size,
-              sha1: authlib.sha1,
-            },
-          },
-        });
-
+      if (authlib && syncAuthlibLibrary(this.manifest, authlib)) {
         await this.writeManifest();
       }
     }
@@ -2124,29 +2108,14 @@ export class Version {
         lib.name.startsWith(AUTHLIB_INJECTOR_COORDINATES) &&
         lib.name !== authlib.name,
     );
-    const existsAuthlib = this.manifest.libraries.some(
-      (lib) => lib.name === authlib.name,
-    );
 
-    if (staleAuthlib.length > 0 || !existsAuthlib) {
+    if (staleAuthlib.length > 0) {
       this.manifest.libraries = this.manifest.libraries.filter(
         (lib) => !staleAuthlib.includes(lib),
       );
+    }
 
-      if (!existsAuthlib) {
-        this.manifest.libraries.push({
-          name: authlib.name,
-          downloads: {
-            artifact: {
-              url: authlib.url,
-              path: authlib.path,
-              size: authlib.size,
-              sha1: authlib.sha1,
-            },
-          },
-        });
-      }
-
+    if (syncAuthlibLibrary(this.manifest, authlib) || staleAuthlib.length > 0) {
       await this.writeManifest();
     }
 

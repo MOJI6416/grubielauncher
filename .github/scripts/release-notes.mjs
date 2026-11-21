@@ -296,7 +296,7 @@ function validate(notes, version) {
     return { errors: ["The file must be a JSON object"], warnings };
   }
 
-  const known = new Set(["version", "isMilestone", "links", ...LOCALES]);
+  const known = new Set(["version", "isMilestone", "quiet", "links", ...LOCALES]);
   for (const key of Object.keys(notes)) {
     if (!known.has(key)) errors.push(`Unknown field "${key}"`);
   }
@@ -304,6 +304,9 @@ function validate(notes, version) {
   if (!/^\d+\.\d+\.\d+$/.test(String(notes.version))) errors.push(`Version "${notes.version}" is not X.Y.Z`);
   if (notes.isMilestone !== undefined && typeof notes.isMilestone !== "boolean") {
     errors.push("isMilestone must be true or false");
+  }
+  if (notes.quiet !== undefined && typeof notes.quiet !== "boolean") {
+    errors.push("quiet must be true or false");
   }
   if (notes.links !== undefined) {
     if (!Array.isArray(notes.links)) {
@@ -395,8 +398,9 @@ function validate(notes, version) {
   }
 
   const cover = coverErrors(version);
-  if (cover === null) warnings.push(`No release-notes/covers/${version}.webp: the release will ship with cards without art`);
-  else errors.push(...cover);
+  if (cover === null) {
+    if (!notes.quiet) warnings.push(`No release-notes/covers/${version}.webp: the release will ship with cards without art`);
+  } else errors.push(...cover);
 
   return { errors, warnings };
 }
@@ -559,6 +563,7 @@ function printPreview(notes) {
     section(`Discord ветка «${threadName(notes)}», заблокирована (${locale.toUpperCase()}) — ${text.length}/${DISCORD_LIMIT}`, text);
   }
   console.log(`\nisMilestone: ${notes.isMilestone === true}`);
+  console.log(`quiet: ${notes.quiet === true}`);
 }
 
 function option(args, name) {
@@ -587,6 +592,10 @@ async function main() {
     const release = await findRelease(version);
     if (!release) fail(`No ${version} release on GitHub: the build did not create it`);
     await updateGithub(release, notes, true);
+    if (notes.quiet) {
+      console.log("Quiet release: What's New, the site and Discord are left alone");
+      return;
+    }
     const coverUrl = await publishToApi(notes, false);
     const image = githubCover(version) ?? coverUrl;
     if (image) await updateGithub(release, notes, false, image);
@@ -609,6 +618,10 @@ async function main() {
       const release = await findRelease(changed);
       if (!release || release.draft) {
         console.log(`${changed}: not published yet, Release Launcher will publish the texts`);
+        continue;
+      }
+      if (notes.quiet) {
+        await updateGithub(release, notes, false, githubCover(changed));
         continue;
       }
       const coverUrl = await publishToApi(notes, true);
