@@ -22,7 +22,12 @@ export interface ModTranslationPackInfo {
 
 export type ModTranslationGroup = "mods" | "packs" | "books" | "quests";
 
-export type ModTranslationFormat = "lavender" | "patchouli" | "ftbquests" | "questz";
+export type ModTranslationFormat =
+  | "lavender"
+  | "patchouli"
+  | "guideme"
+  | "ftbquests"
+  | "questz";
 
 export interface ModTranslationItem {
   group: ModTranslationGroup;

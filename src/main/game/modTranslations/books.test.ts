@@ -283,3 +283,72 @@ describe("book groups and units", () => {
     ]);
   });
 });
+
+describe("GuideME pages", () => {
+  const PAGE = [
+    "---",
+    "navigation:",
+    "  parent: ae2-mechanics/ae2-mechanics-index.md",
+    "  title: ME Controller",
+    "  icon: controller",
+    "categories:",
+    "- devices",
+    "item_ids:",
+    "- ae2:controller",
+    "---",
+    "",
+    "# The Controller",
+    "",
+    "<BlockImage id=\"controller\" scale=\"4\" />",
+    "",
+    "The controller routes channels, see [channels](../channels.md).",
+    "",
+    "<GameScene zoom=\"4\"",
+    "  interactive={true}>",
+    "  <ImportStructure src=\"controller.snbt\" />",
+    "</GameScene>",
+    "",
+    "```",
+    "code is not text",
+    "```",
+    "",
+    "- one cable",
+    "- two cables",
+  ].join("\n");
+
+  it("finds pages of AE2 and of guides built by mods like Powah", () => {
+    expect(parseBookPath("assets/ae2/ae2guide/items-blocks-machines/controller.md")).toMatchObject({
+      format: "guideme",
+      namespace: "ae2",
+      book: "ae2guide",
+      path: "items-blocks-machines/controller.md",
+      locale: null,
+    });
+    expect(parseBookPath("assets/powah/guides/powah/book/_ru_ru/index.md")).toMatchObject({
+      format: "guideme",
+      book: "guides/powah/book",
+      path: "index.md",
+      locale: "ru_ru",
+    });
+  });
+
+  it("translates the navigation title, headings and prose, nothing else", () => {
+    const doc: BookDoc = { format: "guideme", namespace: "ae2", book: "ae2guide", part: "entries", path: "controller.md", text: PAGE };
+    expect(Object.values(docSegments(doc))).toEqual([
+      "ME Controller",
+      "# The Controller",
+      "The controller routes channels, see [channels](../channels.md).",
+      "- one cable\n- two cables",
+    ]);
+    const keys = Object.keys(docSegments(doc));
+    const text = renderDoc(doc, {
+      [keys[0]]: "ME-контроллер",
+      [keys[1]]: "# Контроллер",
+    })!;
+    expect(text).toContain('  title: "ME-контроллер"');
+    expect(text).toContain("  parent: ae2-mechanics/ae2-mechanics-index.md");
+    expect(text).toContain("# Контроллер");
+    expect(text).toContain("code is not text");
+    expect(docOutputPath(doc, "ru_ru")).toBe("assets/ae2/ae2guide/_ru_ru/controller.md");
+  });
+});

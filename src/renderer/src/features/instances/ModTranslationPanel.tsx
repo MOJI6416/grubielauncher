@@ -56,6 +56,7 @@ const GROUP_IDS = GROUPS.map((group) => group.id);
 const FORMAT_LABELS: Record<ModTranslationFormat, string> = {
   lavender: "Lavender",
   patchouli: "Patchouli",
+  guideme: "GuideME",
   ftbquests: "FTB Quests",
   questz: "QuestZ",
 };

@@ -358,6 +358,7 @@ function unitFormat(unit: StoredUnit): ModTranslationFormat | null {
   if (unit.book === FTB_QUESTS_BOOK || unit.book === FTB_INLINE_BOOK) return "ftbquests";
   if (unit.book?.startsWith("lavender:")) return "lavender";
   if (unit.book?.startsWith("patchouli:")) return "patchouli";
+  if (unit.book?.startsWith("guideme:")) return "guideme";
   return unit.group === "quests" ? "questz" : null;
 }
 

@@ -2,7 +2,7 @@ import { lenientJson } from "./langFiles";
 import type { ModContext } from "./modContext";
 import { LangEntries, needsTranslation, unitHash } from "./unitHash";
 
-export type BookFormat = "lavender" | "patchouli";
+export type BookFormat = "lavender" | "patchouli" | "guideme";
 export type BookPart = "entries" | "categories";
 
 export interface BookDoc {
@@ -49,7 +49,7 @@ export interface PlannedBookUnit {
 }
 
 export const SOURCE_BOOK_LOCALE = "en_us";
-export const BOOK_FORMATS: readonly BookFormat[] = ["lavender", "patchouli"];
+export const BOOK_FORMATS: readonly BookFormat[] = ["lavender", "patchouli", "guideme"];
 export const MAX_BOOK_BYTES = 1024 * 1024;
 
 const MAX_SEGMENT_CHARS = 4000;
@@ -65,11 +65,28 @@ const PATCHOULI_PATH =
 const PATCHOULI_BOOK =
   /^data\/([a-z0-9_.-]+)\/patchouli_books\/([a-z0-9_.-]+)\/book\.json$/;
 const FRONTMATTER = /^(\s*```json[ \t]*\r?\n)([\s\S]*?)(\r?\n```[ \t]*)(?=\r?\n|$)/;
+const YAML_FRONTMATTER = /^(---[ \t]*\r?\n)([\s\S]*?)(\r?\n---[ \t]*)(?=\r?\n|$)/;
+const YAML_TITLE = /^([ \t]+title:[ \t]*)(.*?)[ \t]*$/m;
+const GUIDEME_PATH =
+  /^assets\/([a-z0-9_.-]+)\/(ae2guide|guides\/[a-z0-9_.-]+\/[a-z0-9_.-]+)\/(.+\.md)$/;
 const META_TITLE = /("title"\s*:\s*)("(?:[^"\\]|\\.)*")/;
 const LANG_KEY = /^[a-z0-9_-]+(?:\.[a-z0-9_-]+)+$/i;
 const PAGE_FIELDS = ["title", "text", "name"] as const;
 
 export function parseBookPath(name: string): BookPath | null {
+  const guide = GUIDEME_PATH.exec(name);
+  if (guide) {
+    const [, namespace, book, rest] = guide;
+    const localized = /^_([a-z]{2,3}_[a-z]{2,4})\/(.+)$/.exec(rest);
+    return {
+      format: "guideme",
+      namespace,
+      book,
+      part: "entries",
+      path: localized ? localized[2] : rest,
+      locale: localized ? localized[1] : null,
+    };
+  }
   const lavender = LAVENDER_PATH.exec(name);
   if (lavender) {
     const [, namespace, part, book, rest] = lavender;
@@ -117,6 +134,7 @@ export function parsePatchouliBookJson(
 }
 
 export function isSourceBookPath(path: BookPath): boolean {
+  if (path.format === "guideme") return path.locale === null;
   return path.format === "lavender"
     ? path.locale === null || path.locale === SOURCE_BOOK_LOCALE
     : path.locale === SOURCE_BOOK_LOCALE;
@@ -144,6 +162,9 @@ export const EXTERNAL_PATCHOULI_NAMESPACE = "patchouli_external";
 export function docOutputPath(doc: BookDoc, locale: string): string {
   if (doc.external) {
     return `${EXTERNAL_PATCHOULI_DIR}/${doc.book}/${locale}/${doc.part}/${doc.path}`;
+  }
+  if (doc.format === "guideme") {
+    return `assets/${doc.namespace}/${doc.book}/_${locale}/${doc.path}`;
   }
   return doc.format === "lavender"
     ? `assets/${doc.namespace}/lavender/${doc.part}/${doc.book}/${locale}/${doc.path}`
@@ -179,15 +200,39 @@ interface LavenderParts {
   runs: Array<{ start: number; end: number }>;
 }
 
-function lavenderParts(text: string): LavenderParts {
-  const front = FRONTMATTER.exec(text);
+function guideStructure(lines: string[]): boolean[] {
+  let fence = false;
+  let tag = false;
+  return lines.map((line) => {
+    const text = line.trim();
+    if (/^(```|~~~)/.test(text)) {
+      fence = !fence;
+      return true;
+    }
+    if (fence) return true;
+    if (tag) {
+      if (text.includes(">")) tag = false;
+      return true;
+    }
+    if (text.startsWith("<") && !text.includes(">")) {
+      tag = true;
+      return true;
+    }
+    return text.startsWith("|") || /^\{\/\*/.test(text) || structuralLine(line);
+  });
+}
+
+function lavenderParts(text: string, format: BookFormat = "lavender"): LavenderParts {
+  const front = (format === "guideme" ? YAML_FRONTMATTER : FRONTMATTER).exec(text);
   const body = front ? text.slice(front[0].length) : text;
   const eol = body.includes("\r\n") ? "\r\n" : "\n";
   const lines = body.split(/\r?\n/);
+  const structural =
+    format === "guideme" ? guideStructure(lines) : lines.map((line) => structuralLine(line));
   const runs: Array<{ start: number; end: number }> = [];
   let start = -1;
-  lines.forEach((line, index) => {
-    if (structuralLine(line)) {
+  lines.forEach((_line, index) => {
+    if (structural[index]) {
       if (start >= 0) runs.push({ start, end: index });
       start = -1;
     } else if (start < 0) {
@@ -205,7 +250,28 @@ function lavenderParts(text: string): LavenderParts {
   };
 }
 
-function metaTitle(meta: string | null): string | null {
+function yamlScalar(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  if (value.startsWith('"')) {
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === "string" ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  if (value.startsWith("'")) {
+    return value.length > 1 && value.endsWith("'") ? value.slice(1, -1).replace(/''/g, "'") : null;
+  }
+  return value.replace(/\s+#.*$/, "");
+}
+
+function metaTitle(meta: string | null, format: BookFormat = "lavender"): string | null {
+  if (format === "guideme") {
+    const match = meta ? YAML_TITLE.exec(meta) : null;
+    return match ? yamlScalar(match[2]) : null;
+  }
   const match = meta ? META_TITLE.exec(meta) : null;
   if (!match) return null;
   try {
@@ -221,10 +287,10 @@ function runKey(index: number): string {
 }
 
 function lavenderSegments(doc: BookDoc): LangEntries {
-  const parts = lavenderParts(doc.text);
+  const parts = lavenderParts(doc.text, doc.format);
   const prefix = docPrefix(doc);
   const entries: LangEntries = {};
-  const title = metaTitle(parts.meta);
+  const title = metaTitle(parts.meta, doc.format);
   if (worthTranslating(title)) entries[`${prefix}#title`] = title;
   parts.runs.forEach((run, index) => {
     const text = parts.lines.slice(run.start, run.end).join("\n");
@@ -234,12 +300,15 @@ function lavenderSegments(doc: BookDoc): LangEntries {
 }
 
 function renderLavender(doc: BookDoc, translations: LangEntries): string {
-  const parts = lavenderParts(doc.text);
+  const parts = lavenderParts(doc.text, doc.format);
   const prefix = docPrefix(doc);
   let meta = parts.meta;
   const title = translations[`${prefix}#title`];
   if (meta !== null && title !== undefined) {
-    meta = meta.replace(META_TITLE, (_all, key: string) => `${key}${JSON.stringify(title)}`);
+    meta = meta.replace(
+      doc.format === "guideme" ? YAML_TITLE : META_TITLE,
+      (_all, key: string) => `${key}${JSON.stringify(title)}`,
+    );
   }
   const lines = [...parts.lines];
   for (let index = parts.runs.length - 1; index >= 0; index--) {
@@ -326,15 +395,15 @@ function renderPatchouli(doc: BookDoc, translations: LangEntries): string {
 
 export function docSegments(doc: BookDoc): LangEntries {
   if (docPrefix(doc).length > MAX_KEY_CHARS) return {};
-  return doc.format === "lavender" ? lavenderSegments(doc) : patchouliSegments(doc);
+  return doc.format === "patchouli" ? patchouliSegments(doc) : lavenderSegments(doc);
 }
 
 export function renderDoc(doc: BookDoc, translations: LangEntries): string | null {
   const keys = Object.keys(docSegments(doc));
   if (!keys.some((key) => translations[key] !== undefined)) return null;
-  return doc.format === "lavender"
-    ? renderLavender(doc, translations)
-    : renderPatchouli(doc, translations);
+  return doc.format === "patchouli"
+    ? renderPatchouli(doc, translations)
+    : renderLavender(doc, translations);
 }
 
 export function installedBookFormats(
