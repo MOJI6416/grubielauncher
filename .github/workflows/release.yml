@@ -151,6 +151,24 @@ jobs:
         with:
           node-version: 22
 
+      - name: Sign update files
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "Секрета UPDATE_SIGNING_KEY в окружении update-signing нет: релиз подписывается вручную (docs/update-signing.md)."
+            exit 0
+          fi
+          umask 077
+          key_dir="$(mktemp -d "$RUNNER_TEMP/update-signing.XXXXXX")"
+          trap 'rm -rf "$key_dir"' EXIT
+          printf '%s\n' "$UPDATE_SIGNING_KEY" > "$key_dir/key.pem"
+          unset UPDATE_SIGNING_KEY
+          node .github/scripts/update-signing.mjs sign "$VERSION" --key "$key_dir/key.pem"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.notes.outputs.version }}
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          UPDATE_SIGNING_PASSPHRASE: ${{ secrets.UPDATE_SIGNING_PASSPHRASE }}
+
       - name: Check update signatures
         run: node .github/scripts/update-signing.mjs verify "${{ needs.notes.outputs.version }}"
         env:

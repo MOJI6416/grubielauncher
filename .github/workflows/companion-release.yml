@@ -1,0 +1,74 @@
+name: Companion Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Версия мода, как в теге v<версия> релиза grubie-companion (например, 2.0.0)
+        required: true
+        type: string
+      first_release:
+        description: Самый первый выпуск — манифеста на CDN ещё нет
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: companion-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: update-signing
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Download the mod release
+        run: node .github/scripts/companion-release.mjs download "$VERSION" --dir "$RUNNER_TEMP/companion-release"
+
+      - name: Prepare the manifest
+        run: |
+          if [ "$FIRST_RELEASE" = "true" ]; then
+            node .github/scripts/companion-release.mjs prepare "$VERSION" --dir "$RUNNER_TEMP/companion-release" --previous none
+          else
+            node .github/scripts/companion-release.mjs prepare "$VERSION" --dir "$RUNNER_TEMP/companion-release"
+          fi
+        env:
+          FIRST_RELEASE: ${{ inputs.first_release }}
+
+      - name: Sign the manifest
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::error::Секрета UPDATE_SIGNING_KEY в окружении update-signing нет. Подпишите и выложите вручную: api/ops/companion-release/README.md."
+            exit 1
+          fi
+          umask 077
+          key_dir="$(mktemp -d "$RUNNER_TEMP/update-signing.XXXXXX")"
+          trap 'rm -rf "$key_dir"' EXIT
+          printf '%s\n' "$UPDATE_SIGNING_KEY" > "$key_dir/key.pem"
+          unset UPDATE_SIGNING_KEY
+          node .github/scripts/companion-release.mjs sign --dir "$RUNNER_TEMP/companion-release" --key "$key_dir/key.pem"
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          UPDATE_SIGNING_PASSPHRASE: ${{ secrets.UPDATE_SIGNING_PASSPHRASE }}
+
+      - name: Publish through the api
+        run: node .github/scripts/companion-release.mjs publish --dir "$RUNNER_TEMP/companion-release"
+        env:
+          RELEASE_AGENT_TOKEN: ${{ secrets.RELEASE_AGENT_TOKEN }}
+
+      - name: Check what players get
+        run: node .github/scripts/companion-release.mjs verify --dir "$RUNNER_TEMP/companion-release" --own --jars

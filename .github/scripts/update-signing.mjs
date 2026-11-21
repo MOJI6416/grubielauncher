@@ -141,14 +141,14 @@ export function verifyUpdateYml(text, keys, expectedVersion) {
   return { ok: problems.length === 0, problems };
 }
 
-function readPrivateKey(keyPath) {
+export function readPrivateKey(keyPath) {
   const passphrase = process.env.UPDATE_SIGNING_PASSPHRASE || undefined;
   const key = createPrivateKey({ key: fs.readFileSync(keyPath), passphrase });
   if (key.asymmetricKeyType !== "ed25519") throw new Error(`${keyPath} is not an ed25519 key`);
   return key;
 }
 
-function assertKnownKey(privateKey) {
+export function assertKnownKey(privateKey) {
   const spki = createPublicKey(privateKey).export({ type: "spki", format: "der" }).toString("base64");
   const known = JSON.parse(fs.readFileSync(KEYS_FILE, "utf8")).keys.find((entry) => entry.spki === spki);
   if (!known) {
