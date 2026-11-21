@@ -5757,7 +5757,11 @@
         "failed": "Fehlgeschlagen"
       },
       "refresh": "Aktualisieren",
-      "openPack": "Seite des Pakets öffnen"
+      "openPack": "Seite des Pakets öffnen",
+      "status": {
+        "working": "Die KI übersetzt den Rest",
+        "ready": "Die Übersetzung ist fertig"
+      }
     }
   },
   "configs": {
@@ -7904,7 +7908,8 @@
       "none": "Fortschritt auf Servern zählt nur mit dem Begleit-Mod. Schalten Sie ihn in den Einstellungen der Instanz ein",
       "counted_one": "Fortschritt von {{count}} Server wird über den Begleit-Mod gezählt",
       "counted_other": "Fortschritt von {{count}} Servern wird über den Begleit-Mod gezählt"
-    }
+    },
+    "learnMore": "Mehr über den Mod auf der Website"
   },
   "gamepad": {
     "connected": "Gamepad verbunden",

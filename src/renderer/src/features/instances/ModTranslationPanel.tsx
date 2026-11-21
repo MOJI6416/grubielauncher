@@ -12,6 +12,7 @@ import {
   Package,
   RotateCw,
   ScrollText,
+  Sparkles,
   TriangleAlert,
   X,
   type LucideIcon,
@@ -38,8 +39,10 @@ import type {
   ModTranslationItem,
 } from "@/types/ModTranslations";
 import {
-  describeTranslation,
+  translationOverview,
   useModTranslationStatus,
+  type TranslationChipId,
+  type TranslationOverview,
 } from "./useModTranslationStatus";
 
 const api = window.api;
@@ -52,6 +55,34 @@ const GROUPS: Array<{ id: ModTranslationGroup; icon: LucideIcon }> = [
 ];
 
 const GROUP_IDS = GROUPS.map((group) => group.id);
+
+const CHIP_ICONS: Record<TranslationChipId, LucideIcon> = {
+  packs: Package,
+  ai: Sparkles,
+  queue: Clock3,
+};
+
+function OverviewIcon({
+  overview,
+  locked,
+  enabled,
+}: {
+  overview: TranslationOverview;
+  locked: boolean;
+  enabled: boolean;
+}) {
+  if (locked || overview.tone === "warning") {
+    return <TriangleAlert className="size-4 shrink-0 text-warning" />;
+  }
+  if (overview.active) {
+    return <RotateCw className="size-4 shrink-0 animate-spin text-muted-foreground" />;
+  }
+  if (!enabled) return <Languages className="size-4 shrink-0 text-faint" />;
+  if (overview.chips.some((chip) => chip.id === "queue")) {
+    return <Clock3 className="size-4 shrink-0 text-info" />;
+  }
+  return <CircleCheck className="size-4 shrink-0 text-success" />;
+}
 
 const FORMAT_LABELS: Record<ModTranslationFormat, string> = {
   lavender: "Lavender",
@@ -142,7 +173,9 @@ export function ModTranslationPanel({
   const current = byGroup(selected);
   const currentTotals = totalsOf(current);
   const packs = status?.packs ?? [];
-  const line = describeTranslation(status, t);
+  const overview = translationOverview(status, t);
+  const headline = lockedReason ?? overview.headline;
+  const warning = !!lockedReason || overview.tone === "warning";
   const strings = (count: number) =>
     t("modTranslations.panel.strings", { count, value: formatNumber(count) });
 
@@ -165,6 +198,53 @@ export function ModTranslationPanel({
           <X />
           {t("common.close")}
         </Button>
+      </div>
+
+      <div className="flex h-11 shrink-0 items-center gap-2.5 rounded-xl border border-border bg-card pr-2 pl-3.5">
+        <OverviewIcon overview={overview} locked={!!lockedReason} enabled={enabled} />
+        <Hint content={headline} variant="text" truncatedOnly>
+          <span
+            aria-live="polite"
+            className={cn(
+              "min-w-0 flex-1 truncate text-sm",
+              warning ? "text-warning" : "text-foreground",
+            )}
+          >
+            {headline}
+          </span>
+        </Hint>
+        {overview.chips.map((chip) => {
+          const Icon = CHIP_ICONS[chip.id];
+          return (
+            <span
+              key={chip.id}
+              className="flex h-6 shrink-0 items-center gap-1.5 rounded-md bg-surface-3 px-2 text-2xs whitespace-nowrap text-muted-foreground tabular-nums"
+            >
+              <Icon className="size-3" />
+              {chip.text}
+            </span>
+          );
+        })}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="shrink-0 text-muted-foreground"
+          disabled={!enabled || refreshing || busy || !!lockedReason}
+          onClick={refresh}
+        >
+          <RotateCw className={cn(refreshing && "animate-spin")} />
+          {t("modTranslations.panel.refresh")}
+        </Button>
+        <span className="h-5 w-px shrink-0 bg-border" />
+        <label className="flex shrink-0 items-center gap-2 pl-1 text-xs text-muted-foreground">
+          <Switch
+            disabled={switching || !status || !!lockedReason}
+            checked={enabled}
+            onCheckedChange={toggle}
+          />
+          {t("modTranslations.title")}
+        </label>
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,280px)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-3">
@@ -368,39 +448,6 @@ export function ModTranslationPanel({
             </ul>
           )}
         </section>
-      </div>
-
-      <div className="flex h-9 shrink-0 items-center gap-2">
-        <Hint content={lockedReason ?? line.text} variant="text" truncatedOnly>
-          <span
-            className={cn(
-              "min-w-0 flex-1 truncate text-xs",
-              lockedReason || line.tone === "warning"
-                ? "text-warning"
-                : "text-muted-foreground",
-            )}
-          >
-            {lockedReason ?? line.text}
-          </span>
-        </Hint>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={!enabled || refreshing || busy || !!lockedReason}
-          onClick={refresh}
-        >
-          <RotateCw className={cn(refreshing && "animate-spin")} />
-          {t("modTranslations.panel.refresh")}
-        </Button>
-        <label className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-          <Switch
-            disabled={switching || !status || !!lockedReason}
-            checked={enabled}
-            onCheckedChange={toggle}
-          />
-          {t("modTranslations.title")}
-        </label>
       </div>
     </div>
   );

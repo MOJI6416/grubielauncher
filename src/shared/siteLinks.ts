@@ -25,6 +25,13 @@ export function buildPackUrl(code: string): string {
   return `${SITE_URL}/pack/${encodeURIComponent(code.trim())}`;
 }
 
+const SITE_LOCALES = new Set(["en", "ru", "uk", "de", "es", "fr", "pl", "pt", "tr"]);
+
+export function buildCompanionUrl(language: string | null | undefined): string {
+  const code = (language ?? "").toLowerCase().split("-")[0];
+  return `${SITE_URL}/${SITE_LOCALES.has(code) ? code : "en"}#companion`;
+}
+
 export interface RpcButton {
   label: string;
   url: string;

@@ -1,5 +1,6 @@
-import { Suspense, useMemo, useState } from "react";
-import { useAtomValue, useSetAtom } from "jotai";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { translationPanelRequestAtom } from "@renderer/features/instances/translationActivity";
 import { useTranslation } from "react-i18next";
 import {
   CircleCheck,
@@ -161,6 +162,9 @@ export function InstanceScreen({
   const [isOptiFinePanelOpen, setIsOptiFinePanelOpen] = useState(false);
   const [isTranslationPanelOpen, setIsTranslationPanelOpen] = useState(false);
   const [isTagsOpen, setIsTagsOpen] = useState(false);
+  const [translationPanelRequest, setTranslationPanelRequest] = useAtom(
+    translationPanelRequestAtom,
+  );
 
   const routeTab =
     currentRoute.name === "instance" ? currentRoute.tab : undefined;
@@ -219,6 +223,15 @@ export function InstanceScreen({
 
   const contents = useInstanceContents(version?.versionPath);
   const modpackState = useModpackSource(version, isInternetOnline);
+
+  useEffect(() => {
+    if (!version || translationPanelRequest !== version.versionPath) return;
+    setTranslationPanelRequest(null);
+    setIsLoaderPanelOpen(false);
+    setIsJarPanelOpen(false);
+    setIsOptiFinePanelOpen(false);
+    setIsTranslationPanelOpen(true);
+  }, [version, translationPanelRequest, setTranslationPanelRequest]);
   const bisectSession = useBisectSession(version?.versionPath);
   const setVersions = useSetAtom(versionsAtom);
   const updateDetails = useInstanceUpdateDetails(version);

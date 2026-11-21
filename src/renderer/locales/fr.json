@@ -5811,7 +5811,11 @@
         "failed": "Échec"
       },
       "refresh": "Actualiser",
-      "openPack": "Ouvrir la page du pack"
+      "openPack": "Ouvrir la page du pack",
+      "status": {
+        "working": "L’IA traduit le reste",
+        "ready": "La traduction est prête"
+      }
     }
   },
   "configs": {
@@ -8002,7 +8006,8 @@
       "counted_one": "La progression de {{count}} serveur est prise en compte via le mod compagnon",
       "counted_many": "La progression de {{count}} serveurs est prise en compte via le mod compagnon",
       "counted_other": "La progression de {{count}} serveurs est prise en compte via le mod compagnon"
-    }
+    },
+    "learnMore": "En savoir plus sur le mod sur le site"
   },
   "gamepad": {
     "connected": "Manette connectée",

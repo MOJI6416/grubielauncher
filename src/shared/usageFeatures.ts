@@ -171,6 +171,7 @@ export const USAGE_FEATURES = [
   "companion.voice",
   "companion.ptt",
   "companion.screenshot",
+  "companion.site",
   "share.entry",
   "friends.add",
   "friends.accept",

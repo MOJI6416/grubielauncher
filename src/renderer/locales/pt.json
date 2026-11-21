@@ -5811,7 +5811,11 @@
         "failed": "Falhou"
       },
       "refresh": "Atualizar",
-      "openPack": "Abrir a página do pacote"
+      "openPack": "Abrir a página do pacote",
+      "status": {
+        "working": "A IA está traduzindo o resto",
+        "ready": "A tradução está pronta"
+      }
     }
   },
   "configs": {
@@ -7998,7 +8002,8 @@
       "counted_one": "O progresso de {{count}} servidor é contado pelo mod complementar",
       "counted_many": "O progresso de {{count}} servidores é contado pelo mod complementar",
       "counted_other": "O progresso de {{count}} servidores é contado pelo mod complementar"
-    }
+    },
+    "learnMore": "Mais sobre o mod no site"
   },
   "gamepad": {
     "connected": "Controle conectado",

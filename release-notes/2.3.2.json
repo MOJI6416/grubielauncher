@@ -1,0 +1,38 @@
+{
+  "version": "2.3.2",
+  "isMilestone": false,
+  "quiet": true,
+  "en": {
+    "subtitle": "Mod translation that keeps you posted and a tidier instance settings screen.",
+    "highlights": [
+      "Improved mod translation: progress now shows in the Now block, and the translation panel keeps its status at the top without flickering.",
+      "Added a button next to the companion mod that opens its page on the website."
+    ],
+    "fixes": [
+      "Large modpack texts such as the ATM9 quest book no longer get stuck in the AI translation queue.",
+      "Instance settings scroll when there are unsaved changes, and “Use launcher value” for memory sits next to the title."
+    ]
+  },
+  "ru": {
+    "subtitle": "Перевод модов, за которым легко следить, и аккуратнее настройки сборки.",
+    "highlights": [
+      "Улучшен перевод модов: прогресс виден в блоке «Сейчас», а статус в панели перевода стоит сверху и больше не мигает.",
+      "Добавлена кнопка у компаньон-мода, которая открывает его описание на сайте."
+    ],
+    "fixes": [
+      "Большие тексты сборок, например книга квестов ATM9, больше не зависают в очереди ИИ-перевода.",
+      "Настройки сборки прокручиваются, когда есть несохранённые изменения, а «Сбросить к общему» у памяти стоит рядом с заголовком."
+    ]
+  },
+  "uk": {
+    "subtitle": "Переклад модів, за яким легко стежити, і охайніші налаштування збірки.",
+    "highlights": [
+      "Покращено переклад модів: прогрес видно в блоці «Зараз», а статус у панелі перекладу стоїть угорі й більше не блимає.",
+      "Додано кнопку біля мод-компаньйона, яка відкриває його опис на сайті."
+    ],
+    "fixes": [
+      "Великі тексти збірок, наприклад книга квестів ATM9, більше не зависають у черзі ШІ-перекладу.",
+      "Налаштування збірки прокручуються, коли є незбережені зміни, а «Скинути до спільного» для пам’яті стоїть поруч із заголовком."
+    ]
+  }
+}

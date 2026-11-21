@@ -1,8 +1,9 @@
 import { ReactNode, useMemo } from "react";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import {
   HardDriveDownload,
+  Languages,
   Radio,
   Server as ServerIcon,
   Sparkles,
@@ -54,6 +55,14 @@ import {
   shareEntryStage,
 } from "@renderer/features/share/shareModel";
 import { countFeature } from "@renderer/features/usage/usage";
+import {
+  isTranslationActive,
+  translationPanelRequestAtom,
+  translationPercent,
+  translationStatusesAtom,
+  useTranslationActivityFeed,
+} from "@renderer/features/instances/translationActivity";
+import { translationOverview } from "@renderer/features/instances/useModTranslationStatus";
 
 const SHARE_TONE_CLASS = {
   success: "text-success",
@@ -164,7 +173,10 @@ export function NowBlock() {
   const progress = useAtomValue(installProgressAtom);
   const agentChat = useAtomValue(agentChatAtom);
   const runningServers = useAtomValue(runningServersAtom);
+  const translationStatuses = useAtomValue(translationStatusesAtom);
+  const setTranslationPanelRequest = useSetAtom(translationPanelRequestAtom);
   const { t } = useTranslation();
+  useTranslationActivityFeed();
 
   const running = useMemo(
     () => consoleMetas.filter((meta) => meta.status === "running").slice(0, 3),
@@ -259,6 +271,34 @@ export function NowBlock() {
             : clampPercent(progress.progressPercent)
         }
         onClick={() => openTaskCenter()}
+      />,
+    );
+  }
+
+  const translating = versions
+    .map((version) => ({ version, status: translationStatuses[version.versionPath] }))
+    .filter(({ status }) => status && isTranslationActive(status))
+    .slice(0, 3);
+
+  for (const { version, status } of translating) {
+    const percent = translationPercent(status);
+    rows.push(
+      <NowRow
+        key={`translation-${version.versionPath}`}
+        tone="text-info"
+        icon={<Languages className="size-4" />}
+        label={version.version.name}
+        detail={percent === null ? undefined : `${percent}%`}
+        caption={translationOverview(status, t).headline}
+        progress={percent}
+        onClick={() => {
+          setTranslationPanelRequest(version.versionPath);
+          navigate({
+            name: "instance",
+            id: instanceKey(version),
+            tab: "settings",
+          });
+        }}
       />,
     );
   }

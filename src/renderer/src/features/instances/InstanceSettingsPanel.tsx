@@ -131,6 +131,16 @@ function SettingLine({
 }) {
   const { t } = useTranslation();
   const showReset = overridden && !!onReset;
+  const reset = showReset && (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onReset}
+      className="shrink-0 rounded-sm text-2xs whitespace-nowrap text-info underline-offset-2 transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+    >
+      {t("instanceSettings.resetToGlobal")}
+    </button>
+  );
 
   return (
     <div className="flex flex-col gap-1.5 px-3 py-2">
@@ -144,32 +154,22 @@ function SettingLine({
         <Hint content={title} variant="text" truncatedOnly>
           <span className="min-w-0 flex-1 truncate text-sm">{title}</span>
         </Hint>
+        {!hint && reset}
         {control && <div className="flex shrink-0 items-center">{control}</div>}
       </div>
 
-      {(hint || showReset) && (
+      {hint && (
         <div className="flex min-w-0 items-center gap-2 pl-6 text-2xs">
           {typeof hint === "string" ? (
             <Hint content={hint} variant="text" truncatedOnly>
               <span className="min-w-0 flex-1 truncate text-faint">{hint}</span>
             </Hint>
-          ) : hint ? (
+          ) : (
             <span className="min-w-0 flex-1 overflow-hidden text-faint">
               {hint}
             </span>
-          ) : (
-            <span className="flex-1" />
           )}
-          {showReset && (
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={onReset}
-              className="shrink-0 rounded-sm whitespace-nowrap text-info underline-offset-2 transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-            >
-              {t("instanceSettings.resetToGlobal")}
-            </button>
-          )}
+          {reset}
         </div>
       )}
 
@@ -289,7 +289,7 @@ export function InstanceSettingsPanel({
 
   return (
     <div className="grid h-full min-h-0 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-3">
-      <div className="flex min-h-0 flex-col gap-3">
+      <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
         {loaderCard}
 
         <SectionCard
@@ -458,7 +458,7 @@ export function InstanceSettingsPanel({
 
       </div>
 
-      <div className="flex min-h-0 flex-col gap-3">
+      <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
         <SectionCard
           title={t("instanceSettings.groups.compatibility")}
           icon={Coffee}

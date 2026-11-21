@@ -5757,7 +5757,11 @@
         "failed": "Başarısız"
       },
       "refresh": "Yenile",
-      "openPack": "Paketin sayfasını aç"
+      "openPack": "Paketin sayfasını aç",
+      "status": {
+        "working": "Yapay zekâ kalanını çeviriyor",
+        "ready": "Çeviri hazır"
+      }
     }
   },
   "configs": {
@@ -7904,7 +7908,8 @@
       "none": "Sunuculardaki ilerleme yalnızca yardımcı modla sayılır. Onu örnek ayarlarından açın",
       "counted_one": "{{count}} sunucudaki ilerleme yardımcı mod üzerinden sayıldı",
       "counted_other": "{{count}} sunucudaki ilerleme yardımcı mod üzerinden sayıldı"
-    }
+    },
+    "learnMore": "Mod hakkında web sitesinde daha fazlası"
   },
   "gamepad": {
     "connected": "Oyun kumandası bağlandı",

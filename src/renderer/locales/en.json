@@ -5757,7 +5757,11 @@
         "failed": "Failed"
       },
       "refresh": "Refresh",
-      "openPack": "Open the pack's page"
+      "openPack": "Open the pack's page",
+      "status": {
+        "working": "AI is translating the rest",
+        "ready": "Translation is ready"
+      }
     }
   },
   "configs": {
@@ -7904,7 +7908,8 @@
       "none": "Progress on servers counts only with the companion mod. Turn it on in the instance settings",
       "counted_one": "Progress from {{count}} server is counted through the companion mod",
       "counted_other": "Progress from {{count}} servers is counted through the companion mod"
-    }
+    },
+    "learnMore": "About the mod on the website"
   },
   "gamepad": {
     "connected": "Gamepad connected",

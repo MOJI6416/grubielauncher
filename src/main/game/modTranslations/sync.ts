@@ -132,6 +132,7 @@ const BOOKS_VERSION = 1;
 const LOOKUP_BATCH = 100;
 const SUBMIT_BATCH_UNITS = 40;
 const SUBMIT_BATCH_CHARS = 400_000;
+const PERMANENT_REJECTIONS = new Set([UNSUPPORTED_REASON, "invalid", "hash"]);
 const SCAN_CONCURRENCY = 4;
 const POLL_INTERVAL_MS = 90_000;
 const WATCHED_POLL_INTERVAL_MS = 10_000;
@@ -867,7 +868,7 @@ async function submitUnits(
         })),
       );
       for (const entry of result.rejected ?? []) {
-        if (entry.reason === UNSUPPORTED_REASON) unsupported.push(entry.hash);
+        if (PERMANENT_REJECTIONS.has(entry.reason)) unsupported.push(entry.hash);
       }
       if (result.rejected?.some((entry) => entry.reason === "quota")) {
         quota = true;

@@ -6,6 +6,7 @@ import {
   modNamespaces,
   planUnits,
   preferPackEnglish,
+  splitUnitEntries,
   translationPackFiles,
 } from "./plan";
 import { needsTranslation, unitHash } from "./unitHash";
@@ -37,6 +38,41 @@ describe("unitHash", () => {
     expect(needsTranslation("Copper Gear")).toBe(true);
     expect(needsTranslation("%s / %s")).toBe(false);
     expect(needsTranslation("create:brass")).toBe(false);
+  });
+});
+
+describe("splitUnitEntries", () => {
+  const quests = (count: number, text = "Collect the ore and bring it back") =>
+    Object.fromEntries(
+      Array.from({ length: count }, (_, index) => [`atm9.quest.${index}.description`, text]),
+    );
+
+  it("leaves a unit the api accepts in one piece", () => {
+    const entries = quests(6000);
+    expect(splitUnitEntries(entries)).toEqual([entries]);
+  });
+
+  it("splits a namespace over the api limits into stable parts that fit them", () => {
+    const entries = quests(7248, "x".repeat(88));
+    const parts = splitUnitEntries(entries);
+    expect(parts.length).toBe(3);
+    expect(parts.flatMap((part) => Object.keys(part)).sort()).toEqual(Object.keys(entries).sort());
+    for (const part of parts) {
+      expect(Object.keys(part).length).toBeLessThanOrEqual(6000);
+      expect(Object.values(part).join("").length).toBeLessThanOrEqual(400_000);
+    }
+
+    const grown = { ...entries, "atm9.quest.new.title": "x".repeat(88) };
+    const changed = splitUnitEntries(grown).filter(
+      (part) => !parts.some((old) => unitHash(old) === unitHash(part)),
+    );
+    expect(changed).toHaveLength(1);
+  });
+
+  it("gives each part of a big namespace its own planned unit", () => {
+    const units = planUnits([[lang("kubejs", quests(7248, "x".repeat(88)))]], new Set());
+    expect(units.map((unit) => unit.namespace)).toEqual(["kubejs", "kubejs", "kubejs"]);
+    expect(units.reduce((sum, unit) => sum + Object.keys(unit.entries).length, 0)).toBe(7248);
   });
 });
 

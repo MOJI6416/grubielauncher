@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import type { NamespaceLang } from "./jarScan";
 import { LangFormat, langFileName, serializeLangFile } from "./langFiles";
 import type { ModContext } from "./modContext";
@@ -13,6 +14,23 @@ export interface PlannedUnit {
 }
 
 const IGNORED_NAMESPACES = new Set(["minecraft", "realms"]);
+const UNIT_MAX_KEYS = 6000;
+const UNIT_MAX_CHARS = 600_000;
+const PART_KEYS = 4000;
+const PART_CHARS = 250_000;
+
+export function splitUnitEntries(entries: LangEntries): LangEntries[] {
+  const keys = Object.keys(entries);
+  const chars = keys.reduce((sum, key) => sum + entries[key].length, 0);
+  if (keys.length <= UNIT_MAX_KEYS && chars <= UNIT_MAX_CHARS) return [entries];
+  const parts = Math.max(Math.ceil(keys.length / PART_KEYS), Math.ceil(chars / PART_CHARS));
+  const buckets: LangEntries[] = Array.from({ length: parts }, () => ({}));
+  for (const key of keys) {
+    const bucket = createHash("sha1").update(key).digest().readUInt32BE(0) % parts;
+    buckets[bucket][key] = entries[key];
+  }
+  return buckets.filter((bucket) => Object.keys(bucket).length > 0);
+}
 
 export function modNamespaces(jars: NamespaceLang[][]): string[] {
   const names = new Set<string>();
@@ -71,13 +89,14 @@ export function planUnits(
         }
       }
       if (Object.keys(entries).length === 0) continue;
-      const hash = unitHash(entries);
-      if (!units.has(hash)) {
+      for (const part of splitUnitEntries(entries)) {
+        const hash = unitHash(part);
+        if (units.has(hash)) continue;
         units.set(hash, {
           hash,
           namespace: lang.namespace,
           format: lang.format,
-          entries,
+          entries: part,
           ...(lang.context ? { context: lang.context } : {}),
           ...(lang.origin ? { origin: lang.origin } : {}),
         });

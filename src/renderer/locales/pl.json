@@ -5862,7 +5862,11 @@
         "failed": "Nie udało się"
       },
       "refresh": "Odśwież",
-      "openPack": "Otwórz stronę paczki"
+      "openPack": "Otwórz stronę paczki",
+      "status": {
+        "working": "AI tłumaczy resztę",
+        "ready": "Tłumaczenie jest gotowe"
+      }
     }
   },
   "configs": {
@@ -8097,7 +8101,8 @@
       "counted_few": "Uwzględniono postęp z {{count}} serwerów przez mod towarzyszący",
       "counted_many": "Uwzględniono postęp z {{count}} serwerów przez mod towarzyszący",
       "counted_other": "Uwzględniono postęp z {{count}} serwera przez mod towarzyszący"
-    }
+    },
+    "learnMore": "Więcej o modzie na stronie"
   },
   "gamepad": {
     "connected": "Pad podłączony",

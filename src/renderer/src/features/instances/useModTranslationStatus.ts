@@ -133,7 +133,10 @@ export function describeTranslation(
     case "packs":
       return { text: t("modTranslations.packs"), tone: "muted" };
     case "translating":
-      return { text: t("modTranslations.translating"), tone: "muted" };
+      if (!status.updatedAt) {
+        return { text: t("modTranslations.translating"), tone: "muted" };
+      }
+      break;
     case "building":
       return { text: t("modTranslations.building"), tone: "muted" };
     case "deferred":
@@ -170,5 +173,94 @@ export function describeTranslation(
   return {
     text: parts.join(" · "),
     tone: status.error || status.needsAccount ? "warning" : "muted",
+  };
+}
+
+export type TranslationChipId = "packs" | "ai" | "queue";
+
+export interface TranslationOverview {
+  headline: string;
+  tone: "muted" | "warning" | "success";
+  active: boolean;
+  chips: Array<{ id: TranslationChipId; text: string }>;
+}
+
+function stageText(status: ModTranslationStatus, t: TFunction): string | null {
+  switch (status.stage) {
+    case "scanning":
+      return t("modTranslations.scanning", {
+        done: status.progress?.done ?? 0,
+        total: status.progress?.total ?? status.mods,
+      });
+    case "packs":
+      return t("modTranslations.packs");
+    case "translating":
+      return status.updatedAt ? null : t("modTranslations.translating");
+    case "building":
+      return t("modTranslations.building");
+    default:
+      return null;
+  }
+}
+
+function capitalized(text: string): string {
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1);
+}
+
+export function translationOverview(
+  status: ModTranslationStatus | null,
+  t: TFunction,
+): TranslationOverview {
+  if (!status || !status.enabled) {
+    return { headline: t("modTranslations.hintOff"), tone: "muted", active: false, chips: [] };
+  }
+
+  const chips: TranslationOverview["chips"] = [];
+  if (status.packs.length > 0) {
+    chips.push({ id: "packs", text: t("modTranslations.packsCount", { count: status.packs.length }) });
+  }
+  if (status.translated > 0) {
+    chips.push({ id: "ai", text: t("modTranslations.aiCount", { count: status.translated }) });
+  }
+  if (status.pending > 0) {
+    chips.push({ id: "queue", text: capitalized(t("modTranslations.waiting", { count: status.pending })) });
+  }
+
+  const stage = stageText(status, t);
+  if (stage) return { headline: stage, tone: "muted", active: true, chips };
+  if (status.stage === "deferred") {
+    return { headline: t("modTranslations.deferred"), tone: "muted", active: false, chips };
+  }
+  if (status.error === "quota" && status.retryAt) {
+    const seconds = Math.max(60, Math.round((status.retryAt - Date.now()) / 1000));
+    return {
+      headline: t("modTranslations.errorQuotaUntil", { time: formatDuration(seconds) }),
+      tone: "warning",
+      active: false,
+      chips,
+    };
+  }
+  if (status.error) {
+    return {
+      headline: t(ERROR_KEYS[status.error] ?? "modTranslations.errorInternal"),
+      tone: "warning",
+      active: false,
+      chips,
+    };
+  }
+  if (status.needsAccount) {
+    return { headline: capitalized(t("modTranslations.needsAccount")), tone: "warning", active: false, chips };
+  }
+  if (status.pending > 0) {
+    return { headline: t("modTranslations.panel.status.working"), tone: "muted", active: false, chips };
+  }
+  if (!status.updatedAt) {
+    return { headline: t("modTranslations.hintOff"), tone: "muted", active: false, chips };
+  }
+  return {
+    headline: chips.length > 0 ? t("modTranslations.panel.status.ready") : t("modTranslations.nothing"),
+    tone: "success",
+    active: false,
+    chips,
   };
 }

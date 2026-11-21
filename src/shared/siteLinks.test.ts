@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DISCORD_INVITE_URL,
   DOWNLOAD_URL,
+  buildCompanionUrl,
   buildPackUrl,
   buildProfileUrl,
   buildRpcButtons,
@@ -47,6 +48,15 @@ describe("pack link", () => {
     expect(buildPackUrl("ABCD-EFGH")).toBe(
       "https://grubielauncher.com/pack/ABCD-EFGH",
     );
+  });
+});
+
+describe("companion link", () => {
+  it("opens the mod's block on the home page in the player's language", () => {
+    expect(buildCompanionUrl("ru")).toBe("https://grubielauncher.com/ru#companion");
+    expect(buildCompanionUrl("pt-BR")).toBe("https://grubielauncher.com/pt#companion");
+    expect(buildCompanionUrl("ja")).toBe("https://grubielauncher.com/en#companion");
+    expect(buildCompanionUrl(undefined)).toBe("https://grubielauncher.com/en#companion");
   });
 });
 
