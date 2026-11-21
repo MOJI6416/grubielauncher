@@ -40,7 +40,11 @@ import {
 import { PackCoverage, scanPackCoverage, scanSource, SourceScan } from "./jarScan";
 import { langFormatFor } from "./langFiles";
 import type { ModContext } from "./modContext";
-import { ContentSource, listModpackPacks } from "./packSources";
+import {
+  ContentSource,
+  listModpackPacks,
+  PLAYER_PACK_FOLDER,
+} from "./packSources";
 import {
   applyQuestzRewrite,
   QUESTZ_KEY_PREFIX,
@@ -63,6 +67,7 @@ import {
   chunkBySize,
   modNamespaces,
   planUnits,
+  preferPackEnglish,
   translationPackFiles,
 } from "./plan";
 import {
@@ -1085,20 +1090,30 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
       const scanned = (
         await scanSources(versionPath, sources, packIds, locale)
       ).map((scan, index) =>
-        packIds.has(sources[index].id)
-          ? {
-              ...scan,
-              namespaces: scan.namespaces.map((lang) => ({
-                ...lang,
-                origin: "pack" as const,
-              })),
-            }
-          : scan,
+        !packIds.has(sources[index].id)
+          ? scan
+          : sources[index].id.startsWith(`pack:${PLAYER_PACK_FOLDER}/`)
+            ? {
+                ...scan,
+                translatedDocs: [],
+                namespaces: scan.namespaces.map((lang) => ({
+                  ...lang,
+                  translatedKeys: [],
+                  origin: "pack" as const,
+                })),
+              }
+            : {
+                ...scan,
+                namespaces: scan.namespaces.map((lang) => ({
+                  ...lang,
+                  origin: "pack" as const,
+                })),
+              },
       );
-      const langs = [
+      const langs = preferPackEnglish([
         ...scanned.map((scan) => scan.namespaces),
         ...(questzLang ? [[questzLang]] : []),
-      ];
+      ]);
       const namespaces = modNamespaces(langs);
 
       setStage(versionPath, "packs");

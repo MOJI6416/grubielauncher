@@ -32,6 +32,36 @@ function contextOf(name: unknown, description: unknown): ModContext | null {
     : { name: cleanName };
 }
 
+function escapeControlInStrings(text: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+  for (const char of text) {
+    if (!inString) {
+      if (char === '"') inString = true;
+      out += char;
+    } else if (escaped) {
+      escaped = false;
+      out += char;
+    } else if (char === "\\") {
+      escaped = true;
+      out += char;
+    } else if (char === '"') {
+      inString = false;
+      out += char;
+    } else if (char === "\n") {
+      out += "\\n";
+    } else if (char === "\r") {
+      out += "\\r";
+    } else if (char === "\t") {
+      out += "\\t";
+    } else {
+      out += char;
+    }
+  }
+  return out;
+}
+
 function lenientJson(text: string): unknown {
   const body = text.replace(/^﻿/, "");
   try {
@@ -39,7 +69,9 @@ function lenientJson(text: string): unknown {
   } catch {
     try {
       return JSON.parse(
-        body.replace(/^\s*\/\/.*$/gm, "").replace(/,(\s*[}\]])/g, "$1"),
+        escapeControlInStrings(
+          body.replace(/^\s*\/\/.*$/gm, "").replace(/,(\s*[}\]])/g, "$1"),
+        ),
       );
     } catch {
       return null;
@@ -82,7 +114,7 @@ export function contextFromMcmodInfo(text: string): ModContext | null {
 const TOML_BASIC = /^"((?:[^"\\\r\n]|\\.)*)"/;
 const TOML_KEY = /^[ \t]*([A-Za-z0-9_-]+)[ \t]*=[ \t]*/gm;
 const TOML_HEADER = /^\s*\[/m;
-const TOML_MODS = /^\s*\[\[\s*mods\s*\]\]\s*$/m;
+const TOML_MODS = /^\s*\[\[\s*mods\s*\]\]\s*(?:#.*)?$/m;
 
 function tomlString(
   text: string,

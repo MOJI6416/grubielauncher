@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { NamespaceLang } from "./jarScan";
 import { parseLangFile, parseLangPath } from "./langFiles";
-import { chunkBySize, modNamespaces, planUnits, translationPackFiles } from "./plan";
+import {
+  chunkBySize,
+  modNamespaces,
+  planUnits,
+  preferPackEnglish,
+  translationPackFiles,
+} from "./plan";
 import { needsTranslation, unitHash } from "./unitHash";
 import {
   modTranslationLocale,
@@ -76,6 +82,26 @@ describe("planUnits", () => {
     expect(modNamespaces([[lang("minecraft", {})], [lang("lib", same)]])).toEqual([
       "lib",
     ]);
+  });
+});
+
+describe("preferPackEnglish", () => {
+  it("translates the English a modpack's pack shows instead of the jar's", () => {
+    const jar = lang("lumymon", {
+      "welcome.lumymon.title": "COBBLEVERSE 1.7.40",
+      "welcome.lumymon.other": "Kept",
+    });
+    const pack = {
+      ...lang("cobbleverse", { "welcome.lumymon.title": "COBBLEVERSE 1.8.0" }),
+      origin: "pack" as const,
+    };
+
+    const [jars, packs] = preferPackEnglish([[jar], [pack]]);
+    expect(jars[0].english).toEqual({ "welcome.lumymon.other": "Kept" });
+    expect(packs[0]).toBe(pack);
+    expect(
+      planUnits([jars, packs], new Set()).flatMap((unit) => Object.values(unit.entries)),
+    ).toEqual(expect.arrayContaining(["Kept", "COBBLEVERSE 1.8.0"]));
   });
 });
 

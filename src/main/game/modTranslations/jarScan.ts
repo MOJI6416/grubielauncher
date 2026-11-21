@@ -200,6 +200,7 @@ async function collect(
   walker: Walker,
   state: ScanState,
   nested: boolean,
+  isPack = false,
 ): Promise<ModContext | null> {
   const nestedJars: Buffer[] = [];
   const metadata = new Map<string, ModContext>();
@@ -284,7 +285,8 @@ async function collect(
     }
   });
 
-  const context = preferredContext(metadata) ?? (pack as ModContext | null);
+  const context =
+    preferredContext(metadata) ?? (isPack ? (pack as ModContext | null) : null);
   if (context) {
     for (const namespace of created) {
       const collected = state.namespaces.get(namespace);
@@ -356,13 +358,24 @@ export async function scanSource(
   const state = emptyState(targetLocale);
   const stat = await fs.stat(sourcePath);
   if (stat.isDirectory()) {
-    return finish(state, await collect(directoryWalker(sourcePath), state, true));
+    return finish(
+      state,
+      await collect(directoryWalker(sourcePath), state, true, true),
+    );
   }
   const zip = await openZip((callback) =>
     yauzl.open(sourcePath, ZIP_OPTIONS, callback),
   );
   try {
-    return finish(state, await collect(zipWalker(zip), state, false));
+    return finish(
+      state,
+      await collect(
+        zipWalker(zip),
+        state,
+        false,
+        !sourcePath.toLowerCase().endsWith(".jar"),
+      ),
+    );
   } finally {
     zip.close();
   }

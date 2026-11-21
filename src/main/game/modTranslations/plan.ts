@@ -24,6 +24,31 @@ export function modNamespaces(jars: NamespaceLang[][]): string[] {
   return [...names].sort();
 }
 
+export function preferPackEnglish(
+  sources: NamespaceLang[][],
+): NamespaceLang[][] {
+  const overridden = new Set<string>();
+  for (const source of sources) {
+    for (const lang of source) {
+      if (lang.origin !== "pack") continue;
+      for (const key of Object.keys(lang.english)) overridden.add(key);
+    }
+  }
+  if (overridden.size === 0) return sources;
+  return sources.map((source) =>
+    source.map((lang) =>
+      lang.origin === "pack"
+        ? lang
+        : {
+            ...lang,
+            english: Object.fromEntries(
+              Object.entries(lang.english).filter(([key]) => !overridden.has(key)),
+            ),
+          },
+    ),
+  );
+}
+
 export function planUnits(
   jars: NamespaceLang[][],
   coveredByPacks: ReadonlySet<string>,

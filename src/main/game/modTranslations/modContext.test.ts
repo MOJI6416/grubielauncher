@@ -16,6 +16,17 @@ describe("mod context", () => {
     expect(contextFromFabric("{broken")).toBeNull();
   });
 
+  it("reads fabric.mod.json with a raw line break inside a string, as Fabric Loader does", () => {
+    const text = [
+      '{"id":"bettergrass","name":"BetterGrassify","description":"Touch grass!',
+      "OptiFine's Fancy grass\"}",
+    ].join("\n");
+    expect(contextFromFabric(text)).toEqual({
+      name: "BetterGrassify",
+      description: "Touch grass! OptiFine's Fancy grass",
+    });
+  });
+
   it("reads quilt.mod.json", () => {
     expect(
       contextFromQuilt(
@@ -41,6 +52,14 @@ describe("mod context", () => {
       name: "x",
     });
     expect(contextFromModsToml('modLoader="javafml"')).toBeNull();
+  });
+
+  it("accepts a comment after the [[mods]] header, as the Forge MDK writes it", () => {
+    expect(
+      contextFromModsToml(
+        ['[[mods]] #mandatory', 'modId="mod_menu" #id', 'displayName="Better ModList" #shown'].join("\n"),
+      ),
+    ).toEqual({ name: "Better ModList" });
   });
 
   it("does not take a key from inside a multi-line description", () => {

@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs-extra";
 import { createHash } from "crypto";
 import { directoryFiles } from "./jarScan";
+import { isManagedPackFile } from "./optionsTxt";
 
 export interface ContentSource {
   id: string;
@@ -10,7 +11,10 @@ export interface ContentSource {
   label: string;
 }
 
+export const PLAYER_PACK_FOLDER = "resourcepacks";
+
 const PACK_FOLDERS = [
+  PLAYER_PACK_FOLDER,
   "config/paxi/resourcepacks",
   "config/openloader/resources",
   "config/openloader/packs",
@@ -58,6 +62,7 @@ export async function listModpackPacks(
     const root = path.join(versionPath, ...folder.split("/"));
     const names = await fs.readdir(root).catch(() => [] as string[]);
     for (const name of names.sort()) {
+      if (folder === PLAYER_PACK_FOLDER && isManagedPackFile(name)) continue;
       const source = await sourceAt(
         versionPath,
         path.join(root, name),

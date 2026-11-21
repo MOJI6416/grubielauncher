@@ -166,6 +166,22 @@ describe("scanSource", () => {
     expect(context.description!.endsWith("…")).toBe(true);
   });
 
+  it("never names a mod after its jar's pack.mcmeta", async () => {
+    const jar = await zip("template.jar", {
+      "pack.mcmeta": '{"pack":{"pack_format":15,"description":"Example Mod"}}',
+      "META-INF/mods.toml": "[[mods]]\nmodId='x'\ndescription='''${file.desc}'''",
+      "assets/physicsmod/lang/en_us.json": '{"k":"Value"}',
+    });
+    const result = await scanSource(jar, "ru_ru");
+    expect(result.context).toEqual({ name: "x" });
+
+    const bare = await zip("bare.jar", {
+      "pack.mcmeta": '{"pack":{"pack_format":15,"description":"examplemod resources"}}',
+      "assets/bare/lang/en_us.json": '{"k":"Value"}',
+    });
+    expect((await scanSource(bare, "ru_ru")).context).toBeNull();
+  });
+
   it("keeps the nested jar's own name for its namespaces", async () => {
     const inner = await fs.readFile(
       await zip("lib-inner.jar", {
