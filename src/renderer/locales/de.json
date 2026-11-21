@@ -3388,9 +3388,28 @@
     "nameTaken": "Im Ordner gibt es bereits eine Datei mit diesem Namen – der Launcher fügt der neuen ein Datum hinzu.",
     "success": "Instanz erfolgreich exportiert",
     "error": "Fehler beim Export der Instanz",
-    "contents": "Das Archiv enthält den gesamten Instanzordner – Mods, Konfigurationen und Welten. Ihre Serverliste, der Verlauf der Chatbefehle, Screenshots, Logs, Absturzberichte, Spielzeitstatistik, Notizen und Startverlauf bleiben auf diesem Rechner.",
+    "contents": "Wählen Sie aus, was ins Archiv kommt. Ihre Serverliste, der Befehlsverlauf aus dem Chat, Screenshots, Logs, Absturzberichte, Spielstatistiken und Notizen bleiben auf diesem Computer.",
     "stageCopying": "Dateien der Instanz werden kopiert",
-    "stageArchiving": "Archiv wird gepackt"
+    "stageArchiving": "Archiv wird gepackt",
+    "formatLabel": "Archivformat",
+    "formats": {
+      "grubie": "Grubie (.zip)",
+      "mrpack": "Modrinth (.mrpack)"
+    },
+    "mrpackUnsupported": "Das Modrinth-Format unterstützt den Loader {{loader}} nicht",
+    "mrpackNote": "Mods von Modrinth kommen als Links in die Datei, daher ist sie kleiner. Modrinth App, Prism Launcher und andere Launcher können sie öffnen, alles andere wird ins Archiv gepackt.",
+    "items": {
+      "config": "Konfigurationen",
+      "defaultconfigs": "Standardkonfigurationen",
+      "kubejs": "KubeJS-Skripte",
+      "schematics": "Schematics",
+      "options": "Spieleinstellungen",
+      "server": "Server"
+    },
+    "selectedSize": "Ausgewählt ≈ {{size}}",
+    "mrpackLinks": "als Link zu Modrinth: {{total}}",
+    "successMrpack": "Instanz exportiert: {{linked}} als Link zu Modrinth, {{packed}} als Dateien im Archiv",
+    "nothingToPick": "Noch keine Spielordner vorhanden, das Archiv enthält nur die Beschreibung der Instanz."
   },
   "browser": {
     "search": "Suchen"

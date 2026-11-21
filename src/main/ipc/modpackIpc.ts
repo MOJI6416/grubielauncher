@@ -7,6 +7,7 @@ import type {
   ModpackFilesPlan,
   ModpackRollback,
   ModpackRollbackInfo,
+  MrpackExportResult,
 } from "@/types/ModpackSource";
 import {
   applyModpackUpdateFiles,
@@ -54,6 +55,18 @@ function asExtraFiles(value: unknown): IModpackExtraFile[] {
 }
 
 export function registerModpackIpc() {
+  handleSafe<MrpackExportResult | null, [string, string[], string]>(
+    "modpack:exportMrpack",
+    null,
+    [isPath, check.arrayOf(check.nonEmptyString(1024), 5000), isPath],
+    async (_, versionPath, entries, outputPath) => {
+      assertReadablePath(versionPath, "modpack:exportMrpack");
+      assertWritablePath(outputPath, "modpack:exportMrpack");
+      const { exportMrpack } = await import("../utilities/mrpackExport");
+      return await exportMrpack(versionPath, entries, outputPath);
+    },
+  );
+
   handleSafe<DiskRoom | null, [string, number, string[]]>(
     "modpack:checkRoom",
     null,

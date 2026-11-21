@@ -88,6 +88,7 @@ export const USAGE_FEATURES = [
   "modpack.republish",
   "modpack.unpublish",
   "modpack.export",
+  "modpack.exportMrpack",
   "sharedSettings.connect",
   "sharedSettings.disconnect",
   "sharedSettings.groups",

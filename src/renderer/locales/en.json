@@ -3388,9 +3388,28 @@
     "nameTaken": "The folder already has a file with that name — the launcher will add a date to the new one.",
     "success": "Instance exported successfully",
     "error": "Instance export error",
-    "contents": "The archive gets the whole instance folder — mods, configs and worlds. Your server list, chat command history, screenshots, logs, crash reports, playtime statistics, notes and launch history stay on this machine.",
+    "contents": "Tick what goes into the archive. Your server list, chat command history, screenshots, logs, crash reports, game statistics and notes stay on this computer.",
     "stageCopying": "Copying instance files",
-    "stageArchiving": "Packing the archive"
+    "stageArchiving": "Packing the archive",
+    "formatLabel": "Archive format",
+    "formats": {
+      "grubie": "Grubie (.zip)",
+      "mrpack": "Modrinth (.mrpack)"
+    },
+    "mrpackUnsupported": "The Modrinth format does not support the {{loader}} loader",
+    "mrpackNote": "Mods from Modrinth go into the file as links, so it is smaller. Modrinth App, Prism Launcher and other launchers can open it, and everything else is packed inside the archive.",
+    "items": {
+      "config": "Configs",
+      "defaultconfigs": "Default configs",
+      "kubejs": "KubeJS scripts",
+      "schematics": "Schematics",
+      "options": "Game settings",
+      "server": "Server"
+    },
+    "selectedSize": "Selected ≈ {{size}}",
+    "mrpackLinks": "linked to Modrinth: {{total}}",
+    "successMrpack": "Instance exported: {{linked}} linked to Modrinth, {{packed}} packed as files",
+    "nothingToPick": "There are no game folders yet, so the archive will only hold the instance description."
   },
   "browser": {
     "search": "Search"

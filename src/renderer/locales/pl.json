@@ -3451,9 +3451,28 @@
     "nameTaken": "W folderze jest już plik o tej nazwie — launcher doda do nowego datę.",
     "success": "Wyeksportowano instancję",
     "error": "Błąd eksportu instancji",
-    "contents": "Archiwum zawiera cały folder instancji — mody, konfiguracje i światy. Lista serwerów, historia poleceń czatu, zrzuty ekranu, logi, raporty awarii, statystyki czasu gry, notatki i historia uruchomień zostają na tym komputerze.",
+    "contents": "Zaznacz, co ma trafić do archiwum. Lista serwerów, historia poleceń z czatu, zrzuty ekranu, logi, raporty awarii, statystyki gry i notatki zostaną na tym komputerze.",
     "stageCopying": "Kopiowanie plików instancji",
-    "stageArchiving": "Pakowanie archiwum"
+    "stageArchiving": "Pakowanie archiwum",
+    "formatLabel": "Format archiwum",
+    "formats": {
+      "grubie": "Grubie (.zip)",
+      "mrpack": "Modrinth (.mrpack)"
+    },
+    "mrpackUnsupported": "Format Modrinth nie obsługuje loadera {{loader}}",
+    "mrpackNote": "Mody z Modrinth trafią do pliku jako linki, dlatego jest mniejszy. Otworzą go Modrinth App, Prism Launcher i inne launchery, a reszta zostanie spakowana do archiwum.",
+    "items": {
+      "config": "Konfiguracje",
+      "defaultconfigs": "Domyślne konfiguracje",
+      "kubejs": "Skrypty KubeJS",
+      "schematics": "Schematy",
+      "options": "Ustawienia gry",
+      "server": "Serwer"
+    },
+    "selectedSize": "Wybrano ≈ {{size}}",
+    "mrpackLinks": "linkami do Modrinth: {{total}}",
+    "successMrpack": "Instancja wyeksportowana: linkami do Modrinth — {{linked}}, plikami w archiwum — {{packed}}",
+    "nothingToPick": "Nie ma jeszcze folderów gry, więc archiwum będzie zawierać tylko opis instancji."
   },
   "browser": {
     "search": "Szukaj"

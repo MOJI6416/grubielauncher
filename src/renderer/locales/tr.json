@@ -3388,9 +3388,28 @@
     "nameTaken": "Klasörde aynı adda bir dosya zaten var — başlatıcı yenisine tarih ekleyecek.",
     "success": "Kurulum başarıyla dışa aktarıldı",
     "error": "Kurulum dışa aktarma hatası",
-    "contents": "Arşive kurulum klasörünün tamamı girer — modlar, yapılandırmalar ve dünyalar. Sunucu listeniz, sohbet komut geçmişiniz, ekran görüntüleriniz, günlükleriniz, çökme raporlarınız, oynama süresi istatistikleriniz, notlarınız ve başlatma geçmişiniz bu bilgisayarda kalır.",
+    "contents": "Arşive nelerin gireceğini işaretleyin. Sunucu listeniz, sohbet komut geçmişi, ekran görüntüleri, günlükler, çökme raporları, oyun istatistikleri ve notlar bu bilgisayarda kalır.",
     "stageCopying": "Kurulum dosyaları kopyalanıyor",
-    "stageArchiving": "Arşiv paketleniyor"
+    "stageArchiving": "Arşiv paketleniyor",
+    "formatLabel": "Arşiv biçimi",
+    "formats": {
+      "grubie": "Grubie (.zip)",
+      "mrpack": "Modrinth (.mrpack)"
+    },
+    "mrpackUnsupported": "Modrinth biçimi {{loader}} yükleyicisini desteklemiyor",
+    "mrpackNote": "Modrinth'teki modlar dosyaya bağlantı olarak eklenir, bu yüzden dosya daha küçüktür. Modrinth App, Prism Launcher ve diğer başlatıcılar onu açabilir, geri kalan her şey arşivin içine konur.",
+    "items": {
+      "config": "Yapılandırmalar",
+      "defaultconfigs": "Varsayılan yapılandırmalar",
+      "kubejs": "KubeJS betikleri",
+      "schematics": "Şematikler",
+      "options": "Oyun ayarları",
+      "server": "Sunucu"
+    },
+    "selectedSize": "Seçilen ≈ {{size}}",
+    "mrpackLinks": "Modrinth bağlantısı: {{total}}",
+    "successMrpack": "Kurulum dışa aktarıldı: {{linked}} Modrinth bağlantısı, {{packed}} arşivde dosya olarak",
+    "nothingToPick": "Henüz oyun klasörü yok, arşivde yalnızca kurulumun açıklaması olacak."
   },
   "browser": {
     "search": "Ara"

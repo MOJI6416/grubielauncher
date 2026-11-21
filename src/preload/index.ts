@@ -148,6 +148,7 @@ import type {
   ModpackFilesPlan,
   ModpackRollback,
   ModpackRollbackInfo,
+  MrpackExportResult,
 } from "@/types/ModpackSource";
 import type { DiskRoom } from "@/types/DiskRoom";
 import type { ModpackContents } from "@/types/ModpackContents";
@@ -1417,6 +1418,11 @@ export interface IElectronAPI {
     ) => Promise<boolean>;
   };
   modpack: {
+    exportMrpack: (
+      versionPath: string,
+      entries: string[],
+      outputPath: string,
+    ) => Promise<MrpackExportResult | null>;
     writeBase: (
       versionPath: string,
       root: string,
@@ -2842,6 +2848,8 @@ export const api: IElectronAPI = {
       invoke("modManager:compareMods", mods1, mods2),
   },
   modpack: {
+    exportMrpack: (versionPath: string, entries: string[], outputPath: string) =>
+      invoke("modpack:exportMrpack", versionPath, entries, outputPath),
     writeBase: (versionPath: string, root: string, input: ModpackBaseInput) =>
       invoke("modpack:writeBase", versionPath, root, input),
     readBase: (versionPath: string) => invoke("modpack:readBase", versionPath),

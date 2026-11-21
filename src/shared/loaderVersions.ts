@@ -116,7 +116,7 @@ export function loaderVersionMatches(
   return available.some((a) => required.includes(a));
 }
 
-function canonicalLoaderVersionId(
+export function canonicalLoaderVersionId(
   requiredId: string,
   loader: Loader,
   minecraftVersion: string,

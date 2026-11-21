@@ -3421,9 +3421,28 @@
     "nameTaken": "Le dossier contient déjà un fichier portant ce nom — le launcher ajoutera une date au nouveau.",
     "success": "Instance exportée",
     "error": "Erreur lors de l’exportation de l’instance",
-    "contents": "L’archive reçoit tout le dossier de l’instance — mods, configs et mondes. Votre liste de serveurs, l’historique des commandes du chat, les captures d’écran, les journaux, les rapports de plantage, les statistiques de temps de jeu, les notes et l’historique des lancements restent sur cette machine.",
+    "contents": "Cochez ce qui doit aller dans l’archive. Votre liste de serveurs, l'historique des commandes du chat, les captures, les journaux, les rapports de plantage, les statistiques de jeu et les notes restent sur cet ordinateur.",
     "stageCopying": "Copie des fichiers de l’instance",
-    "stageArchiving": "Création de l’archive"
+    "stageArchiving": "Création de l’archive",
+    "formatLabel": "Format de l’archive",
+    "formats": {
+      "grubie": "Grubie (.zip)",
+      "mrpack": "Modrinth (.mrpack)"
+    },
+    "mrpackUnsupported": "Le format Modrinth ne prend pas en charge le chargeur {{loader}}",
+    "mrpackNote": "Les mods de Modrinth sont ajoutés au fichier sous forme de liens, il est donc plus léger. Modrinth App, Prism Launcher et d'autres launchers peuvent l'ouvrir, le reste est placé dans l’archive.",
+    "items": {
+      "config": "Configurations",
+      "defaultconfigs": "Configurations par défaut",
+      "kubejs": "Scripts KubeJS",
+      "schematics": "Schémas",
+      "options": "Paramètres du jeu",
+      "server": "Serveur"
+    },
+    "selectedSize": "Sélection ≈ {{size}}",
+    "mrpackLinks": "liés à Modrinth : {{total}}",
+    "successMrpack": "Instance exportée : {{linked}} liés à Modrinth, {{packed}} en fichiers dans l’archive",
+    "nothingToPick": "Il n'y a pas encore de dossiers de jeu, l’archive ne contiendra que la description de l’instance."
   },
   "browser": {
     "search": "Rechercher"

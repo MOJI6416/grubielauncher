@@ -3421,9 +3421,28 @@
     "nameTaken": "A pasta já tem um arquivo com esse nome — o launcher vai adicionar uma data ao novo.",
     "success": "Instância exportada com sucesso",
     "error": "Erro ao exportar a instância",
-    "contents": "O arquivo compactado recebe a pasta inteira da instância — mods, configs e mundos. Sua lista de servidores, o histórico de comandos do chat, as capturas de tela, os logs, os relatórios de crash, as estatísticas de tempo de jogo, as notas e o histórico de inicializações ficam neste computador.",
+    "contents": "Marque o que vai para o arquivo. A sua lista de servidores, o histórico de comandos do chat, as capturas, os registros, os relatórios de falha, as estatísticas do jogo e as notas ficam neste computador.",
     "stageCopying": "Copiando os arquivos da instância",
-    "stageArchiving": "Compactando o arquivo"
+    "stageArchiving": "Compactando o arquivo",
+    "formatLabel": "Formato do arquivo",
+    "formats": {
+      "grubie": "Grubie (.zip)",
+      "mrpack": "Modrinth (.mrpack)"
+    },
+    "mrpackUnsupported": "O formato Modrinth não suporta o carregador {{loader}}",
+    "mrpackNote": "Os mods do Modrinth entram no arquivo como links, por isso ele fica menor. Modrinth App, Prism Launcher e outros launchers conseguem abri-lo, e o resto vai empacotado dentro do arquivo.",
+    "items": {
+      "config": "Configurações",
+      "defaultconfigs": "Configurações padrão",
+      "kubejs": "Scripts do KubeJS",
+      "schematics": "Esquemas",
+      "options": "Configurações do jogo",
+      "server": "Servidor"
+    },
+    "selectedSize": "Selecionado ≈ {{size}}",
+    "mrpackLinks": "com link para o Modrinth: {{total}}",
+    "successMrpack": "Instância exportada: {{linked}} com link para o Modrinth, {{packed}} como arquivos dentro",
+    "nothingToPick": "Ainda não há pastas do jogo, então o arquivo terá apenas a descrição da instância."
   },
   "browser": {
     "search": "Buscar"

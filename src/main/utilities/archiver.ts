@@ -662,6 +662,7 @@ export async function createZipArchive(
   shouldSkipEntry?: (entryName: string) => boolean,
   extraEntries?: readonly ArchiveExtraEntry[],
   onProgress?: (processedBytes: number) => void,
+  entryPrefix = "",
 ): Promise<void> {
   await fs.ensureDir(path.dirname(outputPath));
   const output = fs.createWriteStream(outputPath);
@@ -713,7 +714,7 @@ export async function createZipArchive(
           const stats = await fs.lstat(file);
 
           if (stats.isDirectory()) {
-            archive.directory(file, entryName, (data) =>
+            archive.directory(file, `${entryPrefix}${entryName}`, (data) =>
               shouldSkipEntry?.(
                 path.posix.join(entryName, data.name.replace(/\\/g, "/")),
               )
@@ -721,7 +722,7 @@ export async function createZipArchive(
                 : data,
             );
           } else {
-            archive.file(file, { name: entryName });
+            archive.file(file, { name: `${entryPrefix}${entryName}` });
           }
         }
       }

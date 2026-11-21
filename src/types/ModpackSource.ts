@@ -66,6 +66,11 @@ export interface ModpackApplyResult {
   downloads: { url: string; destination: string }[];
 }
 
+export interface MrpackExportResult {
+  linked: number;
+  packed: number;
+}
+
 export interface ModpackRollbackInfo {
   fromVersion: string;
   toVersion: string;
