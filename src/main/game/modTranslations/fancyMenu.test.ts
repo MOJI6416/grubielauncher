@@ -9,6 +9,7 @@ import {
   restoreFancy,
   rewriteLayout,
 } from "./fancyMenu";
+import { componentKey } from "./components";
 
 const LAYOUT = [
   "type = fancymenu_layout",
@@ -53,7 +54,10 @@ describe("FancyMenu layouts", () => {
         "Sharing your world has more latency.%%n%%Use 100%% at your own risk, see [notes](click:open_notes).",
       ].sort(),
     );
-    expect(text).toContain(`  label = {"placeholder":"local","values":{"key":"${fancyKey("Discord")}"}}`);
+    expect(text).toContain(`  label = {"translate":"${componentKey("Discord")}","fallback":"Discord"}`);
+    expect(text).toContain(
+      `  description = {"placeholder":"local","values":{"key":"${fancyKey("Join us on Discord!")}"}}`,
+    );
     expect(text).toContain("  source = [source:local]/config/fancymenu/assets/logo.png");
     expect(text).toContain('  source = Mem: {"placeholder":"usedram"}/{"placeholder":"maxram"} MB');
     expect(text).toContain("  identifier = pause_screen");

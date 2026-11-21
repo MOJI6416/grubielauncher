@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { componentKey, rewriteComponent } from "./components";
+import { componentKey, expandSpans, rewriteComponent } from "./components";
 
 describe("rewriteComponent", () => {
   it("turns a plain line into a translatable one that falls back to it", () => {
@@ -22,15 +22,23 @@ describe("rewriteComponent", () => {
     };
     const { component, entries } = rewriteComponent(line);
     const format = "Pick up %1$s & %2$s from the ground.";
+    const markup = "Pick up <s1>rocks</s1> & <s2>flint</s2> from the ground.";
+    const key = componentKey(markup);
     expect(component).toEqual({
-      translate: componentKey(format),
+      translate: key,
       fallback: format,
       with: [
-        { color: "gray", translate: componentKey("rocks"), fallback: "rocks" },
-        { color: "gray", translate: componentKey("flint"), fallback: "flint" },
+        { color: "gray", translate: `${key}.1`, fallback: "rocks" },
+        { color: "gray", translate: `${key}.2`, fallback: "flint" },
       ],
     });
-    expect(Object.values(entries).sort()).toEqual([format, "flint", "rocks"].sort());
+    expect(entries).toEqual({ [key]: markup });
+    expect(rewriteComponent(component)).toEqual({ component, entries });
+    expect(expandSpans(key, "Подберите <s2>кремень</s2> и <s1>камни</s1> с земли.")).toEqual({
+      [key]: "Подберите %2$s и %1$s с земли.",
+      [`${key}.1`]: "камни",
+      [`${key}.2`]: "кремень",
+    });
   });
 
   it("keeps style, click and hover of the line", () => {

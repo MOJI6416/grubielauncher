@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs-extra";
 import { createHash } from "crypto";
+import { rewriteComponent } from "./components";
 import { decodeUtf8Strict } from "./langFiles";
 import { LangEntries, needsTranslation, unitHash } from "./unitHash";
 
@@ -49,6 +50,12 @@ export function rewriteLayout(text: string): { text: string; english: LangEntrie
   const lines = text.split(/(\r?\n)/).map((line) => {
     const match = FIELD.exec(line);
     if (!match || !translatable(match[2])) return line;
+    if (/^\s*(?:label|hoverlabel|hover_label)\s*=/.test(match[1])) {
+      const result = rewriteComponent(match[2]);
+      if (Object.keys(result.entries).length === 0) return line;
+      Object.assign(english, result.entries);
+      return `${match[1]}${JSON.stringify(result.component)}`;
+    }
     const key = fancyKey(match[2]);
     english[key] = match[2].replace(/%/g, "%%");
     return `${match[1]}${placeholder(key)}`;

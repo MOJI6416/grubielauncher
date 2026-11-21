@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs-extra";
 import { createHash } from "crypto";
 import { FTB_QUESTS_CONTEXT, FTB_QUESTS_NAMESPACE } from "./ftbQuests";
+import { rewriteComponent } from "./components";
 import { decodeUtf8Strict } from "./langFiles";
 import { LangEntries, needsTranslation, unitHash } from "./unitHash";
 
@@ -143,6 +144,21 @@ export function rewriteInline(text: string): { text: string; english: LangEntrie
     return { text, english };
   }
   for (const candidate of [...candidates].reverse()) {
+    if (/^[{[]\s*"/.test(candidate.value.trim())) {
+      let component: unknown;
+      try {
+        component = JSON.parse(candidate.value);
+      } catch {
+        continue;
+      }
+      const result = rewriteComponent(component);
+      if (Object.keys(result.entries).length === 0) continue;
+      Object.assign(english, result.entries);
+      const replaced = JSON.stringify(result.component);
+      if (replaced === JSON.stringify(component)) continue;
+      out = `${out.slice(0, candidate.start)}${quoteSnbt(replaced)}${out.slice(candidate.end)}`;
+      continue;
+    }
     if (!translatable(candidate.value)) continue;
     const key = inlineKey(candidate.value);
     english[key] = candidate.value.replace(/%/g, "%%");

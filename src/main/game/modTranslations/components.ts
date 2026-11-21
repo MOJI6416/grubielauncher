@@ -71,13 +71,47 @@ export interface ComponentRewrite {
   entries: LangEntries;
 }
 
+function span(child: Json): { style: JsonObject; text: string } | null {
+  if (ours(child)) return null;
+  const object = normalize(child);
+  if (!object || typeof object.text !== "string") return null;
+  if (CONTENT_KEYS.some((key) => key !== "text" && object[key] !== undefined)) return null;
+  let text = object.text;
+  for (const part of Array.isArray(object.extra) ? object.extra : []) {
+    const plain = plainText(part);
+    if (plain === null) return null;
+    text += plain;
+  }
+  return needsTranslation(text) ? { style: style(object), text } : null;
+}
+
+export function expandSpans(key: string, value: string): LangEntries {
+  const out: LangEntries = {};
+  out[key] = value.replace(/<s(\d+)>([\s\S]*?)<\/s\1>/g, (_all, index: string, inner: string) => {
+    out[`${key}.${index}`] = inner;
+    return `%${index}$s`;
+  });
+  return out;
+}
+
 export function rewriteComponent(value: Json): ComponentRewrite {
   const entries: LangEntries = {};
 
   const visit = (node: Json): Json => {
     if (ours(node)) {
-      entries[node.translate] = node.fallback;
-      if (Array.isArray(node.with)) node.with.forEach((arg) => visit(arg));
+      const args = Array.isArray(node.with) ? node.with : [];
+      entries[node.translate] = node.fallback.replace(
+        /(%%)|%(\d+)\$s/g,
+        (all: string, escaped: string | undefined, index: string | undefined) => {
+          if (escaped) return all;
+          const arg = args[Number(index) - 1];
+          if (ours(arg) && arg.translate === `${node.translate}.${index}`) {
+            return `<s${index}>${arg.fallback}</s${index}>`;
+          }
+          if (arg !== undefined) visit(arg);
+          return all;
+        },
+      );
       return node;
     }
     const object = normalize(node);
@@ -89,27 +123,41 @@ export function rewriteComponent(value: Json): ComponentRewrite {
 
     const extra = Array.isArray(object.extra) ? object.extra : [];
     let format = escapeFormat(object.text);
-    const args: Json[] = [];
+    let markup = format;
+    const parts: Array<{ child: Json; span: { style: JsonObject; text: string } | null }> = [];
     for (const child of extra) {
       const plain = plainText(child);
       if (plain !== null) {
         format += escapeFormat(plain);
+        markup += escapeFormat(plain);
         continue;
       }
-      args.push(visit(child));
-      format += `%${args.length}$s`;
+      const index = parts.length + 1;
+      const styled = span(child);
+      parts.push({ child, span: styled });
+      format += `%${index}$s`;
+      markup += styled ? `<s${index}>${escapeFormat(styled.text)}</s${index}>` : `%${index}$s`;
     }
 
     if (!worthTranslating(format)) {
-      if (args.length === 0) return node;
+      if (parts.length === 0) return node;
       let next = 0;
       return {
         ...object,
-        extra: extra.map((child) => (plainText(child) !== null ? child : args[next++])),
+        extra: extra.map((child) => (plainText(child) !== null ? child : visit(parts[next++].child))),
       };
     }
-    const key = componentKey(format);
-    entries[key] = format;
+    const key = componentKey(markup);
+    entries[key] = markup;
+    const args = parts.map(({ child, span: styled }, index) =>
+      styled
+        ? {
+            ...styled.style,
+            translate: `${key}.${index + 1}`,
+            fallback: escapeFormat(styled.text),
+          }
+        : visit(child),
+    );
     return {
       ...style(object),
       translate: key,

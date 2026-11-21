@@ -46,6 +46,7 @@ describe("old FTB Quests chapters", () => {
         "Getting Started",
         "Start here",
         "The beginning",
+        "JSON line",
         "Welcome to &aDarkRPG&r!",
         "Wood",
       ].sort(),
@@ -56,8 +57,10 @@ describe("old FTB Quests chapters", () => {
     expect(text).toContain('count: 4L');
     expect(text).toContain('id: "1111111111111111"');
     expect(text).toContain('item: "minecraft:oak_log"');
-    expect(text).toContain('JSON line');
-    expect(rewriteInline(text).english).toEqual({});
+    expect(text).toContain('\\"fallback\\":\\"JSON line\\"');
+    const again = rewriteInline(text);
+    expect(again.text).toBe(text);
+    expect(Object.keys(again.english).every((key) => key.startsWith("grubie.text."))).toBe(true);
   });
 });
 
@@ -79,7 +82,7 @@ describe("rewriting an instance's quests", () => {
 
   it("reads the English before and after the rewrite and restores the files", async () => {
     const english = await readInlineEnglish(instance, storage, []);
-    expect(Object.keys(english)).toHaveLength(7);
+    expect(Object.keys(english)).toHaveLength(8);
 
     const rewritten = await applyInlineRewrite(instance, storage, []);
     expect(rewritten.map((entry) => entry.file).sort()).toEqual([

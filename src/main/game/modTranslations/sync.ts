@@ -53,7 +53,12 @@ import {
   listModpackPacks,
   PLAYER_PACK_FOLDER,
 } from "./packSources";
-import { COMPONENT_KEY_PREFIX } from "./components";
+import { COMPONENT_KEY_PREFIX, expandSpans } from "./components";
+import {
+  applyPackOverrides,
+  OverridesFile,
+  restorePackOverrides,
+} from "./packOverrides";
 import {
   applyFancyRewrite,
   FANCYMENU_BOOK,
@@ -173,6 +178,7 @@ interface TranslationState {
   forcedLocale: string | null;
   quotaUntil: number | null;
   createdOptions: string[];
+  packOverrides: OverridesFile | null;
   dataFiles: RewrittenData[];
   ftbInlineFiles: InlineFile[];
   fancyFiles: FancyFile[];
@@ -243,6 +249,7 @@ function emptyState(): TranslationState {
     forcedLocale: null,
     quotaUntil: null,
     createdOptions: [],
+    packOverrides: null,
     dataFiles: [],
     ftbInlineFiles: [],
     fancyFiles: [],
@@ -1012,10 +1019,15 @@ async function buildAiPack(
     Object.keys(unit.entries).some((key) => key.startsWith(COMPONENT_KEY_PREFIX)),
   );
   const files = [
-    ...translationPackFiles(units, locale, mcVersion, langFormatFor(mcVersion)),
+    ...translationPackFiles(
+      units.map(expandComponentUnit),
+      locale,
+      mcVersion,
+      langFormatFor(mcVersion),
+    ),
     ...(Object.keys(inlineEnglish).length > 0
       ? translationPackFiles(
-          [{ namespace: "grubie", entries: inlineEnglish }],
+          [expandComponentUnit({ namespace: "grubie", entries: inlineEnglish })],
           "en_us",
           mcVersion,
           langFormatFor(mcVersion),
@@ -1054,6 +1066,17 @@ async function buildAiPack(
   await fs.ensureDir(packsDir(versionPath));
   await fs.move(temp, target, { overwrite: true });
   return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data, ftbInline, fancy };
+}
+
+function expandComponentUnit(unit: { namespace: string; entries: LangEntries }) {
+  const entries: LangEntries = {};
+  for (const [key, value] of Object.entries(unit.entries)) {
+    Object.assign(
+      entries,
+      key.startsWith(COMPONENT_KEY_PREFIX) ? expandSpans(key, value) : { [key]: value },
+    );
+  }
+  return { ...unit, entries };
 }
 
 export function supportsTextFallback(mcVersion: string): boolean {
@@ -1226,7 +1249,8 @@ async function cleanup(
     state.externalFiles.length > 0 ||
     state.dataFiles.length > 0 ||
     state.ftbInlineFiles.length > 0 ||
-    state.fancyFiles.length > 0;
+    state.fancyFiles.length > 0 ||
+    !!state.packOverrides;
   if (!hadAnything) return;
   if (isVersionRunning(versionPath)) return;
   await removeStaleManaged(versionPath, new Set());
@@ -1236,6 +1260,7 @@ async function cleanup(
   await restoreDataRewrite(versionPath, storageDir(versionPath), state.dataFiles);
   await restoreInline(versionPath, storageDir(versionPath), state.ftbInlineFiles);
   await restoreFancy(versionPath, storageDir(versionPath), state.fancyFiles);
+  await restorePackOverrides(versionPath, storageDir(versionPath), state.packOverrides);
   for (const name of ["questz-originals", "data-originals", "ftbq-originals", "fancymenu-originals"]) {
     await removeEmptyTree(path.join(storageDir(versionPath), name));
   }
@@ -1558,6 +1583,12 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     next.forcedLocale !== locale,
   );
   next.createdOptions = [...new Set([...next.createdOptions, ...created])];
+  next.packOverrides = await applyPackOverrides(
+    versionPath,
+    storageDir(versionPath),
+    ourPackFiles(next),
+    state.packOverrides,
+  );
   next.forcedLocale = locale;
   await writeState(versionPath, next);
   schedulePoll(versionPath, next);
