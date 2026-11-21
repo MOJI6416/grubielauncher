@@ -14,6 +14,8 @@ import {
 import { isOnlineSocketConnected } from "@renderer/utilities/onlineSocket";
 import { uiJournal } from "@renderer/utilities/journal";
 import { countFeature } from "@renderer/features/usage/usage";
+import i18n from "@renderer/i18n";
+import { formatBytes } from "@renderer/utilities/file";
 
 export interface SupportDialogRequest {
   trigger: SupportReportTrigger;
@@ -90,7 +92,9 @@ export function collectSupportUiState(): SupportReportUiState {
 }
 
 export function formatReportBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return formatBytes(
+    bytes,
+    [0, 1, 2, 3, 4].map((index) => i18n.t(`sizes.${index}`)),
+    bytes < 1024 * 1024 ? 0 : 1,
+  );
 }

@@ -251,6 +251,15 @@ describe("formatByteRange", () => {
   it("survives a zero total", () => {
     expect(formatByteRange(0, 0, SIZES)).toBe("0 / 0 B");
   });
+
+  it("uses the player's decimal separator", () => {
+    expect(formatByteRange(1_500_000, 8_400_000, SIZES, "ru")).toBe(
+      "1,4 / 8 MB",
+    );
+    expect(formatByteRange(1_500_000, 8_400_000, SIZES, "en")).toBe(
+      "1.4 / 8 MB",
+    );
+  });
 });
 
 describe("formatSeconds", () => {

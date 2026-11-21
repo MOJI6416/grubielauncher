@@ -2,16 +2,12 @@ import { useTranslation } from "react-i18next";
 import { Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Hint } from "@renderer/components/Hint";
+import { formatBytes } from "@renderer/utilities/file";
 
 export interface PendingImage {
   id: string;
   file: File;
   url: string;
-}
-
-function formatSize(bytes: number) {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export function AttachmentTray({
@@ -25,6 +21,7 @@ export function AttachmentTray({
 }) {
   const { t } = useTranslation();
   const isBusy = uploadingId !== null;
+  const sizes = [0, 1, 2, 3, 4].map((index) => t(`sizes.${index}`));
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -37,7 +34,7 @@ export function AttachmentTray({
             className="group/tile relative size-14 shrink-0 overflow-hidden rounded-lg border border-border bg-surface-2 animate-in fade-in-0 zoom-in-95 duration-150"
           >
             <Hint
-              content={`${item.file.name} · ${formatSize(item.file.size)}`}
+              content={`${item.file.name} · ${formatBytes(item.file.size, sizes, 1)}`}
               variant="text"
             >
               <img

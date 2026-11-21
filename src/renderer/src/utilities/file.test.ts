@@ -23,6 +23,19 @@ describe("formatBytes", () => {
     expect(formatBytes(-1, sizes)).not.toContain("undefined");
     expect(formatBytes(Number.NaN, sizes)).not.toContain("undefined");
   });
+
+  it("uses the player's decimal separator", () => {
+    const worldSize = 24.2 * 1024 * 1024;
+    expect(formatBytes(worldSize, ["Б", "КБ", "МБ"], 1, "ru")).toBe("24,2 МБ");
+    expect(formatBytes(worldSize, sizes, 1, "de")).toBe("24,2 MB");
+    expect(formatBytes(worldSize, sizes, 1, "en")).toBe("24.2 MB");
+  });
+
+  it("drops trailing zeros and never groups thousands", () => {
+    expect(formatBytes(2 * 1024 * 1024, sizes, 1, "ru")).toBe("2 MB");
+    expect(formatBytes(1023 * 1024, sizes, 1, "en")).toBe("1023 KB");
+    expect(formatBytes(1024 ** 4 * 1536, sizes, 1, "de")).toBe("1536 TB");
+  });
 });
 
 describe("revokePreviousBlobUrl", () => {

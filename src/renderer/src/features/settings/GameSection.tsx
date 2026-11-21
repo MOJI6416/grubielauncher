@@ -19,6 +19,7 @@ import { normalizeWorldBackupKeep } from "@/types/WorldBackup";
 import type { TSettings } from "@/types/Settings";
 import { SettingRow, SettingsGroup } from "./SettingsPrimitives";
 import { MemoryControl } from "./MemoryControl";
+import { formatGigabytes } from "./memory";
 import { useGameLockReason } from "./gameLock";
 import type { SettingsEntryId } from "./catalog";
 import { JavaSettingsGroup } from "@renderer/features/java/JavaSettingsGroup";
@@ -35,10 +36,6 @@ import {
 
 const KEEP_OPTIONS = [1, 3, 5, 10, 20];
 const OVERRIDES_PREVIEW = 4;
-
-function formatGb(mb: number): string {
-  return (mb / 1024).toFixed(mb % 1024 === 0 ? 0 : 1);
-}
 
 export function GameSection({
   settings,
@@ -266,7 +263,7 @@ export function GameSection({
               </Hint>
               <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
                 {version.version.overrides?.xmx
-                  ? `${formatGb(version.version.overrides.xmx)} ${t("settings.game.gb")}`
+                  ? `${formatGigabytes(version.version.overrides.xmx)} ${t("settings.game.gb")}`
                   : t("settings.game.overridesOther")}
               </span>
             </button>

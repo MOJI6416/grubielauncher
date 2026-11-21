@@ -1,4 +1,5 @@
 import { EXCLUDED_INSTANCE_PATHS } from '@/shared/instancePrivacy'
+import { formatNumber } from '@renderer/utilities/numbers'
 
 export const notSupportedPaths = [
   ...EXCLUDED_INSTANCE_PATHS,
@@ -24,13 +25,21 @@ export const notSupportedPaths = [
   'saves'
 ]
 
-export function formatBytes(bytes: number, sizes: string[], decimals = 2): string {
+export function formatBytes(
+  bytes: number,
+  sizes: string[],
+  decimals = 2,
+  lang?: string
+): string {
   if (bytes === 0) return `0 ${sizes[0]}`
 
   const k = 1024
   const raw = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k))
   const i = Math.max(0, Math.min(sizes.length - 1, Number.isFinite(raw) ? raw : 0))
-  const formatted = parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))
+  const formatted = formatNumber(bytes / Math.pow(k, i), lang, {
+    maximumFractionDigits: decimals,
+    useGrouping: false
+  })
 
   return `${formatted} ${sizes[i]}`
 }

@@ -5,6 +5,7 @@ import {
   VersionInstallStage,
 } from "@/types/InstallationProgress";
 import { SERVER_FILE_STAGES, VERSION_FILE_STAGES } from "@/shared/installPlan";
+import { formatNumber } from "@renderer/utilities/numbers";
 
 export interface StageEvent {
   stage: VersionInstallStage;
@@ -260,6 +261,7 @@ export function formatByteRange(
   done: number,
   total: number,
   sizes: string[],
+  lang?: string,
 ): string {
   const step = 1024;
   const raw = total > 0 ? Math.floor(Math.log(total) / Math.log(step)) : 0;
@@ -271,7 +273,10 @@ export function formatByteRange(
 
   const render = (value: number) => {
     const scaled = Math.max(0, value) / scale;
-    return String(parseFloat(scaled.toFixed(scaled >= 100 ? 0 : 1)));
+    return formatNumber(scaled, lang, {
+      maximumFractionDigits: scaled >= 100 ? 0 : 1,
+      useGrouping: false,
+    });
   };
 
   return `${render(done)} / ${render(total)} ${sizes[unit]}`;
