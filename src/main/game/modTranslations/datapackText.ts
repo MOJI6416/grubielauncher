@@ -74,10 +74,58 @@ function rewriteJsonFields(paths: string[][]): Rewriter {
 const COMMAND_TEXT =
   /^(\s*(?:execute\s.*?\brun\s+)?(?:tellraw\s+\S+|title\s+\S+\s+(?:title|subtitle|actionbar))\s+)(.+?)\s*$/;
 
+function snbtString(raw: string): string {
+  return raw.slice(1, -1).replace(/\\(.)/g, "$1");
+}
+
+function quoteSnbtSingle(value: string): string {
+  return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+}
+
+function rewriteBookPages(line: string, entries: LangEntries): string {
+  const start = line.indexOf("pages:[");
+  if (start < 0 || !line.includes("written_book")) return line;
+  let index = start + "pages:[".length;
+  let out = line.slice(0, index);
+  while (index < line.length) {
+    const char = line[index];
+    if (char === "]") break;
+    if (char !== "'" && char !== '"') {
+      out += char;
+      index++;
+      continue;
+    }
+    let end = index + 1;
+    while (end < line.length && line[end] !== char) end += line[end] === "\\" ? 2 : 1;
+    const raw = line.slice(index, end + 1);
+    index = end + 1;
+    let component: unknown;
+    try {
+      component = JSON.parse(snbtString(raw));
+    } catch {
+      out += raw;
+      continue;
+    }
+    const result = rewriteComponent(component);
+    if (Object.keys(result.entries).length === 0) {
+      out += raw;
+      continue;
+    }
+    Object.assign(entries, result.entries);
+    out += quoteSnbtSingle(JSON.stringify(result.component));
+  }
+  return out + line.slice(index);
+}
+
 function rewriteFunction(text: string): { text: string; entries: LangEntries } | null {
   const entries: LangEntries = {};
   let changed = false;
   const lines = text.split(/(\r?\n)/).map((line) => {
+    const book = rewriteBookPages(line, entries);
+    if (book !== line) {
+      changed = true;
+      return book;
+    }
     const match = COMMAND_TEXT.exec(line);
     if (!match) return line;
     let component: unknown;
@@ -97,6 +145,33 @@ function rewriteFunction(text: string): { text: string; entries: LangEntries } |
   return { text: changed ? lines.join("") : text, entries };
 }
 
+function rewriteWelcome(text: string): { text: string; entries: LangEntries } | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(text.replace(/^\uFEFF/, ""));
+  } catch {
+    return null;
+  }
+  const elements = (json as { elements?: unknown } | null)?.elements;
+  if (!Array.isArray(elements)) return null;
+  const entries: LangEntries = {};
+  let changed = false;
+  const swap = (value: unknown): unknown => {
+    const result = rewriteComponent(value);
+    Object.assign(entries, result.entries);
+    if (JSON.stringify(result.component) !== JSON.stringify(value)) changed = true;
+    return result.component;
+  };
+  for (const element of elements) {
+    if (!element || typeof element !== "object") continue;
+    const holder = element as Record<string, unknown>;
+    if (Array.isArray(holder.lines)) holder.lines = holder.lines.map(swap);
+    if (holder.label !== undefined) holder.label = swap(holder.label);
+  }
+  if (Object.keys(entries).length === 0) return null;
+  return { text: changed ? `${JSON.stringify(json, null, 2)}\n` : text, entries };
+}
+
 const REWRITERS: Array<{ match: RegExp; rewrite: Rewriter }> = [
   {
     match: /^data\/[^/]+\/advancements?\/.+\.json$/,
@@ -106,10 +181,52 @@ const REWRITERS: Array<{ match: RegExp; rewrite: Rewriter }> = [
     ]),
   },
   { match: /^data\/[^/]+\/functions?\/.+\.mcfunction$/, rewrite: rewriteFunction },
+  { match: /^data\/[^/]+\/welcomescreen\/.+\.json$/, rewrite: rewriteWelcome },
 ];
+
+const ORIGIN_FILE = /^data\/([^/]+)\/(origins|powers|origin_layers)\/(.+)\.json$/;
+const ORIGIN_KIND: Record<string, string> = {
+  origins: "origin",
+  powers: "power",
+  origin_layers: "layer",
+};
+const KEY_LIKE = /^[a-z0-9_-]+(?:\.[a-z0-9_-]+)+$/;
+
+export function originEntries(
+  name: string,
+  text: string,
+  keysAreText: boolean,
+): LangEntries {
+  const match = ORIGIN_FILE.exec(name);
+  if (!match) return {};
+  let json: unknown;
+  try {
+    json = JSON.parse(text.replace(/^\uFEFF/, ""));
+  } catch {
+    return {};
+  }
+  if (!json || typeof json !== "object" || Array.isArray(json)) return {};
+  const [, namespace, folder, file] = match;
+  const kind = ORIGIN_KIND[folder];
+  const fields = kind === "layer" ? ["name"] : ["name", "description"];
+  const entries: LangEntries = {};
+  for (const field of fields) {
+    const value = (json as Record<string, unknown>)[field];
+    if (typeof value !== "string" || !value.trim() || KEY_LIKE.test(value.trim())) continue;
+    const key = keysAreText
+      ? value
+      : `${kind}.${namespace}.${file.replace(/\//g, ".")}.${field}`;
+    entries[key] = value;
+  }
+  return entries;
+}
 
 function rewriterFor(name: string): Rewriter | null {
   return REWRITERS.find((entry) => entry.match.test(name))?.rewrite ?? null;
+}
+
+function readable(name: string): boolean {
+  return !!rewriterFor(name) || ORIGIN_FILE.test(name);
 }
 
 async function listDir(root: string, relative = ""): Promise<string[]> {
@@ -127,12 +244,12 @@ async function packFiles(pack: DataPack): Promise<TextFile[]> {
   if (pack.zip) {
     const files = await readZipFiles(pack.path, MAX_ZIP_BYTES);
     return (files ?? [])
-      .filter((file) => rewriterFor(file.name) && file.data.length <= MAX_FILE_BYTES)
+      .filter((file) => readable(file.name) && file.data.length <= MAX_FILE_BYTES)
       .map((file) => ({ name: file.name, text: file.data.toString("utf8") }));
   }
   const out: TextFile[] = [];
   for (const name of await listDir(pack.path, "data")) {
-    if (!rewriterFor(name)) continue;
+    if (!readable(name)) continue;
     const file = path.join(pack.path, ...name.split("/"));
     const stat = await fs.stat(file).catch(() => null);
     if (!stat || stat.size > MAX_FILE_BYTES) continue;
@@ -162,13 +279,18 @@ export async function listDataPacks(versionPath: string): Promise<DataPack[]> {
   return packs;
 }
 
-export async function scanDataPacks(packs: DataPack[]): Promise<NamespaceLang[]> {
+export async function scanDataPacks(
+  packs: DataPack[],
+  originKeysAreText = false,
+  originsOnly = false,
+): Promise<NamespaceLang[]> {
   const langs: NamespaceLang[] = [];
   for (const pack of packs) {
     const english: LangEntries = {};
     for (const file of await packFiles(pack)) {
-      const result = rewriterFor(file.name)?.(file.text);
+      const result = originsOnly ? null : rewriterFor(file.name)?.(file.text);
       if (result) Object.assign(english, result.entries);
+      Object.assign(english, originEntries(file.name, file.text, originKeysAreText));
     }
     if (Object.keys(english).length === 0) continue;
     langs.push({
@@ -226,6 +348,7 @@ export async function applyDataRewrite(
       continue;
     }
     for (const file of await packFiles(pack)) {
+      if (!rewriterFor(file.name)) continue;
       const id = `${pack.id}/${file.name}`;
       const rewritten = rewriterFor(file.name)?.(file.text);
       if (!rewritten) continue;

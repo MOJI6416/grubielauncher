@@ -1041,9 +1041,12 @@ async function readDataText(
   versionPath: string,
   mcVersion: string,
 ): Promise<{ packs: DataPack[]; langs: NamespaceLang[] }> {
-  if (!supportsTextFallback(mcVersion)) return { packs: [], langs: [] };
   const packs = await listDataPacks(versionPath);
-  return { packs, langs: await scanDataPacks(packs) };
+  if (!supportsTextFallback(mcVersion)) {
+    return { packs: [], langs: await scanDataPacks(packs, true, true) };
+  }
+  const origins21 = /^1\.(?:2[1-9]|[3-9]\d)|^\d{2}\./.test(mcVersion);
+  return { packs, langs: await scanDataPacks(packs, !origins21) };
 }
 
 async function applyExternalBooks(

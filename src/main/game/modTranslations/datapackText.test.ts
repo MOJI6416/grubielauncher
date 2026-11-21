@@ -116,3 +116,67 @@ describe("datapack text", () => {
     );
   });
 });
+
+describe("more data pack formats", () => {
+  let pack: string;
+
+  beforeAll(async () => {
+    pack = await fs.mkdtemp(path.join(os.tmpdir(), "grubie-data2-"));
+    const put = (relative: string, data: string) =>
+      fs.outputFile(path.join(pack, "config", "paxi", "datapacks", "extra", ...relative.split("/")), data, "utf8");
+    await put(
+      "data/welcomescreen/welcomescreen/welcomescreen.json",
+      JSON.stringify({
+        elements: [
+          { type: "text", lines: ["Welcome to the Aged Modpack!", { text: "", extra: ["Pick up ", { text: "rocks", color: "gray" }, "."] }] },
+          { type: "button", action: "close", label: "Start" },
+        ],
+      }),
+    );
+    await put(
+      "data/aged/functions/book.mcfunction",
+      `give @p written_book{pages:['{"text":"Read this first"}','["",{"text":"Page two"}]'],title:"Guide",author:"Aged"}\n`,
+    );
+    await put("data/duck/origins/duck.json", JSON.stringify({ name: "Duck", description: "Quacks loudly." }));
+    await put("data/duck/powers/swim.json", JSON.stringify({ type: "origins:x", name: "duck.power.swim" }));
+  });
+
+  afterAll(async () => {
+    await fs.remove(pack);
+  });
+
+  it("rewrites welcome screen lines and button labels", async () => {
+    const packs = await listDataPacks(pack);
+    await applyDataRewrite(path.join(pack, "storage"), packs, []);
+    const screen = await fs.readJSON(
+      path.join(pack, "config/paxi/datapacks/extra/data/welcomescreen/welcomescreen/welcomescreen.json"),
+    );
+    expect(screen.elements[0].lines[0]).toEqual({
+      translate: componentKey("Welcome to the Aged Modpack!"),
+      fallback: "Welcome to the Aged Modpack!",
+    });
+    expect(screen.elements[0].lines[1].fallback).toBe("Pick up %1$s.");
+    expect(screen.elements[1]).toMatchObject({ type: "button", action: "close", label: { fallback: "Start" } });
+  });
+
+  it("rewrites the pages of a written book given by a function", async () => {
+    const line = await fs.readFile(path.join(pack, "config/paxi/datapacks/extra/data/aged/functions/book.mcfunction"), "utf8");
+    expect(line).toContain(`'{"translate":"${componentKey("Read this first")}","fallback":"Read this first"}'`);
+    expect(line).toContain(`"fallback":"Page two"`);
+    expect(line).toContain('title:"Guide",author:"Aged"}');
+  });
+
+  it("names Origins texts the way each Origins version looks them up", async () => {
+    const packs = await listDataPacks(pack);
+    const legacy = (await scanDataPacks(packs, true))[0].english;
+    expect(legacy).toMatchObject({ Duck: "Duck", "Quacks loudly.": "Quacks loudly." });
+    expect(legacy).not.toHaveProperty("duck.power.swim");
+    const modern = (await scanDataPacks(packs, false))[0].english;
+    expect(modern).toMatchObject({
+      "origin.duck.duck.name": "Duck",
+      "origin.duck.duck.description": "Quacks loudly.",
+    });
+    const originsOnly = (await scanDataPacks(packs, true, true))[0].english;
+    expect(Object.keys(originsOnly).sort()).toEqual(["Duck", "Quacks loudly."]);
+  });
+});
