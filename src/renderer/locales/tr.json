@@ -7881,10 +7881,13 @@
   "companion": {
     "title": "Yardımcı mod",
     "toggle": "Yardımcı modu ekle",
-    "hintOff": "Davetler, arkadaş mesajları ve Birlikte oyna paneli doğrudan oyunda",
+    "hintOff": "Arkadaşlar, davetler, Birlikte oyna ve sesli sohbet doğrudan oyunda",
     "hintOn": "{{version}} sürümü her başlatmada kurulur. Oyunda: G tuşu veya duraklatma menüsündeki Grubie düğmesi",
     "toggleFailed": "Yardımcı mod değiştirilemedi",
     "joining": "{{nickname}} adlı oyuncunun dünyasına oyunda bağlanılıyor",
+    "hangTitle": "Oyun {{seconds}} sn'dir yanıt vermiyor",
+    "hangMods": "Görünüşe göre şu mod: {{mods}}",
+    "hangUnknown": "Mod belirlenemedi — ayrıntılar başlatıcı günlüğünde",
     "servers": {
       "none": "Sunuculardaki ilerleme yalnızca yardımcı modla sayılır. Onu örnek ayarlarından açın",
       "counted_one": "{{count}} sunucudaki ilerleme yardımcı mod üzerinden sayıldı",

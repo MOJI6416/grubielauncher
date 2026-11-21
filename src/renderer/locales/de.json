@@ -7881,10 +7881,13 @@
   "companion": {
     "title": "Begleit-Mod",
     "toggle": "Begleit-Mod hinzufügen",
-    "hintOff": "Einladungen, Nachrichten von Freunden und das Panel „Zusammen spielen“ direkt im Spiel",
+    "hintOff": "Freunde, Einladungen, Zusammen spielen und Sprachchat direkt im Spiel",
     "hintOn": "Version {{version}} wird bei jedem Start installiert. Im Spiel: Taste G oder die Schaltfläche Grubie im Pausenmenü",
     "toggleFailed": "Der Begleit-Mod konnte nicht umgeschaltet werden",
     "joining": "Verbindung zur Welt von {{nickname}} direkt im Spiel",
+    "hangTitle": "Das Spiel reagiert seit {{seconds}} s nicht",
+    "hangMods": "Vermutlich liegt es an dieser Mod: {{mods}}",
+    "hangUnknown": "Die Mod ließ sich nicht bestimmen – Details im Launcher-Protokoll",
     "servers": {
       "none": "Fortschritt auf Servern zählt nur mit dem Begleit-Mod. Schalten Sie ihn in den Einstellungen der Instanz ein",
       "counted_one": "Fortschritt von {{count}} Server wird über den Begleit-Mod gezählt",

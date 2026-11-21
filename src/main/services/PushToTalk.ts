@@ -103,6 +103,17 @@ function handleUp(input: PttInput) {
   }
 }
 
+export function pushToTalkFromGame(down: boolean) {
+  if (!activeBind) return;
+  if (down && !isPressed) {
+    isPressed = true;
+    broadcast("voice:pttDown");
+  } else if (!down && isPressed) {
+    isPressed = false;
+    broadcast("voice:pttUp");
+  }
+}
+
 function attachListeners() {
   if (listenersAttached) return;
   listenersAttached = true;

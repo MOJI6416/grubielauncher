@@ -28,6 +28,7 @@ import { UsageStatsHost } from "./hosts/UsageStatsHost";
 import { AccountSyncHost } from "./hosts/AccountSyncHost";
 import { VoiceCallHost } from "./hosts/VoiceCallHost";
 import { VoiceOverlayHost } from "./hosts/VoiceOverlayHost";
+import { CompanionHost } from "@renderer/features/companion/CompanionHost";
 import { WhatsNewHost } from "./hosts/WhatsNewHost";
 import { ThemeHost } from "./hosts/ThemeHost";
 import { UiScaleHost } from "./hosts/UiScaleHost";
@@ -69,6 +70,7 @@ export function AppHosts() {
       <FriendsEventsHost />
       <VoiceCallHost />
       <VoiceOverlayHost />
+      <CompanionHost />
       <GameInviteHost />
       <CrashHost />
       <SupportHost />

@@ -5,7 +5,9 @@ import {
   guestFromKey,
   hostMessageFor,
   parseInbound,
+  sanitizeFriends,
   sanitizeToasts,
+  sanitizeVoice,
   tokensMatch
 } from './protocol'
 
@@ -41,7 +43,9 @@ describe('companion protocol', () => {
       token: 'abc',
       mod: '1.0.0',
       minecraft: '',
-      loader: 'fabric'
+      loader: 'fabric',
+      protocol: 1,
+      features: []
     })
     expect(parseInbound('{"t":"accept","id":"gameInvite:1"}')).toEqual({ t: 'accept', id: 'gameInvite:1' })
     expect(parseInbound('{"t":"kick","key":"user:abc"}')).toEqual({ t: 'kick', key: 'user:abc' })
@@ -136,5 +140,72 @@ describe('companion protocol', () => {
     expect(guestFromKey('name:alex', peers)).toEqual({ username: 'alex' })
     expect(guestFromKey('user:bb', peers)).toEqual({ userId: 'bb' })
     expect(guestFromKey('stream:3', peers)).toBeNull()
+  })
+
+  it('reads protocol 2 actions and rejects malformed ones', () => {
+    expect(parseInbound('{"t":"invite","req":"invite-1","friend":"u1","server":{"address":"mc.example.net"}}')).toEqual({
+      t: 'invite',
+      req: 'invite-1',
+      friend: 'u1',
+      server: { address: 'mc.example.net', name: 'mc.example.net' }
+    })
+    expect(parseInbound('{"t":"invite","req":"bad req!","friend":"u1"}')).toBeNull()
+    expect(parseInbound('{"t":"share","req":"share-2","action":"start","port":51234,"world":"Island"}')).toEqual({
+      t: 'share',
+      req: 'share-2',
+      action: 'start',
+      port: 51234,
+      visibility: 'friends',
+      world: 'Island'
+    })
+    expect(parseInbound('{"t":"share","req":"share-2","action":"start","port":70000}')).toBeNull()
+    expect(parseInbound('{"t":"share","req":"s","action":"stop"}')).toEqual({ t: 'share', req: 's', action: 'stop' })
+    expect(parseInbound('{"t":"voice","action":"mute"}')).toEqual({ t: 'voice', action: 'mute' })
+    expect(parseInbound('{"t":"voice","action":"explode"}')).toBeNull()
+    expect(parseInbound('{"t":"ptt","down":true}')).toEqual({ t: 'ptt', down: true })
+    expect(parseInbound('{"t":"stage","stage":"World"}')).toBeNull()
+    expect(parseInbound('{"t":"stage","stage":"world"}')).toEqual({ t: 'stage', stage: 'world' })
+    expect(parseInbound('{"t":"hang","seconds":16.4,"stage":"world","thread":"Render thread","frames":["a.b(c)"],"mods":["sodium.jar",5]}')).toEqual({
+      t: 'hang',
+      seconds: 16,
+      stage: 'world',
+      thread: 'Render thread',
+      frames: ['a.b(c)'],
+      mods: ['sodium.jar']
+    })
+    expect(parseInbound('{"t":"stats","kind":"world","key":"Island","snapshot":[]}')).toBeNull()
+    expect(parseInbound('{"t":"stats","kind":"world","key":"Island","snapshot":{"stats":{}}}')).toEqual({
+      t: 'stats',
+      kind: 'world',
+      key: 'Island',
+      name: 'Island',
+      snapshot: { stats: {} }
+    })
+  })
+
+  it('cleans friends and voice snapshots from the renderer', () => {
+    const friends = sanitizeFriends({
+      online: [
+        { id: 'u1', name: 'Kituk', status: 'weird', joinable: 'yes', avatarUrl: 'http://insecure/x.png' },
+        { id: 'u2', name: 'Alex', status: 'playing', joinable: true, avatarUrl: 'https://cdn.example/u2.png' },
+        { name: 'no id' }
+      ],
+      offline: -3
+    })
+    expect(friends).toEqual({
+      online: [
+        { id: 'u1', name: 'Kituk', status: 'online', joinable: false },
+        { id: 'u2', name: 'Alex', status: 'playing', joinable: true, avatarUrl: 'https://cdn.example/u2.png' }
+      ],
+      offline: 0
+    })
+    expect(sanitizeVoice({ active: false, members: [{ id: 'x', name: 'y' }] }).members).toEqual([])
+    expect(sanitizeVoice({ active: true, pttCode: 9999, members: [{ id: 'x', name: 'y', speaking: true }] })).toEqual({
+      active: true,
+      muted: false,
+      deafened: false,
+      ptt: false,
+      members: [{ id: 'x', name: 'y', speaking: true, muted: false }]
+    })
   })
 })

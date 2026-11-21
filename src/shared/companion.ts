@@ -1,23 +1,11 @@
 export const COMPANION_FILE_PREFIX = 'grubie-companion-'
+export const COMPANION_PROTOCOL = 2
 export const COMPANION_STATS_DIR = 'server-stats'
 export const COMPANION_ENV_ADDRESS = 'GRUBIE_COMPANION_ADDRESS'
 export const COMPANION_ENV_TOKEN = 'GRUBIE_COMPANION_TOKEN'
 export const COMPANION_ENV_STATS_DIR = 'GRUBIE_COMPANION_STATS_DIR'
 
 const SHARE_JOIN_SUFFIX = '.join.grubielauncher.com'
-
-export interface CompanionManifestFile {
-  file: string
-  loader: string
-  minecraft: string[]
-  sha1: string
-  size: number
-}
-
-export interface CompanionManifest {
-  version: string
-  files: CompanionManifestFile[]
-}
 
 export interface CompanionSupport {
   supported: boolean
@@ -30,7 +18,13 @@ export interface CompanionSession {
   mod: string
 }
 
-export type CompanionToastKind = 'message' | 'invite' | 'call'
+export type CompanionToastKind =
+  | 'message'
+  | 'invite'
+  | 'call'
+  | 'achievement'
+  | 'screenshot'
+  | 'system'
 
 export interface CompanionToast {
   id: string
@@ -39,6 +33,85 @@ export interface CompanionToast {
   body: string
   count: number
   actionable: boolean
+  meta?: string
+  avatar?: string
+}
+
+export type CompanionFriendStatus = 'online' | 'away' | 'busy' | 'playing'
+
+export interface CompanionFriend {
+  id: string
+  name: string
+  status: CompanionFriendStatus
+  activity?: string
+  avatarUrl?: string
+  joinable: boolean
+}
+
+export interface CompanionFriends {
+  online: CompanionFriend[]
+  offline: number
+}
+
+export interface CompanionVoiceMember {
+  id: string
+  name: string
+  speaking: boolean
+  muted: boolean
+  avatarUrl?: string
+}
+
+export interface CompanionVoice {
+  active: boolean
+  channel?: string
+  muted: boolean
+  deafened: boolean
+  ptt: boolean
+  pttKey?: string
+  pttCode?: number
+  members: CompanionVoiceMember[]
+}
+
+export interface CompanionSelf {
+  id: string
+  name: string
+}
+
+export type CompanionGameAction =
+  | { kind: 'decline'; id: string }
+  | { kind: 'invite'; req: string; friend: string; server?: { address: string; name: string } }
+  | { kind: 'join'; req: string; friend: string }
+  | { kind: 'voice'; action: 'mute' | 'unmute' | 'deafen' | 'undeafen' }
+  | { kind: 'ptt'; down: boolean }
+  | { kind: 'sendScreenshot'; req: string; path: string; friend: string }
+
+export interface CompanionGameEvent {
+  session: CompanionSession
+  action: CompanionGameAction
+}
+
+export interface CompanionResult {
+  versionName: string
+  instance: number
+  req: string
+  ok: boolean
+  error?: string
+}
+
+export interface CompanionStage {
+  versionName: string
+  instance: number
+  stage: string
+  detail?: string
+}
+
+export interface CompanionHang {
+  versionName: string
+  instance: number
+  seconds: number
+  stage: string
+  mods: string[]
+  frames: string[]
 }
 
 export function isCompanionModFile(name: string): boolean {
@@ -46,19 +119,6 @@ export function isCompanionModFile(name: string): boolean {
   return (
     lower.startsWith(COMPANION_FILE_PREFIX) &&
     (lower.endsWith('.jar') || lower.endsWith('.jar.disabled'))
-  )
-}
-
-export function pickCompanionFile(
-  manifest: CompanionManifest | null,
-  minecraft: string,
-  loader: string
-): CompanionManifestFile | null {
-  if (!manifest) return null
-  return (
-    manifest.files.find(
-      (file) => file.loader === loader && file.minecraft.includes(minecraft)
-    ) ?? null
   )
 }
 

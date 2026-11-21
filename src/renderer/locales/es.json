@@ -7974,10 +7974,13 @@
   "companion": {
     "title": "Mod complementario",
     "toggle": "Añadir el mod complementario",
-    "hintOff": "Invitaciones, mensajes de amigos y el panel «Jugar en compañía» dentro del juego",
+    "hintOff": "Amigos, invitaciones, Jugar juntos y chat de voz dentro del juego",
     "hintOn": "La versión {{version}} se instala en cada inicio. En el juego: la tecla G o el botón Grubie del menú de pausa",
     "toggleFailed": "No se pudo cambiar el mod complementario",
     "joining": "Conectando al mundo de {{nickname}} dentro del juego",
+    "hangTitle": "El juego no responde desde hace {{seconds}} s",
+    "hangMods": "Parece que es este mod: {{mods}}",
+    "hangUnknown": "No se pudo saber qué mod es: los detalles están en el registro del launcher",
     "servers": {
       "none": "El progreso en servidores solo cuenta con el mod complementario. Actívelo en los ajustes de la instancia",
       "counted_one": "Se cuenta el progreso de {{count}} servidor mediante el mod complementario",

@@ -15,7 +15,7 @@ export async function prepareCompanionLaunch(
   instance: number
 ): Promise<Record<string, string>> {
   try {
-    const installed = await syncCompanionMod(versionPath, conf)
+    const installed = await syncCompanionMod(versionPath, conf, { refresh: true })
     if (!installed) return {}
     return await companionBridge.register(versionName, instance, companionStatsDir())
   } catch (error) {

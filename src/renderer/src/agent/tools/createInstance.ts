@@ -174,6 +174,7 @@ export const createInstance: AgentTool = {
       image: "",
       loader: { name: loader, mods: [], version: loaderVersion },
       owner: `${account.type}_${account.nickname}`,
+      companionMod: true,
     };
 
     const instance = new Version(conf);

@@ -7881,10 +7881,13 @@
   "companion": {
     "title": "Companion mod",
     "toggle": "Add the companion mod",
-    "hintOff": "Invites, friends' messages and the Play together panel right in the game",
+    "hintOff": "Friends, invites, Play together and voice chat right in the game",
     "hintOn": "Version {{version}} is installed at every launch. In the game: the G key or the Grubie button in the pause menu",
     "toggleFailed": "Could not switch the companion mod",
     "joining": "Joining {{nickname}}'s world right in the game",
+    "hangTitle": "The game has not responded for {{seconds}} s",
+    "hangMods": "It looks like this mod: {{mods}}",
+    "hangUnknown": "Could not tell which mod — details are in the launcher log",
     "servers": {
       "none": "Progress on servers counts only with the companion mod. Turn it on in the instance settings",
       "counted_one": "Progress from {{count}} server is counted through the companion mod",

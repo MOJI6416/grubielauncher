@@ -1,7 +1,9 @@
+import path from "path";
 import type {
   CompanionSession,
   CompanionSupport,
 } from "@/shared/companion";
+import type { UsageFeature } from "@/shared/usageFeatures";
 import { check, handleSafe } from "../utilities/ipc";
 import { assertWritablePath } from "../utilities/safePath";
 import { isVersionRunning } from "../utilities/worldBackups";
@@ -11,11 +13,22 @@ import { mainWindow } from "../windows/mainWindow";
 import { lanShareService } from "../share";
 import { companionBridge } from "../companion/bridge";
 import { companionSupport, syncCompanionMod } from "../companion/companionMod";
+import { scheduleCompanionManifestRefresh } from "../companion/companionCdn";
 import {
   guestFromKey,
   hostMessageFor,
+  sanitizeFriends,
   sanitizeToasts,
+  sanitizeVoice,
 } from "../companion/protocol";
+import { createAvatarSource } from "../companion/avatars";
+import {
+  type CompanionGameHost,
+  handleGameMessage,
+  stopGame,
+  watchScreenshots,
+} from "../companion/game";
+import { pushToTalkFromGame } from "../services/PushToTalk";
 
 const isPath = check.nonEmptyString(4096);
 const isName = check.nonEmptyString(255);
@@ -43,9 +56,33 @@ function pushHost(session?: Pick<CompanionSession, "versionName" | "instance">) 
   }
 }
 
+const gameHost: CompanionGameHost = {
+  result: (session, req, ok, error) =>
+    void companionBridge.result(session.versionName, session.instance, req, ok, error),
+  toRenderer: (channel, payload) => send(channel, payload),
+  pushScreenshot: (session, file) =>
+    companionBridge.pushToast(session.versionName, session.instance, {
+      id: file,
+      kind: "screenshot",
+      title: path.basename(file),
+      body: "",
+      count: 1,
+      actionable: false,
+    }),
+  count: (feature) => countUsage(feature as UsageFeature),
+  pttFromGame: (down) => pushToTalkFromGame(down),
+};
+
 function wireCompanion() {
+  companionBridge.setAvatarSource(createAvatarSource());
   companionBridge.on("status", (sessions) => send("companion:status", sessions));
-  companionBridge.on("connected", (session) => pushHost(session));
+  companionBridge.on("connected", (session) => {
+    pushHost(session);
+    watchScreenshots(session, gameHost);
+  });
+  companionBridge.on("message", (message, session) =>
+    handleGameMessage(message, session, gameHost),
+  );
   companionBridge.on("accept", (id) => {
     countUsage("companion.accept");
     send("companion:accept", id);
@@ -69,13 +106,15 @@ function wireCompanion() {
 
   lanShareService.on("stateChanged", () => pushHost());
   lanShareService.on("peersChanged", () => pushHost());
-  gameRuntime.on("close", (event) =>
-    companionBridge.unregister(event.versionName, event.instance),
-  );
+  gameRuntime.on("close", (event) => {
+    stopGame(event);
+    companionBridge.unregister(event.versionName, event.instance);
+  });
 }
 
 export function registerCompanionIpc() {
   wireCompanion();
+  scheduleCompanionManifestRefresh();
 
   handleSafe<CompanionSupport, [string, string]>(
     "companion:support",
@@ -109,6 +148,52 @@ export function registerCompanionIpc() {
     undefined,
     [check.arrayOf(check.object(16), 16)],
     (_, items) => companionBridge.setToasts(sanitizeToasts(items)),
+  );
+
+  handleSafe<void, [unknown]>(
+    "companion:setSelf",
+    undefined,
+    [check.any()],
+    (_, value) => {
+      const record = value as { id?: unknown; name?: unknown } | null;
+      companionBridge.setSelf(
+        record && typeof record.id === "string" && typeof record.name === "string"
+          ? { id: record.id.slice(0, 64), name: record.name.slice(0, 64) }
+          : null,
+      );
+    },
+  );
+
+  handleSafe<void, [unknown]>(
+    "companion:setFriends",
+    undefined,
+    [check.object(8)],
+    (_, value) => companionBridge.setFriends(sanitizeFriends(value)),
+  );
+
+  handleSafe<void, [unknown]>(
+    "companion:setVoice",
+    undefined,
+    [check.object(16)],
+    (_, value) => companionBridge.setVoice(sanitizeVoice(value)),
+  );
+
+  handleSafe<boolean, [string, number, string, boolean, string | undefined]>(
+    "companion:result",
+    false,
+    [isName, check.integer(), isShort, check.boolean(), check.optional(isShort)],
+    (_, versionName, instance, req, ok, error) =>
+      companionBridge.result(versionName, instance, req, ok, error),
+  );
+
+  handleSafe<void, [string, number, unknown]>(
+    "companion:pushToast",
+    undefined,
+    [isName, check.integer(), check.object(16)],
+    (_, versionName, instance, value) => {
+      const [toast] = sanitizeToasts([value]);
+      if (toast) companionBridge.pushToast(versionName, instance, toast);
+    },
   );
 
   handleSafe<boolean, [string, number, string, string]>(

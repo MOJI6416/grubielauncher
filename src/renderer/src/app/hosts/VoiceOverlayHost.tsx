@@ -147,6 +147,7 @@ export function VoiceOverlayHost() {
           body: toast.body(toast.count),
           count: toast.count,
           actionable: Boolean(toast.accept),
+          ...(toast.face?._id ? { avatar: toast.face._id } : {}),
         }))
       : [];
     void window.api.companion.setToasts(items).catch(ignoreFailure);
@@ -155,7 +156,7 @@ export function VoiceOverlayHost() {
   useEffect(() => {
     const placement = { corner, displayId };
     const next = withOverlayToasts(
-      buildOverlayState(session, isGameRunning, isEnabled, headUrlOf, placement),
+      buildOverlayState(session, isGameRunning, isEnabled && !companionLive, headUrlOf, placement),
       companionLive ? [] : toasts,
       isGameRunning,
       placement,

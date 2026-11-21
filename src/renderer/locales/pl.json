@@ -8072,10 +8072,13 @@
   "companion": {
     "title": "Mod towarzyszący",
     "toggle": "Dodawaj mod towarzyszący",
-    "hintOff": "Zaproszenia, wiadomości od znajomych i panel „Grajcie razem” prosto w grze",
+    "hintOff": "Znajomi, zaproszenia, Graj razem i czat głosowy prosto w grze",
     "hintOn": "Wersja {{version}} jest instalowana przy każdym uruchomieniu. W grze: klawisz G lub przycisk Grubie w menu pauzy",
     "toggleFailed": "Nie udało się przełączyć moda towarzyszącego",
     "joining": "Łączenie ze światem {{nickname}} prosto w grze",
+    "hangTitle": "Gra nie odpowiada od {{seconds}} s",
+    "hangMods": "Wygląda na to, że to ten mod: {{mods}}",
+    "hangUnknown": "Nie udało się ustalić moda — szczegóły w dzienniku launchera",
     "servers": {
       "none": "Postęp na serwerach liczy się tylko z modem towarzyszącym. Włącz go w ustawieniach instancji",
       "counted_one": "Uwzględniono postęp z {{count}} serwera przez mod towarzyszący",

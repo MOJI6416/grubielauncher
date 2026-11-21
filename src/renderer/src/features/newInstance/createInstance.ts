@@ -375,6 +375,7 @@ export async function createInstance(
         : {}),
       ...(importModpack?.source ? { modpack: importModpack.source } : {}),
       ...(request.overrides ? { overrides: request.overrides } : {}),
+      ...(foreign ? {} : { companionMod: true }),
       optifine: undefined,
       ...(pack?.shareVersion
         ? { owner: base.owner, ownerId: base.ownerId }

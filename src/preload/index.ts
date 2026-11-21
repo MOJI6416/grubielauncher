@@ -311,9 +311,15 @@ import {
   readIpcFailureEnvelope,
 } from "@/shared/ipcFailureEnvelope";
 import type {
+  CompanionFriends,
+  CompanionGameEvent,
+  CompanionHang,
+  CompanionSelf,
   CompanionSession,
+  CompanionStage,
   CompanionSupport,
   CompanionToast,
+  CompanionVoice,
 } from "@/shared/companion";
 
 export type UpdaterStatus =
@@ -1593,6 +1599,27 @@ export interface IElectronAPI {
     ) => Promise<boolean>;
     onStatus: (callback: (sessions: CompanionSession[]) => void) => () => void;
     onAccept: (callback: (id: string) => void) => () => void;
+    setSelf: (self: CompanionSelf | null) => Promise<void>;
+    setFriends: (friends: CompanionFriends) => Promise<void>;
+    setVoice: (voice: CompanionVoice) => Promise<void>;
+    result: (
+      versionName: string,
+      instance: number,
+      req: string,
+      ok: boolean,
+      error?: string,
+    ) => Promise<boolean>;
+    pushToast: (
+      versionName: string,
+      instance: number,
+      toast: CompanionToast,
+    ) => Promise<void>;
+    onAction: (callback: (event: CompanionGameEvent) => void) => () => void;
+    onStats: (
+      callback: (event: { session: CompanionSession; kind: string }) => void,
+    ) => () => void;
+    onStage: (callback: (stage: CompanionStage) => void) => () => void;
+    onHang: (callback: (hang: CompanionHang) => void) => () => void;
   };
   sharedSettings: {
     status: (ref: SharedInstanceRef) => Promise<SharedInstanceStatus>;
@@ -3075,6 +3102,61 @@ export const api: IElectronAPI = {
       };
       ipcRenderer.on("companion:accept", listener);
       return () => ipcRenderer.off("companion:accept", listener);
+    },
+    setSelf: (self: CompanionSelf | null) => invoke("companion:setSelf", self),
+    setFriends: (friends: CompanionFriends) =>
+      invoke("companion:setFriends", friends),
+    setVoice: (voice: CompanionVoice) => invoke("companion:setVoice", voice),
+    result: (
+      versionName: string,
+      instance: number,
+      req: string,
+      ok: boolean,
+      error?: string,
+    ) => invoke("companion:result", versionName, instance, req, ok, error),
+    pushToast: (versionName: string, instance: number, toast: CompanionToast) =>
+      invoke("companion:pushToast", versionName, instance, toast),
+    onAction: (callback: (event: CompanionGameEvent) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: CompanionGameEvent,
+      ) => {
+        callback(payload);
+      };
+      ipcRenderer.on("companion:action", listener);
+      return () => ipcRenderer.off("companion:action", listener);
+    },
+    onStats: (
+      callback: (event: { session: CompanionSession; kind: string }) => void,
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: { session: CompanionSession; kind: string },
+      ) => {
+        callback(payload);
+      };
+      ipcRenderer.on("companion:stats", listener);
+      return () => ipcRenderer.off("companion:stats", listener);
+    },
+    onStage: (callback: (stage: CompanionStage) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: CompanionStage,
+      ) => {
+        callback(payload);
+      };
+      ipcRenderer.on("companion:stage", listener);
+      return () => ipcRenderer.off("companion:stage", listener);
+    },
+    onHang: (callback: (hang: CompanionHang) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: CompanionHang,
+      ) => {
+        callback(payload);
+      };
+      ipcRenderer.on("companion:hang", listener);
+      return () => ipcRenderer.off("companion:hang", listener);
     },
   },
   sharedSettings: {

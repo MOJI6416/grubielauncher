@@ -491,6 +491,19 @@ type CachedWorldStats = {
 
 const MAX_CACHED_WORLD_STATS = 500;
 const worldStatsCache = new Map<string, CachedWorldStats>();
+const liveWorldStats = new Map<string, IAchievementStats>();
+
+export function setLiveWorldStats(worldPath: string, data: IWorldStatistics): void {
+  if (!data || typeof data !== "object" || !data.stats || typeof data.stats !== "object") return;
+  liveWorldStats.set(path.resolve(worldPath), reduceStatsToAchievementStats(data));
+}
+
+export function clearLiveWorldStats(versionPath: string): void {
+  const prefix = path.resolve(versionPath, "saves") + path.sep;
+  for (const key of [...liveWorldStats.keys()]) {
+    if (key.startsWith(prefix)) liveWorldStats.delete(key);
+  }
+}
 
 async function getCachedWorldStats(
   worldPath: string,
@@ -575,6 +588,13 @@ export async function loadGlobalAchievementStats(
 
     for (const world of worldEntries) {
       const worldPath = path.join(savesPath, world);
+      const live = liveWorldStats.get(path.resolve(worldPath));
+      if (live) {
+        stats = addAchievementStats(stats, live);
+        const liveKey = await readWorldKey(worldPath);
+        if (liveKey) worldKeys.add(liveKey);
+        continue;
+      }
       const statsFile = await resolveStatsFile(worldPath, accountUUIDs);
       if (!statsFile) continue;
 

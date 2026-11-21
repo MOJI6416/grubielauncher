@@ -1,7 +1,13 @@
 import { EventEmitter } from 'events'
 import net from 'net'
 import { randomBytes } from 'crypto'
-import type { CompanionSession, CompanionToast } from '@/shared/companion'
+import type {
+  CompanionFriends,
+  CompanionSelf,
+  CompanionSession,
+  CompanionToast,
+  CompanionVoice
+} from '@/shared/companion'
 import {
   COMPANION_ENV_ADDRESS,
   COMPANION_ENV_STATS_DIR,
@@ -9,6 +15,7 @@ import {
 } from '@/shared/companion'
 import {
   COMPANION_MAX_LINE,
+  COMPANION_WIRE_PROTOCOL,
   type CompanionHostMessage,
   type CompanionInbound,
   parseInbound,
@@ -26,13 +33,24 @@ interface Registration {
   socket: net.Socket | null
   mod: string
   host: string
+  protocol: number
+  avatars: Set<string>
+  extraToasts: CompanionToast[]
+  toasts: string
 }
+
+export type CompanionMessage = Exclude<CompanionInbound, { t: 'hello' }>
 
 type BridgeEvents = {
   accept: (id: string, session: CompanionSession) => void
   kick: (key: string, session: CompanionSession) => void
+  message: (message: CompanionMessage, session: CompanionSession) => void
   connected: (session: CompanionSession) => void
   status: (sessions: CompanionSession[]) => void
+}
+
+export interface CompanionAvatarSource {
+  png(id: string, url: string): Promise<string | null>
 }
 
 export class CompanionBridge extends EventEmitter {
@@ -40,7 +58,21 @@ export class CompanionBridge extends EventEmitter {
   private listening: Promise<number> | null = null
   private readonly registrations = new Map<string, Registration>()
   private readonly pending = new Set<net.Socket>()
-  private toastsLine = JSON.stringify({ t: 'toasts', items: [] })
+  private toasts: CompanionToast[] = []
+  private friendsLine = JSON.stringify({ t: 'friends', online: [], offline: 0 })
+  private voiceLine = JSON.stringify({ t: 'voice', active: false })
+  private self: CompanionSelf | null = null
+  private avatarUrls = new Map<string, string>()
+  private avatarData = new Map<string, string>()
+  private avatarSource: CompanionAvatarSource | null = null
+
+  public setAvatarSource(source: CompanionAvatarSource): void {
+    this.avatarSource = source
+  }
+
+  public setSelf(self: CompanionSelf | null): void {
+    this.self = self
+  }
 
   public override on<K extends keyof BridgeEvents>(event: K, listener: BridgeEvents[K]): this {
     return super.on(event, listener)
@@ -62,7 +94,11 @@ export class CompanionBridge extends EventEmitter {
       instance,
       socket: null,
       mod: '',
-      host: ''
+      host: '',
+      protocol: 1,
+      avatars: new Set(),
+      extraToasts: [],
+      toasts: ''
     })
     return {
       [COMPANION_ENV_ADDRESS]: `127.0.0.1:${port}`,
@@ -98,10 +134,87 @@ export class CompanionBridge extends EventEmitter {
   }
 
   public setToasts(items: CompanionToast[]): void {
+    this.toasts = items
+    for (const entry of this.registrations.values()) this.writeToasts(entry)
+  }
+
+  public pushToast(versionName: string, instance: number, toast: CompanionToast): void {
+    const entry = this.registrations.get(`${versionName}-${instance}`)
+    if (!entry) return
+    entry.extraToasts = [...entry.extraToasts.filter((item) => item.id !== toast.id), toast].slice(-4)
+    this.writeToasts(entry)
+  }
+
+  public setFriends(friends: CompanionFriends): void {
+    const online = friends.online.map(({ avatarUrl, ...friend }) => {
+      if (!avatarUrl) return friend
+      this.rememberAvatar(friend.id, avatarUrl)
+      return { ...friend, avatar: friend.id }
+    })
+    const line = JSON.stringify({ t: 'friends', online, offline: friends.offline })
+    if (line === this.friendsLine) return
+    this.friendsLine = line
+    for (const entry of this.registrations.values()) {
+      if (entry.protocol >= 2) this.write(entry, line)
+    }
+  }
+
+  public setVoice(voice: CompanionVoice): void {
+    const members = voice.members.map(({ avatarUrl, ...member }) => {
+      if (!avatarUrl) return member
+      this.rememberAvatar(member.id, avatarUrl)
+      return { ...member, avatar: member.id }
+    })
+    const line = JSON.stringify({ t: 'voice', ...voice, members })
+    if (line === this.voiceLine) return
+    this.voiceLine = line
+    for (const entry of this.registrations.values()) {
+      if (entry.protocol >= 2) this.write(entry, line)
+    }
+  }
+
+  public result(
+    versionName: string,
+    instance: number,
+    req: string,
+    ok: boolean,
+    error?: string
+  ): boolean {
+    const entry = this.registrations.get(`${versionName}-${instance}`)
+    if (!entry?.socket || entry.protocol < 2) return false
+    return this.write(entry, JSON.stringify(error ? { t: 'result', req, ok, error } : { t: 'result', req, ok }))
+  }
+
+  private rememberAvatar(id: string, url: string): void {
+    if (this.avatarUrls.get(id) === url && this.avatarData.has(id)) {
+      for (const entry of this.registrations.values()) this.sendAvatar(entry, id)
+      return
+    }
+    this.avatarUrls.set(id, url)
+    const source = this.avatarSource
+    if (!source) return
+    void source.png(id, url).then((png) => {
+      if (!png || this.avatarUrls.get(id) !== url) return
+      this.avatarData.set(id, png)
+      for (const entry of this.registrations.values()) {
+        entry.avatars.delete(id)
+        this.sendAvatar(entry, id)
+      }
+    })
+  }
+
+  private sendAvatar(entry: Registration, id: string): void {
+    if (entry.protocol < 2 || entry.avatars.has(id)) return
+    const png = this.avatarData.get(id)
+    if (!png) return
+    if (this.write(entry, JSON.stringify({ t: 'avatar', id, png }))) entry.avatars.add(id)
+  }
+
+  private writeToasts(entry: Registration): void {
+    const items = [...this.toasts, ...entry.extraToasts].slice(-8)
     const line = JSON.stringify({ t: 'toasts', items })
-    if (line === this.toastsLine) return
-    this.toastsLine = line
-    for (const entry of this.registrations.values()) this.write(entry, line)
+    if (line === entry.toasts) return
+    if (this.write(entry, line)) entry.toasts = line
   }
 
   public setHost(versionName: string, instance: number, message: CompanionHostMessage): void {
@@ -212,8 +325,24 @@ export class CompanionBridge extends EventEmitter {
     entry.socket = socket
     entry.mod = message.mod
     entry.host = ''
-    this.write(entry, JSON.stringify({ t: 'welcome' }))
-    this.write(entry, this.toastsLine)
+    entry.toasts = ''
+    entry.avatars = new Set()
+    entry.protocol = Math.min(message.protocol, COMPANION_WIRE_PROTOCOL)
+    const self = this.self
+    this.write(
+      entry,
+      JSON.stringify(
+        self
+          ? { t: 'welcome', protocol: entry.protocol, selfId: self.id, selfName: self.name }
+          : { t: 'welcome', protocol: entry.protocol }
+      )
+    )
+    if (entry.protocol >= 2) {
+      for (const id of this.avatarData.keys()) this.sendAvatar(entry, id)
+      this.write(entry, this.friendsLine)
+      this.write(entry, this.voiceLine)
+    }
+    this.writeToasts(entry)
     const session = this.sessionOf(entry)
     this.emit('connected', session)
     this.emitStatus()
@@ -221,9 +350,16 @@ export class CompanionBridge extends EventEmitter {
   }
 
   private dispatch(entry: Registration, message: CompanionInbound): void {
+    if (message.t === 'hello') return
     const session = this.sessionOf(entry)
-    if (message.t === 'accept') this.emit('accept', message.id, session)
-    else if (message.t === 'kick') this.emit('kick', message.key, session)
+    if (message.t === 'accept') {
+      entry.extraToasts = entry.extraToasts.filter((toast) => toast.id !== message.id)
+      this.emit('accept', message.id, session)
+    } else if (message.t === 'kick') {
+      this.emit('kick', message.key, session)
+    } else {
+      this.emit('message', message, session)
+    }
   }
 
   private sessionOf(entry: Registration): CompanionSession {

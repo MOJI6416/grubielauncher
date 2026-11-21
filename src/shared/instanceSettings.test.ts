@@ -143,7 +143,7 @@ describe('resolveInstanceSettings with launch overrides', () => {
 
 describe('withoutOverrides', () => {
   it('drops the per-instance settings and keeps the rest', () => {
-    const conf = { name: 'Pack', overrides: { xmx: 8192, java: { major: 17 } } }
+    const conf = { name: 'Pack', companionMod: true, overrides: { xmx: 8192, java: { major: 17 } } }
     const stripped = withoutOverrides(conf)
 
     expect(stripped).toEqual({ name: 'Pack' })

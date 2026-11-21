@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import net from 'net'
-import { CompanionBridge } from './CompanionBridge'
+import { CompanionBridge, type CompanionMessage } from './CompanionBridge'
 
 const bridges: CompanionBridge[] = []
 
@@ -106,7 +106,7 @@ describe('companion bridge', () => {
     const port = Number(env.GRUBIE_COMPANION_ADDRESS.split(':')[1])
 
     const flood = await open(port)
-    flood.write('x'.repeat(70 * 1024))
+    flood.write('x'.repeat(1100 * 1024))
     await closed(flood)
 
     const second = await bridge.register('Pack', 1, '/stats')
@@ -114,5 +114,82 @@ describe('companion bridge', () => {
     const old = await open(port)
     old.write(`${JSON.stringify({ t: 'hello', token: env.GRUBIE_COMPANION_TOKEN })}\n`)
     await closed(old)
+  })
+
+  it('speaks protocol 2 with friends, voice, avatars, actions and results', async () => {
+    const bridge = new CompanionBridge()
+    bridges.push(bridge)
+    bridge.setAvatarSource({ png: async (id) => (id === 'u1' ? 'iVBORw0KGgo=' : null) })
+    bridge.setSelf({ id: 'me', name: 'Steve' })
+    bridge.setFriends({
+      online: [
+        { id: 'u1', name: 'Kituk', status: 'playing', joinable: true, avatarUrl: 'https://cdn.example/u1.png' },
+        { id: 'u2', name: 'Alex', status: 'online', joinable: false }
+      ],
+      offline: 4
+    })
+    bridge.setVoice({
+      active: true,
+      channel: 'Builders',
+      muted: false,
+      deafened: false,
+      ptt: true,
+      pttKey: 'V',
+      pttCode: 86,
+      members: [{ id: 'u1', name: 'Kituk', speaking: true, muted: false }]
+    })
+    const env = await bridge.register('Pack', 2, '/stats')
+    const port = Number(env.GRUBIE_COMPANION_ADDRESS.split(':')[1])
+    const game = await open(port)
+    const reader = lines(game)
+    game.write(
+      `${JSON.stringify({ t: 'hello', token: env.GRUBIE_COMPANION_TOKEN, mod: '2.0.0', loader: 'fabric', protocol: 2, features: ['panel'] })}\n`
+    )
+    const welcome = await reader.next('welcome')
+    expect(welcome).toEqual({ t: 'welcome', protocol: 2, selfId: 'me', selfName: 'Steve' })
+    const friends = await reader.next('friends')
+    expect(friends.offline).toBe(4)
+    expect((friends.online as Record<string, unknown>[])[0]).toEqual({
+      id: 'u1',
+      name: 'Kituk',
+      status: 'playing',
+      joinable: true,
+      avatar: 'u1'
+    })
+    const avatar = await reader.next('avatar')
+    expect(avatar).toEqual({ t: 'avatar', id: 'u1', png: 'iVBORw0KGgo=' })
+    const voice = await reader.next('voice')
+    expect(voice.pttCode).toBe(86)
+
+    const messages: CompanionMessage[] = []
+    bridge.on('message', (message) => messages.push(message))
+    game.write(`${JSON.stringify({ t: 'invite', req: 'invite-1', friend: 'u2', server: { address: 'mc.example.net', name: 'Example' } })}\n`)
+    game.write(`${JSON.stringify({ t: 'ptt', down: true })}\n`)
+    game.write(`${JSON.stringify({ t: 'stage', stage: 'world' })}\n`)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(messages.map((message) => message.t)).toEqual(['invite', 'ptt', 'stage'])
+
+    expect(bridge.result('Pack', 2, 'invite-1', false, 'friend_offline')).toBe(true)
+    expect(await reader.next('result')).toEqual({ t: 'result', req: 'invite-1', ok: false, error: 'friend_offline' })
+
+    bridge.pushToast('Pack', 2, { id: 'shot', kind: 'screenshot', title: 'Saved', body: '', count: 1, actionable: false })
+    let toasts = await reader.next('toasts')
+    while ((toasts.items as unknown[]).length === 0) toasts = await reader.next('toasts')
+    expect((toasts.items as { id: string }[]).map((item) => item.id)).toEqual(['shot'])
+  })
+
+  it('keeps old mods on protocol 1', async () => {
+    const bridge = new CompanionBridge()
+    bridges.push(bridge)
+    const env = await bridge.register('Pack', 3, '/stats')
+    const port = Number(env.GRUBIE_COMPANION_ADDRESS.split(':')[1])
+    const game = await open(port)
+    const reader = lines(game)
+    game.write(`${JSON.stringify({ t: 'hello', token: env.GRUBIE_COMPANION_TOKEN, mod: '1.0.0' })}\n`)
+    expect(await reader.next('welcome')).toEqual({ t: 'welcome', protocol: 1 })
+    bridge.setFriends({ online: [{ id: 'u1', name: 'A', status: 'online', joinable: false }], offline: 0 })
+    expect(bridge.result('Pack', 3, 'r', true)).toBe(false)
+    await reader.next('toasts')
+    expect(reader.received.filter((message) => message.t === 'friends')).toEqual([])
   })
 })
