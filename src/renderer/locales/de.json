@@ -6585,9 +6585,9 @@
     "notesUnavailableHint": "Die Beschreibung ist noch nicht veröffentlicht oder der Grubie-Server hat nicht geantwortet. Das Update lässt sich trotzdem installieren.",
     "errors": {
       "unknown": "Das Update konnte nicht heruntergeladen werden. Der Launcher läuft mit der aktuellen Version weiter und versucht es später erneut.",
-      "startAnyway": "Der Launcher startet mit der aktuellen Version.",
       "target": "Update-Server",
-      "later": "Der Launcher versucht es später erneut."
+      "later": "Der Launcher versucht es später erneut.",
+      "startAnyway": "Der Launcher startet mit der aktuellen Version."
     },
     "portable": {
       "title": "Version {{version}} ist erschienen",

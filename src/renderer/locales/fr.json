@@ -6652,9 +6652,9 @@
     "notesUnavailableHint": "Les notes de cette version ne sont pas encore publiées ou le serveur Grubie n’a pas répondu. Vous pouvez quand même installer la mise à jour.",
     "errors": {
       "unknown": "La mise à jour n’a pas pu être téléchargée. Le launcher reste sur la version actuelle et réessaiera plus tard.",
-      "startAnyway": "Le launcher démarre avec la version actuelle.",
       "target": "Serveur de mises à jour",
-      "later": "Le launcher réessaiera plus tard."
+      "later": "Le launcher réessaiera plus tard.",
+      "startAnyway": "Le launcher démarre avec la version actuelle."
     },
     "portable": {
       "title": "La version {{version}} est sortie",

@@ -6585,9 +6585,9 @@
     "notesUnavailableHint": "Bu sürümün notları henüz yayımlanmadı ya da Grubie sunucusu yanıt vermedi. Güncellemeyi yine de kurabilirsiniz.",
     "errors": {
       "unknown": "Güncelleme indirilemedi. Başlatıcı mevcut sürümle çalışmaya devam ediyor ve daha sonra yeniden deneyecek.",
-      "startAnyway": "Başlatıcı mevcut sürümle açılacak.",
       "target": "Güncelleme sunucusu",
-      "later": "Başlatıcı daha sonra yeniden deneyecek."
+      "later": "Başlatıcı daha sonra yeniden deneyecek.",
+      "startAnyway": "Başlatıcı mevcut sürümle açılacak."
     },
     "portable": {
       "title": "{{version}} sürümü çıktı",

@@ -6648,9 +6648,9 @@
     "notesUnavailableHint": "Las notas de esta versión aún no se han publicado o el servidor de Grubie no respondió. Puede instalar la actualización igualmente.",
     "errors": {
       "unknown": "No se pudo descargar la actualización. El launcher sigue con la versión actual y lo intentará de nuevo más tarde.",
-      "startAnyway": "El launcher se iniciará con la versión actual.",
       "target": "Servidor de actualizaciones",
-      "later": "El launcher lo intentará de nuevo más tarde."
+      "later": "El launcher lo intentará de nuevo más tarde.",
+      "startAnyway": "El launcher se iniciará con la versión actual."
     },
     "portable": {
       "title": "Ya está disponible la versión {{version}}",

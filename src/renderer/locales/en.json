@@ -6585,9 +6585,9 @@
     "notesUnavailableHint": "The notes for this version are not published yet or the Grubie server did not answer. You can still install the update.",
     "errors": {
       "unknown": "The update could not be downloaded. The launcher keeps running on the current version and will try again later.",
-      "startAnyway": "The launcher will start on the current version.",
       "target": "Update server",
-      "later": "The launcher will try again later."
+      "later": "The launcher will try again later.",
+      "startAnyway": "The launcher will start on the current version."
     },
     "portable": {
       "title": "Version {{version}} is out",

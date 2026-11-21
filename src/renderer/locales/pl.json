@@ -6716,9 +6716,9 @@
     "notesUnavailableHint": "Opis wersji nie został jeszcze opublikowany lub serwer Grubie nie odpowiedział. Aktualizację można zainstalować i bez niego.",
     "errors": {
       "unknown": "Nie udało się pobrać aktualizacji. Launcher działa na obecnej wersji i spróbuje ponownie później.",
-      "startAnyway": "Launcher uruchomi się w obecnej wersji.",
       "target": "Serwer aktualizacji",
-      "later": "Launcher spróbuje ponownie później."
+      "later": "Launcher spróbuje ponownie później.",
+      "startAnyway": "Launcher uruchomi się w obecnej wersji."
     },
     "portable": {
       "title": "Wyszła wersja {{version}}",
