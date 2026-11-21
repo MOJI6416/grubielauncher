@@ -216,14 +216,51 @@ function threadLocales(notes) {
   return notesLocales(notes).filter((locale) => locale !== "en");
 }
 
-function renderDiscord(notes, locale) {
+const DISCORD_MORE = {
+  en: "More in the full release notes:",
+  ru: "Остальное — в полном списке изменений:",
+  uk: "Решта — у повному списку змін:",
+  de: "Alles Weitere in den vollständigen Versionshinweisen:",
+  es: "El resto, en las notas completas de la versión:",
+  fr: "La suite dans les notes de version complètes :",
+  pl: "Pozostałe zmiany w pełnej liście:",
+  pt: "O restante está nas notas completas da versão:",
+  tr: "Diğer değişiklikler tam sürüm notlarında:"
+};
+
+function releasePageUrl(notes, locale) {
+  return `https://grubielauncher.com/${locale}/release/${notes.version}`;
+}
+
+function composeDiscord(notes, locale, highlights, fixes, more) {
   const template = DISCORD[locale];
-  const content = notes[locale];
   const parts = [template.available(notes.version)];
-  if (content.highlights.length) parts.push(`${template.highlights}\n${bulletList(content.highlights, true)}`);
-  if (content.fixes.length) parts.push(`${template.fixes}\n${bulletList(content.fixes, true)}`);
+  if (highlights.length) parts.push(`${template.highlights}\n${bulletList(highlights, true)}`);
+  if (fixes.length) parts.push(`${template.fixes}\n${bulletList(fixes, true)}`);
+  if (more) parts.push(`${DISCORD_MORE[locale]} <${releasePageUrl(notes, locale)}>`);
   parts.push(template.role ? `${template.report}\n\n<@&${template.role}>` : template.report);
   return parts.join("\n\n");
+}
+
+function fitDiscord(notes, locale) {
+  const content = notes[locale];
+  let highlights = content.highlights;
+  let fixes = content.fixes;
+  let text = composeDiscord(notes, locale, highlights, fixes, false);
+  if (text.length <= DISCORD_LIMIT) return { text, shown: highlights.length + fixes.length };
+
+  while (true) {
+    if (fixes.length) fixes = fixes.slice(0, -1);
+    else if (highlights.length > 1) highlights = highlights.slice(0, -1);
+    else break;
+    text = composeDiscord(notes, locale, highlights, fixes, true);
+    if (text.length <= DISCORD_LIMIT) break;
+  }
+  return { text, shown: highlights.length + fixes.length };
+}
+
+function renderDiscord(notes, locale) {
+  return fitDiscord(notes, locale).text;
 }
 
 function renderGithub(notes, coverUrl) {
@@ -307,7 +344,7 @@ function validate(notes, version) {
         errors.push(`${locale}.${field}: должен быть массивом (пустой — [])`);
         continue;
       }
-      if (items.length > 12) errors.push(`${locale}.${field}: больше 12 пунктов`);
+      if (items.length > 16) errors.push(`${locale}.${field}: больше 16 пунктов — api хранит не больше 16`);
       items.forEach((item, index) => {
         const where = `${locale}.${field}[${index}]`;
         if (typeof item !== "string" || !item.trim()) {
@@ -343,12 +380,14 @@ function validate(notes, version) {
   if (locales.every((locale) => !notes[locale].highlights.length && !notes[locale].fixes.length)) {
     errors.push("Нет ни одного пункта");
   }
-  if (notes.en.highlights.length > 6) warnings.push(`highlights: ${notes.en.highlights.length} пунктов — длинный список, сгруппируйте связанные изменения`);
-  if (notes.en.fixes.length > 5) warnings.push(`fixes: ${notes.en.fixes.length} пунктов — длинный список, сгруппируйте связанные изменения`);
+  if (!notes.isMilestone && notes.en.highlights.length > 6) warnings.push(`highlights: ${notes.en.highlights.length} пунктов — длинный список, сгруппируйте связанные изменения`);
+  if (!notes.isMilestone && notes.en.fixes.length > 5) warnings.push(`fixes: ${notes.en.fixes.length} пунктов — длинный список, сгруппируйте связанные изменения`);
 
   for (const locale of locales) {
-    const length = renderDiscord(notes, locale).length;
-    if (length > DISCORD_LIMIT) errors.push(`Discord ${locale}: ${length} символов при лимите ${DISCORD_LIMIT}`);
+    const { text, shown } = fitDiscord(notes, locale);
+    const total = notes[locale].highlights.length + notes[locale].fixes.length;
+    if (text.length > DISCORD_LIMIT) errors.push(`Discord ${locale}: ${text.length} символов при лимите ${DISCORD_LIMIT}`);
+    else if (shown < total) warnings.push(`Discord ${locale}: в сообщение вошли ${shown} из ${total} пунктов, остальное — по ссылке на страницу релиза`);
   }
 
   const cover = coverErrors(version);
