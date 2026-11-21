@@ -54,6 +54,7 @@ import {
   PLAYER_PACK_FOLDER,
 } from "./packSources";
 import { COMPONENT_KEY_PREFIX, expandSpans } from "./components";
+import { splitBookPage } from "./bookPages";
 import {
   applyDefaultOptionsPacks,
   applyPackOverrides,
@@ -974,9 +975,11 @@ async function buildAiPack(
   state: TranslationState,
   locale: string,
   mcVersion: string,
+  pageKeys: ReadonlySet<string>,
 ): Promise<{
   file: string | null;
   digest: string | null;
+  pages: Map<string, number>;
   quests: LangEntries;
   questz: boolean;
   books: Map<string, LangEntries>;
@@ -1024,9 +1027,10 @@ async function buildAiPack(
   const data = units.some((unit) =>
     Object.keys(unit.entries).some((key) => key.startsWith(COMPONENT_KEY_PREFIX)),
   );
+  const pages = new Map<string, number>();
   const files = [
     ...translationPackFiles(
-      units.map(expandComponentUnit),
+      units.map(expandComponentUnit).map((unit) => splitBookUnit(unit, pageKeys, pages)),
       locale,
       mcVersion,
       langFormatFor(mcVersion),
@@ -1049,7 +1053,7 @@ async function buildAiPack(
   ];
   if (files.length === 0) {
     await fs.remove(target).catch(() => undefined);
-    return { file: null, digest: null, quests, questz, books: bookTranslations, done, data, ftbInline, fancy };
+    return { file: null, digest: null, pages, quests, questz, books: bookTranslations, done, data, ftbInline, fancy };
   }
 
   const description = PACK_DESCRIPTIONS[locale] ?? "Grubie: AI translation of mods";
@@ -1062,7 +1066,7 @@ async function buildAiPack(
   const value = contentDigest.digest("hex");
 
   if (value === state.aiDigest && (await fs.pathExists(target))) {
-    return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data, ftbInline, fancy };
+    return { file: fileName, digest: value, pages, quests, questz, books: bookTranslations, done, data, ftbInline, fancy };
   }
 
   setStage(versionPath, "building");
@@ -1071,7 +1075,7 @@ async function buildAiPack(
   await createZipArchive([], temp, undefined, 9, undefined, files);
   await fs.ensureDir(packsDir(versionPath));
   await fs.move(temp, target, { overwrite: true });
-  return { file: fileName, digest: value, quests, questz, books: bookTranslations, done, data, ftbInline, fancy };
+  return { file: fileName, digest: value, pages, quests, questz, books: bookTranslations, done, data, ftbInline, fancy };
 }
 
 function expandComponentUnit(unit: { namespace: string; entries: LangEntries }) {
@@ -1083,6 +1087,25 @@ function expandComponentUnit(unit: { namespace: string; entries: LangEntries }) 
     );
   }
   return { ...unit, entries };
+}
+
+function splitBookUnit(
+  unit: { namespace: string; entries: LangEntries },
+  pageKeys: ReadonlySet<string>,
+  pages: Map<string, number>,
+) {
+  let entries = unit.entries;
+  for (const [key, value] of Object.entries(unit.entries)) {
+    if (!pageKeys.has(key)) continue;
+    const chunks = splitBookPage(value, (index) => unit.entries[`${key}.${index}`]);
+    if (chunks.length < 2) continue;
+    if (entries === unit.entries) entries = { ...unit.entries };
+    chunks.forEach((chunk, index) => {
+      entries[index === 0 ? key : `${key}.p${index + 1}`] = chunk;
+    });
+    pages.set(key, chunks.length);
+  }
+  return entries === unit.entries ? unit : { ...unit, entries };
 }
 
 export function supportsTextFallback(mcVersion: string): boolean {
@@ -1097,12 +1120,14 @@ export function supportsTextFallback(mcVersion: string): boolean {
 async function readDataText(
   versionPath: string,
   mcVersion: string,
-): Promise<{ packs: DataPack[]; langs: NamespaceLang[] }> {
+): Promise<{ packs: DataPack[]; langs: NamespaceLang[]; pageKeys: Set<string> }> {
   const packs = await listDataPacks(versionPath);
+  const pageKeys = new Set<string>();
   if (!supportsTextFallback(mcVersion)) {
-    return { packs: [], langs: await scanDataPacks(packs, true, true) };
+    return { packs: [], langs: await scanDataPacks(packs, true, true), pageKeys };
   }
-  return { packs, langs: await scanDataPacks(packs, originKeysAreText(mcVersion)) };
+  const langs = await scanDataPacks(packs, originKeysAreText(mcVersion), false, pageKeys);
+  return { packs, langs, pageKeys };
 }
 
 async function applyExternalBooks(
@@ -1563,7 +1588,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     return;
   }
 
-  const ai = await buildAiPack(versionPath, next, locale, mcVersion);
+  const ai = await buildAiPack(versionPath, next, locale, mcVersion, dataText.pageKeys);
   next.aiFile = ai.file;
   next.aiDigest = ai.digest;
   next.units = next.units.map((unit) =>
@@ -1590,6 +1615,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
       storageDir(versionPath),
       dataText.packs,
       state.dataFiles,
+      ai.pages,
     );
   }
   if (ai.questz) {

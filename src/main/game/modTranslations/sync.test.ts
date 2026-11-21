@@ -324,4 +324,46 @@ describe("mod translation sync", () => {
     expect(await fs.readFile(path.join(old, "options.txt"), "utf8")).toBe("lang:ru_ru\n");
     expect(await fs.pathExists(path.join(old, "storage", "mod-translations", "ftbq-originals"))).toBe(false);
   });
+
+  it("gives a long translated book page more pages and keeps DefaultOptions in step", async () => {
+    const pack = path.join(root, "BookPack");
+    const book = path.join(pack, "datapacks", "guide", "data", "cv", "function", "guide.mcfunction");
+    const original = `give @p written_book[written_book_content={pages:['{"text":"Welcome to the pack"}'],title:"Guide",author:"CV"}]\n`;
+    const toml = 'defaultResourcePacks = [ "vanilla","file/Pack RP.zip" ]\n';
+    const tomlFile = path.join(pack, "config", "defaultoptions-common.toml");
+    await fs.outputFile(path.join(pack, "version.json"), JSON.stringify({ version: { id: "1.21.1" }, loader: { mods: [] } }));
+    await fs.outputFile(path.join(pack, "datapacks", "guide", "pack.mcmeta"), "{}");
+    await fs.outputFile(book, original);
+    await fs.outputFile(tomlFile, toml);
+    await fs.outputFile(
+      path.join(pack, "config", "defaultoptions", "options.txt"),
+      "guiScale:3\nkey_key.jump:key.keyboard.space\nresourcePacks:[\"vanilla\",\"file/Pack RP.zip\"]\n",
+    );
+
+    await toggle(true, pack);
+    const unit = fake.submitted.find((entry) => Object.values(entry.entries).includes("Welcome to the pack"));
+    expect(unit).toBeDefined();
+    const [key] = Object.keys(unit!.entries);
+    fake.done.set(unit!.hash, { [key]: "Добро пожаловать в сборку. ".repeat(30).trim() });
+    await runSync(pack, "refresh");
+
+    const russian = await readJSONFromArchive<Record<string, string>>(
+      path.join(pack, "resourcepacks", "grubie-i18n-ai-ru_ru.zip"),
+      "assets/grubie/lang/ru_ru.json",
+    );
+    expect(russian?.[`${key}.p2`]).toBeTruthy();
+    expect(`${russian?.[key]} ${russian?.[`${key}.p2`]}`).toContain("Добро пожаловать в сборку.");
+    expect(await fs.readFile(book, "utf8")).toContain(`'{"translate":"${key}.p2","fallback":""}'`);
+    expect(await fs.readFile(tomlFile, "utf8")).toBe(
+      'defaultResourcePacks = [ "vanilla","file/grubie-i18n-ai-ru_ru.zip","file/Pack RP.zip" ]\n',
+    );
+    const options = await fs.readFile(path.join(pack, "options.txt"), "utf8");
+    expect(options).toContain("guiScale:3");
+    expect(options).not.toContain("key_key.jump");
+    expect(options).toContain('resourcePacks:["vanilla","file/grubie-i18n-ai-ru_ru.zip","file/Pack RP.zip"]');
+
+    await toggle(false, pack);
+    expect(await fs.readFile(book, "utf8")).toBe(original);
+    expect(await fs.readFile(tomlFile, "utf8")).toBe(toml);
+  });
 });

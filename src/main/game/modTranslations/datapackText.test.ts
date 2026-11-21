@@ -117,6 +117,49 @@ describe("datapack text", () => {
   });
 });
 
+describe("written book pages that overflow in the translation", () => {
+  let root: string;
+  const ORIGINAL = `give @p written_book{pages:['{"text":"Read this first"}', '["",{"text":"Page two"}]'],title:"Guide"}\n`;
+  const file = () => path.join(root, "datapacks", "guide", "data", "aged", "function", "book.mcfunction");
+
+  beforeAll(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "grubie-pages-"));
+    await fs.outputFile(path.join(root, "datapacks", "guide", "pack.mcmeta"), "{}");
+    await fs.outputFile(file(), ORIGINAL, "utf8");
+  });
+
+  afterAll(async () => {
+    await fs.remove(root);
+  });
+
+  it("adds continuation pages after the page, drops them again and restores the file", async () => {
+    const packs = await listDataPacks(root);
+    const keys = new Set<string>();
+    const english = (await scanDataPacks(packs, false, false, keys))[0].english;
+    const first = componentKey("Read this first");
+    expect(keys).toEqual(new Set([first, componentKey("Page two")]));
+
+    const store = path.join(root, "storage");
+    const split = await applyDataRewrite(store, packs, [], new Map([[first, 3]]));
+    const text = await fs.readFile(file(), "utf8");
+    const pages = [...text.matchAll(/"translate":"([^"]+)"/g)].map((match) => match[1]);
+    expect(pages).toEqual([first, `${first}.p2`, `${first}.p3`, componentKey("Page two")]);
+    expect(text).toContain(`'{"translate":"${first}.p2","fallback":""}', '`);
+    expect(text.endsWith(`],title:"Guide"}\n`)).toBe(true);
+
+    expect(await applyDataRewrite(store, packs, split, new Map([[first, 3]]))).toEqual(split);
+    expect(await fs.readFile(file(), "utf8")).toBe(text);
+    const again = new Set<string>();
+    expect((await scanDataPacks(packs, false, false, again))[0].english).toEqual(english);
+    expect(again).toEqual(keys);
+
+    const single = await applyDataRewrite(store, packs, split);
+    expect(await fs.readFile(file(), "utf8")).not.toContain(".p2");
+    await restoreDataRewrite(root, store, single);
+    expect(await fs.readFile(file(), "utf8")).toBe(ORIGINAL);
+  });
+});
+
 describe("more data pack formats", () => {
   let pack: string;
 
