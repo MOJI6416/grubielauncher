@@ -20,6 +20,20 @@ export interface ModTranslationPackInfo {
   url: string;
 }
 
+export type ModTranslationGroup = "mods" | "packs" | "books" | "quests";
+
+export type ModTranslationFormat = "lavender" | "patchouli" | "ftbquests" | "questz";
+
+export interface ModTranslationItem {
+  group: ModTranslationGroup;
+  title: string;
+  format: ModTranslationFormat | null;
+  strings: number;
+  translated: number;
+  pending: number;
+  failed: number;
+}
+
 export interface ModTranslationStatus {
   versionPath: string;
   enabled: boolean;
@@ -31,6 +45,7 @@ export interface ModTranslationStatus {
   translated: number;
   pending: number;
   failed: number;
+  items?: ModTranslationItem[];
   needsAccount: boolean;
   error: string | null;
   updatedAt: number | null;

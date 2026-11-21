@@ -34,6 +34,7 @@ export interface NamespaceLang {
   english: LangEntries;
   translatedKeys: string[];
   context?: ModContext;
+  origin?: "pack" | "quests";
 }
 
 export interface SourceScan {

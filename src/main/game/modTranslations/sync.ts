@@ -7,6 +7,9 @@ import { ProjectType, Provider } from "@/types/ModManager";
 import {
   modTranslationLocale,
   supportsModTranslation,
+  ModTranslationFormat,
+  ModTranslationGroup,
+  ModTranslationItem,
   ModTranslationPackInfo,
   ModTranslationStage,
   ModTranslationStatus,
@@ -38,6 +41,14 @@ import { PackCoverage, scanPackCoverage, scanSource, SourceScan } from "./jarSca
 import { langFormatFor } from "./langFiles";
 import type { ModContext } from "./modContext";
 import { ContentSource, listModpackPacks } from "./packSources";
+import {
+  applyQuestzRewrite,
+  QUESTZ_KEY_PREFIX,
+  questzNamespace,
+  readQuestzChapters,
+  restoreQuestz,
+  RewrittenChapter,
+} from "./questz";
 import {
   applyTranslationOptions,
   gameResourceFormat,
@@ -102,6 +113,8 @@ interface StoredUnit {
   keys: number;
   kind?: "book";
   book?: string;
+  group?: Exclude<ModTranslationGroup, "mods">;
+  title?: string;
 }
 
 interface TranslationState {
@@ -116,6 +129,7 @@ interface TranslationState {
   aiDigest: string | null;
   questFile: string | null;
   questDigest: string | null;
+  questzFiles: RewrittenChapter[];
   mods: number;
   needsAccount: boolean;
   error: string | null;
@@ -142,7 +156,11 @@ interface JarFile {
   mtimeMs: number;
 }
 
-type PendingUnit = SubmitUnit & { keys: number; book?: string };
+type PendingUnit = SubmitUnit & {
+  keys: number;
+  book?: string;
+  group?: Exclude<ModTranslationGroup, "mods">;
+};
 
 interface Runtime {
   stage: ModTranslationStage | null;
@@ -172,6 +190,7 @@ function emptyState(): TranslationState {
     aiDigest: null,
     questFile: null,
     questDigest: null,
+    questzFiles: [],
     mods: 0,
     needsAccount: false,
     error: null,
@@ -282,10 +301,45 @@ function statusFrom(
       state.units.length - cachedCount(state) - state.failed.length,
     ),
     failed: state.failed.length,
+    items: statusItems(state),
     needsAccount: state.needsAccount,
     error: state.error,
     updatedAt: state.updatedAt,
   };
+}
+
+function unitFormat(unit: StoredUnit): ModTranslationFormat | null {
+  if (unit.book === FTB_QUESTS_BOOK) return "ftbquests";
+  if (unit.book?.startsWith("lavender:")) return "lavender";
+  if (unit.book?.startsWith("patchouli:")) return "patchouli";
+  return unit.group === "quests" ? "questz" : null;
+}
+
+function statusItems(state: TranslationState): ModTranslationItem[] {
+  const known = state.locale ? cachedUnits.get(state.locale) : undefined;
+  const failed = new Set(state.failed);
+  const items = new Map<string, ModTranslationItem>();
+  for (const unit of state.units) {
+    const group: ModTranslationGroup = unit.group ?? "mods";
+    const format = unitFormat(unit);
+    const title = unit.title ?? unit.namespace;
+    const id = `${group}\u0000${format}\u0000${title}`;
+    const item = items.get(id) ?? {
+      group,
+      title,
+      format,
+      strings: 0,
+      translated: 0,
+      pending: 0,
+      failed: 0,
+    };
+    item.strings += unit.keys;
+    if (known?.has(unit.hash)) item.translated += unit.keys;
+    else if (failed.has(unit.hash)) item.failed += unit.keys;
+    else item.pending += unit.keys;
+    items.set(id, item);
+  }
+  return [...items.values()].sort((a, b) => a.title.localeCompare(b.title));
 }
 
 const cachedUnits = new Map<string, Set<string>>();
@@ -802,7 +856,12 @@ async function buildAiPack(
   state: TranslationState,
   locale: string,
   mcVersion: string,
-): Promise<{ file: string | null; digest: string | null; quests: LangEntries }> {
+): Promise<{
+  file: string | null;
+  digest: string | null;
+  quests: LangEntries;
+  questz: boolean;
+}> {
   const known = await loadCachedHashes(locale);
   const units: Array<{ namespace: string; entries: LangEntries }> = [];
   const bookTranslations = new Map<string, LangEntries>();
@@ -824,6 +883,9 @@ async function buildAiPack(
   const target = path.join(packsDir(versionPath), fileName);
   const quests = bookTranslations.get(FTB_QUESTS_BOOK) ?? {};
   bookTranslations.delete(FTB_QUESTS_BOOK);
+  const questz = units.some((unit) =>
+    Object.keys(unit.entries).some((key) => key.startsWith(QUESTZ_KEY_PREFIX)),
+  );
   const files = [
     ...translationPackFiles(units, locale, mcVersion, langFormatFor(mcVersion)),
     ...(bookTranslations.size > 0
@@ -836,7 +898,7 @@ async function buildAiPack(
   ];
   if (files.length === 0) {
     await fs.remove(target).catch(() => undefined);
-    return { file: null, digest: null, quests };
+    return { file: null, digest: null, quests, questz };
   }
 
   const description = PACK_DESCRIPTIONS[locale] ?? "Grubie: AI translation of mods";
@@ -849,7 +911,7 @@ async function buildAiPack(
   const value = contentDigest.digest("hex");
 
   if (value === state.aiDigest && (await fs.pathExists(target))) {
-    return { file: fileName, digest: value, quests };
+    return { file: fileName, digest: value, quests, questz };
   }
 
   setStage(versionPath, "building");
@@ -858,7 +920,7 @@ async function buildAiPack(
   await createZipArchive([], temp, undefined, 9, undefined, files);
   await fs.ensureDir(packsDir(versionPath));
   await fs.move(temp, target, { overwrite: true });
-  return { file: fileName, digest: value, quests };
+  return { file: fileName, digest: value, quests, questz };
 }
 
 async function readGameResourceFormat(
@@ -929,11 +991,13 @@ async function cleanup(
     state.packs.length > 0 ||
     state.aiFile ||
     state.units.length > 0 ||
-    state.questFile;
+    state.questFile ||
+    state.questzFiles.length > 0;
   if (!hadAnything) return;
   if (isVersionRunning(versionPath)) return;
   await removeStaleManaged(versionPath, new Set());
   await removeOwnQuestFile(versionPath, state);
+  await restoreQuestz(versionPath, storageDir(versionPath), state.questzFiles);
   await fs.remove(booksPath(versionPath)).catch(() => undefined);
   if (mcVersion) await applyOptions(versionPath, mcVersion, [], null);
   await writeState(versionPath, {
@@ -972,6 +1036,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
   const api = new TranslationApi(runtime.context?.token);
   const jars = await listJars(versionPath);
   const modpackPacks = await listModpackPacks(versionPath);
+  const questzLang = questzNamespace(await readQuestzChapters(versionPath));
   const skipProjects = userPackProjects(conf);
   const player = await playerPacks(versionPath);
   const fingerprint = digest([
@@ -980,6 +1045,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     mcVersion,
     jars.map((jar) => [jar.name, jar.size, jar.mtimeMs]),
     modpackPacks.map((pack) => [pack.id, pack.identity]),
+    questzLang ? digest(questzLang.english) : null,
     skipProjects,
     player.map((pack) => pack.identity),
   ]);
@@ -1015,13 +1081,24 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
     if (fullPass) {
       const sources = [...jarSources(jars), ...modpackPacks];
       setStage(versionPath, "scanning", { done: 0, total: sources.length });
-      const scanned = await scanSources(
-        versionPath,
-        sources,
-        new Set(modpackPacks.map((pack) => pack.id)),
-        locale,
+      const packIds = new Set(modpackPacks.map((pack) => pack.id));
+      const scanned = (
+        await scanSources(versionPath, sources, packIds, locale)
+      ).map((scan, index) =>
+        packIds.has(sources[index].id)
+          ? {
+              ...scan,
+              namespaces: scan.namespaces.map((lang) => ({
+                ...lang,
+                origin: "pack" as const,
+              })),
+            }
+          : scan,
       );
-      const langs = scanned.map((scan) => scan.namespaces);
+      const langs = [
+        ...scanned.map((scan) => scan.namespaces),
+        ...(questzLang ? [[questzLang]] : []),
+      ];
       const namespaces = modNamespaces(langs);
 
       setStage(versionPath, "packs");
@@ -1070,6 +1147,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
           entries: unit.entries,
           keys: Object.keys(unit.entries).length,
           ...(unit.context ? { context: unit.context } : {}),
+          ...(unit.origin ? { group: unit.origin === "pack" ? ("packs" as const) : ("quests" as const) } : {}),
         })),
         ...[...planBookUnits(groups), ...questUnits].map((unit) => ({
           hash: unit.hash,
@@ -1078,6 +1156,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
           keys: Object.keys(unit.entries).length,
           kind: "book" as const,
           book: unit.book,
+          group: unit.book === FTB_QUESTS_BOOK ? ("quests" as const) : ("books" as const),
           ...(unit.context ? { context: unit.context } : {}),
         })),
       ];
@@ -1108,6 +1187,8 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
           namespace: unit.namespace,
           keys: unit.keys,
           ...(unit.kind ? { kind: unit.kind, book: unit.book } : {}),
+          ...(unit.group ? { group: unit.group } : {}),
+          ...(unit.context ? { title: unit.context.name } : {}),
         })),
         failed: [...new Set([...failed, ...submitted.unsupported])],
         mods: jars.length,
@@ -1134,6 +1215,13 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
   next.aiFile = ai.file;
   next.aiDigest = ai.digest;
   Object.assign(next, await applyQuestLang(versionPath, next, locale, ai.quests));
+  if (ai.questz) {
+    next.questzFiles = await applyQuestzRewrite(
+      versionPath,
+      storageDir(versionPath),
+      state.questzFiles,
+    );
+  }
   await applyOptions(versionPath, mcVersion, ourPackFiles(next), locale);
   await writeState(versionPath, next);
   schedulePoll(versionPath, next);

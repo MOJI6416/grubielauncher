@@ -85,6 +85,10 @@ beforeAll(async () => {
     '```json\n{\n  "title": "Guide Book"\n}\n```\n\nOpen quests with <keybind;key.questz.openquestscreen>.\n',
   );
   await write(
+    "questz/chapters/76a9fc9e.json",
+    JSON.stringify({ quests: [{ id: "6db07bbe", title: "Pick rocks", description: ["Gather rocks"] }] }),
+  );
+  await write(
     "config/ftbquests/quests/lang/en_us.snbt",
     '{\n\tquest.0123456789ABCDEF.title: "Wood"\n}\n',
   );
@@ -125,6 +129,15 @@ describe("mod translation sync", () => {
       "entries/landing_page.md#001",
     ]);
     expect(fake.submitted.find((unit) => unit.namespace === "ftbquests")?.kind).toBe("book");
+    const questz = fake.submitted.find((unit) => unit.namespace === "questz");
+    expect(questz?.kind).toBeUndefined();
+    expect(questz?.entries).toEqual({
+      "grubie.questz.76a9fc9e.6db07bbe.title": "Pick rocks",
+      "grubie.questz.76a9fc9e.6db07bbe.description.0": "Gather rocks",
+    });
+    expect(await fs.readFile(path.join(instance, "questz/chapters/76a9fc9e.json"), "utf8")).not.toContain(
+      "translate",
+    );
 
     translateEverything();
     await runSync(instance, "refresh");
@@ -146,11 +159,28 @@ describe("mod translation sync", () => {
       "utf8",
     );
     expect(quests).toContain('quest.0123456789ABCDEF.title: "RU Wood"');
+    const questzLang = await readJSONFromArchive<Record<string, string>>(pack, "assets/questz/lang/ru_ru.json");
+    expect(questzLang?.["grubie.questz.76a9fc9e.6db07bbe.title"]).toBe("RU Pick rocks");
+    const chapter = await fs.readJSON(path.join(instance, "questz/chapters/76a9fc9e.json"));
+    expect(chapter.quests[0].title).toEqual({
+      translate: "grubie.questz.76a9fc9e.6db07bbe.title",
+      fallback: "Pick rocks",
+    });
     expect(
       await fs.readFile(path.join(instance, "config/paxi/resourcepacks/guide_book/assets/agedaddition/lavender/entries/guide_book/landing_page.md"), "utf8"),
     ).toContain('"title": "Guide Book"');
     expect(await fs.readFile(path.join(instance, "options.txt"), "utf8")).toContain(
       "file/grubie-i18n-ai-ru_ru.zip",
+    );
+
+    const status = await getModTranslationStatus(instance, { launcherLang: "ru", token: "t" });
+    expect(status.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ group: "mods", title: "Lavender", format: null, translated: 1, pending: 0 }),
+        expect.objectContaining({ group: "books", title: "Aged Guide Book", format: "lavender", strings: 2, translated: 2 }),
+        expect.objectContaining({ group: "quests", title: "FTB Quests", format: "ftbquests", translated: 1 }),
+        expect.objectContaining({ group: "quests", title: "QuestZ", format: "questz", translated: 2 }),
+      ]),
     );
   });
 
@@ -159,6 +189,9 @@ describe("mod translation sync", () => {
 
     expect(await fs.pathExists(path.join(instance, "config/ftbquests/quests/lang/ru_ru.snbt"))).toBe(false);
     expect(await fs.pathExists(path.join(instance, "config/ftbquests/quests/lang/en_us.snbt"))).toBe(true);
+    expect((await fs.readJSON(path.join(instance, "questz/chapters/76a9fc9e.json"))).quests[0].title).toBe(
+      "Pick rocks",
+    );
     expect(await fs.pathExists(path.join(instance, "resourcepacks", "grubie-i18n-ai-ru_ru.zip"))).toBe(false);
   });
 

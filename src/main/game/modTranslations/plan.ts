@@ -9,6 +9,7 @@ export interface PlannedUnit {
   format: LangFormat;
   entries: LangEntries;
   context?: ModContext;
+  origin?: "pack" | "quests";
 }
 
 const IGNORED_NAMESPACES = new Set(["minecraft", "realms"]);
@@ -53,6 +54,7 @@ export function planUnits(
           format: lang.format,
           entries,
           ...(lang.context ? { context: lang.context } : {}),
+          ...(lang.origin ? { origin: lang.origin } : {}),
         });
       }
     }
