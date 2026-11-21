@@ -6655,6 +6655,12 @@
       "startAnyway": "Le launcher démarre avec la version actuelle.",
       "target": "Serveur de mises à jour",
       "later": "Le launcher réessaiera plus tard."
+    },
+    "portable": {
+      "title": "La version {{version}} est sortie",
+      "description": "Téléchargez la nouvelle archive et déplacez-y le dossier data — vos instances et réglages sont conservés.",
+      "download": "Télécharger",
+      "hide": "Masquer"
     }
   },
   "trayPopup": {

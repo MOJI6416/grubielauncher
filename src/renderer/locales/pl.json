@@ -6719,6 +6719,12 @@
       "startAnyway": "Launcher uruchomi się w obecnej wersji.",
       "target": "Serwer aktualizacji",
       "later": "Launcher spróbuje ponownie później."
+    },
+    "portable": {
+      "title": "Wyszła wersja {{version}}",
+      "description": "Pobierz nowe archiwum i przenieś do niego folder data — instancje i ustawienia zostaną zachowane.",
+      "download": "Pobierz",
+      "hide": "Ukryj"
     }
   },
   "trayPopup": {

@@ -6651,6 +6651,12 @@
       "startAnyway": "El launcher se iniciará con la versión actual.",
       "target": "Servidor de actualizaciones",
       "later": "El launcher lo intentará de nuevo más tarde."
+    },
+    "portable": {
+      "title": "Ya está disponible la versión {{version}}",
+      "description": "Descargue el nuevo archivo y mueva a él la carpeta data: sus instancias y ajustes se conservan.",
+      "download": "Descargar",
+      "hide": "Ocultar"
     }
   },
   "trayPopup": {

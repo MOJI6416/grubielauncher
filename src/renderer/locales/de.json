@@ -6588,6 +6588,12 @@
       "startAnyway": "Der Launcher startet mit der aktuellen Version.",
       "target": "Update-Server",
       "later": "Der Launcher versucht es später erneut."
+    },
+    "portable": {
+      "title": "Version {{version}} ist erschienen",
+      "description": "Laden Sie das neue Archiv herunter und verschieben Sie den Ordner data hinein – Instanzen und Einstellungen bleiben erhalten.",
+      "download": "Herunterladen",
+      "hide": "Ausblenden"
     }
   },
   "trayPopup": {

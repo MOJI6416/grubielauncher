@@ -37,6 +37,7 @@ import { StartScreenHost } from "./hosts/StartScreenHost";
 import { SeasonalHost } from "./hosts/SeasonalHost";
 import { TrayHost } from "./hosts/TrayHost";
 import { AppUpdateHost } from "./hosts/AppUpdateHost";
+import { PortableUpdateHost } from "./hosts/PortableUpdateHost";
 import { SupportHost } from "./hosts/SupportHost";
 import { StreamerModeHost } from "./hosts/StreamerModeHost";
 import { DataMoveHost } from "./hosts/DataMoveHost";
@@ -57,6 +58,7 @@ export function AppHosts() {
       <AppearanceHost />
       <SeasonalHost />
       <AppUpdateHost />
+      <PortableUpdateHost />
       <TrayHost />
       <LaunchHost />
       <ConsoleHost />

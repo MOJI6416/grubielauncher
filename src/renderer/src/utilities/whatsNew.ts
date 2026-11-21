@@ -10,6 +10,9 @@ export interface LauncherWhatsNewState {
   launcherImported?: string[];
   instanceConfCleanup?: boolean;
   instanceConfRevision?: number;
+  portableUpdate?: {
+    dismissedVersion?: string;
+  };
 }
 
 export type WhatsNewDecision =

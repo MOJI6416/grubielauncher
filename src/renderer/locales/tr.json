@@ -6588,6 +6588,12 @@
       "startAnyway": "Başlatıcı mevcut sürümle açılacak.",
       "target": "Güncelleme sunucusu",
       "later": "Başlatıcı daha sonra yeniden deneyecek."
+    },
+    "portable": {
+      "title": "{{version}} sürümü çıktı",
+      "description": "Yeni arşivi indirin ve data klasörünü içine taşıyın — kurulumlarınız ve ayarlarınız korunur.",
+      "download": "İndir",
+      "hide": "Gizle"
     }
   },
   "trayPopup": {

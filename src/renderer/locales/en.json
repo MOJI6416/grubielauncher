@@ -6588,6 +6588,12 @@
       "startAnyway": "The launcher will start on the current version.",
       "target": "Update server",
       "later": "The launcher will try again later."
+    },
+    "portable": {
+      "title": "Version {{version}} is out",
+      "description": "Download the new archive and move your data folder into it — your instances and settings stay.",
+      "download": "Download",
+      "hide": "Hide"
     }
   },
   "trayPopup": {

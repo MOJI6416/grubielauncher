@@ -248,6 +248,7 @@ export const USAGE_FEATURES = [
   "links.webLogin",
   "app.update",
   "app.updateCheck",
+  "app.portableDownload",
   "whatsNew.open",
   "whatsNew.link",
   "news.open",
