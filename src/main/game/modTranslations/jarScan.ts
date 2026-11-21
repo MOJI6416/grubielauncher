@@ -154,8 +154,15 @@ async function listDirectory(
 
 export async function directoryFiles(
   root: string,
+  assetsRoot = false,
 ): Promise<Array<{ name: string; file: string; size: number; mtimeMs: number }>> {
   const files: Array<{ name: string; file: string; size: number; mtimeMs: number }> = [];
+  if (assetsRoot) {
+    await listDirectory(root, "", files);
+    return files
+      .map((file) => ({ ...file, name: `assets/${file.name}` }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
   for (const top of DIRECTORY_ROOTS) await listDirectory(root, top, files);
   const mcmeta = path.join(root, "pack.mcmeta");
   const stat = await fs.stat(mcmeta).catch(() => null);
@@ -165,9 +172,9 @@ export async function directoryFiles(
   return files.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function directoryWalker(root: string): Walker {
+function directoryWalker(root: string, assetsRoot = false): Walker {
   return async (visit) => {
-    for (const file of await directoryFiles(root)) {
+    for (const file of await directoryFiles(root, assetsRoot)) {
       await visit(file.name, file.size, () => fs.readFile(file.file));
     }
   };
@@ -356,13 +363,14 @@ function finish(state: ScanState, context: ModContext | null): SourceScan {
 export async function scanSource(
   sourcePath: string,
   targetLocale: string,
+  assetsRoot = false,
 ): Promise<SourceScan> {
   const state = emptyState(targetLocale);
   const stat = await fs.stat(sourcePath);
   if (stat.isDirectory()) {
     return finish(
       state,
-      await collect(directoryWalker(sourcePath), state, true, true),
+      await collect(directoryWalker(sourcePath, assetsRoot), state, true, true),
     );
   }
   const zip = await openZip((callback) =>

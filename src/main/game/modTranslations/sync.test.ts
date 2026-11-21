@@ -71,10 +71,22 @@ beforeAll(async () => {
   fake.cache = path.join(root, "cache");
   instance = path.join(root, "Aged");
   await write("version.json", JSON.stringify({ version: { id: "1.21.1" }, loader: { mods: [] } }));
-  await write("options.txt", "lang:ru_ru\nresourcePacks:[\"vanilla\",\"guide_book\"]\n");
+  await write("options.txt", "lang:ru_ru\nresourcePacks:[\"vanilla\",\"guide_book\",\"file/Compat.zip\"]\n");
+  await createZipArchive(
+    [],
+    path.join(instance, "resourcepacks", "Compat.zip"),
+    undefined,
+    6,
+    undefined,
+    Object.entries({
+      "pack.mcmeta": '{"pack":{"pack_format":34,"description":"Compat"}}',
+      "assets/lavender/lang/en_us.json": '{"text.lavender.search":"Find"}',
+      "assets/missingmod/lang/en_us.json": '{"item.missing.ghost":"Ghost item"}',
+    }).map(([entry, data]) => ({ name: entry, data: Buffer.from(data, "utf8") })),
+  );
   await jar("lavender.jar", {
     "fabric.mod.json": '{"id":"lavender","name":"Lavender","description":"Guide books in Markdown"}',
-    "assets/lavender/lang/en_us.json": '{"text.lavender.search":"Search"}',
+    "assets/lavender/lang/en_us.json": '{"text.lavender.search":"Search","text.lavender.other":"Other"}',
   });
   await write(
     "config/paxi/resourcepacks/guide_book/pack.mcmeta",
@@ -115,11 +127,17 @@ async function toggle(enabled: boolean) {
   await runSync(instance, "toggle");
 }
 
+const REJECTED = "grubie.questz.76a9fc9e.6db07bbe.description.0";
+
 function translateEverything() {
   for (const unit of fake.submitted) {
     fake.done.set(
       unit.hash,
-      Object.fromEntries(Object.entries(unit.entries).map(([key, value]) => [key, `RU ${value}`])),
+      Object.fromEntries(
+        Object.entries(unit.entries)
+          .filter(([key]) => key !== REJECTED)
+          .map(([key, value]) => [key, `RU ${value}`]),
+      ),
     );
   }
 }
@@ -128,7 +146,7 @@ describe("mod translation sync", () => {
   it("sends the mod context, the guide book and the quests, then installs them", async () => {
     await toggle(true);
 
-    const lavender = fake.submitted.find((unit) => unit.namespace === "lavender");
+    const lavender = fake.submitted.find((unit) => "text.lavender.other" in unit.entries);
     expect(lavender?.context).toEqual({ name: "Lavender", description: "Guide books in Markdown" });
     expect(lavender?.kind).toBeUndefined();
     const book = fake.submitted.find((unit) => unit.kind === "book" && unit.namespace === "agedaddition");
@@ -148,12 +166,22 @@ describe("mod translation sync", () => {
       "translate",
     );
 
+    expect(fake.submitted.some((unit) => "item.missing.ghost" in unit.entries)).toBe(false);
+    expect(lavender?.entries).toEqual({ "text.lavender.other": "Other" });
+    expect(
+      fake.submitted.find((unit) => "text.lavender.search" in unit.entries)?.entries,
+    ).toEqual({ "text.lavender.search": "Find" });
+    const order = fake.submitted.map((unit) =>
+      unit.namespace === "questz" || unit.namespace === "ftbquests" ? 0 : unit.kind === "book" ? 1 : 2,
+    );
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+
     translateEverything();
     await runSync(instance, "refresh");
 
     const pack = path.join(instance, "resourcepacks", "grubie-i18n-ai-ru_ru.zip");
     const lang = await readJSONFromArchive<Record<string, string>>(pack, "assets/lavender/lang/ru_ru.json");
-    expect(lang).toEqual({ "text.lavender.search": "RU Search" });
+    expect(lang).toEqual({ "text.lavender.other": "RU Other", "text.lavender.search": "RU Find" });
     const page = String(
       await readArchiveEntry(
         pack,
@@ -197,7 +225,8 @@ describe("mod translation sync", () => {
         expect.objectContaining({ group: "mods", title: "Lavender", format: null, translated: 1, pending: 0 }),
         expect.objectContaining({ group: "books", title: "Aged Guide Book", format: "lavender", strings: 2, translated: 2 }),
         expect.objectContaining({ group: "quests", title: "FTB Quests", format: "ftbquests", translated: 1 }),
-        expect.objectContaining({ group: "quests", title: "QuestZ", format: "questz", translated: 2 }),
+        expect.objectContaining({ group: "quests", title: "QuestZ", format: "questz", strings: 2, translated: 1, failed: 1 }),
+        expect.objectContaining({ group: "packs", title: "Compat", translated: 1 }),
         expect.objectContaining({ group: "books", title: "notebook", format: "patchouli", translated: 2 }),
       ]),
     );

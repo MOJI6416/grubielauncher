@@ -126,6 +126,7 @@ interface StoredUnit {
   book?: string;
   group?: Exclude<ModTranslationGroup, "mods">;
   title?: string;
+  done?: number;
 }
 
 interface TranslationState {
@@ -334,7 +335,10 @@ function statusItems(state: TranslationState): ModTranslationItem[] {
   const known = state.locale ? cachedUnits.get(state.locale) : undefined;
   const failed = new Set(state.failed);
   const items = new Map<string, ModTranslationItem>();
+  const seen = new Set<string>();
   for (const unit of state.units) {
+    if (seen.has(unit.hash)) continue;
+    seen.add(unit.hash);
     const group: ModTranslationGroup = unit.group ?? "mods";
     const format = unitFormat(unit);
     const title = unit.title ?? unit.namespace;
@@ -349,8 +353,11 @@ function statusItems(state: TranslationState): ModTranslationItem[] {
       failed: 0,
     };
     item.strings += unit.keys;
-    if (known?.has(unit.hash)) item.translated += unit.keys;
-    else if (failed.has(unit.hash)) item.failed += unit.keys;
+    if (known?.has(unit.hash)) {
+      const done = Math.min(unit.done ?? unit.keys, unit.keys);
+      item.translated += done;
+      item.failed += unit.keys - done;
+    } else if (failed.has(unit.hash)) item.failed += unit.keys;
     else item.pending += unit.keys;
     items.set(id, item);
   }
@@ -516,7 +523,7 @@ async function scanSources(
           scan = cached.scan;
         } else {
           try {
-            scan = await scanSource(source.path, locale);
+            scan = await scanSource(source.path, locale, source.assetsRoot);
             if (packIds.has(source.id)) {
               scan = withFallbackContext(scan, source.label);
             }
@@ -726,8 +733,11 @@ async function submitUnits(
   const size = (unit: PendingUnit) =>
     Object.values(unit.entries).reduce((sum, value) => sum + value.length, 0);
   let quota = false;
+  const priority = (unit: PendingUnit) =>
+    unit.group === "quests" ? 0 : unit.kind === "book" ? 1 : 2;
+  const ordered = [...units].sort((a, b) => priority(a) - priority(b));
   for (const batch of chunkBySize(
-    units,
+    ordered,
     SUBMIT_BATCH_UNITS,
     SUBMIT_BATCH_CHARS,
     size,
@@ -838,7 +848,7 @@ async function applyQuestLang(
   translations: LangEntries,
 ): Promise<{ questFile: string | null; questDigest: string | null }> {
   const target = questLangPath(versionPath, locale);
-  const relative = path.relative(versionPath, target);
+  const relative = path.relative(versionPath, target).split(path.sep).join("/");
   const previous = state.questFile ? path.resolve(versionPath, state.questFile) : null;
   if (previous && previous !== path.resolve(target)) {
     await removeOwnQuestFile(versionPath, state);
@@ -877,13 +887,16 @@ async function buildAiPack(
   quests: LangEntries;
   questz: boolean;
   books: Map<string, LangEntries>;
+  done: Map<string, number>;
 }> {
   const known = await loadCachedHashes(locale);
   const units: Array<{ namespace: string; entries: LangEntries }> = [];
   const bookTranslations = new Map<string, LangEntries>();
+  const done = new Map<string, number>();
   for (const unit of state.units) {
     if (!known.has(unit.hash)) continue;
     const entries = await readCachedUnit(locale, unit.hash);
+    done.set(unit.hash, entries ? Object.keys(entries).length : 0);
     if (!entries || Object.keys(entries).length === 0) continue;
     if (unit.kind === "book" && unit.book) {
       bookTranslations.set(unit.book, {
@@ -914,7 +927,7 @@ async function buildAiPack(
   ];
   if (files.length === 0) {
     await fs.remove(target).catch(() => undefined);
-    return { file: null, digest: null, quests, questz, books: bookTranslations };
+    return { file: null, digest: null, quests, questz, books: bookTranslations, done };
   }
 
   const description = PACK_DESCRIPTIONS[locale] ?? "Grubie: AI translation of mods";
@@ -927,7 +940,7 @@ async function buildAiPack(
   const value = contentDigest.digest("hex");
 
   if (value === state.aiDigest && (await fs.pathExists(target))) {
-    return { file: fileName, digest: value, quests, questz, books: bookTranslations };
+    return { file: fileName, digest: value, quests, questz, books: bookTranslations, done };
   }
 
   setStage(versionPath, "building");
@@ -936,7 +949,7 @@ async function buildAiPack(
   await createZipArchive([], temp, undefined, 9, undefined, files);
   await fs.ensureDir(packsDir(versionPath));
   await fs.move(temp, target, { overwrite: true });
-  return { file: fileName, digest: value, quests, questz, books: bookTranslations };
+  return { file: fileName, digest: value, quests, questz, books: bookTranslations, done };
 }
 
 async function applyExternalBooks(
@@ -1146,21 +1159,33 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
       const sources = [...jarSources(jars), ...modpackPacks];
       setStage(versionPath, "scanning", { done: 0, total: sources.length });
       const packIds = new Set(modpackPacks.map((pack) => pack.id));
-      const scanned = [
+      const raw = [
         ...(await scanSources(versionPath, sources, packIds, locale)),
         await scanExternalPatchouli(versionPath, locale),
-      ].map((scan, index) =>
+      ];
+      const installed = new Set(
+        raw
+          .filter((_scan, index) => !sources[index] || !packIds.has(sources[index].id))
+          .flatMap((scan) => [
+            ...scan.namespaces.map((lang) => lang.namespace),
+            ...scan.books.map((doc) => doc.namespace),
+          ]),
+      );
+      const scanned = raw.map((scan, index) =>
         !sources[index] || !packIds.has(sources[index].id)
           ? scan
           : sources[index].id.startsWith(`pack:${PLAYER_PACK_FOLDER}/`)
             ? {
                 ...scan,
                 translatedDocs: [],
-                namespaces: scan.namespaces.map((lang) => ({
-                  ...lang,
-                  translatedKeys: [],
-                  origin: "pack" as const,
-                })),
+                books: scan.books.filter((doc) => installed.has(doc.namespace)),
+                namespaces: scan.namespaces
+                  .filter((lang) => installed.has(lang.namespace))
+                  .map((lang) => ({
+                    ...lang,
+                    translatedKeys: [],
+                    origin: "pack" as const,
+                  })),
               }
             : {
                 ...scan,
@@ -1293,6 +1318,9 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
   const ai = await buildAiPack(versionPath, next, locale, mcVersion);
   next.aiFile = ai.file;
   next.aiDigest = ai.digest;
+  next.units = next.units.map((unit) =>
+    ai.done.has(unit.hash) ? { ...unit, done: ai.done.get(unit.hash) } : unit,
+  );
   Object.assign(next, await applyQuestLang(versionPath, next, locale, ai.quests));
   next.externalFiles = await applyExternalBooks(versionPath, next, locale, ai.books);
   if (ai.questz) {

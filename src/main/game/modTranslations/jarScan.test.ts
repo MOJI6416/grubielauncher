@@ -254,6 +254,24 @@ describe("scanSource", () => {
   });
 });
 
+describe("ResourceLoader folders", () => {
+  it("reads resources/<namespace>/lang as assets", async () => {
+    const root = await folder("resources", {
+      "betterquesting/lang/en_us.lang": "betterquesting.quest.1=Chop a tree\n",
+      "betterquesting/lang/ru_ru.lang": "betterquesting.quest.2=Есть\n",
+    });
+    const result = await scanSource(root, "ru_ru", true);
+    expect(result.namespaces).toEqual([
+      {
+        namespace: "betterquesting",
+        format: "lang",
+        english: { "betterquesting.quest.1": "Chop a tree" },
+        translatedKeys: ["betterquesting.quest.2"],
+      },
+    ]);
+  });
+});
+
 describe("scanPackCoverage", () => {
   it("collects every key and book page a pack translates into the locale", async () => {
     const pack = await zip("pack.zip", {
