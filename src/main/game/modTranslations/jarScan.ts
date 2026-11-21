@@ -5,6 +5,8 @@ import type { Entry, ZipFile } from "yauzl";
 import {
   BookDoc,
   docId,
+  EXTERNAL_PATCHOULI_DIR,
+  EXTERNAL_PATCHOULI_NAMESPACE,
   isSourceBookPath,
   MAX_BOOK_BYTES,
   parseBookPath,
@@ -379,6 +381,72 @@ export async function scanSource(
   } finally {
     zip.close();
   }
+}
+
+async function externalBookFiles(
+  root: string,
+  relative: string,
+  out: Array<{ name: string; file: string; size: number }>,
+): Promise<void> {
+  const entries = await fs
+    .readdir(path.join(root, relative), { withFileTypes: true })
+    .catch(() => []);
+  for (const entry of entries) {
+    const name = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      await externalBookFiles(root, name, out);
+    } else if (entry.isFile() && name.endsWith(".json")) {
+      const file = path.join(root, name);
+      const stat = await fs.stat(file).catch(() => null);
+      if (stat) out.push({ name, file, size: stat.size });
+    }
+  }
+}
+
+const EXTERNAL_DOC =
+  /^([a-z0-9_.-]+)\/([a-z]{2,3}_[a-z]{2,4})\/(entries|categories)\/(.+\.json)$/;
+
+export async function scanExternalPatchouli(
+  versionPath: string,
+  targetLocale: string,
+): Promise<SourceScan> {
+  const root = path.join(versionPath, EXTERNAL_PATCHOULI_DIR);
+  const files: Array<{ name: string; file: string; size: number }> = [];
+  await externalBookFiles(root, "", files);
+  const scan: SourceScan = {
+    context: null,
+    namespaces: [],
+    books: [],
+    translatedDocs: [],
+    patchouliI18n: [],
+  };
+  for (const { name, file, size } of files.sort((a, b) => a.name.localeCompare(b.name))) {
+    if (size > MAX_BOOK_BYTES) continue;
+    const bookJson = /^([a-z0-9_.-]+)\/book\.json$/.exec(name);
+    if (bookJson) {
+      const i18n = parsePatchouliBookJson(
+        `data/${EXTERNAL_PATCHOULI_NAMESPACE}/patchouli_books/${bookJson[1]}/book.json`,
+        await fs.readFile(file),
+      );
+      if (i18n) scan.patchouliI18n.push(i18n);
+      continue;
+    }
+    const match = EXTERNAL_DOC.exec(name);
+    if (!match) continue;
+    const doc = {
+      format: "patchouli" as const,
+      namespace: EXTERNAL_PATCHOULI_NAMESPACE,
+      book: match[1],
+      part: match[3] as BookDoc["part"],
+      path: match[4],
+    };
+    if (match[2] === targetLocale) {
+      scan.translatedDocs.push(docId(doc));
+    } else if (match[2] === SOURCE_LOCALE) {
+      scan.books.push({ ...doc, text: await fs.readFile(file, "utf8"), external: true });
+    }
+  }
+  return scan;
 }
 
 export async function scanPackCoverage(

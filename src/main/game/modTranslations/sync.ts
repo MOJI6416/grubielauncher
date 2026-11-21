@@ -37,7 +37,13 @@ import {
   planQuestUnits,
   renderQuestLang,
 } from "./ftbQuests";
-import { PackCoverage, scanPackCoverage, scanSource, SourceScan } from "./jarScan";
+import {
+  PackCoverage,
+  scanExternalPatchouli,
+  scanPackCoverage,
+  scanSource,
+  SourceScan,
+} from "./jarScan";
 import { langFormatFor } from "./langFiles";
 import type { ModContext } from "./modContext";
 import {
@@ -135,6 +141,7 @@ interface TranslationState {
   questFile: string | null;
   questDigest: string | null;
   questzFiles: RewrittenChapter[];
+  externalFiles: Array<{ file: string; digest: string }>;
   mods: number;
   needsAccount: boolean;
   error: string | null;
@@ -196,6 +203,7 @@ function emptyState(): TranslationState {
     questFile: null,
     questDigest: null,
     questzFiles: [],
+    externalFiles: [],
     mods: 0,
     needsAccount: false,
     error: null,
@@ -866,6 +874,7 @@ async function buildAiPack(
   digest: string | null;
   quests: LangEntries;
   questz: boolean;
+  books: Map<string, LangEntries>;
 }> {
   const known = await loadCachedHashes(locale);
   const units: Array<{ namespace: string; entries: LangEntries }> = [];
@@ -903,7 +912,7 @@ async function buildAiPack(
   ];
   if (files.length === 0) {
     await fs.remove(target).catch(() => undefined);
-    return { file: null, digest: null, quests, questz };
+    return { file: null, digest: null, quests, questz, books: bookTranslations };
   }
 
   const description = PACK_DESCRIPTIONS[locale] ?? "Grubie: AI translation of mods";
@@ -916,7 +925,7 @@ async function buildAiPack(
   const value = contentDigest.digest("hex");
 
   if (value === state.aiDigest && (await fs.pathExists(target))) {
-    return { file: fileName, digest: value, quests, questz };
+    return { file: fileName, digest: value, quests, questz, books: bookTranslations };
   }
 
   setStage(versionPath, "building");
@@ -925,7 +934,51 @@ async function buildAiPack(
   await createZipArchive([], temp, undefined, 9, undefined, files);
   await fs.ensureDir(packsDir(versionPath));
   await fs.move(temp, target, { overwrite: true });
-  return { file: fileName, digest: value, quests, questz };
+  return { file: fileName, digest: value, quests, questz, books: bookTranslations };
+}
+
+async function applyExternalBooks(
+  versionPath: string,
+  state: TranslationState,
+  locale: string,
+  translations: Map<string, LangEntries>,
+): Promise<Array<{ file: string; digest: string }>> {
+  const owned = new Map(state.externalFiles.map((entry) => [entry.file, entry.digest]));
+  const files =
+    translations.size > 0
+      ? bookPackFiles((await readBooks(versionPath, locale)).groups, translations, locale, true)
+      : [];
+  const result: Array<{ file: string; digest: string }> = [];
+  const keep = new Set<string>();
+  for (const file of files) {
+    const target = path.join(versionPath, ...file.name.split("/"));
+    const current = await fileDigest(target);
+    const digest = createHash("sha1").update(file.data).digest("hex");
+    if (current !== null && current !== owned.get(file.name)) continue;
+    if (current !== digest) {
+      await fs.ensureDir(path.dirname(target));
+      await fs.writeFile(`${target}.grubie-tmp`, file.data);
+      await fs.move(`${target}.grubie-tmp`, target, { overwrite: true });
+    }
+    keep.add(file.name);
+    result.push({ file: file.name, digest });
+  }
+  for (const [file, digest] of owned) {
+    if (keep.has(file)) continue;
+    const target = path.join(versionPath, ...file.split("/"));
+    if ((await fileDigest(target)) === digest) await fs.remove(target).catch(() => undefined);
+  }
+  return result;
+}
+
+async function removeExternalBooks(
+  versionPath: string,
+  state: TranslationState,
+): Promise<void> {
+  for (const { file, digest } of state.externalFiles) {
+    const target = path.join(versionPath, ...file.split("/"));
+    if ((await fileDigest(target)) === digest) await fs.remove(target).catch(() => undefined);
+  }
 }
 
 async function readGameResourceFormat(
@@ -997,12 +1050,14 @@ async function cleanup(
     state.aiFile ||
     state.units.length > 0 ||
     state.questFile ||
-    state.questzFiles.length > 0;
+    state.questzFiles.length > 0 ||
+    state.externalFiles.length > 0;
   if (!hadAnything) return;
   if (isVersionRunning(versionPath)) return;
   await removeStaleManaged(versionPath, new Set());
   await removeOwnQuestFile(versionPath, state);
   await restoreQuestz(versionPath, storageDir(versionPath), state.questzFiles);
+  await removeExternalBooks(versionPath, state);
   await fs.remove(booksPath(versionPath)).catch(() => undefined);
   if (mcVersion) await applyOptions(versionPath, mcVersion, [], null);
   await writeState(versionPath, {
@@ -1087,10 +1142,11 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
       const sources = [...jarSources(jars), ...modpackPacks];
       setStage(versionPath, "scanning", { done: 0, total: sources.length });
       const packIds = new Set(modpackPacks.map((pack) => pack.id));
-      const scanned = (
-        await scanSources(versionPath, sources, packIds, locale)
-      ).map((scan, index) =>
-        !packIds.has(sources[index].id)
+      const scanned = [
+        ...(await scanSources(versionPath, sources, packIds, locale)),
+        await scanExternalPatchouli(versionPath, locale),
+      ].map((scan, index) =>
+        !sources[index] || !packIds.has(sources[index].id)
           ? scan
           : sources[index].id.startsWith(`pack:${PLAYER_PACK_FOLDER}/`)
             ? {
@@ -1203,7 +1259,11 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
           keys: unit.keys,
           ...(unit.kind ? { kind: unit.kind, book: unit.book } : {}),
           ...(unit.group ? { group: unit.group } : {}),
-          ...(unit.context ? { title: unit.context.name } : {}),
+          ...(unit.context
+            ? { title: unit.context.name }
+            : unit.book
+              ? { title: unit.book.split(":").pop() }
+              : {}),
         })),
         failed: [...new Set([...failed, ...submitted.unsupported])],
         mods: jars.length,
@@ -1230,6 +1290,7 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
   next.aiFile = ai.file;
   next.aiDigest = ai.digest;
   Object.assign(next, await applyQuestLang(versionPath, next, locale, ai.quests));
+  next.externalFiles = await applyExternalBooks(versionPath, next, locale, ai.books);
   if (ai.questz) {
     next.questzFiles = await applyQuestzRewrite(
       versionPath,

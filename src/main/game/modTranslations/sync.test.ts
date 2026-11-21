@@ -84,6 +84,15 @@ beforeAll(async () => {
     "config/paxi/resourcepacks/guide_book/assets/agedaddition/lavender/entries/guide_book/landing_page.md",
     '```json\n{\n  "title": "Guide Book"\n}\n```\n\nOpen quests with <keybind;key.questz.openquestscreen>.\n',
   );
+  await jar("patchouli.jar", {
+    "fabric.mod.json": '{"id":"patchouli","name":"Patchouli"}',
+    "assets/patchouli/lang/en_us.json": '{"patchouli.gui.lexicon.home":"Home"}',
+  });
+  await write(
+    "patchouli_books/notebook/en_us/entries/start.json",
+    JSON.stringify({ name: "Start", category: "patchouli:basics", pages: ["Read me first."] }),
+  );
+  await write("patchouli_books/notebook/zh_cn/entries/start.json", '{"name":"开始"}');
   await write(
     "questz/chapters/76a9fc9e.json",
     JSON.stringify({ quests: [{ id: "6db07bbe", title: "Pick rocks", description: ["Gather rocks"] }] }),
@@ -154,6 +163,15 @@ describe("mod translation sync", () => {
     expect(page).toContain('"title": "RU Guide Book"');
     expect(page).toContain("RU Open quests with <keybind;key.questz.openquestscreen>.");
 
+    const notebook = await fs.readJSON(
+      path.join(instance, "patchouli_books/notebook/ru_ru/entries/start.json"),
+    );
+    expect(notebook).toEqual({
+      name: "RU Start",
+      category: "patchouli:basics",
+      pages: ["RU Read me first."],
+    });
+
     const quests = await fs.readFile(
       path.join(instance, "config/ftbquests/quests/lang/ru_ru.snbt"),
       "utf8",
@@ -180,6 +198,7 @@ describe("mod translation sync", () => {
         expect.objectContaining({ group: "books", title: "Aged Guide Book", format: "lavender", strings: 2, translated: 2 }),
         expect.objectContaining({ group: "quests", title: "FTB Quests", format: "ftbquests", translated: 1 }),
         expect.objectContaining({ group: "quests", title: "QuestZ", format: "questz", translated: 2 }),
+        expect.objectContaining({ group: "books", title: "notebook", format: "patchouli", translated: 2 }),
       ]),
     );
   });
@@ -189,6 +208,8 @@ describe("mod translation sync", () => {
 
     expect(await fs.pathExists(path.join(instance, "config/ftbquests/quests/lang/ru_ru.snbt"))).toBe(false);
     expect(await fs.pathExists(path.join(instance, "config/ftbquests/quests/lang/en_us.snbt"))).toBe(true);
+    expect(await fs.pathExists(path.join(instance, "patchouli_books/notebook/ru_ru/entries/start.json"))).toBe(false);
+    expect(await fs.pathExists(path.join(instance, "patchouli_books/notebook/zh_cn/entries/start.json"))).toBe(true);
     expect((await fs.readJSON(path.join(instance, "questz/chapters/76a9fc9e.json"))).quests[0].title).toBe(
       "Pick rocks",
     );

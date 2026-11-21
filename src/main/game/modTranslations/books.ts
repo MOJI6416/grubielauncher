@@ -12,6 +12,7 @@ export interface BookDoc {
   part: BookPart;
   path: string;
   text: string;
+  external?: boolean;
 }
 
 export interface BookPath {
@@ -137,7 +138,13 @@ function docPrefix(doc: BookDoc): string {
   return `${doc.part}/${doc.path}`;
 }
 
+export const EXTERNAL_PATCHOULI_DIR = "patchouli_books";
+export const EXTERNAL_PATCHOULI_NAMESPACE = "patchouli_external";
+
 export function docOutputPath(doc: BookDoc, locale: string): string {
+  if (doc.external) {
+    return `${EXTERNAL_PATCHOULI_DIR}/${doc.book}/${locale}/${doc.part}/${doc.path}`;
+  }
   return doc.format === "lavender"
     ? `assets/${doc.namespace}/lavender/${doc.part}/${doc.book}/${locale}/${doc.path}`
     : `assets/${doc.namespace}/patchouli_books/${doc.book}/${locale}/${doc.part}/${doc.path}`;
@@ -422,12 +429,14 @@ export function bookPackFiles(
   groups: BookGroup[],
   translations: ReadonlyMap<string, LangEntries>,
   locale: string,
+  external = false,
 ): BookFile[] {
   const files: BookFile[] = [];
   for (const group of groups) {
     const translated = translations.get(group.key);
     if (!translated) continue;
     for (const doc of group.docs) {
+      if (!!doc.external !== external) continue;
       const text = renderDoc(doc, translated);
       if (text === null) continue;
       files.push({ name: docOutputPath(doc, locale), data: Buffer.from(text, "utf8") });
