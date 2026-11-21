@@ -219,7 +219,13 @@ describe("mod translation sync", () => {
   it("never takes over a quest translation the pack author ships", async () => {
     await write("config/ftbquests/quests/lang/ru_ru.snbt", '{\n\tquest.0123456789ABCDEF.title: "Дерево"\n}\n');
     fake.submitted.length = 0;
+    await write("options.txt", 'lang:zh_cn\nresourcePacks:["vanilla"]\n');
     await toggle(true);
+    expect(await fs.readFile(path.join(instance, "options.txt"), "utf8")).toMatch(/^lang:ru_ru$/m);
+
+    await write("options.txt", 'lang:de_de\nresourcePacks:["vanilla"]\n');
+    await runSync(instance, "refresh");
+    expect(await fs.readFile(path.join(instance, "options.txt"), "utf8")).toMatch(/^lang:de_de$/m);
 
     expect(fake.submitted.some((unit) => unit.namespace === "ftbquests")).toBe(false);
     expect(

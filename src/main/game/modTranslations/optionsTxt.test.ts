@@ -114,6 +114,22 @@ describe("applyTranslationOptions", () => {
     expect(german.changed).toBe(false);
   });
 
+  it("switches any other language when asked to, once translation is turned on", () => {
+    const options = {
+      mcVersion: "1.20.1",
+      packFiles: [],
+      incompatibleFiles: [],
+      locale: "ru_ru",
+      forceLocale: true,
+    };
+    expect(applyTranslationOptions("lang:zh_cn\n", options).text).toBe("lang:ru_ru\n");
+    expect(applyTranslationOptions("lang:de_de\n", options).text).toBe("lang:ru_ru\n");
+    expect(applyTranslationOptions("lang:ru_ru\n", options).changed).toBe(false);
+    expect(
+      applyTranslationOptions("lang:zh_CN\n", { ...options, mcVersion: "1.7.10" }).text,
+    ).toBe("lang:ru_RU\n");
+  });
+
   it("writes a fresh options.txt for a game that never ran", () => {
     const { text } = applyTranslationOptions(null, {
       mcVersion: "1.20.1",

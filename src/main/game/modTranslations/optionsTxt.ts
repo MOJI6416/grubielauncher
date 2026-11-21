@@ -62,6 +62,7 @@ export interface TranslationOptions {
   packFiles: string[];
   incompatibleFiles: string[];
   locale: string | null;
+  forceLocale?: boolean;
 }
 
 export interface OptionsResult {
@@ -126,7 +127,12 @@ export function applyTranslationOptions(
 
   if (options.locale) {
     const langLine = find("lang");
-    if (!langLine || /^en_us$/i.test(langLine.value.trim())) {
+    const current = langLine?.value.trim().toLowerCase();
+    if (
+      !langLine ||
+      current === "en_us" ||
+      (options.forceLocale && current !== options.locale.toLowerCase())
+    ) {
       set("lang", localeForVersion(options.locale, options.mcVersion));
     }
   }

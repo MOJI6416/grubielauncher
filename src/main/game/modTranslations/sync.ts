@@ -142,6 +142,7 @@ interface TranslationState {
   questDigest: string | null;
   questzFiles: RewrittenChapter[];
   externalFiles: Array<{ file: string; digest: string }>;
+  forcedLocale: string | null;
   mods: number;
   needsAccount: boolean;
   error: string | null;
@@ -204,6 +205,7 @@ function emptyState(): TranslationState {
     questDigest: null,
     questzFiles: [],
     externalFiles: [],
+    forcedLocale: null,
     mods: 0,
     needsAccount: false,
     error: null,
@@ -1021,6 +1023,7 @@ async function applyOptions(
   mcVersion: string,
   packFiles: string[],
   locale: string | null,
+  forceLocale = false,
 ): Promise<void> {
   const file = path.join(versionPath, "options.txt");
   const current = await fs.readFile(file, "utf8").catch(() => null);
@@ -1033,6 +1036,7 @@ async function applyOptions(
       packFiles,
     ),
     locale,
+    forceLocale,
   });
   if (!result.changed) return;
   const temp = `${file}.grubie-tmp`;
@@ -1298,7 +1302,14 @@ async function syncOnce(versionPath: string, reason: SyncReason): Promise<void> 
       state.questzFiles,
     );
   }
-  await applyOptions(versionPath, mcVersion, ourPackFiles(next), locale);
+  await applyOptions(
+    versionPath,
+    mcVersion,
+    ourPackFiles(next),
+    locale,
+    next.forcedLocale !== locale,
+  );
+  next.forcedLocale = locale;
   await writeState(versionPath, next);
   schedulePoll(versionPath, next);
 }
